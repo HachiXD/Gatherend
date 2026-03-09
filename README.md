@@ -19,4 +19,4 @@ Gatherend provides real-time voice with screen and video sharing, real-time chat
 
 ## Roadmap
 
-My current priorities are completing app features and fixing the board caching system, followed by a client redesign, then focusing on self-hosting capabilities.
+My current priorities are completing app features and fixing the board caching system, followed by a client redesign, then focusing on the self-hosting capabilities of the project.
