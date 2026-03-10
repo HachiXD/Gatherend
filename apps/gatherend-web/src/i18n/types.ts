@@ -178,6 +178,7 @@ export type TranslationKeys = {
     escToCancelEnterToSave: string;
     // Welcome messages
     welcomeTo: string;
+    welcomeJoined: string;
     welcomeHopeGoodTime: string;
     greetingsThisIs: string;
     hopeGreatTimeIn: string;

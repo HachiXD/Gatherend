@@ -12,7 +12,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { logger } from "@/lib/logger";
 
 import { ChatWelcome } from "./chat-welcome";
 import { ChatItemOptimized } from "./chat-item-optimized";
@@ -490,8 +489,7 @@ function ChatMessagesComponent({
 
   useEffect(() => {
     if (scrollTrigger > 0) {
-      const needsJumpToPresent =
-        hasMoreRecent || pendingNewerMessages > 0;
+      const needsJumpToPresent = hasMoreRecent || pendingNewerMessages > 0;
 
       if (needsJumpToPresent) {
         // Treat "scroll to bottom" as "go to most recent" when the user is in
@@ -630,7 +628,9 @@ function ChatMessagesComponent({
 
       if ("type" in msg && msg.type === "WELCOME") {
         if (!board) return null;
-        return <WelcomeMessageCard board={board} />;
+        const welcomeUsername =
+          "member" in msg ? msg.member?.profile?.username : undefined;
+        return <WelcomeMessageCard board={board} username={welcomeUsername} />;
       }
 
       const sender = isMessageWithMember ? msg.member?.profile : msg.sender;

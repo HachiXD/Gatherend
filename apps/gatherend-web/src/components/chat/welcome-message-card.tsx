@@ -6,9 +6,13 @@ import { useTranslation } from "@/i18n";
 
 interface WelcomeMessageCardProps {
   board: Board;
+  username?: string;
 }
 
-export function WelcomeMessageCard({ board }: WelcomeMessageCardProps) {
+export function WelcomeMessageCard({
+  board,
+  username,
+}: WelcomeMessageCardProps) {
   const { t } = useTranslation();
 
   return (
@@ -19,7 +23,13 @@ export function WelcomeMessageCard({ board }: WelcomeMessageCardProps) {
       </div>
 
       <p className="text-theme-text-subtle text-sm px-4">
-        {t.chat.welcomeTo} <span className="font-semibold">{board.name}</span>!
+        {username && (
+          <>
+            <span className="font-semibold">@{username}</span>{" "}
+            {t.chat.welcomeJoined}{" "}
+          </>
+        )}
+        <span className="font-semibold">{board.name}</span>!
         <br />
         {t.chat.welcomeHopeGoodTime}
       </p>

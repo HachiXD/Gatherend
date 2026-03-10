@@ -163,6 +163,7 @@ export const es: TranslationKeys = {
     escToCancelEnterToSave: "Esc para cancelar • Enter para guardar",
     // Welcome messages
     welcomeTo: "Bienvenido a",
+    welcomeJoined: "se unió a",
     welcomeHopeGoodTime:
       "¡Espero que la pases bien :D, preséntate y únete a la discusión!",
     greetingsThisIs: "¡Saludos!, este es /",

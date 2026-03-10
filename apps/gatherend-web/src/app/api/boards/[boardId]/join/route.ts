@@ -8,7 +8,33 @@ import { requireAuth } from "@/lib/require-auth";
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Helper para notificar a los miembros existentes via socket
+// Helper function to notify the members about the Welcome Message
+async function notifyWelcomeMessage(channelId: string, message: object) {
+  try {
+    const socketUrl =
+      process.env.SOCKET_SERVER_URL || process.env.NEXT_PUBLIC_SOCKET_URL;
+    const secret = process.env.INTERNAL_API_SECRET;
+
+    if (!socketUrl || !secret) return;
+
+    await fetch(`${socketUrl}/emit-to-room`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Internal-Secret": secret,
+      },
+      body: JSON.stringify({
+        room: `channel:${channelId}`,
+        event: `chat:${channelId}:messages`,
+        data: message,
+      }),
+      signal: AbortSignal.timeout(3000),
+    });
+  } catch (error) {
+    console.error("[NOTIFY_WELCOME_MESSAGE]", error);
+  }
+}
+
 async function notifyMemberJoined(
   boardId: string,
   newMemberProfile: {
@@ -145,7 +171,11 @@ export async function POST(
       source === "invitation" ? SlotMode.BY_INVITATION : SlotMode.BY_DISCOVERY;
 
     // 5. JOIN ATÓMICO con FOR UPDATE SKIP LOCKED (evita race conditions)
-    const member = await db.$transaction(async (tx) => {
+    const {
+      newMember: member,
+      welcomeMessage,
+      firstChannelId,
+    } = await db.$transaction(async (tx) => {
       // Verificar ban dentro de la transacción para evitar TOCTOU
       const banned = await tx.boardBan.findFirst({
         where: { boardId, profileId: profile.id },
@@ -192,18 +222,28 @@ export async function POST(
         orderBy: { position: "asc" },
       });
 
+      let welcomeMessage = null;
       if (firstChannel) {
-        await tx.message.create({
+        welcomeMessage = await tx.message.create({
           data: {
             channelId: firstChannel.id,
             type: "WELCOME",
             content: "",
             memberId: newMember.id,
           },
+          include: {
+            member: {
+              include: { profile: true },
+            },
+          },
         });
       }
 
-      return newMember;
+      return {
+        newMember,
+        welcomeMessage,
+        firstChannelId: firstChannel?.id ?? null,
+      };
     });
 
     // Notificar a los miembros existentes que alguien se unió
@@ -212,6 +252,10 @@ export async function POST(
       username: profile.username,
       imageUrl: profile.imageUrl,
     });
+
+    if (firstChannelId && welcomeMessage) {
+      notifyWelcomeMessage(firstChannelId, welcomeMessage);
+    }
 
     // 6. RESPUESTA
     return NextResponse.json({
