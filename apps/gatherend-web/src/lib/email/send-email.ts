@@ -48,7 +48,8 @@ function getTransport(): Transporter | null {
 }
 
 function getFrom(): string {
-  const email = process.env.SMTP_FROM || process.env.SMTP_USER || "noreply@localhost";
+  const email =
+    process.env.SMTP_FROM || process.env.SMTP_USER || "noreply@localhost";
   const name = process.env.SMTP_FROM_NAME;
   return name ? `${name} <${email}>` : email;
 }
@@ -62,7 +63,10 @@ export async function sendEmail(input: EmailInput): Promise<void> {
     where: { email: to },
   });
   if (suppression?.isSuppressed) {
-    logger.server("[EMAIL] Suppressed recipient; skipping.", { to, tag: input.tag });
+    logger.server("[EMAIL] Suppressed recipient; skipping.", {
+      to,
+      tag: input.tag,
+    });
     return;
   }
 

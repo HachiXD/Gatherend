@@ -44,19 +44,26 @@ if (process.env.NODE_ENV !== "production") {
   }
 }
 
-// R2 Configuration
+// R2 / S3-compatible configuration
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID || "";
 const R2_BUCKET = process.env.R2_BUCKET_NAME || "";
-const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || ""; // Custom domain, e.g., https://storage.gatherend.com
+const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || "";
 
-// Initialize R2 client (S3-compatible)
+// S3_ENDPOINT overrides the default R2 endpoint, this is for MinIO or any S3-compatible storage to work
+const s3Endpoint = process.env.S3_ENDPOINT
+  ? process.env.S3_ENDPOINT
+  : `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
+
+// Initialize S3-compatible client
 const r2Client = new S3Client({
-  region: "auto",
-  endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  region: process.env.S3_REGION || "auto",
+  endpoint: s3Endpoint,
   credentials: {
     accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
   },
+  // Required by MinIO
+  forcePathStyle: !!process.env.S3_ENDPOINT,
 });
 
 // Legacy exports for backwards compatibility
@@ -69,6 +76,14 @@ const CLOUDFRONT_DOMAIN = R2_PUBLIC_URL.replace("https://", "");
  * Check if R2 is properly configured
  */
 export function isR2Configured(): boolean {
+  // With S3_ENDPOINT set (MinIO, etc.), R2_ACCOUNT_ID is not needed
+  if (process.env.S3_ENDPOINT) {
+    return !!(
+      process.env.R2_ACCESS_KEY_ID &&
+      process.env.R2_SECRET_ACCESS_KEY &&
+      R2_BUCKET
+    );
+  }
   return !!(
     process.env.R2_ACCESS_KEY_ID &&
     process.env.R2_SECRET_ACCESS_KEY &&
@@ -87,7 +102,10 @@ export function getR2PublicUrl(key: string): string {
   if (R2_PUBLIC_URL) {
     return `${R2_PUBLIC_URL}/${key}`;
   }
-  // Fallback to R2 dev URL (not recommended for production)
+  // Fallback: construct URL from endpoint (MinIO) or R2 account ID
+  if (process.env.S3_ENDPOINT) {
+    return `${process.env.S3_ENDPOINT}/${R2_BUCKET}/${key}`;
+  }
   return `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${R2_BUCKET}/${key}`;
 }
 

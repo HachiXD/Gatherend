@@ -135,14 +135,18 @@ export const auth = betterAuth({
       create: {
         before: async (account) => {
           if (account.providerId === "google") {
-            return { data: { ...account, scope: googleMinimalScope.join(",") } };
+            return {
+              data: { ...account, scope: googleMinimalScope.join(",") },
+            };
           }
         },
       },
       update: {
         before: async (account) => {
           if (account.providerId === "google") {
-            return { data: { ...account, scope: googleMinimalScope.join(",") } };
+            return {
+              data: { ...account, scope: googleMinimalScope.join(",") },
+            };
           }
         },
       },

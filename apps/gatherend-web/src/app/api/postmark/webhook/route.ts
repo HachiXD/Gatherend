@@ -30,7 +30,10 @@ function timingSafeEqualString(a: string, b: string): boolean {
   return crypto.timingSafeEqual(aBuf, bBuf);
 }
 
-function verifyPostmarkSignature(rawBody: string, signatureHeader: string): boolean {
+function verifyPostmarkSignature(
+  rawBody: string,
+  signatureHeader: string,
+): boolean {
   const secret = process.env.POSTMARK_WEBHOOK_SECRET;
   if (!secret) {
     if (process.env.NODE_ENV === "production") {
@@ -201,4 +204,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false }, { status: 500 });
   }
 }
-
