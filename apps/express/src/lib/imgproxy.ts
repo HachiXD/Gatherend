@@ -2,7 +2,7 @@
  * imgproxy URL Signing Library
  *
  * Generates signed URLs for imgproxy transformations.
- * Used to transform images stored in R2 on-the-fly.
+ * Used to transform images stored in S3-compatible storage on-the-fly.
  */
 
 import crypto from "crypto";

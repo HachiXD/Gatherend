@@ -5,7 +5,7 @@
  * 1. Receives file via multer
  * 2. Moderates public content (Rekognition) - boards, avatars, stickers
  * 3. Skips moderation for private content - chat/DM attachments
- * 4. Uploads everything to R2 (Cloudflare)
+ * 4. Uploads everything to S3-compatible storage
  * 5. Returns URL or error
  *
  * CSAM scanning is handled at the Cloudflare proxy level.
@@ -15,9 +15,9 @@ import express from "express";
 import multer from "multer";
 import crypto from "crypto";
 import {
-  uploadToR2,
-  isR2Configured,
-  type R2UploadResult,
+  uploadToStorage,
+  isStorageConfigured,
+  type StorageUploadResult,
 } from "../../lib/s3.config.js";
 import { getSignedAttachmentsUrl } from "../../lib/attachments-gateway.js";
 import {
@@ -33,7 +33,7 @@ import {
 import {
   type ModerationContext,
   CONTEXT_THRESHOLD_MAP,
-  R2_FOLDERS,
+  STORAGE_FOLDERS,
 } from "../../config/moderation.config.js";
 import { logger } from "../../lib/logger.js";
 
@@ -66,7 +66,7 @@ interface UploadResponse {
   success: boolean;
   url?: string;
   key?: string;
-  storage?: "r2";
+  storage?: "s3";
   width?: number;
   height?: number;
   error?: string;
@@ -130,12 +130,12 @@ router.post("/", upload.single("image"), async (req, res) => {
     }
 
     // Validate context
-    if (!context || !R2_FOLDERS[context]) {
+    if (!context || !STORAGE_FOLDERS[context]) {
       return res.status(400).json({
         success: false,
         error:
           "Invalid or missing context. Valid values: " +
-          Object.keys(R2_FOLDERS).join(", "),
+          Object.keys(STORAGE_FOLDERS).join(", "),
       } as UploadResponse);
     }
 
@@ -166,9 +166,9 @@ router.post("/", upload.single("image"), async (req, res) => {
       } as UploadResponse);
     }
 
-    // Check R2 configuration
-    if (!isR2Configured()) {
-      logger.error("[Upload] R2 not configured");
+    // Check storage configuration
+    if (!isStorageConfigured()) {
+      logger.error("[Upload] Storage not configured");
       return res.status(500).json({
         success: false,
         error: "Storage not configured",
@@ -210,7 +210,7 @@ router.post("/", upload.single("image"), async (req, res) => {
       }
     }
 
-    // UPLOAD TO R2
+    // UPLOAD
 
     let imageWidth: number | null = null;
     let imageHeight: number | null = null;
@@ -237,15 +237,15 @@ router.post("/", upload.single("image"), async (req, res) => {
 
     const ext = sniffed.ext;
     const uniqueKey = `${Date.now()}-${crypto.randomUUID()}.${ext}`;
-    const folder = R2_FOLDERS[context];
+    const folder = STORAGE_FOLDERS[context];
 
     const isPrivateAttachment =
       context === "message_attachment" || context === "dm_attachment";
-    const attachmentsBucket = process.env.R2_ATTACHMENTS_BUCKET_NAME?.trim();
+    const attachmentsBucket = process.env.ATTACHMENTS_BUCKET_NAME?.trim();
 
     if (isPrivateAttachment && !attachmentsBucket) {
       logger.error(
-        "[Upload] Private attachments requested but R2_ATTACHMENTS_BUCKET_NAME is not set",
+        "[Upload] Private attachments requested but ATTACHMENTS_BUCKET_NAME is not set",
       );
       return res.status(500).json({
         success: false,
@@ -253,7 +253,7 @@ router.post("/", upload.single("image"), async (req, res) => {
       } as UploadResponse);
     }
 
-    const r2Result = await uploadToR2({
+    const storageResult = await uploadToStorage({
       buffer: file.buffer,
       key: uniqueKey,
       contentType: sniffed.mime,
@@ -261,12 +261,11 @@ router.post("/", upload.single("image"), async (req, res) => {
       ...(isPrivateAttachment && attachmentsBucket
         ? { bucketName: attachmentsBucket }
         : {}),
-      // PDFs should be served as a download unless you have a safe renderer/sanitizer.
       ...(sniffed.kind === "pdf" ? { contentDisposition: "attachment" } : {}),
     });
 
-    if (!r2Result.success) {
-      logger.error("[Upload] R2 upload failed:", r2Result.error);
+    if (!storageResult.success) {
+      logger.error("[Upload] Storage upload failed:", storageResult.error);
       return res.status(500).json({
         success: false,
         error: "Failed to upload file",
@@ -274,11 +273,11 @@ router.post("/", upload.single("image"), async (req, res) => {
     }
 
     // Build response
-    // For private attachments we return a signed gateway URL (don't persist this URL; persist r2Result.key).
-    let responseUrl = r2Result.url;
+    // For private attachments we return a signed gateway URL (don't persist this URL; persist storageResult.key).
+    let responseUrl = storageResult.url;
     if (isPrivateAttachment && attachmentsBucket) {
       try {
-        responseUrl = getSignedAttachmentsUrl(r2Result.key);
+        responseUrl = getSignedAttachmentsUrl(storageResult.key);
       } catch (e) {
         logger.error(
           "[Upload] Attachments gateway signing misconfigured (missing ATTACHMENTS_HMAC_KEY?)",
@@ -294,8 +293,8 @@ router.post("/", upload.single("image"), async (req, res) => {
     const response: UploadResponse = {
       success: true,
       url: responseUrl,
-      key: r2Result.key,
-      storage: "r2",
+      key: storageResult.key,
+      storage: "s3",
       ...(imageWidth !== null && imageHeight !== null
         ? { width: imageWidth, height: imageHeight }
         : {}),

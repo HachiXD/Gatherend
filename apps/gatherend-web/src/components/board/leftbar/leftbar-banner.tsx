@@ -19,7 +19,7 @@ import { logger } from "@/lib/logger";
 import { useTranslation } from "@/i18n";
 import { getOptimizedStaticUiImageUrl } from "@/lib/ui-image-optimizer";
 
-const R2_DOMAIN = process.env.NEXT_PUBLIC_R2_DOMAIN || "";
+const STORAGE_DOMAIN = process.env.NEXT_PUBLIC_STORAGE_DOMAIN || "";
 
 interface LeftbarBannerProps {
   imageUrl?: string | null;
@@ -72,8 +72,8 @@ export const LeftbarBanner = ({
   const isGatherendCdnUrl = (() => {
     try {
       return (
-        R2_DOMAIN !== "" &&
-        new URL(displayImageUrl ?? "").hostname === R2_DOMAIN
+        STORAGE_DOMAIN !== "" &&
+        new URL(displayImageUrl ?? "").hostname === STORAGE_DOMAIN
       );
     } catch {
       return false;

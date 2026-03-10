@@ -14,7 +14,7 @@ interface FileUploadProps {
 }
 
 // Map legacy endpoint names to new context
-const CDN_DOMAIN = process.env.NEXT_PUBLIC_R2_DOMAIN || "";
+const CDN_DOMAIN = process.env.NEXT_PUBLIC_STORAGE_DOMAIN || "";
 
 const ENDPOINT_TO_CONTEXT: Record<string, UploadContext> = {
   messageFile: "message_attachment",

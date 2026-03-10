@@ -7,7 +7,7 @@
  * in a non-animated image payload.
  */
 
-const R2_DOMAIN = process.env.NEXT_PUBLIC_R2_DOMAIN || "";
+const STORAGE_DOMAIN = process.env.NEXT_PUBLIC_STORAGE_DOMAIN || "";
 
 function getPathnameLower(url: string): string {
   try {
@@ -23,11 +23,11 @@ function isPotentiallyAnimatedByExtension(url: string): boolean {
   return p.endsWith(".webp") || p.endsWith(".gif") || p.endsWith(".apng");
 }
 
-function isR2Url(url: string): boolean {
+function isStorageUrl(url: string): boolean {
   try {
-    return new URL(url).hostname === R2_DOMAIN;
+    return new URL(url).hostname === STORAGE_DOMAIN;
   } catch {
-    return url.includes(R2_DOMAIN);
+    return url.includes(STORAGE_DOMAIN);
   }
 }
 
@@ -39,7 +39,7 @@ export function getNeverAnimatedImageUrl(
   },
 ): string {
   // Only proxy our own CDN assets. Other sources (Dicebear, Google, etc.) are static anyway.
-  if (!src || !isR2Url(src)) return src;
+  if (!src || !isStorageUrl(src)) return src;
 
   // Only force static transform for formats that can be animated.
   if (!isPotentiallyAnimatedByExtension(src)) return src;

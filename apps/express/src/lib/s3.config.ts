@@ -1,7 +1,7 @@
 /**
- * Cloudflare R2 Configuration
+ * S3-compatible Object Storage Configuration
  *
- * R2 is S3-compatible storage with free egress and built-in CDN.
+ * Supports any S3-compatible provider (Cloudflare R2, MinIO, AWS S3, etc.).
  * Used for all media storage (public and private content).
  *
  * CSAM scanning is handled at the Cloudflare proxy level (custom domain).
@@ -44,75 +44,52 @@ if (process.env.NODE_ENV !== "production") {
   }
 }
 
-// R2 / S3-compatible configuration
-const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID || "";
-const R2_BUCKET = process.env.R2_BUCKET_NAME || "";
-const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || "";
+const STORAGE_ACCOUNT_ID = process.env.STORAGE_ACCOUNT_ID || "";
+const STORAGE_BUCKET = process.env.STORAGE_BUCKET_NAME || "";
+const STORAGE_PUBLIC_URL = process.env.STORAGE_PUBLIC_URL || "";
 
-// S3_ENDPOINT overrides the default R2 endpoint, this is for MinIO or any S3-compatible storage to work
+// S3_ENDPOINT overrides the auto-detected endpoint (for MinIO, AWS S3, etc.)
 const s3Endpoint = process.env.S3_ENDPOINT
   ? process.env.S3_ENDPOINT
-  : `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
+  : `https://${STORAGE_ACCOUNT_ID}.r2.cloudflarestorage.com`;
 
-// Initialize S3-compatible client
-const r2Client = new S3Client({
+const storageClient = new S3Client({
   region: process.env.S3_REGION || "auto",
   endpoint: s3Endpoint,
   credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
+    accessKeyId: process.env.STORAGE_ACCESS_KEY_ID || "",
+    secretAccessKey: process.env.STORAGE_SECRET_ACCESS_KEY || "",
   },
-  // Required by MinIO
   forcePathStyle: !!process.env.S3_ENDPOINT,
 });
 
-// Legacy exports for backwards compatibility
-const s3Client = r2Client;
-const S3_BUCKET = R2_BUCKET;
-const AWS_REGION = "auto";
-const CLOUDFRONT_DOMAIN = R2_PUBLIC_URL.replace("https://", "");
-
-/**
- * Check if R2 is properly configured
- */
-export function isR2Configured(): boolean {
-  // With S3_ENDPOINT set (MinIO, etc.), R2_ACCOUNT_ID is not needed
+export function isStorageConfigured(): boolean {
   if (process.env.S3_ENDPOINT) {
     return !!(
-      process.env.R2_ACCESS_KEY_ID &&
-      process.env.R2_SECRET_ACCESS_KEY &&
-      R2_BUCKET
+      process.env.STORAGE_ACCESS_KEY_ID &&
+      process.env.STORAGE_SECRET_ACCESS_KEY &&
+      STORAGE_BUCKET
     );
   }
   return !!(
-    process.env.R2_ACCESS_KEY_ID &&
-    process.env.R2_SECRET_ACCESS_KEY &&
-    R2_BUCKET &&
-    R2_ACCOUNT_ID
+    process.env.STORAGE_ACCESS_KEY_ID &&
+    process.env.STORAGE_SECRET_ACCESS_KEY &&
+    STORAGE_BUCKET &&
+    STORAGE_ACCOUNT_ID
   );
 }
 
-// Legacy alias
-export const isS3Configured = isR2Configured;
-
-/**
- * Get public URL for an R2 object
- */
-export function getR2PublicUrl(key: string): string {
-  if (R2_PUBLIC_URL) {
-    return `${R2_PUBLIC_URL}/${key}`;
+export function getStoragePublicUrl(key: string): string {
+  if (STORAGE_PUBLIC_URL) {
+    return `${STORAGE_PUBLIC_URL}/${key}`;
   }
-  // Fallback: construct URL from endpoint (MinIO) or R2 account ID
   if (process.env.S3_ENDPOINT) {
-    return `${process.env.S3_ENDPOINT}/${R2_BUCKET}/${key}`;
+    return `${process.env.S3_ENDPOINT}/${STORAGE_BUCKET}/${key}`;
   }
-  return `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${R2_BUCKET}/${key}`;
+  return `https://${STORAGE_ACCOUNT_ID}.r2.cloudflarestorage.com/${STORAGE_BUCKET}/${key}`;
 }
 
-// Legacy alias
-export const getCloudFrontUrl = getR2PublicUrl;
-
-export interface R2UploadOptions {
+export interface StorageUploadOptions {
   buffer: Buffer;
   key: string;
   contentType: string;
@@ -121,47 +98,39 @@ export interface R2UploadOptions {
   contentDisposition?: string;
 }
 
-export interface R2UploadResult {
+export interface StorageUploadResult {
   success: boolean;
   url: string;
   key: string;
   error?: string;
 }
 
-// Legacy type aliases
-export type S3UploadOptions = R2UploadOptions;
-export type S3UploadResult = R2UploadResult;
-
-/**
- * Upload a file to R2
- */
-export async function uploadToR2(
-  options: R2UploadOptions,
-): Promise<R2UploadResult> {
+export async function uploadToStorage(
+  options: StorageUploadOptions,
+): Promise<StorageUploadResult> {
   const { buffer, key, contentType, folder, bucketName, contentDisposition } =
     options;
   const fullKey = `${folder}/${key}`;
 
   try {
     const command = new PutObjectCommand({
-      Bucket: bucketName || R2_BUCKET,
+      Bucket: bucketName || STORAGE_BUCKET,
       Key: fullKey,
       Body: buffer,
       ContentType: contentType,
       ...(contentDisposition ? { ContentDisposition: contentDisposition } : {}),
-      // Cache for 1 year (immutable content)
       CacheControl: "public, max-age=31536000, immutable",
     });
 
-    await r2Client.send(command);
+    await storageClient.send(command);
 
     return {
       success: true,
-      url: getR2PublicUrl(fullKey),
+      url: getStoragePublicUrl(fullKey),
       key: fullKey,
     };
   } catch (error) {
-    console.error("[R2] Upload error:", error);
+    console.error("[Storage] Upload error:", error);
     return {
       success: false,
       url: "",
@@ -171,32 +140,19 @@ export async function uploadToR2(
   }
 }
 
-// Legacy alias
-export const uploadToS3 = uploadToR2;
-
-/**
- * Delete a file from R2
- */
-export async function deleteFromR2(key: string): Promise<boolean> {
+export async function deleteFromStorage(key: string): Promise<boolean> {
   try {
     const command = new DeleteObjectCommand({
-      Bucket: R2_BUCKET,
+      Bucket: STORAGE_BUCKET,
       Key: key,
     });
 
-    await r2Client.send(command);
+    await storageClient.send(command);
     return true;
   } catch (error) {
-    console.error("[R2] Delete error:", error);
+    console.error("[Storage] Delete error:", error);
     return false;
   }
 }
 
-// Legacy alias
-export const deleteFromS3 = deleteFromR2;
-
-// Export R2 client and config
-export { r2Client, R2_BUCKET, R2_PUBLIC_URL, R2_ACCOUNT_ID };
-
-// Legacy exports for backwards compatibility
-export { s3Client, S3_BUCKET, CLOUDFRONT_DOMAIN, AWS_REGION };
+export { storageClient, STORAGE_BUCKET, STORAGE_PUBLIC_URL, STORAGE_ACCOUNT_ID };

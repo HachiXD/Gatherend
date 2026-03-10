@@ -89,7 +89,7 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       ...(dicebearPattern ? [dicebearPattern] : []), // NEXT_PUBLIC_DICEBEAR_URL
-      ...(cdnPattern ? [cdnPattern] : []), // R2 custom domain (NEXT_PUBLIC_CDN_URL)
+      ...(cdnPattern ? [cdnPattern] : []), // Storage CDN domain (NEXT_PUBLIC_CDN_URL)
       ...(imgproxyEnvPattern ? [imgproxyEnvPattern] : []),
       ...(apiEnvPattern ? [apiEnvPattern] : []), // Express API (dev/prod)
     ],

@@ -100,29 +100,26 @@ export const CONTEXT_THRESHOLD_MAP: Record<ModerationContext, ThresholdType> = {
   profile_banner: "strict",
   sticker: "strict", // Stickers use Cloudinary with strict
 
-  // Privado - Permissive (goes to S3+CloudFront)
+  // Privado - Permissive (goes to S3)
   message_attachment: "permissive",
   dm_attachment: "permissive",
 };
 
 // STORAGE BACKEND MAPPING
-// All content now goes to R2 (Cloudflare)
 
-export type StorageBackend = "r2";
+export type StorageBackend = "s3";
 
 export const CONTEXT_STORAGE_MAP: Record<ModerationContext, StorageBackend> = {
-  // All content goes to R2
-  board_image: "r2",
-  board_description: "r2",
-  profile_avatar: "r2",
-  profile_banner: "r2",
-  sticker: "r2",
-  message_attachment: "r2",
-  dm_attachment: "r2",
+  board_image: "s3",
+  board_description: "s3",
+  profile_avatar: "s3",
+  profile_banner: "s3",
+  sticker: "s3",
+  message_attachment: "s3",
+  dm_attachment: "s3",
 };
 
-// R2 folder mapping for all content
-export const R2_FOLDERS: Record<ModerationContext, string> = {
+export const STORAGE_FOLDERS: Record<ModerationContext, string> = {
   board_image: "boards",
   board_description: "boards",
   profile_avatar: "avatars",
@@ -131,9 +128,6 @@ export const R2_FOLDERS: Record<ModerationContext, string> = {
   message_attachment: "chat-attachments",
   dm_attachment: "dm-attachments",
 };
-
-// Legacy alias
-export const S3_FOLDERS = R2_FOLDERS;
 
 // STRIKE SEVERITY MAPPING
 // Only for labels that are actually blocked

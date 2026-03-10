@@ -2,8 +2,8 @@
  * useUpload Hook
  *
  * Centralized upload hook that uses our Express backend with:
- * - R2 for public content (boards, avatars, banners) - WITH moderation
- * - R2 for private content (chat/DM attachments) - NO moderation
+ * - S3-compatible storage for public content (boards, avatars, banners) - WITH moderation
+ * - S3-compatible storage for private content (chat/DM attachments) - NO moderation
  */
 
 import { useState, useCallback, useEffect, useRef } from "react";
@@ -34,8 +34,8 @@ const ENDPOINT_TO_CONTEXT: Record<string, UploadContext> = {
 
 export interface UploadedFile {
   url: string;
-  key?: string; // R2 key
-  storage: "r2" | "s3"; // Which backend was used
+  key?: string;
+  storage: "s3";
   type: string;
   name: string;
   size: number;
@@ -171,8 +171,8 @@ function useUploadInternal(
 
           const uploadedFile: UploadedFile = {
             url: data.url,
-            key: data.key, // R2 key
-            storage: data.storage === "s3" ? "s3" : "r2",
+            key: data.key,
+            storage: "s3",
             type: file.type,
             name: file.name,
             size: file.size,

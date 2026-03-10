@@ -2,7 +2,6 @@
  * Image URL Utilities
  *
  * Helper functions to transform images using imgproxy.
- * Supports R2 URLs (cdn.gatherend.com).
  *
  * NOTE: imgproxy should be configured with IMGPROXY_ALLOWED_SOURCES
  * instead of signature for frontend usage (simpler and secure enough).
@@ -10,13 +9,13 @@
 
 const IMGPROXY_URL =
   process.env.NEXT_PUBLIC_IMGPROXY_URL || "";
-const R2_DOMAIN = process.env.NEXT_PUBLIC_R2_DOMAIN || "";
+const STORAGE_DOMAIN = process.env.NEXT_PUBLIC_STORAGE_DOMAIN || "";
 
-export function isR2Url(url: string): boolean {
+export function isStorageUrl(url: string): boolean {
   try {
     const u = new URL(url);
     if (u.username || u.password) return false;
-    return u.hostname === R2_DOMAIN;
+    return u.hostname === STORAGE_DOMAIN;
   } catch {
     return false;
   }
@@ -28,9 +27,7 @@ export function isAnimatedFormat(url: string): boolean {
 }
 
 export function canUseImgproxy(url: string): boolean {
-  // Allowlist only: our public R2 bucket.
-  // NOTE: This is only a client-side guard. Server-side allowlists must also be configured.
-  return isR2Url(url);
+  return isStorageUrl(url);
 }
 
 export interface TransformOptions {

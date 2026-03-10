@@ -2,9 +2,9 @@ import express from "express";
 import multer from "multer";
 import crypto from "crypto";
 import {
-  uploadToR2,
-  deleteFromR2,
-  isR2Configured,
+  uploadToStorage,
+  deleteFromStorage,
+  isStorageConfigured,
 } from "../../lib/s3.config.js";
 import { db } from "../../lib/db.js";
 import { getAllStickers, getStickersByCategory } from "./stickers.service.js";
@@ -125,16 +125,16 @@ router.post("/", upload.single("image"), async (req, res) => {
     }
 
     // Check R2 configuration
-    if (!isR2Configured()) {
-      logger.error("[STICKERS] R2 not configured");
+    if (!isStorageConfigured()) {
+      logger.error("[STICKERS] Storage not configured");
       return res.status(500).json({ error: "Storage not configured" });
     }
 
-    // Upload to R2
+    // Upload to storage
     const ext = sniffed.ext;
     const uniqueKey = `${Date.now()}-${crypto.randomUUID()}.${ext}`;
 
-    const result = await uploadToR2({
+    const result = await uploadToStorage({
       buffer: file.buffer,
       key: uniqueKey,
       contentType: sniffed.mime,
@@ -142,7 +142,7 @@ router.post("/", upload.single("image"), async (req, res) => {
     });
 
     if (!result.success) {
-      logger.error("[STICKERS] R2 upload failed:", result.error);
+      logger.error("[STICKERS] Storage upload failed:", result.error);
       return res.status(500).json({ error: "Failed to upload sticker" });
     }
 
@@ -154,7 +154,7 @@ router.post("/", upload.single("image"), async (req, res) => {
         category: "custom",
         isCustom: true,
         uploaderId: profileId,
-        publicId: result.key, // Store R2 key here
+        publicId: result.key,
       },
     });
 
@@ -213,9 +213,9 @@ router.delete("/:id", async (req, res) => {
       });
     } else {
       // Sticker is not used anywhere - safe to delete completely
-      // Delete from R2 if it has publicId (stores R2 key)
+      // Delete from storage if it has publicId
       if (sticker.publicId) {
-        await deleteFromR2(sticker.publicId);
+        await deleteFromStorage(sticker.publicId);
       }
 
       // Delete from DB
