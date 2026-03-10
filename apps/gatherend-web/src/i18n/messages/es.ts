@@ -927,7 +927,7 @@ export const es: TranslationKeys = {
         "  - Alojamiento de base de datos principal: Railway (Estados Unidos).",
         "  - Proveedores de alojamiento e infraestructura en la nube: Railway (Estados Unidos) y OVH (Canadá).",
         "  - Servicios de protección y red de distribución de contenido: Cloudflare (Estados Unidos).",
-        "  - Envío de emails transaccionales para reseteo de contraseña y verificación de email: Postmark.",
+        "  - Envío de emails transaccionales para reseteo de contraseña y verificación de email: enviados vía SMTP (proveedor configurado por el operador).",
         "  - Alojamiento de imagenes: Cloudflare R2 (Estados Unidos).",
         "Estos proveedores unicamente procesan la información necesaria para prestar sus servicios y no están autorizados a usarla para fines propios.",
         "",

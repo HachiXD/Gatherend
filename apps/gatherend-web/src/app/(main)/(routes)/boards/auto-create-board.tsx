@@ -41,11 +41,8 @@ export function AutoCreateBoard({ profile }: AutoCreateBoardProps) {
         const firstLetter =
           (profile.username ?? profile.userId ?? "G")[0]?.toUpperCase() ?? "G";
 
-        const autoImage = generateBoardAvatarUrl(
-          profile.userId,
-          firstLetter,
-          256,
-        ) ?? "";
+        const autoImage =
+          generateBoardAvatarUrl(profile.userId, firstLetter, 256) ?? "";
 
         // --- 3. Preparar nombre automático ---
         const displayName =

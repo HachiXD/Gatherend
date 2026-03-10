@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -161,6 +162,9 @@ async function handleEvent(event: PostmarkEventBase) {
 }
 
 export async function POST(request: Request) {
+  const rateLimitResponse = await checkRateLimit(RATE_LIMITS.api);
+  if (rateLimitResponse) return rateLimitResponse;
+
   const rawBody = await request.text();
   const signatureHeader =
     request.headers.get("x-postmark-signature") ||

@@ -61,17 +61,20 @@ export const LeftbarBanner = ({
     ? finalImageUrl
     : finalImageUrl
       ? getOptimizedStaticUiImageUrl(finalImageUrl, {
-        w: 512,
-        h: 512,
-        q: 82,
-        resize: "fill",
-        gravity: "sm",
-      })
+          w: 512,
+          h: 512,
+          q: 82,
+          resize: "fill",
+          gravity: "sm",
+        })
       : null;
 
   const isGatherendCdnUrl = (() => {
     try {
-      return R2_DOMAIN !== "" && new URL(displayImageUrl ?? "").hostname === R2_DOMAIN;
+      return (
+        R2_DOMAIN !== "" &&
+        new URL(displayImageUrl ?? "").hostname === R2_DOMAIN
+      );
     } catch {
       return false;
     }

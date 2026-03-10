@@ -918,7 +918,7 @@ export const en: TranslationKeys = {
         "  - Main database hosting: Railway (United States).",
         "  - Cloud hosting and infrastructure providers: Railway (United States) and OVH (Canada).",
         "  - Protection services and content delivery network: Cloudflare (United States).",
-        "  - Transactional emails for password reset and email verification: Postmark.",
+        "  - Transactional emails for password reset and email verification: sent via SMTP (provider configured by the operator).",
         "  - Image hosting: Cloudflare R2 (United States).",
         "These providers only process the information necessary to provide their services and are not authorized to use it for their own purposes.",
         "",

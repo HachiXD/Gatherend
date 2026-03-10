@@ -8,7 +8,10 @@ import { v4 as uuidv4 } from "uuid";
 import { generateUniqueDiscriminator } from "@/lib/username";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
-async function emitProfileUpdated(profileId: string, patch: Record<string, unknown>) {
+async function emitProfileUpdated(
+  profileId: string,
+  patch: Record<string, unknown>,
+) {
   try {
     const socketUrl =
       process.env.SOCKET_SERVER_URL || process.env.NEXT_PUBLIC_SOCKET_URL;
@@ -356,7 +359,8 @@ export async function DELETE() {
       await generateUniqueDiscriminator(anonymizedUsername);
 
     // Generate a generic avatar based on the anonymized username
-    const anonymizedImageUrl = generateProfileAvatarUrl(anonymizedUsername) ?? "";
+    const anonymizedImageUrl =
+      generateProfileAvatarUrl(anonymizedUsername) ?? "";
 
     // Anonymize the profile in database
     const deletedProfile = await db.profile.update({

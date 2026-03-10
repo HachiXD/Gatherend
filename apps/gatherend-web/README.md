@@ -20,21 +20,19 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Email (Postmark)
+## Email (SMTP)
 
-Better Auth sends password reset + email verification emails via Postmark.
+Better Auth sends password reset + email verification emails via SMTP. Any provider works (Gmail, Postmark, SES, Resend, Mailpit, etc.).
 
 Add these to `apps/gatherend-web/.env`:
 
 ```bash
-POSTMARK_SERVER_TOKEN=...
-POSTMARK_FROM_EMAIL=no-reply@yourdomain.com
-POSTMARK_FROM_NAME=Gatherend
-# Optional
-POSTMARK_MESSAGE_STREAM=outbound
-
-# Postmark Webhook (bounces/unsubscribes -> suppression list)
-POSTMARK_WEBHOOK_SECRET=...
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=you@gmail.com
+SMTP_PASS=your-app-password
+SMTP_FROM=you@gmail.com
+SMTP_FROM_NAME=Gatherend
 ```
 
 ## Learn More

@@ -2,7 +2,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
 import { db } from "./db";
-import { sendPostmarkEmail } from "./email/postmark";
+import { sendEmail } from "./email/send-email";
 import { generateRandomUsername } from "./username/random";
 
 const isDevelopment = process.env.NODE_ENV === "development";
@@ -55,7 +55,7 @@ export const auth = betterAuth({
   trustedOrigins,
   emailVerification: {
     sendVerificationEmail: async ({ user, url }) => {
-      await sendPostmarkEmail({
+      await sendEmail({
         to: user.email,
         subject: `Verify your email for ${appName}`,
         textBody: `Verify your email by opening this link:\n\n${url}\n\nIf you didn't request this, you can ignore this email.`,
@@ -69,7 +69,7 @@ export const auth = betterAuth({
     requireEmailVerification: true,
     onExistingUserSignUp: async ({ user }) => {
       const signInUrl = `${process.env.BETTER_AUTH_URL}/sign-in`;
-      await sendPostmarkEmail({
+      await sendEmail({
         to: user.email,
         subject: `Sign-up attempt for ${appName}`,
         textBody: `Someone tried to create an account with your email address. If this was you, sign in instead:\n\n${signInUrl}\n\nIf you didn't request this, you can ignore this email.`,
@@ -79,7 +79,7 @@ export const auth = betterAuth({
     },
     sendResetPassword: async ({ user, url }) => {
       // Do not log reset URLs/tokens (they can be used to take over accounts if leaked via logs).
-      await sendPostmarkEmail({
+      await sendEmail({
         to: user.email,
         subject: `Reset your ${appName} password`,
         textBody: `Reset your password by opening this link:\n\n${url}\n\nIf you didn't request this, you can ignore this email.`,

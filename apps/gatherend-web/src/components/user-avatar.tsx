@@ -213,7 +213,10 @@ export const UserAvatar = ({
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const canGuaranteeStatic =
-    !!apiUrl && !!currentSrc && isAnimatedFormat(currentSrc) && canUseImgproxy(currentSrc);
+    !!apiUrl &&
+    !!currentSrc &&
+    isAnimatedFormat(currentSrc) &&
+    canUseImgproxy(currentSrc);
 
   const staticSrc = useMemo(() => {
     // Only rewrites for our own CDN animated formats; otherwise returns currentSrc.
