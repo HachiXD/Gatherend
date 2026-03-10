@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
+import { generateBoardAvatarUrl } from "@/lib/avatar-utils";
 
 interface AutoCreateBoardProps {
   profile: {
@@ -40,12 +41,11 @@ export function AutoCreateBoard({ profile }: AutoCreateBoardProps) {
         const firstLetter =
           (profile.username ?? profile.userId ?? "G")[0]?.toUpperCase() ?? "G";
 
-        const randomColor = Math.floor(Math.random() * 16777215)
-          .toString(16)
-          .padStart(6, "0");
-        const autoImage = `https://api.dicebear.com/9.x/initials/webp?seed=${encodeURIComponent(
+        const autoImage = generateBoardAvatarUrl(
+          profile.userId,
           firstLetter,
-        )}&backgroundColor=${randomColor}&size=256`;
+          256,
+        );
 
         // --- 3. Preparar nombre automático ---
         const displayName =
@@ -62,7 +62,7 @@ export function AutoCreateBoard({ profile }: AutoCreateBoardProps) {
           },
           body: JSON.stringify({
             name: autoBoardName,
-            imageUrl: autoImage, // ahora el endpoint usa SOLO string
+            ...(autoImage ? { imageUrl: autoImage } : {}),
           }),
         });
 

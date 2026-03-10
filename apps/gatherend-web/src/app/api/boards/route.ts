@@ -14,8 +14,10 @@ const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const ALLOWED_PREFIXES = [
-  // Dicebear avatars
-  "https://api.dicebear.com/",
+  // Dicebear avatars (parametrized via env)
+  ...(process.env.NEXT_PUBLIC_DICEBEAR_URL
+    ? [process.env.NEXT_PUBLIC_DICEBEAR_URL]
+    : []),
   // R2 / custom CDN
   ...(process.env.NEXT_PUBLIC_CDN_URL ? [process.env.NEXT_PUBLIC_CDN_URL] : []),
 ];

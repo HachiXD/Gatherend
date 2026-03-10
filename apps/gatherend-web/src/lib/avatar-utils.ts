@@ -53,7 +53,10 @@ export function normalizeImageUrl(
 function normalizeDicebearRasterUrl(url: string): string {
   try {
     const u = new URL(url);
-    if (u.hostname !== "api.dicebear.com") return url;
+    const dicebearHost = process.env.NEXT_PUBLIC_DICEBEAR_URL
+      ? new URL(process.env.NEXT_PUBLIC_DICEBEAR_URL).hostname
+      : null;
+    if (!dicebearHost || u.hostname !== dicebearHost) return url;
 
     const parts = u.pathname.split("/").filter(Boolean);
     const last = parts[parts.length - 1]?.toLowerCase();
@@ -73,7 +76,8 @@ export function generateBoardAvatarUrl(
   boardId: string,
   boardName: string,
   size: number = 256,
-): string {
+): string | null {
+  if (!process.env.NEXT_PUBLIC_DICEBEAR_URL) return null;
   // Usar Array.from para manejar correctamente emojis y caracteres Unicode
   // (los emojis son 2 unidades UTF-16, [0] rompería el par surrogado)
   const chars = Array.from(boardName || "G");
@@ -88,7 +92,7 @@ export function generateBoardAvatarUrl(
 
   const bgColor = stringToColor(boardId);
   const rasterSize = Math.min(256, Math.max(1, Math.round(size)));
-  return `https://api.dicebear.com/9.x/initials/webp?seed=${encodeURIComponent(
+  return `${process.env.NEXT_PUBLIC_DICEBEAR_URL}/9.x/initials/webp?seed=${encodeURIComponent(
     safeLetter,
   )}&backgroundColor=${bgColor}&size=${rasterSize}`;
 }
@@ -99,7 +103,7 @@ export function getBoardImageUrl(
   boardId: string,
   boardName: string,
   size: number = 256,
-): string {
+): string | null {
   const normalizedUrl = normalizeImageUrl(imageUrl);
   if (normalizedUrl) {
     return normalizedUrl;
@@ -109,7 +113,13 @@ export function getBoardImageUrl(
 
 // Verificar si una URL es de Dicebear
 export function isDicebearUrl(url: string): boolean {
-  return url.includes("api.dicebear.com");
+  if (!process.env.NEXT_PUBLIC_DICEBEAR_URL) return false;
+  try {
+    const dicebearHost = new URL(process.env.NEXT_PUBLIC_DICEBEAR_URL).hostname;
+    return url.includes(dicebearHost);
+  } catch {
+    return false;
+  }
 }
 
 // Avatares de Perfil (usando DiceBear Thumbs)
@@ -123,10 +133,11 @@ export function isDicebearUrl(url: string): boolean {
 export function generateProfileAvatarUrl(
   profileId: string,
   size: number = 256,
-): string {
+): string | null {
+  if (!process.env.NEXT_PUBLIC_DICEBEAR_URL) return null;
   const bgColor = stringToColor(profileId);
   const rasterSize = Math.min(256, Math.max(1, Math.round(size)));
-  return `https://api.dicebear.com/9.x/thumbs/webp?seed=${encodeURIComponent(
+  return `${process.env.NEXT_PUBLIC_DICEBEAR_URL}/9.x/thumbs/webp?seed=${encodeURIComponent(
     profileId,
   )}&backgroundColor=${bgColor}&size=${rasterSize}`;
 }
@@ -143,7 +154,7 @@ export function getProfileAvatarUrl(
   imageUrl: string | null | undefined,
   profileId: string,
   size: number = 256,
-): string {
+): string | null {
   const normalizedUrl = normalizeImageUrl(imageUrl);
   if (normalizedUrl && normalizedUrl.trim() !== "") {
     return normalizedUrl;

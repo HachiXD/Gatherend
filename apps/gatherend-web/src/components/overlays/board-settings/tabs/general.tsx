@@ -310,7 +310,7 @@ export const GeneralTab = ({ board }: GeneralTabProps) => {
                       <FormControl>
                         <FileUpload
                           endpoint="boardImage"
-                          value={field.value || boardImagePreviewUrl}
+                          value={field.value || boardImagePreviewUrl || ""}
                           onChange={field.onChange}
                         />
                       </FormControl>

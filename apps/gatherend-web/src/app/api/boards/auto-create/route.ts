@@ -17,7 +17,9 @@ const ENDPOINT = "/api/boards/auto-create";
 const MAX_NAME_LENGTH = 50;
 
 const ALLOWED_PREFIXES = [
-  "https://api.dicebear.com/",
+  ...(process.env.NEXT_PUBLIC_DICEBEAR_URL
+    ? [process.env.NEXT_PUBLIC_DICEBEAR_URL]
+    : []),
   ...(process.env.NEXT_PUBLIC_CDN_URL ? [process.env.NEXT_PUBLIC_CDN_URL] : []),
 ];
 

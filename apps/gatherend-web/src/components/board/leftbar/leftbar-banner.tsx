@@ -56,20 +56,22 @@ export const LeftbarBanner = ({
   const finalImageUrl = getBoardImageUrl(imageUrl, boardId, boardName, 512);
 
   // Detectar si es Dicebear para usar quality máxima
-  const isDicebear = isDicebearUrl(finalImageUrl);
+  const isDicebear = finalImageUrl ? isDicebearUrl(finalImageUrl) : false;
   const displayImageUrl = forceOriginalImage
     ? finalImageUrl
-    : getOptimizedStaticUiImageUrl(finalImageUrl, {
+    : finalImageUrl
+      ? getOptimizedStaticUiImageUrl(finalImageUrl, {
         w: 512,
         h: 512,
         q: 82,
         resize: "fill",
         gravity: "sm",
-      });
+      })
+      : null;
 
   const isGatherendCdnUrl = (() => {
     try {
-      return R2_DOMAIN !== "" && new URL(displayImageUrl).hostname === R2_DOMAIN;
+      return R2_DOMAIN !== "" && new URL(displayImageUrl ?? "").hostname === R2_DOMAIN;
     } catch {
       return false;
     }
@@ -111,7 +113,7 @@ export const LeftbarBanner = ({
       {/* Imagen de fondo - cover para Dicebear (avatars), fill para imágenes subidas */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={displayImageUrl}
+        src={displayImageUrl ?? undefined}
         alt={boardName}
         className={`absolute inset-0 h-full w-full ${
           isDicebear ? "object-cover" : "object-fill"

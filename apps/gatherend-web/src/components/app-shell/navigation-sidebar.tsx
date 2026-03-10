@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface BoardItem {
   id: string;
   name: string;
-  imageUrl: string;
+  imageUrl: string | null;
   channelIds: string[];
   mainChannelId: string | null;
 }

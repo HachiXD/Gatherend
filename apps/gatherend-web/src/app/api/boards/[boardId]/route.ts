@@ -12,7 +12,9 @@ const UUID_REGEX =
 
 // Allowed image URL prefixes (same as /api/boards/route.ts)
 const ALLOWED_IMAGE_PREFIXES = [
-  "https://api.dicebear.com/",
+  ...(process.env.NEXT_PUBLIC_DICEBEAR_URL
+    ? [process.env.NEXT_PUBLIC_DICEBEAR_URL]
+    : []),
   ...(process.env.NEXT_PUBLIC_CDN_URL ? [process.env.NEXT_PUBLIC_CDN_URL] : []),
 ];
 

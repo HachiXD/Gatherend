@@ -18,7 +18,7 @@ const R2_DOMAIN = process.env.NEXT_PUBLIC_R2_DOMAIN || "";
 
 interface NavigationItemProps {
   id: string;
-  imageUrl: string;
+  imageUrl: string | null;
   name: string;
   channelIds: string[];
   mainChannelId?: string | null;
@@ -78,6 +78,7 @@ const NavigationItemComponent = ({
   const [forceOriginalImage, setForceOriginalImage] = useState(false);
 
   const displayImageUrl = useMemo(() => {
+    if (!imageUrl) return null;
     if (forceOriginalImage) return imageUrl;
     return getOptimizedStaticUiImageUrl(imageUrl, {
       w: 96,
@@ -90,7 +91,7 @@ const NavigationItemComponent = ({
 
   const isGatherendCdnUrl = (() => {
     try {
-      return R2_DOMAIN !== "" && new URL(displayImageUrl).hostname === R2_DOMAIN;
+      return R2_DOMAIN !== "" && new URL(displayImageUrl ?? "").hostname === R2_DOMAIN;
     } catch {
       return false;
     }
@@ -121,15 +122,17 @@ const NavigationItemComponent = ({
           )}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={displayImageUrl}
-            alt={name}
-            className="absolute inset-0 h-full w-full object-cover"
-            loading="eager"
-            decoding="async"
-            crossOrigin={isGatherendCdnUrl ? "anonymous" : undefined}
-            onError={() => setForceOriginalImage(true)}
-          />
+          {displayImageUrl && (
+            <img
+              src={displayImageUrl}
+              alt={name}
+              className="absolute inset-0 h-full w-full object-cover"
+              loading="eager"
+              decoding="async"
+              crossOrigin={isGatherendCdnUrl ? "anonymous" : undefined}
+              onError={() => setForceOriginalImage(true)}
+            />
+          )}
         </div>
 
         {/* Indicador de mención - siempre renderizado, oculto via CSS */}

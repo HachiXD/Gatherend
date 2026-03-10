@@ -5,7 +5,10 @@ import { getNeverAnimatedImageUrl } from "@/lib/media-static";
 function rewriteDicebearToWebp(url: string): string {
   try {
     const u = new URL(url);
-    if (u.hostname !== "api.dicebear.com") return url;
+    const dicebearHost = process.env.NEXT_PUBLIC_DICEBEAR_URL
+      ? new URL(process.env.NEXT_PUBLIC_DICEBEAR_URL).hostname
+      : null;
+    if (!dicebearHost || u.hostname !== dicebearHost) return url;
     // Dicebear selects output format by path segment (e.g. `/.../png` vs `/.../webp`).
     // Query params like `format=webp` are ignored for `/png` (it still responds `image/png`).
     const parts = u.pathname.split("/").filter(Boolean);

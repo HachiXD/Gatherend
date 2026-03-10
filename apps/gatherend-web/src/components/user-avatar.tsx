@@ -189,8 +189,7 @@ export const UserAvatar = ({
     if (profileId) {
       return getProfileAvatarUrl(null, profileId);
     }
-    // Fallback genérico si no hay profileId
-    return `https://api.dicebear.com/9.x/thumbs/webp?seed=default&backgroundColor=7c3aed&size=256`;
+    return null;
   }, [profileId]);
 
   const fallbackBgColor = useMemo(() => {
@@ -200,7 +199,7 @@ export const UserAvatar = ({
   }, [profileId, usernameColor]);
 
   const resolvedSrc = src || fallbackAvatarUrl;
-  const [currentSrc, setCurrentSrc] = useState(resolvedSrc);
+  const [currentSrc, setCurrentSrc] = useState<string | null>(resolvedSrc);
   const [disableStaticOptimization, setDisableStaticOptimization] =
     useState(false);
 
@@ -214,11 +213,11 @@ export const UserAvatar = ({
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const canGuaranteeStatic =
-    !!apiUrl && isAnimatedFormat(currentSrc) && canUseImgproxy(currentSrc);
+    !!apiUrl && !!currentSrc && isAnimatedFormat(currentSrc) && canUseImgproxy(currentSrc);
 
   const staticSrc = useMemo(() => {
     // Only rewrites for our own CDN animated formats; otherwise returns currentSrc.
-    return getNeverAnimatedImageUrl(currentSrc, {
+    return getNeverAnimatedImageUrl(currentSrc ?? "", {
       w: 256,
       h: 256,
       q: 82,
@@ -258,7 +257,7 @@ export const UserAvatar = ({
     if (!inferredSizePx) return currentSrc;
     if (currentSrc === fallbackAvatarUrl) return currentSrc;
 
-    return getOptimizedStaticUiImageUrl(currentSrc, {
+    return getOptimizedStaticUiImageUrl(currentSrc ?? "", {
       w: inferredSizePx,
       h: inferredSizePx,
       q: 82,
@@ -278,7 +277,7 @@ export const UserAvatar = ({
   const avatarVisual =
     animationMode === "onHover" && canGuaranteeStatic ? (
       <AnimatedSticker
-        src={currentSrc}
+        src={currentSrc ?? ""}
         alt="avatar"
         isHovered={isHovered}
         containerClassName={avatarBoxClass}
@@ -308,7 +307,7 @@ export const UserAvatar = ({
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={optimizedStaticSrc}
+          src={optimizedStaticSrc ?? undefined}
           alt="avatar"
           className="block h-full w-full object-cover"
           loading="eager"

@@ -26,7 +26,7 @@ export const NavigationSidebar = async () => {
             board.imageUrl,
             board.id,
             board.name,
-            96
+            96,
           );
 
           return (

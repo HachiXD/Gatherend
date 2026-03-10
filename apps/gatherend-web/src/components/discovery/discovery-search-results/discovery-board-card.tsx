@@ -70,6 +70,7 @@ function DiscoveryBoardCardComponent({ board }: DiscoveryBoardCardProps) {
   );
 
   const displayImageUrl = useMemo(() => {
+    if (!finalImageUrl) return null;
     // Discovery board header: never animate even if the original is animated.
     return getNeverAnimatedImageUrl(finalImageUrl, { w: 1024, h: 512, q: 82 });
   }, [finalImageUrl]);

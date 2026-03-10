@@ -64,6 +64,9 @@ const imgproxyEnvPattern = getRemotePatternFromUrl(
 
 const apiEnvPattern = getRemotePatternFromUrl(process.env.NEXT_PUBLIC_API_URL);
 const cdnPattern = getRemotePatternFromUrl(process.env.NEXT_PUBLIC_CDN_URL);
+const dicebearPattern = getRemotePatternFromUrl(
+  process.env.NEXT_PUBLIC_DICEBEAR_URL,
+);
 
 const nextConfig: NextConfig = {
   // Strict Mode deshabilitado temporalmente para debugging de renders
@@ -85,14 +88,7 @@ const nextConfig: NextConfig = {
 
   images: {
     remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "api.dicebear.com",
-      },
-      {
-        protocol: "https",
-        hostname: "lh3.googleusercontent.com",
-      },
+      ...(dicebearPattern ? [dicebearPattern] : []), // NEXT_PUBLIC_DICEBEAR_URL
       ...(cdnPattern ? [cdnPattern] : []), // R2 custom domain (NEXT_PUBLIC_CDN_URL)
       ...(imgproxyEnvPattern ? [imgproxyEnvPattern] : []),
       ...(apiEnvPattern ? [apiEnvPattern] : []), // Express API (dev/prod)
