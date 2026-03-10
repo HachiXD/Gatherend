@@ -756,7 +756,6 @@ export const en: TranslationKeys = {
     createPassword: "Create a password",
     passwordMinLength: "Must be at least 8 characters",
     invalidEmail: "Please enter a valid email address",
-    emailAlreadyRegistered: "This email is already registered",
     passwordTooShort: "Password must be at least 8 characters",
     continue: "Continue",
     alreadyHaveAccount: "Already have an account?",

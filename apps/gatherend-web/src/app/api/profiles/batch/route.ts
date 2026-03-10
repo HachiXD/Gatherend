@@ -38,17 +38,21 @@ export async function POST(req: Request) {
 
     if (!Array.isArray(rawIds) || rawIds.length === 0) {
       return NextResponse.json(
-        { error: "ids must be a non-empty array" },
+        { error: "Ids must be a non-empty array" },
         { status: 400 },
       );
     }
 
     // Validate and deduplicate
-    const ids = [...new Set(
-      rawIds
-        .filter((id): id is string => typeof id === "string" && UUID_REGEX.test(id))
-        .slice(0, MAX_IDS),
-    )];
+    const ids = [
+      ...new Set(
+        rawIds
+          .filter(
+            (id): id is string => typeof id === "string" && UUID_REGEX.test(id),
+          )
+          .slice(0, MAX_IDS),
+      ),
+    ];
 
     if (ids.length === 0) {
       return NextResponse.json(

@@ -105,12 +105,7 @@ export const CustomSignUp = () => {
 
       const resultError = (result as { error?: { message?: string } }).error;
       if (resultError?.message) {
-        const message = resultError.message.toLowerCase();
-        if (message.includes("exist") || message.includes("already")) {
-          setEmailError(t.auth.emailAlreadyRegistered);
-        } else {
-          setError(resultError.message);
-        }
+        setError(resultError.message);
         return;
       }
 
@@ -128,12 +123,7 @@ export const CustomSignUp = () => {
 
       setStep("verification");
     } catch (err: unknown) {
-      const message = extractErrorMessage(err, t.auth.failedToCreateAccount);
-      if (message.toLowerCase().includes("exist")) {
-        setEmailError(t.auth.emailAlreadyRegistered);
-      } else {
-        setError(message);
-      }
+      setError(extractErrorMessage(err, t.auth.failedToCreateAccount));
     } finally {
       setIsLoading(false);
     }

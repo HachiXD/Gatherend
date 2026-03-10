@@ -44,9 +44,6 @@ const trustedOrigins = Array.from(
   ),
 );
 
-const requireEmailVerification =
-  process.env.BETTER_AUTH_REQUIRE_EMAIL_VERIFICATION === "true";
-
 const appName = "Gatherend";
 
 export const auth = betterAuth({
@@ -69,7 +66,17 @@ export const auth = betterAuth({
   },
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification,
+    requireEmailVerification: true,
+    onExistingUserSignUp: async ({ existingUser }) => {
+      const signInUrl = `${process.env.BETTER_AUTH_URL}/sign-in`;
+      await sendPostmarkEmail({
+        to: existingUser.email,
+        subject: `Sign-up attempt for ${appName}`,
+        textBody: `Someone tried to create an account with your email address. If this was you, sign in instead:\n\n${signInUrl}\n\nIf you didn't request this, you can ignore this email.`,
+        htmlBody: `<p>Someone tried to create an account with your email address.</p><p>If this was you, <a href="${signInUrl}">sign in instead</a>.</p><p>If you didn't request this, you can ignore this email.</p>`,
+        tag: "existing-user-signup",
+      });
+    },
     sendResetPassword: async ({ user, url }) => {
       // Do not log reset URLs/tokens (they can be used to take over accounts if leaked via logs).
       await sendPostmarkEmail({

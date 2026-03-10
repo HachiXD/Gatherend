@@ -761,7 +761,6 @@ export const es: TranslationKeys = {
     createPassword: "Crea una contraseña",
     passwordMinLength: "Debe tener al menos 8 caracteres",
     invalidEmail: "Por favor ingresa un correo electrónico válido",
-    emailAlreadyRegistered: "Este correo ya está registrado",
     passwordTooShort: "La contraseña debe tener al menos 8 caracteres",
     continue: "Continuar",
     alreadyHaveAccount: "¿Ya tienes una cuenta?",

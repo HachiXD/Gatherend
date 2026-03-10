@@ -775,7 +775,6 @@ export type TranslationKeys = {
     createPassword: string;
     passwordMinLength: string;
     invalidEmail: string;
-    emailAlreadyRegistered: string;
     passwordTooShort: string;
     continue: string;
     alreadyHaveAccount: string;
