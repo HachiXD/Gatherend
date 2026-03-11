@@ -1,0 +1,36 @@
+{
+    auto_https off
+    log {
+        output stdout
+        format console
+    }
+    layer4 {
+        :443 {
+            @livekit tls sni {$LIVEKIT_DOMAIN}
+            route @livekit {
+                proxy localhost:7880
+            }
+
+            @turn tls sni {$LIVEKIT_TURN_DOMAIN}
+            route @turn {
+                proxy localhost:5349
+            }
+
+            route {
+                proxy localhost:8443
+            }
+        }
+    }
+}
+
+:8443 {
+    route {
+        handle_path /api/r2/* {
+            reverse_proxy {$EXPRESS_UPSTREAM}
+        }
+
+        handle {
+            reverse_proxy {$NEXT_UPSTREAM}
+        }
+    }
+}

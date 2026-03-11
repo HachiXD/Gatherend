@@ -121,6 +121,107 @@ services:
       SOCKET_SERVER_URL: http://express:3001
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET}
 
+  imgproxy:
+    image: ghcr.io/imgproxy/imgproxy:latest
+    restart: unless-stopped
+    profiles: [images]
+    cpus: "1"
+    expose:
+      - "8080"
+    environment:
+      IMGPROXY_MAX_ANIMATION_FRAMES: "1"
+      IMGPROXY_BIND: ":8080"
+      IMGPROXY_LOCAL_FILESYSTEM_ROOT: "/tmp"
+      IMGPROXY_MAX_SRC_RESOLUTION: "50"
+      IMGPROXY_KEY: ${IMGPROXY_KEY:-}
+      IMGPROXY_SALT: ${IMGPROXY_SALT:-}
+    mem_limit: 512m
+    networks:
+      - internal
+
+  dicebear:
+    image: dicebear/api:3
+    restart: unless-stopped
+    profiles: [images]
+    expose:
+      - "3000"
+    tmpfs:
+      - '/run'
+      - '/tmp'
+    environment:
+      WEBP_SIZE_MAX: "256"
+      PNG_SIZE_MAX: "256"
+    mem_limit: 256m
+    cpus: "0.5"
+    networks:
+      - internal
+
+  nudenet:
+    build:
+      context: ./services/nudenet-service
+    restart: unless-stopped
+    profiles: [moderation]
+    expose:
+      - "5000"
+    mem_limit: 4g
+    cpus: "2"
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    profiles: [minio]
+    command: server /data --console-address ":9001"
+    expose:
+      - "9000"
+      - "9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?required}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?required}
+    volumes:
+      - miniodata:/data
+    networks:
+      - internal
+
+  livekit:
+    image: livekit/livekit-server:latest
+    restart: unless-stopped
+    profiles: [livekit]
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "3478:3478/udp"
+      - "50000-60000:50000-60000/udp"
+    volumes:
+      - ./livekit/livekit.yaml:/etc/livekit.yaml:ro
+    command: --config /etc/livekit.yaml
+    depends_on:
+      livekit-redis:
+        condition: service_healthy
+    networks:
+      - internal
+
+  livekit-redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    profiles: [livekit]
+    volumes:
+      - livekitredis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - internal
+
   caddy:
     build:
       context: ../apps/gatherend-gateway
@@ -137,7 +238,13 @@ services:
       CF_ORIGIN_SECRET: ${CF_ORIGIN_SECRET:?required}
       EXPRESS_UPSTREAM: express:3001
       NEXT_UPSTREAM: web:3000
+      IMAGES_DOMAIN: ${IMAGES_DOMAIN:-}
+      AVATARS_DOMAIN: ${AVATARS_DOMAIN:-}
+      MODERATION_DOMAIN: ${MODERATION_DOMAIN:-}
+      APP_DOMAIN: ${APP_DOMAIN:-}
 
 volumes:
   pgdata:
   redisdata:
+  miniodata:
+  livekitredis:

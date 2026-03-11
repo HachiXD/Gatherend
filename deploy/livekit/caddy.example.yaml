@@ -1,0 +1,43 @@
+logging:
+  logs:
+    default:
+      level: INFO
+storage:
+  "module": "file_system"
+  "root": "/data"
+apps:
+  tls:
+    certificates:
+      automate:
+        - "${LIVEKIT_DOMAIN}"
+        - "${LIVEKIT_TURN_DOMAIN}"
+    session_tickets:
+      rotation_interval: 12h
+      max_keys: 4
+      disable_rotation: false
+      disabled: false
+  layer4:
+    servers:
+      main:
+        listen: [":443"]
+        routes:
+          - match:
+            - tls:
+                sni:
+                  - "${LIVEKIT_TURN_DOMAIN}"
+            handle:
+              - handler: tls
+              - handler: proxy
+                upstreams:
+                  - dial: ["localhost:5349"]
+          - match:
+              - tls:
+                  sni:
+                    - "${LIVEKIT_DOMAIN}"
+            handle:
+              - handler: tls
+                connection_policies:
+                  - alpn: ["http/1.1"]
+              - handler: proxy
+                upstreams:
+                  - dial: ["localhost:7880"]

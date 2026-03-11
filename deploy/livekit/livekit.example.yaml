@@ -1,0 +1,34 @@
+port: 7880
+bind_addresses:
+    - ""
+rtc:
+    tcp_port: 7881
+    port_range_start: 50000
+    port_range_end: 60000
+    use_external_ip: true
+    use_ice_lite: true
+    enable_loopback_candidate: false
+    node_ip: "${LIVEKIT_SERVER_IP}"
+audio:
+    active_speaker_threshold: 0.02
+    active_speaker_off_delay: 100
+redis:
+    address: localhost:6379
+    username: ""
+    password: ""
+    db: 0
+    use_tls: false
+    sentinel_master_name: ""
+    sentinel_username: ""
+    sentinel_password: ""
+    sentinel_addresses: []
+    cluster_addresses: []
+    max_redirects: null
+turn:
+    enabled: true
+    domain: "${LIVEKIT_TURN_DOMAIN}"
+    tls_port: 5349
+    udp_port: 3478
+    external_tls: true
+keys:
+    "${LIVEKIT_API_KEY}": "${LIVEKIT_API_SECRET}"

@@ -1,0 +1,4 @@
+# imgproxy — public, URL signatures provide security
+{$IMAGES_DOMAIN} {
+    reverse_proxy imgproxy:8080
+}

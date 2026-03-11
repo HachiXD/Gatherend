@@ -1,0 +1,18 @@
+# LiveKit L4 SNI routing — only used when LiveKit runs on a separate VPS
+# without the core app. When LiveKit is co-located with core, use base_l4.caddy instead.
+{
+    auto_https off
+    layer4 {
+        :443 {
+            @livekit tls sni {$LIVEKIT_DOMAIN}
+            route @livekit {
+                proxy localhost:7880
+            }
+
+            @turn tls sni {$LIVEKIT_TURN_DOMAIN}
+            route @turn {
+                proxy localhost:5349
+            }
+        }
+    }
+}

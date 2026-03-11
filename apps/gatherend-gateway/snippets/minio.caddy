@@ -1,0 +1,4 @@
+# MinIO S3 API
+{$MINIO_DOMAIN} {
+    reverse_proxy minio:9000
+}

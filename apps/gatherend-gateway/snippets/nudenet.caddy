@@ -1,0 +1,14 @@
+# NudeNet — private, API key required
+{$MODERATION_DOMAIN} {
+    @authorized {
+        header X-API-Key {$NUDENET_API_KEY}
+    }
+
+    handle @authorized {
+        reverse_proxy nudenet:5000
+    }
+
+    handle {
+        respond "Unauthorized" 401
+    }
+}

@@ -1,0 +1,19 @@
+{
+    auto_https off
+    log {
+        output stdout
+        format console
+    }
+}
+
+:{$PORT} {
+    route {
+        handle_path /api/r2/* {
+            reverse_proxy {$EXPRESS_UPSTREAM}
+        }
+
+        handle {
+            reverse_proxy {$NEXT_UPSTREAM}
+        }
+    }
+}

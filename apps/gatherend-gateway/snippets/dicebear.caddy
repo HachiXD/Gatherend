@@ -1,0 +1,17 @@
+# Dicebear — rate limited, referer allowlist
+{$AVATARS_DOMAIN} {
+    @bad_referer {
+        not header Referer *{$APP_DOMAIN}*
+    }
+    respond @bad_referer 403
+
+    rate_limit {
+        zone dicebear_per_ip {
+            key    {http.request.remote.host}
+            window 1m
+            events 60
+        }
+    }
+
+    reverse_proxy dicebear:3000
+}
