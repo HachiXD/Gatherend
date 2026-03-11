@@ -1,0 +1,139 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-gatherend}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required}
+      POSTGRES_DB: ${POSTGRES_DB:-gatherend}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER:-gatherend} -d $${POSTGRES_DB:-gatherend}",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:?required}
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  express:
+    build:
+      context: ..
+      dockerfile: apps/express/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-gatherend}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-gatherend}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?required}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:?required}
+      STORAGE_ACCOUNT_ID: ${STORAGE_ACCOUNT_ID:-}
+      STORAGE_ACCESS_KEY_ID: ${STORAGE_ACCESS_KEY_ID:-}
+      STORAGE_SECRET_ACCESS_KEY: ${STORAGE_SECRET_ACCESS_KEY:-}
+      STORAGE_BUCKET_NAME: ${STORAGE_BUCKET_NAME:-}
+      STORAGE_PUBLIC_URL: ${STORAGE_PUBLIC_URL:-}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      ATTACHMENTS_BUCKET_NAME: ${ATTACHMENTS_BUCKET_NAME:-}
+      ATTACHMENTS_BASE_URL: ${ATTACHMENTS_BASE_URL:-}
+      ATTACHMENTS_URL_TTL_SECONDS: ${ATTACHMENTS_URL_TTL_SECONDS:-}
+      ATTACHMENTS_URL_EXP_ROUND_SECONDS: ${ATTACHMENTS_URL_EXP_ROUND_SECONDS:-}
+      IMGPROXY_URL: ${IMGPROXY_URL:-}
+      IMGPROXY_KEY: ${IMGPROXY_KEY:-}
+      IMGPROXY_SALT: ${IMGPROXY_SALT:-}
+      NUDENET_URL: ${NUDENET_URL:-}
+      NUDENET_API_KEY: ${NUDENET_API_KEY:-}
+      FRONTEND_URL: ${FRONTEND_URL:?required}
+      RAILWAY_PRIVATE_URL: http://web:3000
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:?required}
+      MEDIA_ALLOWED_HOSTNAMES: ${MEDIA_ALLOWED_HOSTNAMES:-}
+
+  # prisma migrate deploy runs before the server starts (check CMD in apps/gatherend-web/Dockerfile)
+  web:
+    build:
+      context: ..
+      dockerfile: apps/gatherend-web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?required}
+        NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:?required}
+        NEXT_PUBLIC_LIVEKIT_URL: ${NEXT_PUBLIC_LIVEKIT_URL:-}
+        NEXT_PUBLIC_CDN_URL: ${NEXT_PUBLIC_CDN_URL:-}
+        NEXT_PUBLIC_IMGPROXY_URL: ${NEXT_PUBLIC_IMGPROXY_URL:-}
+        NEXT_PUBLIC_STORAGE_DOMAIN: ${NEXT_PUBLIC_STORAGE_DOMAIN:-}
+        NEXT_PUBLIC_BETTER_AUTH_URL: ${NEXT_PUBLIC_BETTER_AUTH_URL:?required}
+        NEXT_PUBLIC_DICEBEAR_URL: ${NEXT_PUBLIC_DICEBEAR_URL:-}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-gatherend}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-gatherend}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL}
+      STORAGE_PUBLIC_URL: ${STORAGE_PUBLIC_URL:-}
+      ATTACHMENTS_BASE_URL: ${ATTACHMENTS_BASE_URL:-}
+      IMGPROXY_URL: ${IMGPROXY_URL:-}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-}
+      POSTMARK_WEBHOOK_SECRET: ${POSTMARK_WEBHOOK_SECRET:-}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      ADMIN_PROFILE_IDS: ${ADMIN_PROFILE_IDS:-}
+      ADMIN_USER_IDS: ${ADMIN_USER_IDS:-}
+      CRON_SECRET: ${CRON_SECRET:-}
+      SITE_URL: ${SITE_URL:-}
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET}
+
+  caddy:
+    build:
+      context: ../apps/gatherend-gateway
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_started
+      express:
+        condition: service_started
+    ports:
+      - "80:80"
+    environment:
+      PORT: "80"
+      CF_ORIGIN_SECRET: ${CF_ORIGIN_SECRET:?required}
+      EXPRESS_UPSTREAM: express:3001
+      NEXT_UPSTREAM: web:3000
+
+volumes:
+  pgdata:
+  redisdata:
