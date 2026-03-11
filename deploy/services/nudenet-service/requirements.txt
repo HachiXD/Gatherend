@@ -1,6 +1,6 @@
 nudenet==3.4.2
 fastapi==0.109.0
 uvicorn[standard]==0.27.0
-python-multipart==0.0.6
+python-multipart==0.0.22
 pillow
 numpy<2
