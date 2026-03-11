@@ -155,4 +155,9 @@ export async function deleteFromStorage(key: string): Promise<boolean> {
   }
 }
 
-export { storageClient, STORAGE_BUCKET, STORAGE_PUBLIC_URL, STORAGE_ACCOUNT_ID };
+export {
+  storageClient,
+  STORAGE_BUCKET,
+  STORAGE_PUBLIC_URL,
+  STORAGE_ACCOUNT_ID,
+};

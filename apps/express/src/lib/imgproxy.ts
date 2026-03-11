@@ -79,7 +79,7 @@ function buildTransformations(options: TransformOptions): string {
     parts.push(`f:${options.format}`);
   }
 
-  // Page 
+  // Page
   if (options.page !== undefined) {
     parts.push(`pg:${options.page}`);
   }
@@ -113,7 +113,7 @@ export function getImgproxyUrl(
 }
 
 /**
- * Preset transformations 
+ * Preset transformations
  */
 export const presets = {
   avatar: (url: string) =>

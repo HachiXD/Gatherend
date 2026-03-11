@@ -54,7 +54,7 @@ export const FileUpload = ({ onChange, value, endpoint }: FileUploadProps) => {
             type: file.type,
             name: file.name,
             size: file.size,
-          })
+          }),
         );
       }
     } catch (err) {
@@ -81,7 +81,8 @@ export const FileUpload = ({ onChange, value, endpoint }: FileUploadProps) => {
   }
 
   const { url: fileUrl, type: fileType, name: fileName } = fileData;
-  const isGatherendCdnUrl = !!fileUrl && CDN_DOMAIN !== "" && fileUrl.includes(CDN_DOMAIN);
+  const isGatherendCdnUrl =
+    !!fileUrl && CDN_DOMAIN !== "" && fileUrl.includes(CDN_DOMAIN);
 
   // Helper: determinar si es imagen
   const looksLikeImageUrl = (url: string) => {
@@ -215,7 +216,7 @@ export const FileUpload = ({ onChange, value, endpoint }: FileUploadProps) => {
           isCircular ? "h-20 w-20 rounded-full gap-1" : "h-20 w-40 rounded-lg",
           uploading
             ? "opacity-50 cursor-not-allowed"
-            : "hover:border-gray-300 cursor-pointer"
+            : "hover:border-gray-300 cursor-pointer",
         )}
         disabled={uploading}
       >
@@ -223,7 +224,7 @@ export const FileUpload = ({ onChange, value, endpoint }: FileUploadProps) => {
         {uploading ? (
           <span
             className={clsx(
-              isCircular && "text-[9px] text-center leading-tight"
+              isCircular && "text-[9px] text-center leading-tight",
             )}
           >
             {t.common.uploading}
@@ -231,7 +232,7 @@ export const FileUpload = ({ onChange, value, endpoint }: FileUploadProps) => {
         ) : (
           <span
             className={clsx(
-              isCircular && "text-[9px] text-center leading-tight px-1"
+              isCircular && "text-[9px] text-center leading-tight px-1",
             )}
           >
             {isCircular ? t.common.uploadBoardImage : t.common.uploadFile}

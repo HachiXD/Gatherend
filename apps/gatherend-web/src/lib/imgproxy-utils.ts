@@ -7,8 +7,7 @@
  * instead of signature for frontend usage (simpler and secure enough).
  */
 
-const IMGPROXY_URL =
-  process.env.NEXT_PUBLIC_IMGPROXY_URL || "";
+const IMGPROXY_URL = process.env.NEXT_PUBLIC_IMGPROXY_URL || "";
 const STORAGE_DOMAIN = process.env.NEXT_PUBLIC_STORAGE_DOMAIN || "";
 
 export function isStorageUrl(url: string): boolean {
