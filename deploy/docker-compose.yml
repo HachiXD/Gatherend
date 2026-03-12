@@ -197,8 +197,11 @@ services:
       - "9000"
       - "9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?required}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?required}
+      # NOTE: These are only required when the `minio` profile is enabled.
+      # Using `:-` defaults prevents `docker compose` from failing during env interpolation
+      # when MinIO is not selected.
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-}
     volumes:
       - miniodata:/data
     networks:
