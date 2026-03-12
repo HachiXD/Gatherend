@@ -22,9 +22,9 @@ apps:
         listen: [":443"]
         routes:
           - match:
-            - tls:
-                sni:
-                  - "${LIVEKIT_TURN_DOMAIN}"
+              - tls:
+                  sni:
+                    - "${LIVEKIT_TURN_DOMAIN}"
             handle:
               - handler: tls
               - handler: proxy
