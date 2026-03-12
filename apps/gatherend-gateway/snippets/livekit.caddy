@@ -6,12 +6,12 @@
         :443 {
             @livekit tls sni {$LIVEKIT_DOMAIN}
             route @livekit {
-                proxy localhost:7880
+                proxy livekit:7880
             }
 
             @turn tls sni {$LIVEKIT_TURN_DOMAIN}
             route @turn {
-                proxy localhost:5349
+                proxy livekit:5349
             }
         }
     }
