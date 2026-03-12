@@ -16,7 +16,7 @@ export async function askDomain(): Promise<DomainResult> {
     console.log("");
     console.log(
       chalk.yellow(
-        "  Running without a domain. HTTPS will be disabled and URLs will use http://localhost.",
+        "  ⚠ Running without a domain. HTTPS will be disabled and URLs will use http://localhost.",
       ),
     );
     console.log(
