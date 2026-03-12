@@ -59,9 +59,30 @@ export interface WizardConfig {
   googleClientSecret?: string;
 }
 
-export const ALL_MODULES: { value: Module; name: string; description: string }[] = [
-  { value: "images", name: "Image Processing", description: "imgproxy + dicebear (avatars, image optimization)" },
-  { value: "moderation", name: "Content Moderation", description: "NudeNet (~4GB RAM, detects explicit content)" },
-  { value: "minio", name: "MinIO Storage", description: "Self-hosted S3-compatible storage (replaces R2/S3)" },
-  { value: "livekit", name: "LiveKit Voice/Video", description: "Voice channels and video rooms" },
+export const ALL_MODULES: {
+  value: Module;
+  name: string;
+  description: string;
+}[] = [
+  {
+    value: "images",
+    name: "Image Processing",
+    description: "imgproxy + dicebear (avatars, image optimization)",
+  },
+  {
+    value: "moderation",
+    name: "Content Moderation",
+    description:
+      "NudeNet (~1GB of disk space, detects explicit sexual content)",
+  },
+  {
+    value: "minio",
+    name: "MinIO Storage",
+    description: "Self-hosted S3-compatible storage (replaces R2/S3)",
+  },
+  {
+    value: "livekit",
+    name: "LiveKit Voice/Video",
+    description: "Voice channels and video rooms",
+  },
 ];
