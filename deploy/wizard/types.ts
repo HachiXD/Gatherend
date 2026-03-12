@@ -4,6 +4,7 @@ export interface ServerConfig {
   id: number;
   isLocal: boolean;
   ip?: string;
+  deployMode?: "auto" | "manual";
   sshUser?: string;
   sshPort?: number;
   sshKeyPath?: string;
