@@ -18,6 +18,8 @@ services:
       timeout: 3s
       retries: 5
       start_period: 30s
+    networks:
+      - internal
 
   redis:
     image: redis:7-alpine
@@ -31,6 +33,8 @@ services:
       timeout: 3s
       retries: 5
       start_period: 10s
+    networks:
+      - internal
 
   express:
     build:
@@ -70,6 +74,8 @@ services:
       RAILWAY_PRIVATE_URL: http://web:3000
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:?required}
       MEDIA_ALLOWED_HOSTNAMES: ${MEDIA_ALLOWED_HOSTNAMES:-}
+    networks:
+      - internal
 
   # prisma migrate deploy runs before the server starts (check CMD in apps/gatherend-web/Dockerfile)
   web:
@@ -120,6 +126,8 @@ services:
       SITE_URL: ${SITE_URL:-}
       SOCKET_SERVER_URL: http://express:3001
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET}
+    networks:
+      - internal
 
   imgproxy:
     image: ghcr.io/imgproxy/imgproxy:latest
@@ -146,8 +154,8 @@ services:
     expose:
       - "3000"
     tmpfs:
-      - '/run'
-      - '/tmp'
+      - "/run"
+      - "/tmp"
     environment:
       WEBP_SIZE_MAX: "256"
       PNG_SIZE_MAX: "256"
@@ -168,7 +176,13 @@ services:
     networks:
       - internal
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/')"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:5000/')",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -233,6 +247,7 @@ services:
         condition: service_started
     ports:
       - "80:80"
+      - "443:443"
     environment:
       PORT: "80"
       CF_ORIGIN_SECRET: ${CF_ORIGIN_SECRET:?required}
@@ -242,9 +257,24 @@ services:
       AVATARS_DOMAIN: ${AVATARS_DOMAIN:-}
       MODERATION_DOMAIN: ${MODERATION_DOMAIN:-}
       APP_DOMAIN: ${APP_DOMAIN:-}
+      MINIO_DOMAIN: ${MINIO_DOMAIN:-}
+      LIVEKIT_DOMAIN: ${LIVEKIT_DOMAIN:-}
+      LIVEKIT_TURN_DOMAIN: ${LIVEKIT_TURN_DOMAIN:-}
+      NUDENET_API_KEY: ${NUDENET_API_KEY:-}
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - internal
 
 volumes:
   pgdata:
   redisdata:
   miniodata:
   livekitredis:
+  caddy_data:
+  caddy_config:
+
+networks:
+  internal:
+    driver: bridge
