@@ -59,6 +59,6 @@ export function generateSecrets(
       existingSecrets?.minioRootPassword || generateSecret(24);
   }
 
-  console.log(chalk.green("  OK: Secrets generated"));
+  console.log(chalk.green("  ✔ Secrets generated"));
   return secrets;
 }
