@@ -22,18 +22,30 @@ export function showDnsRecords(config: WizardConfig): void {
   const records: DnsRecord[] = [];
   const mainServer = config.servers[0];
 
-  // Main server IP: try to detect it
+  // Main server IP: try to detect it (prefer IPv4)
   let mainIp = "<THIS_SERVER_IP>";
+  let mainIpType: "A" | "AAAA" = "A";
   try {
-    const cmd = process.platform === "win32" ? "curl.exe -s ifconfig.me" : "curl -s ifconfig.me";
-    mainIp = execSync(cmd, { timeout: 5000 })
-      .toString()
-      .trim();
-  } catch {}
+    const cmd4 =
+      process.platform === "win32"
+        ? "curl.exe -4 -s ifconfig.me"
+        : "curl -4 -s ifconfig.me";
+    mainIp = execSync(cmd4, { timeout: 5000 }).toString().trim();
+    mainIpType = "A";
+  } catch {
+    try {
+      const cmd6 =
+        process.platform === "win32"
+          ? "curl.exe -6 -s ifconfig.me"
+          : "curl -6 -s ifconfig.me";
+      mainIp = execSync(cmd6, { timeout: 5000 }).toString().trim();
+      mainIpType = mainIp.includes(":") ? "AAAA" : "A";
+    } catch {}
+  }
 
   // Core: main domain → main server
   records.push({
-    type: "A",
+    type: mainIpType,
     name: d,
     value: mainIp,
     note: "Main app",
@@ -42,16 +54,17 @@ export function showDnsRecords(config: WizardConfig): void {
   // For each module, figure out which server it's on and add DNS records
   for (const server of config.servers) {
     const ip = server.isLocal ? mainIp : server.ip!;
+    const type: "A" | "AAAA" = ip.includes(":") ? "AAAA" : "A";
 
     if (server.modules.includes("images")) {
       records.push({
-        type: "A",
+        type,
         name: `img.${d}`,
         value: ip,
         note: "imgproxy (image processing)",
       });
       records.push({
-        type: "A",
+        type,
         name: `avatars.${d}`,
         value: ip,
         note: "Dicebear (avatar generation)",
@@ -60,7 +73,7 @@ export function showDnsRecords(config: WizardConfig): void {
 
     if (server.modules.includes("moderation")) {
       records.push({
-        type: "A",
+        type,
         name: `moderation.${d}`,
         value: ip,
         note: "NudeNet (content moderation)",
@@ -69,7 +82,7 @@ export function showDnsRecords(config: WizardConfig): void {
 
     if (server.modules.includes("minio")) {
       records.push({
-        type: "A",
+        type,
         name: `s3.${d}`,
         value: ip,
         note: "MinIO (S3 storage)",
@@ -78,13 +91,13 @@ export function showDnsRecords(config: WizardConfig): void {
 
     if (server.modules.includes("livekit")) {
       records.push({
-        type: "A",
+        type,
         name: `media.${d}`,
         value: ip,
         note: "LiveKit — DNS-only (grey cloud), never proxied",
       });
       records.push({
-        type: "A",
+        type,
         name: `turn.${d}`,
         value: ip,
         note: "TURN relay — DNS-only (grey cloud), never proxied",

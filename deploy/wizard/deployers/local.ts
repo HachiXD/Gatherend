@@ -39,7 +39,10 @@ export async function deployLocal(config: WizardConfig): Promise<void> {
     // Get server's public IP for LiveKit
     let serverIp = "0.0.0.0";
     try {
-      const cmd = process.platform === "win32" ? "curl.exe -s ifconfig.me" : "curl -s ifconfig.me";
+      const cmd =
+        process.platform === "win32"
+          ? "curl.exe -4 -s ifconfig.me"
+          : "curl -4 -s ifconfig.me";
       serverIp = execSync(cmd, {
         timeout: 5000,
       })

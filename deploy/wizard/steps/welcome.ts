@@ -54,7 +54,8 @@ export async function welcome(): Promise<"fresh" | "existing"> {
   console.log(chalk.green("  ✔ Docker and Docker Compose detected"));
 
   // Check for existing installation
-  const envPath = resolve(import.meta.dirname, "..", ".env");
+  // This file lives in `deploy/wizard/steps`, but the generated `.env` is written to `deploy/.env`.
+  const envPath = resolve(import.meta.dirname, "..", "..", ".env");
   if (existsSync(envPath)) {
     console.log(
       chalk.yellow("  ⚠ Existing installation detected (.env found)"),

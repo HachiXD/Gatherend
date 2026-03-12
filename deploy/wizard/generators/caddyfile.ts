@@ -184,7 +184,6 @@ function generateMainL4LivekitCaddyfile(server: ServerConfig): string {
     `}`,
     ``,
     `{$APP_DOMAIN}:8443 {`,
-    `    tls`,
     `    route {`,
     `        handle_path /api/r2/* {`,
     `            reverse_proxy {$EXPRESS_UPSTREAM}`,
@@ -198,11 +197,9 @@ function generateMainL4LivekitCaddyfile(server: ServerConfig): string {
     ``,
     `# Ensure certs exist for the LiveKit domains used by layer4 TLS termination.`,
     `{$LIVEKIT_DOMAIN}:8443 {`,
-    `    tls`,
     `    respond "Not found" 404`,
     `}`,
     `{$LIVEKIT_TURN_DOMAIN}:8443 {`,
-    `    tls`,
     `    respond "Not found" 404`,
     `}`,
   ];
@@ -211,12 +208,10 @@ function generateMainL4LivekitCaddyfile(server: ServerConfig): string {
     lines.push(
       ``,
       `{$IMAGES_DOMAIN}:8443 {`,
-      `    tls`,
       `    reverse_proxy imgproxy:8080`,
       `}`,
       ``,
       `{$AVATARS_DOMAIN}:8443 {`,
-      `    tls`,
       `    @bad_referer {`,
       `        not header Referer *{$APP_DOMAIN}*`,
       `    }`,
@@ -239,7 +234,6 @@ function generateMainL4LivekitCaddyfile(server: ServerConfig): string {
     lines.push(
       ``,
       `{$MODERATION_DOMAIN}:8443 {`,
-      `    tls`,
       `    @authorized {`,
       `        header X-API-Key {$NUDENET_API_KEY}`,
       `    }`,
@@ -259,7 +253,6 @@ function generateMainL4LivekitCaddyfile(server: ServerConfig): string {
     lines.push(
       ``,
       `{$MINIO_DOMAIN}:8443 {`,
-      `    tls`,
       `    reverse_proxy minio:9000`,
       `}`
     );
@@ -300,11 +293,9 @@ function generateServicesLivekitOnlyCaddyfile(): string {
     ``,
     `# Ensure certs exist for the LiveKit domains used by layer4 TLS termination.`,
     `{$LIVEKIT_DOMAIN}:8443 {`,
-    `    tls`,
     `    respond "Not found" 404`,
     `}`,
     `{$LIVEKIT_TURN_DOMAIN}:8443 {`,
-    `    tls`,
     `    respond "Not found" 404`,
     `}`,
   ].join("\n");
@@ -359,11 +350,9 @@ function generateServicesMixedLivekitCaddyfile(server: ServerConfig): string {
     ``,
     `# Ensure certs exist for the LiveKit domains used by layer4 TLS termination.`,
     `{$LIVEKIT_DOMAIN}:8443 {`,
-    `    tls`,
     `    respond "Not found" 404`,
     `}`,
     `{$LIVEKIT_TURN_DOMAIN}:8443 {`,
-    `    tls`,
     `    respond "Not found" 404`,
     `}`,
   ];
@@ -372,12 +361,10 @@ function generateServicesMixedLivekitCaddyfile(server: ServerConfig): string {
     lines.push(
       ``,
       `{$IMAGES_DOMAIN}:8443 {`,
-      `    tls`,
       `    reverse_proxy imgproxy:8080`,
       `}`,
       ``,
       `{$AVATARS_DOMAIN}:8443 {`,
-      `    tls`,
       `    @bad_referer {`,
       `        not header Referer *{$APP_DOMAIN}*`,
       `    }`,
@@ -400,7 +387,6 @@ function generateServicesMixedLivekitCaddyfile(server: ServerConfig): string {
     lines.push(
       ``,
       `{$MODERATION_DOMAIN}:8443 {`,
-      `    tls`,
       `    @authorized {`,
       `        header X-API-Key {$NUDENET_API_KEY}`,
       `    }`,
@@ -420,7 +406,6 @@ function generateServicesMixedLivekitCaddyfile(server: ServerConfig): string {
     lines.push(
       ``,
       `{$MINIO_DOMAIN}:8443 {`,
-      `    tls`,
       `    reverse_proxy minio:9000`,
       `}`
     );

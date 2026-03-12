@@ -9,9 +9,6 @@ rtc:
   use_ice_lite: true
   enable_loopback_candidate: false
   node_ip: "${LIVEKIT_SERVER_IP}"
-audio:
-  active_speaker_threshold: 0.02
-  active_speaker_off_delay: 100
 redis:
   address: livekit-redis:6379
   username: ""
