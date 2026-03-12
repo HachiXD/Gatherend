@@ -54,6 +54,7 @@ export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET,
   trustedOrigins,
   emailVerification: {
+    sendOnSignIn: true,
     sendVerificationEmail: async ({ user, url }) => {
       await sendEmail({
         to: user.email,

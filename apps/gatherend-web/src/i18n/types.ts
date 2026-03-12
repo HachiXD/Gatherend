@@ -762,6 +762,8 @@ export type TranslationKeys = {
     noPasswordAccount: string;
     noPasswordAccountDesc: string;
     clickToCreatePassword: string;
+    emailNotVerifiedYet: string;
+    verificationEmailResent: string;
     // Sign Up
     createYourAccount: string;
     joinGatherend: string;

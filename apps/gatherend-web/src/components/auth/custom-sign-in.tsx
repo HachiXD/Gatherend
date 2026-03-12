@@ -13,6 +13,8 @@ import { useRateLimit, RATE_LIMIT_CONFIGS } from "@/hooks/use-rate-limit";
 import { checkUserBanStatus } from "@/lib/check-ban-client";
 import { signIn } from "@/lib/better-auth-client";
 
+type SignInStep = "credentials" | "verification";
+
 function extractErrorMessage(err: unknown, fallback: string): string {
   if (err instanceof Error && err.message) {
     return err.message;
@@ -40,6 +42,7 @@ export const CustomSignIn = () => {
   const { lockoutSecondsRemaining, checkAndRecord: checkRateLimit } =
     useRateLimit(RATE_LIMIT_CONFIGS.auth);
 
+  const [step, setStep] = useState<SignInStep>("credentials");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -84,8 +87,12 @@ export const CustomSignIn = () => {
         rememberMe: true,
       });
 
-      const resultError = (result as { error?: { message?: string } }).error;
+      const resultError = (result as { error?: { message?: string; code?: string; status?: number } }).error;
       if (resultError?.message) {
+        if (resultError.code === "EMAIL_NOT_VERIFIED" || resultError.status === 403) {
+          setStep("verification");
+          return;
+        }
         setEmailError(t.auth.invalidEmailOrPassword);
         setPasswordError(t.auth.invalidEmailOrPassword);
         return;
@@ -141,7 +148,28 @@ export const CustomSignIn = () => {
           <p className="text-sm text-zinc-400 mt-2">{t.auth.signInToContinue}</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {step === "verification" && (
+          <div className="space-y-4 text-center">
+            <p className="text-sm text-zinc-300">{t.auth.emailNotVerifiedYet}</p>
+            <p className="font-medium text-white">{email}</p>
+            <p className="text-xs text-zinc-400">
+              {t.auth.verificationEmailResent}
+            </p>
+
+            <Button
+              type="button"
+              onClick={() => {
+                setStep("credentials");
+                setError("");
+              }}
+              className="w-full cursor-pointer bg-[#368780] hover:bg-[#17968b] text-white"
+            >
+              {t.auth.backToSignIn}
+            </Button>
+          </div>
+        )}
+
+        {step === "credentials" && <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="email" className="text-zinc-300">
               {t.auth.email}
@@ -280,7 +308,7 @@ export const CustomSignIn = () => {
               {t.auth.signUp}
             </Link>
           </p>
-        </form>
+        </form>}
       </div>
     </div>
   );
