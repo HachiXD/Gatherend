@@ -64,6 +64,8 @@ next-env.d.ts
 # Prisma
 **/src/generated/prisma
 **/prisma/migrations
+!prisma/migrations
+!prisma/migrations/**
 
 # Específico del monorepo
 chat-module/.env*
