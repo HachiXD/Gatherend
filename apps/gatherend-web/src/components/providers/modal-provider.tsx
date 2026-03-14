@@ -1,7 +1,7 @@
 "use client";
 
 import { CreateBoardModal } from "@/components/modals/create-board-modal";
-import { useEffect, useState } from "react";
+import { CreateCommunityPostModal } from "@/components/modals/create-community-post-modal";
 import { InviteModal } from "@/components/modals/invite-modal";
 import { CreateChannelModal } from "@/components/modals/create-channel-modal";
 import { EditChannelModal } from "@/components/modals/edit-channel-modal";
@@ -16,11 +16,7 @@ import { ReportProfileModal } from "@/components/modals/report-profile-modal";
 import { ReportCommunityModal } from "@/components/modals/report-community-modal";
 
 export const ModalProvider = () => {
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const isMounted = typeof window !== "undefined";
 
   if (!isMounted) {
     return null;
@@ -29,6 +25,7 @@ export const ModalProvider = () => {
   return (
     <>
       <CreateBoardModal />
+      <CreateCommunityPostModal />
       <InviteModal />
       <CreateChannelModal />
       <EditChannelModal />

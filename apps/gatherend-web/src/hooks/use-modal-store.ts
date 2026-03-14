@@ -3,6 +3,7 @@ import { Category, Channel, ChannelType, Board, Profile } from "@prisma/client";
 
 export type ModalType =
   | "createBoard"
+  | "createCommunityPost"
   | "createCommunity"
   | "invite"
   | "editBoard"
@@ -35,7 +36,7 @@ interface ModalData {
   channelType?: ChannelType;
   category?: Category;
   apiUrl?: string;
-  query?: Record<string, any>;
+  query?: Record<string, unknown>;
   conversationId?: string;
   roomType?: "channel" | "conversation";
   // Report message modal data
@@ -63,6 +64,8 @@ interface ModalData {
   reportCommunityId?: string;
   reportCommunityName?: string;
   reportCommunityImageUrl?: string | null;
+  communityId?: string;
+  communityName?: string;
 }
 
 interface ModalStore {

@@ -49,6 +49,9 @@ model Profile {
   boardBans              BoardBan[]
   categories             Category[]
   channels               Channel[]
+  communityHelperInvitesAccepted CommunityHelperInvite[] @relation("CommunityHelperInviteAcceptedBy")
+  communityHelperInvitesCreated  CommunityHelperInvite[] @relation("CommunityHelperInviteCreatedBy")
+  communityPosts         CommunityPost[]
   createdCommunities     Community[]       @relation("CommunityCreatedBy")
   communityHelpers       CommunityHelper[]
   conversationsInitiated Conversation[]    @relation("ProfileOne")
@@ -114,6 +117,8 @@ model Community {
   rankingScore   Float             @default(0)
   rankedAt       DateTime          @default(now())
   boards         Board[]
+  helperInvites  CommunityHelperInvite[]
+  posts          CommunityPost[]
   createdBy      Profile?          @relation("CommunityCreatedBy", fields: [createdById], references: [id])
   helpers        CommunityHelper[]
 
@@ -130,6 +135,47 @@ model CommunityHelper {
 
   @@unique([communityId, profileId])
   @@index([profileId])
+}
+
+model CommunityHelperInvite {
+  id                  String                      @id @default(uuid())
+  communityId         String
+  createdByProfileId  String
+  acceptedByProfileId String?
+  inviteCode          String                      @unique
+  status              CommunityHelperInviteStatus @default(PENDING)
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime                    @updatedAt
+  expiresAt           DateTime?
+  acceptedAt          DateTime?
+  revokedAt           DateTime?
+  community           Community                   @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  createdBy           Profile                     @relation("CommunityHelperInviteCreatedBy", fields: [createdByProfileId], references: [id], onDelete: Cascade)
+  acceptedBy          Profile?                    @relation("CommunityHelperInviteAcceptedBy", fields: [acceptedByProfileId], references: [id], onDelete: SetNull)
+
+  @@index([communityId, status, createdAt(sort: Desc)])
+  @@index([createdByProfileId, status, createdAt(sort: Desc)])
+  @@index([acceptedByProfileId])
+  @@index([expiresAt])
+}
+
+model CommunityPost {
+  id              String    @id @default(uuid())
+  communityId     String
+  authorProfileId String
+  content         String
+  imageUrl        String?
+  deleted         Boolean   @default(false)
+  pinnedAt        DateTime?
+  lockedAt        DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  community       Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  author          Profile   @relation(fields: [authorProfileId], references: [id], onDelete: Cascade)
+
+  @@index([authorProfileId])
+  @@index([communityId, deleted, pinnedAt(sort: Desc), createdAt(sort: Desc), id(sort: Desc)])
+  @@index([communityId, deleted, createdAt(sort: Desc), id(sort: Desc)])
 }
 
 model Board {
@@ -502,6 +548,7 @@ enum ReportTargetType {
   PROFILE
   BOARD
   COMMUNITY
+  COMMUNITY_POST
 }
 
 enum ReportCategory {
@@ -519,6 +566,13 @@ enum ReportStatus {
   REVIEWING
   ACTION_TAKEN
   DISMISSED
+}
+
+enum CommunityHelperInviteStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
 }
 
 enum SlotMode {
