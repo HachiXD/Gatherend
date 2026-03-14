@@ -215,7 +215,7 @@ const MessageContent = memo(function MessageContent({
     <div
       data-chat-item-block="message-content"
       className={cn(
-        "text-sm text-theme-text-secondary break-words whitespace-pre-wrap",
+        "text-sm text-theme-text-secondary whitespace-pre-wrap [overflow-wrap:anywhere]",
         deleted && "italic text-theme-text-tertiary text-xs mt-1",
         isOptimistic && !isFailed && "text-theme-text-muted italic",
         isFailed && "text-red-400",
@@ -1338,30 +1338,50 @@ const ChatItemOptimizedComponent = ({
                 inlineUsername={
                   !isCompact ? (
                     <>
-                      <UserAvatarMenu
-                        profileId={authorProfile?.id || ""}
-                        profileImageUrl={authorProfile?.imageUrl || ""}
-                        username={authorProfile?.username || ""}
-                        discriminator={authorProfile?.discriminator}
-                        currentProfileId={currentProfile.id}
-                        currentProfile={currentProfile}
-                        memberId={member?.id}
-                        showStatus={false}
-                        usernameColor={authorProfile?.usernameColor}
-                        usernameFormat={authorProfile?.usernameFormat}
-                        hideAvatar
-                      >
+                      <span className="whitespace-nowrap">
+                        <UserAvatarMenu
+                          profileId={authorProfile?.id || ""}
+                          profileImageUrl={authorProfile?.imageUrl || ""}
+                          username={authorProfile?.username || ""}
+                          discriminator={authorProfile?.discriminator}
+                          currentProfileId={currentProfile.id}
+                          currentProfile={currentProfile}
+                          memberId={member?.id}
+                          showStatus={false}
+                          usernameColor={authorProfile?.usernameColor}
+                          usernameFormat={authorProfile?.usernameFormat}
+                          hideAvatar
+                        >
+                          <span
+                            data-chat-item-block="text-username"
+                            className={cn(
+                              "text-sm font-semibold text-white cursor-pointer hover:underline",
+                              getUsernameFormatClasses(
+                                authorProfile?.usernameFormat,
+                              ),
+                              isOptimistic &&
+                                !isFailed &&
+                                "text-theme-text-muted",
+                              isFailed && "text-red-400",
+                              getGradientAnimationClass(
+                                authorProfile?.usernameColor,
+                              ),
+                            )}
+                            style={getUsernameColorStyle(
+                              authorProfile?.usernameColor,
+                              {
+                                isOwnProfile: isOwnMessage,
+                                themeMode:
+                                  (resolvedTheme as "dark" | "light") || "dark",
+                              },
+                            )}
+                          >
+                            {authorProfile?.username}
+                          </span>
+                        </UserAvatarMenu>
                         <span
-                          data-chat-item-block="text-username"
                           className={cn(
-                            "text-sm font-semibold text-white cursor-pointer hover:underline",
-                            getUsernameFormatClasses(
-                              authorProfile?.usernameFormat,
-                            ),
-                            isOptimistic &&
-                              !isFailed &&
-                              "text-theme-text-muted",
-                            isFailed && "text-red-400",
+                            "text-sm font-semibold",
                             getGradientAnimationClass(
                               authorProfile?.usernameColor,
                             ),
@@ -1375,27 +1395,10 @@ const ChatItemOptimizedComponent = ({
                             },
                           )}
                         >
-                          {authorProfile?.username}
+                          :
                         </span>
-                      </UserAvatarMenu>
-                      <span
-                        className={cn(
-                          "text-sm font-semibold mr-1.5",
-                          getGradientAnimationClass(
-                            authorProfile?.usernameColor,
-                          ),
-                        )}
-                        style={getUsernameColorStyle(
-                          authorProfile?.usernameColor,
-                          {
-                            isOwnProfile: isOwnMessage,
-                            themeMode:
-                              (resolvedTheme as "dark" | "light") || "dark",
-                          },
-                        )}
-                      >
-                        :
                       </span>
+                      {"\u00A0"}
                     </>
                   ) : undefined
                 }
