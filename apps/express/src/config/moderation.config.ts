@@ -10,6 +10,7 @@
 
 export type ModerationContext =
   | "board_image"
+  | "community_post_image"
   | "board_description"
   | "profile_avatar"
   | "profile_banner"
@@ -95,6 +96,7 @@ export const REKOGNITION_THRESHOLDS = NUDENET_THRESHOLDS;
 export const CONTEXT_THRESHOLD_MAP: Record<ModerationContext, ThresholdType> = {
   // Público - Strict (goes to Cloudinary)
   board_image: "strict",
+  community_post_image: "strict",
   board_description: "strict",
   profile_avatar: "strict",
   profile_banner: "strict",
@@ -111,6 +113,7 @@ export type StorageBackend = "s3";
 
 export const CONTEXT_STORAGE_MAP: Record<ModerationContext, StorageBackend> = {
   board_image: "s3",
+  community_post_image: "s3",
   board_description: "s3",
   profile_avatar: "s3",
   profile_banner: "s3",
@@ -121,6 +124,7 @@ export const CONTEXT_STORAGE_MAP: Record<ModerationContext, StorageBackend> = {
 
 export const STORAGE_FOLDERS: Record<ModerationContext, string> = {
   board_image: "boards",
+  community_post_image: "community-posts",
   board_description: "boards",
   profile_avatar: "avatars",
   profile_banner: "banners",

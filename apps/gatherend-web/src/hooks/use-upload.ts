@@ -16,6 +16,7 @@ const IS_PRODUCTION = process.env.NODE_ENV === "production";
 // Context types that match the backend
 export type UploadContext =
   | "board_image"
+  | "community_post_image"
   | "profile_avatar"
   | "profile_banner"
   | "message_attachment"
@@ -26,6 +27,7 @@ export type UploadContext =
 const ENDPOINT_TO_CONTEXT: Record<string, UploadContext> = {
   messageFile: "message_attachment",
   boardImage: "board_image",
+  communityPostImage: "community_post_image",
   profileAvatar: "profile_avatar",
   profileBanner: "profile_banner",
   sticker: "sticker",

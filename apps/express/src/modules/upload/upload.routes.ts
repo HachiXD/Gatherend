@@ -83,6 +83,7 @@ interface UploadResponse {
 // Contexts that require moderation (public content)
 const MODERATED_CONTEXTS: ModerationContext[] = [
   "board_image",
+  "community_post_image",
   "board_description",
   "profile_avatar",
   "profile_banner",

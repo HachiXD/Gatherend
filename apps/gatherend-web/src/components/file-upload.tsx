@@ -10,7 +10,7 @@ import { useTranslation } from "@/i18n";
 interface FileUploadProps {
   onChange: (url?: string) => void;
   value: string;
-  endpoint: "messageFile" | "boardImage";
+  endpoint: "messageFile" | "boardImage" | "communityPostImage";
 }
 
 // Map legacy endpoint names to new context
@@ -19,6 +19,7 @@ const CDN_DOMAIN = process.env.NEXT_PUBLIC_STORAGE_DOMAIN || "";
 const ENDPOINT_TO_CONTEXT: Record<string, UploadContext> = {
   messageFile: "message_attachment",
   boardImage: "board_image",
+  communityPostImage: "community_post_image",
 };
 
 export const FileUpload = ({ onChange, value, endpoint }: FileUploadProps) => {
@@ -94,6 +95,7 @@ export const FileUpload = ({ onChange, value, endpoint }: FileUploadProps) => {
     !!fileUrl &&
     (fileType?.startsWith("image/") ||
       endpoint === "boardImage" ||
+      endpoint === "communityPostImage" ||
       looksLikeImageUrl(fileUrl));
   const isPdf = fileType === "application/pdf";
 
@@ -205,7 +207,11 @@ export const FileUpload = ({ onChange, value, endpoint }: FileUploadProps) => {
         type="file"
         className="hidden"
         onChange={handleFileSelect}
-        accept={endpoint === "boardImage" ? "image/*" : "image/*,.pdf"}
+        accept={
+          endpoint === "messageFile"
+            ? "image/*,.pdf"
+            : "image/*"
+        }
       />
 
       <button
