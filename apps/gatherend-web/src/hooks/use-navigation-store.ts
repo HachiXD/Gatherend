@@ -17,29 +17,20 @@ type SwitchBoardOptions = {
 };
 
 interface NavigationState {
-
-  // Funciones de navegación registradas por BoardSwitchProvider
+  // Función de navegación registrada por BoardSwitchProvider
   switchBoard: ((
     boardId: string,
     channelId?: string,
     options?: SwitchBoardOptions,
   ) => void) | null;
-  switchChannel: ((channelId: string) => void) | null;
-  switchConversation: ((conversationId: string) => void) | null;
-  switchToDiscovery: (() => void) | null;
-  switchToCommunityBoards: ((communityId: string) => void) | null;
 
-  // Registrar funciones (llamado por BoardSwitchProvider)
+  // Registrar función (llamado por BoardSwitchProvider)
   registerNavigation: (fns: {
     switchBoard: (
       boardId: string,
       channelId?: string,
       options?: SwitchBoardOptions,
     ) => void;
-    switchChannel: (channelId: string) => void;
-    switchConversation: (conversationId: string) => void;
-    switchToDiscovery: () => void;
-    switchToCommunityBoards: (communityId: string) => void;
   }) => void;
 
   // Limpiar funciones (llamado cuando BoardSwitchProvider se desmonta)
@@ -51,37 +42,19 @@ interface NavigationState {
 
 export const useNavigationStore = create<NavigationState>((set, get) => ({
   switchBoard: null,
-  switchChannel: null,
-  switchConversation: null,
-  switchToDiscovery: null,
-  switchToCommunityBoards: null,
 
   registerNavigation: (fns) =>
     set({
       switchBoard: fns.switchBoard,
-      switchChannel: fns.switchChannel,
-      switchConversation: fns.switchConversation,
-      switchToDiscovery: fns.switchToDiscovery,
-      switchToCommunityBoards: fns.switchToCommunityBoards,
     }),
 
   unregisterNavigation: () =>
     set({
       switchBoard: null,
-      switchChannel: null,
-      switchConversation: null,
-      switchToDiscovery: null,
-      switchToCommunityBoards: null,
     }),
 
   isNavigationReady: () => {
     const state = get();
-    return (
-      state.switchBoard !== null &&
-      state.switchChannel !== null &&
-      state.switchConversation !== null &&
-      state.switchToDiscovery !== null &&
-      state.switchToCommunityBoards !== null
-    );
+    return state.switchBoard !== null;
   },
 }));
