@@ -3,12 +3,56 @@ import { db } from "../../lib/db.js";
 import { logger } from "../../lib/logger.js";
 import { verifyMemberInBoardCached } from "../../lib/cache.js";
 import { findConversationForProfile } from "../direct-messages/direct-messages.service.js";
+import { getStoragePublicUrl } from "../../lib/s3.config.js";
 import { uploadedAssetSelect } from "../../lib/uploaded-assets.js";
 
 const router = express.Router();
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+type MinimalPublicAsset = {
+  id: string;
+  key: string;
+  width: number | null;
+  height: number | null;
+};
+
+function serializePublicAsset(
+  asset: MinimalPublicAsset | null,
+) {
+  if (!asset) {
+    return null;
+  }
+
+  return {
+    id: asset.id,
+    width: asset.width,
+    height: asset.height,
+    url: getStoragePublicUrl(asset.key),
+  };
+}
+
+function serializeReaction(reaction: {
+  id: string;
+  emoji: string;
+  profileId: string;
+  messageId: string | null;
+  directMessageId: string | null;
+  profile: {
+    id: string;
+    username: string;
+    avatarAsset: MinimalPublicAsset | null;
+  };
+}) {
+  return {
+    ...reaction,
+    profile: {
+      ...reaction.profile,
+      avatarAsset: serializePublicAsset(reaction.profile.avatarAsset),
+    },
+  };
+}
 
 async function resolveReactionScope(input: {
   profileId: string;
@@ -149,6 +193,8 @@ router.post("/", async (req, res) => {
       },
     });
 
+    const serializedReaction = serializeReaction(reaction);
+
     // Emit socket event
     if (req.io) {
       const roomKey =
@@ -164,12 +210,12 @@ router.post("/", async (req, res) => {
       req.io.to(roomKey).emit(reactionRoomKey, {
         messageId:
           scope.kind === "message" ? scope.messageId : scope.directMessageId,
-        reaction,
+        reaction: serializedReaction,
         action: "add",
       });
     }
 
-    res.json(reaction);
+    res.json(serializedReaction);
   } catch (error) {
     logger.error("[REACTIONS_POST]", error);
     res.status(500).json({ error: "Internal Error" });

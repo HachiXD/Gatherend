@@ -16,7 +16,7 @@ import {
   looksLikeSvg,
   sniffFileType,
 } from "../../lib/file-sniff.js";
-import { serializeUploadedAsset } from "../../lib/uploaded-assets.js";
+import { getStoragePublicUrl } from "../../lib/s3.config.js";
 
 const router = express.Router();
 
@@ -27,6 +27,26 @@ const MAX_IMAGE_DIMENSION = 8192;
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+type MinimalPublicAsset = {
+  id: string;
+  key: string;
+  width: number | null;
+  height: number | null;
+};
+
+function serializePublicAsset(asset: MinimalPublicAsset | null) {
+  if (!asset) {
+    return null;
+  }
+
+  return {
+    id: asset.id,
+    width: asset.width,
+    height: asset.height,
+    url: getStoragePublicUrl(asset.key),
+  };
+}
+
 function serializeStickerResponse(sticker: {
   id: string;
   name: string;
@@ -35,12 +55,7 @@ function serializeStickerResponse(sticker: {
   uploaderId: string | null;
   createdAt: Date;
   assetId: string;
-  asset: {
-    id: string;
-    key: string;
-    width: number | null;
-    height: number | null;
-  } | null;
+  asset: MinimalPublicAsset | null;
 }) {
   return {
     id: sticker.id,
@@ -50,7 +65,7 @@ function serializeStickerResponse(sticker: {
     uploaderId: sticker.uploaderId,
     createdAt: sticker.createdAt,
     assetId: sticker.assetId,
-    asset: serializeUploadedAsset(sticker.asset),
+    asset: serializePublicAsset(sticker.asset),
   };
 }
 
