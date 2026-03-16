@@ -66,7 +66,7 @@ interface MembersTabProps {
     members: (Member & {
       profile: Pick<
         Profile,
-        "id" | "username" | "discriminator" | "email" | "userId"
+        "id" | "username" | "discriminator"
       > & {
         avatarAsset: ClientUploadedAsset | null;
         badgeSticker: ClientStickerAssetRef | null;
@@ -189,9 +189,6 @@ export const MembersTab = ({ board, currentProfileId }: MembersTabProps) => {
                     {member.profile.username}
                     {roleIconMap[member.role]}
                   </div>
-                  <p className="text-xs text-theme-text-tertiary">
-                    {member.profile.email}
-                  </p>
                 </div>
                 {showActions && (
                   <div className="ml-auto">

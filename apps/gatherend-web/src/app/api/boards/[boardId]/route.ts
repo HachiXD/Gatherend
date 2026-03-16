@@ -63,8 +63,6 @@ export async function GET(
                 id: true,
                 username: true,
                 discriminator: true,
-                email: true,
-                userId: true,
                 usernameColor: true,
                 profileTags: true,
                 badge: true,
@@ -94,8 +92,6 @@ export async function GET(
                     id: true,
                     username: true,
                     discriminator: true,
-                    email: true,
-                    userId: true,
                     usernameColor: true,
                     profileTags: true,
                     badge: true,
@@ -127,8 +123,8 @@ export async function GET(
 
     const serializeProfile = <
       T extends {
-        avatarAsset: typeof board.members[number]["profile"]["avatarAsset"];
-        badgeSticker: typeof board.members[number]["profile"]["badgeSticker"];
+        avatarAsset: (typeof board.members)[number]["profile"]["avatarAsset"];
+        badgeSticker: (typeof board.members)[number]["profile"]["badgeSticker"];
       },
     >(
       targetProfile: T,
@@ -294,7 +290,10 @@ export async function PATCH(
     if (imageAssetId !== undefined) {
       if (imageAssetId === null || imageAssetId === "") {
         resolvedImageAssetId = null;
-      } else if (typeof imageAssetId !== "string" || !UUID_REGEX.test(imageAssetId)) {
+      } else if (
+        typeof imageAssetId !== "string" ||
+        !UUID_REGEX.test(imageAssetId)
+      ) {
         return NextResponse.json(
           { error: "Image asset ID must be a valid UUID" },
           { status: 400 },

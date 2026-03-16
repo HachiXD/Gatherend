@@ -1,46 +1,121 @@
+import { MessageType } from "@prisma/client";
 import { db } from "../../lib/db.js";
 import { logger } from "../../lib/logger.js";
+import {
+  profileSelect,
+  serializeProfile,
+  serializeSticker,
+  serializeAttachmentAsset,
+  stickerSelect,
+  uploadedAssetSelect,
+} from "../../lib/uploaded-assets.js";
 
-// Reusable profile select fields for customization
-const profileSelect = {
+export const messageSelectFields = {
   id: true,
-  username: true,
-  imageUrl: true,
-  usernameColor: true,
-  profileTags: true,
-  badge: true,
-  badgeStickerUrl: true,
-  usernameFormat: true,
-  // longDescription omitido - no se necesita en lista de mensajes
-};
+  content: true,
+  type: true,
+  attachmentAssetId: true,
+  channelId: true,
+  deleted: true,
+  pinned: true,
+  pinnedAt: true,
+  createdAt: true,
+  updatedAt: true,
+  attachmentAsset: {
+    select: uploadedAssetSelect,
+  },
+  member: {
+    select: {
+      id: true,
+      role: true,
+      profile: {
+        select: profileSelect,
+      },
+    },
+  },
+  sticker: {
+    select: stickerSelect,
+  },
+  reactions: {
+    select: {
+      id: true,
+      emoji: true,
+      profileId: true,
+      profile: {
+        select: profileSelect,
+      },
+    },
+  },
+  replyTo: {
+    select: {
+      id: true,
+      content: true,
+      attachmentAssetId: true,
+      attachmentAsset: {
+        select: uploadedAssetSelect,
+      },
+      member: {
+        select: {
+          id: true,
+          profile: {
+            select: profileSelect,
+          },
+        },
+      },
+      sticker: {
+        select: stickerSelect,
+      },
+    },
+  },
+} as const;
 
-/**
- * Extrae los username/discriminator de las menciones de un contenido
- * Formato de mención: @[username]/[discriminator]
- */
+export function serializeMessageRecord(message: any) {
+  return {
+    ...message,
+    attachmentAsset: serializeAttachmentAsset(message.attachmentAsset),
+    member: {
+      ...message.member,
+      profile: serializeProfile(message.member.profile),
+    },
+    sticker: serializeSticker(message.sticker),
+    reactions: message.reactions?.map((reaction: any) => ({
+      ...reaction,
+      profile: serializeProfile(reaction.profile),
+    })),
+    replyTo: message.replyTo
+      ? {
+          ...message.replyTo,
+          attachmentAsset: serializeAttachmentAsset(
+            message.replyTo.attachmentAsset,
+          ),
+          member: {
+            ...message.replyTo.member,
+            profile: serializeProfile(message.replyTo.member.profile),
+          },
+          sticker: serializeSticker(message.replyTo.sticker),
+        }
+      : null,
+  };
+}
+
 export function extractMentionIdentifiers(content: string): string[] {
   const mentionRegex = /@\[([^\]]+)\]\/\[([^\]]+)\]/g;
   const identifiers: string[] = [];
   let match;
 
   while ((match = mentionRegex.exec(content)) !== null) {
-    identifiers.push(`${match[1]}/${match[2]}`); // username/discriminator
+    identifiers.push(`${match[1]}/${match[2]}`);
   }
 
-  return [...new Set(identifiers)]; // Remove duplicates
+  return [...new Set(identifiers)];
 }
 
-/**
- * Resuelve los username/discriminator a profileIds
- * Optimizado: Usa una sola query batch en lugar de N queries individuales
- */
 export async function resolveProfileIds(
   identifiers: string[],
 ): Promise<string[]> {
   if (identifiers.length === 0) return [];
 
   try {
-    // Parsear todos los identificadores y filtrar los inválidos
     const conditions = identifiers
       .map((identifier) => {
         const [username, discriminator] = identifier.split("/");
@@ -54,7 +129,6 @@ export async function resolveProfileIds(
 
     if (conditions.length === 0) return [];
 
-    // Una sola query para todos los perfiles
     const profiles = await db.profile.findMany({
       where: {
         OR: conditions,
@@ -65,13 +139,10 @@ export async function resolveProfileIds(
     return profiles.map((p) => p.id);
   } catch (error) {
     logger.error("[resolveProfileIds] Database error:", error);
-    return []; // Return empty array on error - mentions are not critical
+    return [];
   }
 }
 
-/**
- * Crea las menciones en la base de datos para un mensaje
- */
 export async function createMentions(messageId: string, profileIds: string[]) {
   if (profileIds.length === 0) return [];
 
@@ -87,7 +158,7 @@ export async function createMentions(messageId: string, profileIds: string[]) {
     return mentions;
   } catch (error) {
     logger.error("[createMentions] Database error:", error);
-    return { count: 0 }; // Return empty result on error - mentions are not critical
+    return { count: 0 };
   }
 }
 
@@ -107,393 +178,107 @@ export async function findChannel(boardId: string, channelId: string) {
   });
 }
 
-export function createMessage({
+export async function createMessage({
   content,
-  fileUrl,
-  fileKey,
-  fileName,
-  fileType,
-  fileSize,
-  fileWidth,
-  fileHeight,
+  attachmentAssetId,
   channelId,
   memberId,
   stickerId,
   type,
   replyToId,
+}: {
+  content: string;
+  attachmentAssetId: string | null;
+  channelId: string;
+  memberId: string;
+  stickerId?: string | null;
+  type: MessageType;
+  replyToId?: string | null;
 }) {
-  return db.message.create({
+  const message = await db.message.create({
     data: {
       content,
-      fileUrl,
-      fileKey,
-      fileName,
-      fileType,
-      fileSize,
-      fileWidth,
-      fileHeight,
+      attachmentAssetId,
       channelId,
       memberId,
       stickerId,
       type,
       replyToId,
     },
-    select: {
-      id: true,
-      content: true,
-      type: true,
-      fileUrl: true,
-      fileKey: true,
-      fileName: true,
-      fileType: true,
-      fileSize: true,
-      fileWidth: true,
-      fileHeight: true,
-      channelId: true,
-      deleted: true,
-      createdAt: true,
-      updatedAt: true,
-      member: {
-        select: {
-          id: true,
-          role: true,
-          profile: {
-            select: profileSelect,
-          },
-        },
-      },
-      sticker: {
-        select: {
-          id: true,
-          name: true,
-          imageUrl: true,
-          category: true,
-        },
-      },
-      replyTo: {
-        select: {
-          id: true,
-          content: true,
-          fileUrl: true,
-          fileKey: true,
-          fileName: true,
-          fileWidth: true,
-          fileHeight: true,
-          member: {
-            select: {
-              id: true,
-              profile: {
-                select: profileSelect,
-              },
-            },
-          },
-          sticker: {
-            select: {
-              id: true,
-              imageUrl: true,
-              name: true,
-            },
-          },
-        },
-      },
-    },
+    select: messageSelectFields,
   });
+
+  return serializeMessageRecord(message);
 }
 
-/**
- * Obtiene mensajes paginados con cursor-based pagination optimizado.
- *
- * Estrategia: Usamos cursor por ID con ordenación por createdAt DESC.
- * El índice compuesto @@index([channelId, createdAt(sort: Desc)]) permite
- * búsquedas eficientes incluso con millones de mensajes.
- *
- * Para escalar a miles de mensajes:
- * - PAGE_SIZE de 40 es óptimo para chat
- * - El cursor evita el problema de offset pagination (O(n) → O(1))
- * - El índice compuesto hace que la query sea O(log n)
- *
- * NO usar cache para mensajes de chat - son datos en tiempo real.
- * Los mensajes nuevos se sincronizan via WebSocket.
- *
- * @param channelId - ID del canal
- * @param cursor - ID del mensaje como punto de referencia
- * @param direction - 'before' para mensajes más antiguos, 'after' para más nuevos
- */
-export function getPaginatedMessages(
+export async function getPaginatedMessages(
   channelId: string,
   cursor?: string,
   direction: "before" | "after" = "before",
 ) {
   const PAGE_SIZE = 40;
 
-  const selectFields = {
-    id: true,
-    content: true,
-    type: true,
-    fileUrl: true,
-    fileKey: true,
-    fileName: true,
-    fileType: true,
-    fileSize: true,
-    fileWidth: true,
-    fileHeight: true,
-    channelId: true,
-    deleted: true,
-    pinned: true,
-    pinnedAt: true,
-    createdAt: true,
-    updatedAt: true,
-    member: {
-      select: {
-        id: true,
-        role: true,
-        profile: {
-          select: profileSelect,
-        },
-      },
-    },
-    sticker: {
-      select: {
-        id: true,
-        name: true,
-        imageUrl: true,
-        category: true,
-      },
-    },
-    reactions: {
-      select: {
-        id: true,
-        emoji: true,
-        profileId: true,
-        profile: {
-          select: profileSelect,
-        },
-      },
-    },
-    replyTo: {
-      select: {
-        id: true,
-        content: true,
-        fileUrl: true,
-        fileKey: true,
-        fileName: true,
-        fileWidth: true,
-        fileHeight: true,
-        member: {
-          select: {
-            id: true,
-            profile: {
-              select: profileSelect,
-            },
-          },
-        },
-        sticker: {
-          select: {
-            id: true,
-            imageUrl: true,
-            name: true,
-          },
-        },
-      },
-    },
-  };
-
-  // NO usar cache para mensajes de chat - los mensajes son datos en tiempo real
-  // El cache de Prisma Accelerate causaba que los mensajes nuevos no aparecieran
-  // hasta que el cache expiraba (30-60 segundos), lo cual es inaceptable para chat.
-  // Los mensajes nuevos mientras el usuario está en el chat se manejan via WebSocket.
-
   if (direction === "after" && cursor) {
-    // Fetch messages NEWER than cursor (for scrolling DOWN to recent messages)
-    return db.message
+    const messages = await db.message
       .findMany({
         take: PAGE_SIZE,
-        skip: 1, // Skip the cursor itself
+        skip: 1,
         cursor: { id: cursor },
         where: { channelId },
-        select: selectFields,
-        orderBy: { createdAt: "asc" }, // Get newer messages
+        select: messageSelectFields,
+        orderBy: { createdAt: "asc" },
       })
-      .then((messages) => messages.reverse()); // Reverse to maintain newest-first order
+      .then((items) => items.reverse());
+
+    return messages.map(serializeMessageRecord);
   }
 
-  if (cursor) {
-    return db.message.findMany({
-      take: PAGE_SIZE,
-      skip: 1,
-      cursor: { id: cursor },
-      where: { channelId },
-      select: selectFields,
-      orderBy: { createdAt: "desc" },
-    });
-  }
-  return db.message.findMany({
+  const messages = await db.message.findMany({
     take: PAGE_SIZE,
+    skip: cursor ? 1 : 0,
+    cursor: cursor ? { id: cursor } : undefined,
     where: { channelId },
-    select: selectFields,
+    select: messageSelectFields,
     orderBy: { createdAt: "desc" },
   });
+
+  return messages.map(serializeMessageRecord);
 }
 
-export function getMessage(messageId: string, channelId: string) {
-  return db.message.findFirst({
+export async function getMessage(messageId: string, channelId: string) {
+  const message = await db.message.findFirst({
     where: {
       id: messageId,
       channelId,
     },
-    select: {
-      id: true,
-      content: true,
-      type: true,
-      fileUrl: true,
-      fileKey: true,
-      fileName: true,
-      fileType: true,
-      fileSize: true,
-      fileWidth: true,
-      fileHeight: true,
-      channelId: true,
-      deleted: true,
-      createdAt: true,
-      updatedAt: true,
-      member: {
-        select: {
-          id: true,
-          role: true,
-          profile: {
-            select: profileSelect,
-          },
-        },
-      },
-      sticker: {
-        select: {
-          id: true,
-          name: true,
-          imageUrl: true,
-          category: true,
-        },
-      },
-      reactions: {
-        select: {
-          id: true,
-          emoji: true,
-          profileId: true,
-          profile: {
-            select: profileSelect,
-          },
-        },
-      },
-    },
+    select: messageSelectFields,
   });
+
+  return message ? serializeMessageRecord(message) : null;
 }
 
-export function updateMessageContent(messageId: string, content: string) {
-  return db.message.update({
+export async function updateMessageContent(messageId: string, content: string) {
+  const message = await db.message.update({
     where: { id: messageId },
     data: { content },
-    select: {
-      id: true,
-      content: true,
-      type: true,
-      fileUrl: true,
-      fileKey: true,
-      fileName: true,
-      fileType: true,
-      fileSize: true,
-      fileWidth: true,
-      fileHeight: true,
-      channelId: true,
-      deleted: true,
-      createdAt: true,
-      updatedAt: true,
-      member: {
-        select: {
-          id: true,
-          role: true,
-          profile: {
-            select: profileSelect,
-          },
-        },
-      },
-      sticker: {
-        select: {
-          id: true,
-          name: true,
-          imageUrl: true,
-          category: true,
-        },
-      },
-      reactions: {
-        select: {
-          id: true,
-          emoji: true,
-          profileId: true,
-          profile: {
-            select: profileSelect,
-          },
-        },
-      },
-    },
+    select: messageSelectFields,
   });
+
+  return serializeMessageRecord(message);
 }
 
-export function softDeleteMessage(messageId: string) {
-  return db.message.update({
+export async function softDeleteMessage(messageId: string) {
+  const message = await db.message.update({
     where: { id: messageId },
     data: {
-      fileUrl: null,
-      fileName: null,
-      fileType: null,
-      fileSize: null,
-      fileWidth: null,
-      fileHeight: null,
+      attachmentAssetId: null,
       content: "This message has been deleted.",
       deleted: true,
     },
-    select: {
-      id: true,
-      content: true,
-      type: true,
-      fileUrl: true,
-      fileKey: true,
-      fileName: true,
-      fileType: true,
-      fileSize: true,
-      fileWidth: true,
-      fileHeight: true,
-      channelId: true,
-      deleted: true,
-      createdAt: true,
-      updatedAt: true,
-      member: {
-        select: {
-          id: true,
-          role: true,
-          profile: {
-            select: profileSelect,
-          },
-        },
-      },
-      sticker: {
-        select: {
-          id: true,
-          name: true,
-          imageUrl: true,
-          category: true,
-        },
-      },
-      reactions: {
-        select: {
-          id: true,
-          emoji: true,
-          profileId: true,
-          profile: {
-            select: profileSelect,
-          },
-        },
-      },
-    },
+    select: messageSelectFields,
   });
+
+  return serializeMessageRecord(message);
 }
 
 export function hardDeleteMessage(messageId: string) {

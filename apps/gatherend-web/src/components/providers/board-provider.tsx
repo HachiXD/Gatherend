@@ -7,7 +7,6 @@ import {
   Channel,
   Category,
   Member,
-  Profile,
   Slot,
   MemberRole,
   ChannelType,
@@ -45,8 +44,6 @@ export type BoardMember = Member & {
     username: string;
     discriminator: string;
     avatarAsset: ClientUploadedAsset | null;
-    email: string;
-    userId: string;
     usernameColor: UsernameColor;
     profileTags: string[];
     badge: string | null;

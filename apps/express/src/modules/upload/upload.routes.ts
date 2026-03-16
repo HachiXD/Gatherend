@@ -1,23 +1,10 @@
-/**
- * Upload Routes
- *
- * Unified upload endpoint that:
- * 1. Receives file via multer
- * 2. Moderates public content (Rekognition) - boards, avatars, stickers
- * 3. Skips moderation for private content - chat/DM attachments
- * 4. Uploads everything to S3-compatible storage
- * 5. Returns URL or error
- *
- * CSAM scanning is handled at the Cloudflare proxy level.
- */
-
 import express from "express";
 import multer from "multer";
 import crypto from "crypto";
+import { AssetContext, AssetVisibility } from "@prisma/client";
 import {
   uploadToStorage,
   isStorageConfigured,
-  type StorageUploadResult,
 } from "../../lib/s3.config.js";
 import { getSignedAttachmentsUrl } from "../../lib/attachments-gateway.js";
 import {
@@ -32,17 +19,16 @@ import {
 } from "../../services/moderation.service.js";
 import {
   type ModerationContext,
-  CONTEXT_THRESHOLD_MAP,
   STORAGE_FOLDERS,
 } from "../../config/moderation.config.js";
 import { logger } from "../../lib/logger.js";
+import { db } from "../../lib/db.js";
 
 const router = express.Router();
 
 const MAX_IMAGE_PIXELS = 60_000_000; // decompression bomb guard
 const MAX_IMAGE_DIMENSION = 8192;
 
-// Configure multer for memory storage
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -60,13 +46,14 @@ const upload = multer({
   },
 });
 
-// TYPES
-
 interface UploadResponse {
   success: boolean;
+  assetId?: string;
   url?: string;
-  key?: string;
   storage?: "s3";
+  mimeType?: string;
+  originalName?: string;
+  sizeBytes?: number;
   width?: number;
   height?: number;
   error?: string;
@@ -78,34 +65,32 @@ interface UploadResponse {
   };
 }
 
-// CONTEXT CONFIGURATION
-
-// Contexts that require moderation (public content)
 const MODERATED_CONTEXTS: ModerationContext[] = [
   "board_image",
+  "community_image",
   "community_post_image",
-  "board_description",
+  "community_post_comment_image",
   "profile_avatar",
   "profile_banner",
   "sticker",
 ];
 
-// Check if context requires moderation
 function requiresModeration(context: ModerationContext): boolean {
   return MODERATED_CONTEXTS.includes(context);
 }
 
-// MAIN UPLOAD ENDPOINT
+const CONTEXT_TO_ASSET_CONTEXT: Record<ModerationContext, AssetContext> = {
+  board_image: AssetContext.BOARD_IMAGE,
+  community_image: AssetContext.COMMUNITY_IMAGE,
+  community_post_image: AssetContext.COMMUNITY_POST_IMAGE,
+  community_post_comment_image: AssetContext.COMMUNITY_POST_COMMENT_IMAGE,
+  profile_avatar: AssetContext.PROFILE_AVATAR,
+  profile_banner: AssetContext.PROFILE_BANNER,
+  message_attachment: AssetContext.MESSAGE_ATTACHMENT,
+  dm_attachment: AssetContext.DM_ATTACHMENT,
+  sticker: AssetContext.STICKER_IMAGE,
+};
 
-/**
- * POST /api/upload
- *
- * Body (multipart/form-data):
- * - image: File
- * - context: ModerationContext ('board_image', 'profile_avatar', etc.)
- *
- * Authentication: Handled by authenticateRequest middleware (req.profile)
- */
 router.post("/", upload.single("image"), async (req, res) => {
   const startTime = Date.now();
 
@@ -114,7 +99,6 @@ router.post("/", upload.single("image"), async (req, res) => {
     const context = req.body.context as ModerationContext;
     const file = req.file;
 
-    // Validate auth
     if (!profileId) {
       return res.status(401).json({
         success: false,
@@ -122,7 +106,6 @@ router.post("/", upload.single("image"), async (req, res) => {
       } as UploadResponse);
     }
 
-    // Validate file
     if (!file) {
       return res.status(400).json({
         success: false,
@@ -130,7 +113,6 @@ router.post("/", upload.single("image"), async (req, res) => {
       } as UploadResponse);
     }
 
-    // Validate context
     if (!context || !STORAGE_FOLDERS[context]) {
       return res.status(400).json({
         success: false,
@@ -140,7 +122,6 @@ router.post("/", upload.single("image"), async (req, res) => {
       } as UploadResponse);
     }
 
-    // Content sniffing (do not trust browser mimetype)
     if (looksLikeSvg(file.buffer)) {
       return res.status(400).json({
         success: false,
@@ -156,8 +137,6 @@ router.post("/", upload.single("image"), async (req, res) => {
       } as UploadResponse);
     }
 
-    // Context rules:
-    // - PDFs are allowed only for private attachments in chats/DMs.
     const isChatContext =
       context === "message_attachment" || context === "dm_attachment";
     if (sniffed.kind === "pdf" && !isChatContext) {
@@ -167,7 +146,6 @@ router.post("/", upload.single("image"), async (req, res) => {
       } as UploadResponse);
     }
 
-    // Check storage configuration
     if (!isStorageConfigured()) {
       logger.error("[Upload] Storage not configured");
       return res.status(500).json({
@@ -176,12 +154,9 @@ router.post("/", upload.single("image"), async (req, res) => {
       } as UploadResponse);
     }
 
-    // MODERATION (only for public content)
-
     let moderationResult: ModerationResponse | null = null;
 
     if (requiresModeration(context) && sniffed.kind === "image") {
-      // Moderate public content with Rekognition
       if (context === "sticker") {
         moderationResult = await moderateSticker({
           buffer: file.buffer,
@@ -196,7 +171,6 @@ router.post("/", upload.single("image"), async (req, res) => {
         });
       }
 
-      // Block if moderation failed
       if (!moderationResult.allowed) {
         return res.status(400).json({
           success: false,
@@ -210,8 +184,6 @@ router.post("/", upload.single("image"), async (req, res) => {
         } as UploadResponse);
       }
     }
-
-    // UPLOAD
 
     let imageWidth: number | null = null;
     let imageHeight: number | null = null;
@@ -273,8 +245,6 @@ router.post("/", upload.single("image"), async (req, res) => {
       } as UploadResponse);
     }
 
-    // Build response
-    // For private attachments we return a signed gateway URL (don't persist this URL; persist storageResult.key).
     let responseUrl = storageResult.url;
     if (isPrivateAttachment && attachmentsBucket) {
       try {
@@ -291,17 +261,41 @@ router.post("/", upload.single("image"), async (req, res) => {
       }
     }
 
+    const visibility = isPrivateAttachment
+      ? AssetVisibility.PRIVATE
+      : AssetVisibility.PUBLIC;
+    const assetContext = CONTEXT_TO_ASSET_CONTEXT[context];
+
+    const asset = await db.uploadedAsset.create({
+      data: {
+        key: storageResult.key,
+        visibility,
+        context: assetContext,
+        mimeType: sniffed.mime,
+        sizeBytes: file.size,
+        width: imageWidth,
+        height: imageHeight,
+        originalName: file.originalname || null,
+        ownerProfileId: profileId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
     const response: UploadResponse = {
       success: true,
+      assetId: asset.id,
       url: responseUrl,
-      key: storageResult.key,
       storage: "s3",
+      mimeType: sniffed.mime,
+      originalName: file.originalname || undefined,
+      sizeBytes: file.size,
       ...(imageWidth !== null && imageHeight !== null
         ? { width: imageWidth, height: imageHeight }
         : {}),
     };
 
-    // Include moderation info if applicable
     if (moderationResult) {
       response.moderation = {
         allowed: true,

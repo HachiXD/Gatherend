@@ -1,16 +1,12 @@
 import { db } from "../../lib/db.js";
+import {
+  profileSelect,
+  serializeProfile,
+} from "../../lib/uploaded-assets.js";
 
 // Campos para el ProfileCard (usado en UserAvatarMenu)
 const profileCardSelect = {
-  id: true,
-  username: true,
-  discriminator: true,
-  imageUrl: true,
-  usernameColor: true,
-  profileTags: true,
-  badge: true,
-  badgeStickerUrl: true,
-  usernameFormat: true,
+  ...profileSelect,
   longDescription: true,
 };
 
@@ -19,8 +15,10 @@ const profileCardSelect = {
  * Incluye todos los campos necesarios para el popover
  */
 export async function getProfileCard(profileId: string) {
-  return db.profile.findUnique({
+  const profile = await db.profile.findUnique({
     where: { id: profileId },
     select: profileCardSelect,
   });
+
+  return profile ? serializeProfile(profile) : null;
 }

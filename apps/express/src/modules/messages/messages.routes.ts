@@ -1,5 +1,7 @@
 import { Router } from "express";
 import {
+  messageSelectFields,
+  serializeMessageRecord,
   createMessage,
   getPaginatedMessages,
   getMessage,
@@ -14,15 +16,16 @@ import {
   findChannelCached,
 } from "../../lib/cache.js";
 import { incrementUnreadForChannel } from "../channel-read-state/channel-read-state.service.js";
-import { MemberRole, MessageType } from "@prisma/client";
+import {
+  AssetContext,
+  AssetVisibility,
+  MemberRole,
+  MessageType,
+} from "@prisma/client";
 import { db } from "../../lib/db.js";
 import { logger } from "../../lib/logger.js";
 import { attachFilePreviews } from "../../lib/chat-image-previews.js";
-import {
-  getSignedAttachmentsUrl,
-  isPrivateAttachmentKey,
-  isValidSignedAttachmentsUrlForKey,
-} from "../../lib/attachments-gateway.js";
+import { findOwnedUploadedAsset } from "../../lib/uploaded-assets.js";
 
 const router = Router();
 
@@ -37,14 +40,14 @@ router.post("/", async (req, res) => {
   try {
     const profileId = req.profile?.id;
     const { boardId, channelId } = req.query;
-    const { content, fileUrl, stickerId, replyToId, tempId } = req.body;
+    const { content, attachmentAssetId, stickerId, replyToId, tempId } = req.body;
 
     if (!profileId) return res.status(401).json({ error: "Unauthorized" });
     if (!boardId || !UUID_REGEX.test(boardId as string))
       return res.status(400).json({ error: "Invalid board ID" });
     if (!channelId || !UUID_REGEX.test(channelId as string))
       return res.status(400).json({ error: "Invalid channel ID" });
-    if (!content && !fileUrl && !stickerId)
+    if (!content && !attachmentAssetId && !stickerId)
       return res.status(400).json({ error: "Content missing" });
 
     const board = await verifyMemberInBoardCached(profileId, boardId as string);
@@ -59,84 +62,37 @@ router.post("/", async (req, res) => {
     const member = board.members.find((m) => m.profileId === profileId);
     if (!member) return res.status(404).json({ error: "Member not found" });
 
-    // Parse fileUrl if it's a JSON string with metadata
-    let parsedFileUrl: string | null = fileUrl ?? null;
-    let parsedFileKey: string | null = null;
-    let fileName = null;
-    let fileType = null;
-    let fileSize = null;
-    let fileWidth: number | null = null;
-    let fileHeight: number | null = null;
-    let parsedSignedUrlCandidate: string | null = null;
-
-    if (fileUrl && typeof fileUrl === "string") {
-      try {
-        const fileData = JSON.parse(fileUrl);
-        parsedFileUrl = typeof fileData.url === "string" ? fileData.url : null;
-        parsedSignedUrlCandidate = parsedFileUrl;
-        parsedFileKey = typeof fileData.key === "string" ? fileData.key : null;
-        fileName = fileData.name || null;
-        fileType = fileData.type || null;
-        fileSize = fileData.size || null;
-        fileWidth =
-          typeof fileData.width === "number"
-            ? Math.round(fileData.width)
-            : null;
-        fileHeight =
-          typeof fileData.height === "number"
-            ? Math.round(fileData.height)
-            : null;
-      } catch {
-        // If not JSON, use as-is (backward compatibility)
-        parsedFileUrl = fileUrl;
-      }
-    }
-
-    if (parsedFileKey) {
-      if (parsedFileKey.length > 512) {
-        return res.status(400).json({ error: "Invalid attachment" });
-      }
-      if (parsedFileKey.includes("\\") || parsedFileKey.split("/").includes("..")) {
-        return res.status(400).json({ error: "Invalid attachment" });
-      }
-      // Channel messages should never accept DM attachment keys.
-      if (parsedFileKey.startsWith("dm-attachments/")) {
+    let resolvedAttachmentAssetId: string | null = null;
+    if (attachmentAssetId !== undefined && attachmentAssetId !== null && attachmentAssetId !== "") {
+      if (typeof attachmentAssetId !== "string" || !UUID_REGEX.test(attachmentAssetId)) {
         return res.status(400).json({ error: "Invalid attachment" });
       }
 
-      if (isPrivateAttachmentKey(parsedFileKey)) {
-        if (
-          !parsedSignedUrlCandidate ||
-          typeof parsedSignedUrlCandidate !== "string" ||
-          !isValidSignedAttachmentsUrlForKey(parsedSignedUrlCandidate, parsedFileKey)
-        ) {
-          return res.status(400).json({ error: "Invalid attachment" });
-        }
-      }
-    }
+      const attachmentAsset = await findOwnedUploadedAsset({
+        assetId: attachmentAssetId,
+        ownerProfileId: profileId,
+        context: AssetContext.MESSAGE_ATTACHMENT,
+        visibility: AssetVisibility.PRIVATE,
+      });
 
-    // Never persist expiring signed URLs for private attachments.
-    if (parsedFileKey && isPrivateAttachmentKey(parsedFileKey)) {
-      parsedFileUrl = null;
+      if (!attachmentAsset) {
+        return res.status(400).json({ error: "Invalid attachment" });
+      }
+
+      resolvedAttachmentAssetId = attachmentAsset.id;
     }
 
     let type: MessageType = MessageType.TEXT;
     if (stickerId) {
       type = MessageType.STICKER;
-    } else if (parsedFileUrl || parsedFileKey) {
+    } else if (resolvedAttachmentAssetId) {
       type = MessageType.IMAGE;
     }
 
     const message = await createMessage({
       content: content || "",
-      fileUrl: parsedFileUrl,
-      fileKey: parsedFileKey,
+      attachmentAssetId: resolvedAttachmentAssetId,
       stickerId,
-      fileName,
-      fileType,
-      fileSize,
-      fileWidth,
-      fileHeight,
       channelId: channelId as string,
       memberId: member.id,
       type,
@@ -179,9 +135,7 @@ router.post("/", async (req, res) => {
       await req.io.in(roomName).fetchSockets();
     }
 
-    const messageWithSignedUrl = withSignedAttachmentUrls(message);
-
-    const messageWithPreviews = attachFilePreviews(messageWithSignedUrl);
+    const messageWithPreviews = attachFilePreviews(message);
 
     // Include tempId for optimistic message matching
     const messageWithTempId = tempId
@@ -249,9 +203,7 @@ router.get("/", async (req, res) => {
       dir,
     );
 
-    const items = messages
-      .map((m) => withSignedAttachmentUrls(m as any))
-      .map((m) => attachFilePreviews(m));
+    const items = messages.map((m) => attachFilePreviews(m));
 
     // Bidirectional cursors:
     // - nextCursor: ID of oldest message in this batch (for fetching older messages)
@@ -332,7 +284,7 @@ router.patch("/:messageId", async (req, res) => {
     const isOwner = message.member.id === member.id;
     if (!isOwner) return res.status(401).json({ error: "Unauthorized" });
 
-    if (message.fileUrl)
+    if (message.attachmentAssetId)
       return res.status(400).json({ error: "Cannot edit message with file" });
 
     if (message.sticker)
@@ -461,108 +413,14 @@ router.post("/:messageId/pin", async (req, res) => {
         // Preserve original updatedAt so it doesn't show as "edited"
         updatedAt: originalMessage?.updatedAt,
       },
-      select: {
-        id: true,
-        content: true,
-        type: true,
-        fileUrl: true,
-        fileName: true,
-        fileType: true,
-        fileSize: true,
-        fileWidth: true,
-        fileHeight: true,
-        channelId: true,
-        deleted: true,
-        pinned: true,
-        pinnedAt: true,
-        createdAt: true,
-        updatedAt: true,
-        member: {
-          select: {
-            id: true,
-            role: true,
-            profile: {
-              select: {
-                id: true,
-                username: true,
-                imageUrl: true,
-                usernameColor: true,
-                profileTags: true,
-                badge: true,
-                badgeStickerUrl: true,
-                usernameFormat: true,
-              },
-            },
-          },
-        },
-        sticker: {
-          select: {
-            id: true,
-            name: true,
-            imageUrl: true,
-            category: true,
-          },
-        },
-        reactions: {
-          select: {
-            id: true,
-            emoji: true,
-            profileId: true,
-            profile: {
-              select: {
-                id: true,
-                username: true,
-                imageUrl: true,
-                usernameColor: true,
-                profileTags: true,
-                badge: true,
-                badgeStickerUrl: true,
-                usernameFormat: true,
-              },
-            },
-          },
-        },
-        replyTo: {
-          select: {
-            id: true,
-            content: true,
-            fileUrl: true,
-            fileName: true,
-            fileWidth: true,
-            fileHeight: true,
-            member: {
-              select: {
-                id: true,
-                profile: {
-                  select: {
-                    id: true,
-                    username: true,
-                    imageUrl: true,
-                    usernameColor: true,
-                    profileTags: true,
-                    badge: true,
-                    badgeStickerUrl: true,
-                    usernameFormat: true,
-                  },
-                },
-              },
-            },
-            sticker: {
-              select: {
-                id: true,
-                imageUrl: true,
-                name: true,
-              },
-            },
-          },
-        },
-      },
+      select: messageSelectFields,
     });
 
     const updateKey = `chat:${channelId}:messages:update`;
-    req.io.to(`channel:${channelId}`).emit(updateKey, message);
+    const serializedMessage = attachFilePreviews(serializeMessageRecord(message));
+    req.io.to(`channel:${channelId}`).emit(updateKey, serializedMessage);
 
-    return res.json(message);
+    return res.json(serializedMessage);
   } catch (error) {
     logger.error("[MESSAGE_PIN]", error);
     return res.status(500).json({ error: "Internal Error" });
@@ -622,108 +480,14 @@ router.delete("/:messageId/pin", async (req, res) => {
         // Preserve original updatedAt so it doesn't show as "edited"
         updatedAt: originalMessage?.updatedAt,
       },
-      select: {
-        id: true,
-        content: true,
-        type: true,
-        fileUrl: true,
-        fileName: true,
-        fileType: true,
-        fileSize: true,
-        fileWidth: true,
-        fileHeight: true,
-        channelId: true,
-        deleted: true,
-        pinned: true,
-        pinnedAt: true,
-        createdAt: true,
-        updatedAt: true,
-        member: {
-          select: {
-            id: true,
-            role: true,
-            profile: {
-              select: {
-                id: true,
-                username: true,
-                imageUrl: true,
-                usernameColor: true,
-                profileTags: true,
-                badge: true,
-                badgeStickerUrl: true,
-                usernameFormat: true,
-              },
-            },
-          },
-        },
-        sticker: {
-          select: {
-            id: true,
-            name: true,
-            imageUrl: true,
-            category: true,
-          },
-        },
-        reactions: {
-          select: {
-            id: true,
-            emoji: true,
-            profileId: true,
-            profile: {
-              select: {
-                id: true,
-                username: true,
-                imageUrl: true,
-                usernameColor: true,
-                profileTags: true,
-                badge: true,
-                badgeStickerUrl: true,
-                usernameFormat: true,
-              },
-            },
-          },
-        },
-        replyTo: {
-          select: {
-            id: true,
-            content: true,
-            fileUrl: true,
-            fileName: true,
-            fileWidth: true,
-            fileHeight: true,
-            member: {
-              select: {
-                id: true,
-                profile: {
-                  select: {
-                    id: true,
-                    username: true,
-                    imageUrl: true,
-                    usernameColor: true,
-                    profileTags: true,
-                    badge: true,
-                    badgeStickerUrl: true,
-                    usernameFormat: true,
-                  },
-                },
-              },
-            },
-            sticker: {
-              select: {
-                id: true,
-                imageUrl: true,
-                name: true,
-              },
-            },
-          },
-        },
-      },
+      select: messageSelectFields,
     });
 
     const updateKey = `chat:${channelId}:messages:update`;
-    req.io.to(`channel:${channelId}`).emit(updateKey, message);
+    const serializedMessage = attachFilePreviews(serializeMessageRecord(message));
+    req.io.to(`channel:${channelId}`).emit(updateKey, serializedMessage);
 
-    return res.json(message);
+    return res.json(serializedMessage);
   } catch (error) {
     logger.error("[MESSAGE_UNPIN]", error);
     return res.status(500).json({ error: "Internal Error" });
@@ -761,36 +525,14 @@ router.get("/pinned", async (req, res) => {
       },
       take: 20,
       orderBy: { pinnedAt: "desc" },
-      select: {
-        id: true,
-        content: true,
-        fileUrl: true,
-        fileName: true,
-        fileType: true,
-        createdAt: true,
-        pinnedAt: true,
-        member: {
-          select: {
-            profile: {
-              select: {
-                id: true,
-                username: true,
-                imageUrl: true,
-              },
-            },
-          },
-        },
-        sticker: {
-          select: {
-            id: true,
-            imageUrl: true,
-            name: true,
-          },
-        },
-      },
+      select: messageSelectFields,
     });
 
-    return res.json(pinnedMessages);
+    return res.json(
+      pinnedMessages.map((message) =>
+        attachFilePreviews(serializeMessageRecord(message)),
+      ),
+    );
   } catch (error) {
     logger.error("[GET_PINNED_MESSAGES]", error);
     return res.status(500).json({ error: "Internal Error" });
@@ -798,24 +540,3 @@ router.get("/pinned", async (req, res) => {
 });
 
 export default router;
-const withSignedAttachmentUrls = <
-  T extends { fileKey?: string | null; fileUrl?: string | null; replyTo?: any },
->(
-  m: T,
-): T => {
-  const out: any = { ...m };
-  if (out.fileKey && isPrivateAttachmentKey(out.fileKey)) {
-    out.fileUrl = getSignedAttachmentsUrl(out.fileKey);
-  }
-  if (
-    out.replyTo &&
-    out.replyTo.fileKey &&
-    isPrivateAttachmentKey(out.replyTo.fileKey)
-  ) {
-    out.replyTo = {
-      ...out.replyTo,
-      fileUrl: getSignedAttachmentsUrl(out.replyTo.fileKey),
-    };
-  }
-  return out as T;
-};

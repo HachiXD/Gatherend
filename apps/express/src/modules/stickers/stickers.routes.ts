@@ -1,6 +1,7 @@
 import express from "express";
 import multer from "multer";
 import crypto from "crypto";
+import { AssetContext, AssetVisibility } from "@prisma/client";
 import {
   uploadToStorage,
   deleteFromStorage,
@@ -82,12 +83,18 @@ router.post("/", upload.single("image"), async (req, res) => {
     }
 
     // Decompression bomb / oversized dimensions guard
+    let imageWidth: number | null = null;
+    let imageHeight: number | null = null;
+
     try {
-      await getSafeImageMetadata({
+      const metadata = await getSafeImageMetadata({
         buffer: file.buffer,
         maxPixels: MAX_IMAGE_PIXELS,
         maxDimension: MAX_IMAGE_DIMENSION,
       });
+
+      imageWidth = metadata.width;
+      imageHeight = metadata.height;
     } catch {
       return res.status(400).json({ error: "Invalid or oversized image" });
     }
@@ -146,16 +153,63 @@ router.post("/", upload.single("image"), async (req, res) => {
       return res.status(500).json({ error: "Failed to upload sticker" });
     }
 
-    // Save to DB (using publicId field to store R2 key for backwards compat)
-    const sticker = await db.sticker.create({
-      data: {
-        name: name || "Custom Sticker",
-        imageUrl: result.url,
-        category: "custom",
-        isCustom: true,
-        uploaderId: profileId,
-        publicId: result.key,
-      },
+    const sticker = await db.$transaction(async (tx) => {
+      const asset = await tx.uploadedAsset.create({
+        data: {
+          key: result.key,
+          visibility: AssetVisibility.PUBLIC,
+          context: AssetContext.STICKER_IMAGE,
+          mimeType: sniffed.mime,
+          sizeBytes: file.size,
+          width: imageWidth,
+          height: imageHeight,
+          originalName: file.originalname || null,
+          ownerProfileId: profileId,
+        },
+        select: {
+          id: true,
+          key: true,
+          context: true,
+          visibility: true,
+          mimeType: true,
+          sizeBytes: true,
+          width: true,
+          height: true,
+          originalName: true,
+        },
+      });
+
+      return tx.sticker.create({
+        data: {
+          name: name || "Custom Sticker",
+          assetId: asset.id,
+          category: "custom",
+          isCustom: true,
+          uploaderId: profileId,
+        },
+        select: {
+          id: true,
+          name: true,
+          category: true,
+          isCustom: true,
+          uploaderId: true,
+          createdAt: true,
+          assetId: true,
+          asset: {
+            select: {
+              id: true,
+              key: true,
+              context: true,
+              visibility: true,
+              mimeType: true,
+              sizeBytes: true,
+              width: true,
+              height: true,
+              originalName: true,
+            },
+          },
+        },
+      });
     });
 
     res.json(sticker);
@@ -182,6 +236,11 @@ router.delete("/:id", async (req, res) => {
 
     const sticker = await db.sticker.findUnique({
       where: { id },
+      select: {
+        id: true,
+        uploaderId: true,
+        assetId: true,
+      },
     });
 
     if (!sticker) {
@@ -212,16 +271,24 @@ router.delete("/:id", async (req, res) => {
         data: { uploaderId: null },
       });
     } else {
-      // Sticker is not used anywhere - safe to delete completely
-      // Delete from storage if it has publicId
-      if (sticker.publicId) {
-        await deleteFromStorage(sticker.publicId);
-      }
-
-      // Delete from DB
-      await db.sticker.delete({
-        where: { id },
+      const asset = await db.uploadedAsset.findUnique({
+        where: { id: sticker.assetId },
+        select: { id: true, key: true },
       });
+
+      await db.$transaction(async (tx) => {
+        await tx.sticker.delete({
+          where: { id },
+        });
+
+        await tx.uploadedAsset.delete({
+          where: { id: sticker.assetId },
+        });
+      });
+
+      if (asset) {
+        await deleteFromStorage(asset.key);
+      }
     }
 
     res.json({ success: true });
@@ -259,7 +326,7 @@ router.post("/:id/clone", async (req, res) => {
     const existingClone = await db.sticker.findFirst({
       where: {
         uploaderId: profileId,
-        imageUrl: originalSticker.imageUrl,
+        assetId: originalSticker.assetId,
         name: originalSticker.name,
       },
     });
@@ -287,11 +354,32 @@ router.post("/:id/clone", async (req, res) => {
     const clonedSticker = await db.sticker.create({
       data: {
         name: originalSticker.name,
-        imageUrl: originalSticker.imageUrl,
+        assetId: originalSticker.assetId,
         category: "custom",
         isCustom: true,
         uploaderId: profileId,
-        // Don't copy publicId - we don't own the Cloudinary asset
+      },
+      select: {
+        id: true,
+        name: true,
+        category: true,
+        isCustom: true,
+        uploaderId: true,
+        createdAt: true,
+        assetId: true,
+        asset: {
+          select: {
+            id: true,
+            key: true,
+            context: true,
+            visibility: true,
+            mimeType: true,
+            sizeBytes: true,
+            width: true,
+            height: true,
+            originalName: true,
+          },
+        },
       },
     });
 

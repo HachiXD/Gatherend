@@ -3,6 +3,7 @@ import { db } from "../../lib/db.js";
 import { logger } from "../../lib/logger.js";
 import { verifyMemberInBoardCached } from "../../lib/cache.js";
 import { findConversationForProfile } from "../direct-messages/direct-messages.service.js";
+import { uploadedAssetSelect } from "../../lib/uploaded-assets.js";
 
 const router = express.Router();
 
@@ -140,7 +141,9 @@ router.post("/", async (req, res) => {
           select: {
             id: true,
             username: true,
-            imageUrl: true,
+            avatarAsset: {
+              select: uploadedAssetSelect,
+            },
           },
         },
       },

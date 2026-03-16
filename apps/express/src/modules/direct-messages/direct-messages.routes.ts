@@ -1,17 +1,16 @@
 import { Router } from "express";
 import {
+  directMessageSelect,
+  serializeDirectMessage,
   createDirectMessage,
   getPaginatedDirectMessages,
   findConversationForProfile,
 } from "./direct-messages.service.js";
+import { AssetContext, AssetVisibility } from "@prisma/client";
 import { db } from "../../lib/db.js";
 import { logger } from "../../lib/logger.js";
 import { attachFilePreviews } from "../../lib/chat-image-previews.js";
-import {
-  getSignedAttachmentsUrl,
-  isPrivateAttachmentKey,
-  isValidSignedAttachmentsUrlForKey,
-} from "../../lib/attachments-gateway.js";
+import { findOwnedUploadedAsset } from "../../lib/uploaded-assets.js";
 
 const router = Router();
 const MESSAGES_BATCH = 40;
@@ -27,13 +26,13 @@ router.post("/", async (req, res) => {
 
   try {
     const profileId = req.profile?.id;
-    const { content, fileUrl, stickerId, replyToId, tempId } = req.body;
+    const { content, attachmentAssetId, stickerId, replyToId, tempId } = req.body;
     const { conversationId } = req.query;
 
     if (!profileId) return res.status(401).json({ error: "Unauthorized" });
     if (!conversationId || !UUID_REGEX.test(conversationId as string))
       return res.status(400).json({ error: "Invalid conversation ID" });
-    if (!content && !fileUrl && !stickerId)
+    if (!content && !attachmentAssetId && !stickerId)
       return res.status(400).json({ error: "Message empty" });
 
     // 1. Verificar que el usuario pertenece a la conversación
@@ -48,83 +47,32 @@ router.post("/", async (req, res) => {
 
     const { conversation, currentProfile, otherProfile } = result;
 
-    // 2. Parseo de archivo (si existe)
-
-    let actualFileUrl = null;
-    let actualFileKey: string | null = null;
-    let fileName = null;
-    let fileType = null;
-    let fileSize = null;
-    let fileWidth: number | null = null;
-    let fileHeight: number | null = null;
-    let parsedSignedUrlCandidate: string | null = null;
-
-    try {
-      if (fileUrl) {
-        const fileData =
-          typeof fileUrl === "string" && fileUrl.startsWith("https")
-            ? { url: fileUrl }
-            : JSON.parse(fileUrl);
-
-        actualFileUrl = typeof fileData.url === "string" ? fileData.url : null;
-        parsedSignedUrlCandidate = actualFileUrl;
-        actualFileKey = typeof fileData.key === "string" ? fileData.key : null;
-        fileName = fileData.name || null;
-        fileType = fileData.type || null;
-        fileSize = fileData.size || null;
-        fileWidth =
-          typeof fileData.width === "number"
-            ? Math.round(fileData.width)
-            : null;
-        fileHeight =
-          typeof fileData.height === "number"
-            ? Math.round(fileData.height)
-            : null;
-      }
-    } catch (err) {
-      logger.error("Error parsing fileUrl:", err);
-    }
-
-    if (actualFileKey) {
-      if (actualFileKey.length > 512) {
-        return res.status(400).json({ error: "Invalid attachment" });
-      }
-      if (actualFileKey.includes("\\") || actualFileKey.split("/").includes("..")) {
-        return res.status(400).json({ error: "Invalid attachment" });
-      }
-      // DMs should never accept channel attachment keys.
-      if (actualFileKey.startsWith("chat-attachments/")) {
+    let resolvedAttachmentAssetId: string | null = null;
+    if (attachmentAssetId !== undefined && attachmentAssetId !== null && attachmentAssetId !== "") {
+      if (typeof attachmentAssetId !== "string" || !UUID_REGEX.test(attachmentAssetId)) {
         return res.status(400).json({ error: "Invalid attachment" });
       }
 
-      if (isPrivateAttachmentKey(actualFileKey)) {
-        if (
-          !parsedSignedUrlCandidate ||
-          typeof parsedSignedUrlCandidate !== "string" ||
-          !isValidSignedAttachmentsUrlForKey(parsedSignedUrlCandidate, actualFileKey)
-        ) {
-          return res.status(400).json({ error: "Invalid attachment" });
-        }
-      }
-    }
+      const attachmentAsset = await findOwnedUploadedAsset({
+        assetId: attachmentAssetId,
+        ownerProfileId: profileId,
+        context: AssetContext.DM_ATTACHMENT,
+        visibility: AssetVisibility.PRIVATE,
+      });
 
-    // Never persist expiring signed URLs for private attachments.
-    if (actualFileKey && isPrivateAttachmentKey(actualFileKey)) {
-      actualFileUrl = null;
+      if (!attachmentAsset) {
+        return res.status(400).json({ error: "Invalid attachment" });
+      }
+
+      resolvedAttachmentAssetId = attachmentAsset.id;
     }
 
     // 3. Guardar mensaje en DB (también actualiza updatedAt de la conversación)
 
     const savedMessage = await createDirectMessage({
       content: content || "",
-      fileUrl: actualFileUrl,
-      fileKey: actualFileKey,
+      attachmentAssetId: resolvedAttachmentAssetId,
       stickerId,
-      fileName,
-      fileType,
-      fileSize,
-      fileWidth,
-      fileHeight,
       conversationId: conversation.id,
       conversationProfileOneId: conversation.profileOneId ?? null,
       conversationProfileTwoId: conversation.profileTwoId ?? null,
@@ -136,9 +84,7 @@ router.post("/", async (req, res) => {
     // 4. Emitir mensaje REAL con sender completo
 
     const eventKey = `chat:${conversationId}:messages`;
-    const savedMessageWithPreviews = attachFilePreviews(
-      withSignedAttachmentUrls(savedMessage as any),
-    );
+    const savedMessageWithPreviews = attachFilePreviews(savedMessage);
 
     // Include tempId for optimistic message matching
     const messageWithTempId = tempId
@@ -158,7 +104,7 @@ router.post("/", async (req, res) => {
         sender: currentProfile,
         lastMessage: {
           content: savedMessage.content,
-          fileUrl: (messageWithTempId as any).fileUrl ?? null,
+          attachmentAsset: (messageWithTempId as any).attachmentAsset ?? null,
           deleted: false,
           senderId: profileId,
         },
@@ -201,9 +147,7 @@ router.get("/", async (req, res) => {
       dir,
     );
 
-    const items = messages
-      .map((m) => withSignedAttachmentUrls(m as any))
-      .map((m) => attachFilePreviews(m));
+    const items = messages.map((m) => attachFilePreviews(m));
 
     // Bidirectional cursors:
     // - nextCursor: ID of oldest message in this batch (for fetching older messages)
@@ -275,9 +219,7 @@ router.patch("/:directMessageId", async (req, res) => {
         id: directMessageId,
         conversationId: conversationId as string,
       },
-      include: {
-        sender: true,
-      },
+      select: directMessageSelect,
     });
 
     if (!message || message.deleted)
@@ -288,7 +230,7 @@ router.patch("/:directMessageId", async (req, res) => {
       return res.status(401).json({ error: "Unauthorized" });
 
     // No editar si tiene archivo
-    if (message.fileUrl)
+    if (message.attachmentAssetId)
       return res.status(400).json({ error: "Cannot edit message with file" });
 
     // No editar si es un sticker
@@ -299,16 +241,15 @@ router.patch("/:directMessageId", async (req, res) => {
     message = await db.directMessage.update({
       where: { id: directMessageId },
       data: { content },
-      include: {
-        sender: true,
-      },
+      select: directMessageSelect,
     });
 
     // Emitir UPDATE
     const updateKey = `chat:${conversationId}:messages:update`;
-    req.io.to(`conversation:${conversationId}`).emit(updateKey, message);
+    const serializedMessage = attachFilePreviews(serializeDirectMessage(message));
+    req.io.to(`conversation:${conversationId}`).emit(updateKey, serializedMessage);
 
-    return res.json(message);
+    return res.json(serializedMessage);
   } catch (error) {
     logger.error("[DM_PATCH]", error);
     return res.status(500).json({ error: "Internal Error" });
@@ -410,26 +351,14 @@ router.post("/:messageId/pin", async (req, res) => {
         // Preserve original updatedAt so it doesn't show as "edited"
         updatedAt: originalMessage?.updatedAt,
       },
-      include: {
-        sender: true,
-        sticker: true,
-        reactions: {
-          include: {
-            profile: true,
-          },
-        },
-        replyTo: {
-          include: {
-            sender: true,
-          },
-        },
-      },
+      select: directMessageSelect,
     });
 
     const updateKey = `chat:${conversationId}:messages:update`;
-    req.io.to(`conversation:${conversationId}`).emit(updateKey, message);
+    const serializedMessage = attachFilePreviews(serializeDirectMessage(message));
+    req.io.to(`conversation:${conversationId}`).emit(updateKey, serializedMessage);
 
-    return res.json(message);
+    return res.json(serializedMessage);
   } catch (error) {
     logger.error("[DM_PIN]", error);
     return res.status(500).json({ error: "Internal Error" });
@@ -472,26 +401,14 @@ router.delete("/:messageId/pin", async (req, res) => {
         // Preserve original updatedAt so it doesn't show as "edited"
         updatedAt: originalMessage?.updatedAt,
       },
-      include: {
-        sender: true,
-        sticker: true,
-        reactions: {
-          include: {
-            profile: true,
-          },
-        },
-        replyTo: {
-          include: {
-            sender: true,
-          },
-        },
-      },
+      select: directMessageSelect,
     });
 
     const updateKey = `chat:${conversationId}:messages:update`;
-    req.io.to(`conversation:${conversationId}`).emit(updateKey, message);
+    const serializedMessage = attachFilePreviews(serializeDirectMessage(message));
+    req.io.to(`conversation:${conversationId}`).emit(updateKey, serializedMessage);
 
-    return res.json(message);
+    return res.json(serializedMessage);
   } catch (error) {
     logger.error("[DM_UNPIN]", error);
     return res.status(500).json({ error: "Internal Error" });
@@ -527,29 +444,15 @@ router.get("/pinned", async (req, res) => {
       select: {
         id: true,
         content: true,
-        fileUrl: true,
-        fileName: true,
-        fileType: true,
-        createdAt: true,
-        pinnedAt: true,
-        sender: {
-          select: {
-            id: true,
-            username: true,
-            imageUrl: true,
-          },
-        },
-        sticker: {
-          select: {
-            id: true,
-            imageUrl: true,
-            name: true,
-          },
-        },
+        ...directMessageSelect,
       },
     });
 
-    return res.json(pinnedMessages);
+    return res.json(
+      pinnedMessages.map((message) =>
+        attachFilePreviews(serializeDirectMessage(message)),
+      ),
+    );
   } catch (error) {
     logger.error("[GET_PINNED_DMS]", error);
     return res.status(500).json({ error: "Internal Error" });
@@ -557,24 +460,3 @@ router.get("/pinned", async (req, res) => {
 });
 
 export default router;
-const withSignedAttachmentUrls = <
-  T extends { fileKey?: string | null; fileUrl?: string | null; replyTo?: any },
->(
-  m: T,
-): T => {
-  const out: any = { ...m };
-  if (out.fileKey && isPrivateAttachmentKey(out.fileKey)) {
-    out.fileUrl = getSignedAttachmentsUrl(out.fileKey);
-  }
-  if (
-    out.replyTo &&
-    out.replyTo.fileKey &&
-    isPrivateAttachmentKey(out.replyTo.fileKey)
-  ) {
-    out.replyTo = {
-      ...out.replyTo,
-      fileUrl: getSignedAttachmentsUrl(out.replyTo.fileKey),
-    };
-  }
-  return out as T;
-};
