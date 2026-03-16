@@ -22,55 +22,93 @@ model Friendship {
   @@index([receiverId])
 }
 
+model UploadedAsset {
+  id                         String          @id @default(uuid())
+  key                        String          @unique
+  visibility                 AssetVisibility
+  context                    AssetContext
+  mimeType                   String
+  sizeBytes                  Int?
+  width                      Int?
+  height                     Int?
+  originalName               String?
+  ownerProfileId             String?
+  createdAt                  DateTime        @default(now())
+  updatedAt                  DateTime        @updatedAt
+  ownerProfile               Profile?        @relation("UploadedAssetOwner", fields: [ownerProfileId], references: [id], onDelete: SetNull)
+  profileAvatarFor           Profile[]       @relation("ProfileAvatarAsset")
+  profileBannerFor           Profile[]       @relation("ProfileBannerAsset")
+  boardImageFor              Board[]         @relation("BoardImageAsset")
+  communityImageFor          Community[]     @relation("CommunityImageAsset")
+  communityPostImageFor      CommunityPost[] @relation("CommunityPostImageAsset")
+  communityPostCommentImageFor CommunityPostComment[] @relation("CommunityPostCommentImageAsset")
+  messageAttachmentFor       Message[]       @relation("MessageAttachmentAsset")
+  directMessageAttachmentFor DirectMessage[] @relation("DirectMessageAttachmentAsset")
+  stickerImageFor            Sticker[]       @relation("StickerImageAsset")
+
+  @@index([ownerProfileId])
+  @@index([visibility, context, createdAt(sort: Desc)])
+  @@index([context, createdAt(sort: Desc)])
+}
+
 model Profile {
-  id                     String            @id @default(uuid())
-  imageUrl               String
-  email                  String
-  createdAt              DateTime          @default(now())
-  updatedAt              DateTime          @updatedAt
-  languages              Languages[]       @default([EN])
-  discriminator          String            @default("xxx")
-  username               String
-  userId                 String            @unique
-  badge                  String?           @db.VarChar(30)
-  longDescription        String?           @db.VarChar(200)
-  badgeStickerUrl        String?
-  themeConfig            Json?
-  banReason              String?
-  banned                 Boolean           @default(false)
-  bannedAt               DateTime?
-  falseReports           Int               @default(0)
-  reportAccuracy         Float?
-  validReports           Int               @default(0)
-  profileTags            String[]          @default([])
-  usernameColor          Json?
-  usernameFormat         Json?
-  boards                 Board[]
-  boardBans              BoardBan[]
-  categories             Category[]
-  channels               Channel[]
+  id                             String                  @id @default(uuid())
+  avatarAssetId                  String?
+  bannerAssetId                  String?
+  email                          String
+  createdAt                      DateTime                @default(now())
+  updatedAt                      DateTime                @updatedAt
+  languages                      Languages[]             @default([EN])
+  discriminator                  String                  @default("xxx")
+  username                       String
+  userId                         String                  @unique
+  badge                          String?                 @db.VarChar(30)
+  longDescription                String?                 @db.VarChar(200)
+  badgeStickerId                 String?
+  themeConfig                    Json?
+  banReason                      String?
+  banned                         Boolean                 @default(false)
+  bannedAt                       DateTime?
+  falseReports                   Int                     @default(0)
+  reportAccuracy                 Float?
+  validReports                   Int                     @default(0)
+  profileTags                    String[]                @default([])
+  usernameColor                  Json?
+  usernameFormat                 Json?
+  avatarAsset                    UploadedAsset?          @relation("ProfileAvatarAsset", fields: [avatarAssetId], references: [id], onDelete: SetNull)
+  bannerAsset                    UploadedAsset?          @relation("ProfileBannerAsset", fields: [bannerAssetId], references: [id], onDelete: SetNull)
+  badgeSticker                   Sticker?                @relation("ProfileBadgeSticker", fields: [badgeStickerId], references: [id], onDelete: SetNull)
+  boards                         Board[]
+  boardBans                      BoardBan[]
+  categories                     Category[]
+  channels                       Channel[]
   communityHelperInvitesAccepted CommunityHelperInvite[] @relation("CommunityHelperInviteAcceptedBy")
   communityHelperInvitesCreated  CommunityHelperInvite[] @relation("CommunityHelperInviteCreatedBy")
-  communityPosts         CommunityPost[]
-  createdCommunities     Community[]       @relation("CommunityCreatedBy")
-  communityHelpers       CommunityHelper[]
-  conversationsInitiated Conversation[]    @relation("ProfileOne")
-  conversationsReceived  Conversation[]    @relation("ProfileTwo")
-  directMessages         DirectMessage[]
-  receivedFriendRequests Friendship[]      @relation("FriendReceiver")
-  sentFriendRequests     Friendship[]      @relation("FriendRequester")
-  members                Member[]
-  mentions               Mention[]         @relation("MentionedProfile")
-  reactions              Reaction[]        @relation("ProfileReactions")
-  reportsMade            Report[]          @relation("ReportsMade")
-  reportsAgainst         Report[]          @relation("ReportsReceived")
-  authIdentities         AuthIdentity[]
-  uploadedStickers       Sticker[]         @relation("StickerUploader")
-  strikes                Strike[]
+  communityPosts                 CommunityPost[]
+  communityPostComments          CommunityPostComment[]
+  createdCommunities            Community[]             @relation("CommunityCreatedBy")
+  communityHelpers              CommunityHelper[]
+  conversationsInitiated        Conversation[]          @relation("ProfileOne")
+  conversationsReceived         Conversation[]          @relation("ProfileTwo")
+  directMessages                DirectMessage[]
+  receivedFriendRequests        Friendship[]            @relation("FriendReceiver")
+  sentFriendRequests            Friendship[]            @relation("FriendRequester")
+  members                       Member[]
+  mentions                      Mention[]               @relation("MentionedProfile")
+  reactions                     Reaction[]              @relation("ProfileReactions")
+  reportsMade                   Report[]                @relation("ReportsMade")
+  reportsAgainst                Report[]                @relation("ReportsReceived")
+  authIdentities                AuthIdentity[]
+  uploadedAssets                UploadedAsset[]         @relation("UploadedAssetOwner")
+  uploadedStickers              Sticker[]               @relation("StickerUploader")
+  strikes                       Strike[]
 
   @@unique([username, discriminator])
   @@index([username])
   @@index([discriminator])
+  @@index([avatarAssetId])
+  @@index([bannerAssetId])
+  @@index([badgeStickerId])
 }
 
 model AuthIdentity {
@@ -107,7 +145,7 @@ model Slot {
 model Community {
   id             String            @id @default(uuid())
   name           String            @unique
-  imageUrl       String?
+  imageAssetId   String?
   createdById    String?
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
@@ -119,10 +157,12 @@ model Community {
   boards         Board[]
   helperInvites  CommunityHelperInvite[]
   posts          CommunityPost[]
+  imageAsset     UploadedAsset?    @relation("CommunityImageAsset", fields: [imageAssetId], references: [id], onDelete: SetNull)
   createdBy      Profile?          @relation("CommunityCreatedBy", fields: [createdById], references: [id])
   helpers        CommunityHelper[]
 
   @@index([rankingScore(sort: Desc), id])
+  @@index([imageAssetId])
 }
 
 model CommunityHelper {
@@ -160,29 +200,55 @@ model CommunityHelperInvite {
 }
 
 model CommunityPost {
-  id              String    @id @default(uuid())
+  id              String         @id @default(uuid())
   communityId     String
   authorProfileId String
   content         String
-  imageUrl        String?
-  deleted         Boolean   @default(false)
+  imageAssetId    String?
+  commentCount    Int            @default(0)
+  deleted         Boolean        @default(false)
   pinnedAt        DateTime?
   lockedAt        DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  community       Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
-  author          Profile   @relation(fields: [authorProfileId], references: [id], onDelete: Cascade)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  community       Community      @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  author          Profile        @relation(fields: [authorProfileId], references: [id], onDelete: Cascade)
+  imageAsset      UploadedAsset? @relation("CommunityPostImageAsset", fields: [imageAssetId], references: [id], onDelete: SetNull)
+  comments        CommunityPostComment[]
 
   @@index([authorProfileId])
+  @@index([imageAssetId])
   @@index([communityId, deleted, pinnedAt(sort: Desc), createdAt(sort: Desc), id(sort: Desc)])
   @@index([communityId, deleted, createdAt(sort: Desc), id(sort: Desc)])
+}
+
+model CommunityPostComment {
+  id               String                @id @default(uuid())
+  postId           String
+  authorProfileId  String
+  content          String
+  imageAssetId     String?
+  replyToCommentId String?
+  deleted          Boolean               @default(false)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  post             CommunityPost         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author           Profile               @relation(fields: [authorProfileId], references: [id], onDelete: Cascade)
+  imageAsset       UploadedAsset?        @relation("CommunityPostCommentImageAsset", fields: [imageAssetId], references: [id], onDelete: SetNull)
+  replyToComment   CommunityPostComment? @relation("CommunityPostCommentReplies", fields: [replyToCommentId], references: [id], onDelete: SetNull)
+  replies          CommunityPostComment[] @relation("CommunityPostCommentReplies")
+
+  @@index([postId, deleted, createdAt, id])
+  @@index([authorProfileId])
+  @@index([imageAssetId])
+  @@index([replyToCommentId])
 }
 
 model Board {
   id                    String                   @id @default(uuid())
   name                  String
   description           String?
-  imageUrl              String?
+  imageAssetId          String?
   inviteCode            String                   @unique
   inviteEnabled         Boolean                  @default(true)
   size                  Int                      @default(5)
@@ -195,6 +261,7 @@ model Board {
   hiddenFromFeed        Boolean                  @default(false)
   reportCount           Int                      @default(0)
   communityId           String?
+  imageAsset            UploadedAsset?           @relation("BoardImageAsset", fields: [imageAssetId], references: [id], onDelete: SetNull)
   community             Community?               @relation(fields: [communityId], references: [id])
   profile               Profile?                 @relation(fields: [profileId], references: [id])
   boardBans             BoardBan[]
@@ -208,6 +275,7 @@ model Board {
   @@index([languages])
   @@index([hiddenFromFeed])
   @@index([communityId])
+  @@index([imageAssetId])
 }
 
 model BoardBan {
@@ -280,39 +348,32 @@ model Channel {
 }
 
 model Message {
-  id         String      @id @default(uuid())
-  content    String
-  fileUrl    String?
-  /// Stable object key for private attachments (served via attachments gateway).
-  /// When present, APIs should generate a signed URL at read time and avoid persisting expiring URLs.
-  fileKey    String?
-  fileName   String?
-  fileType   String?
-  fileSize   Int?
-  /// Original asset dimensions (used by client to reserve layout space and avoid reflow).
-  fileWidth  Int?
-  fileHeight Int?
-  memberId   String?
-  channelId  String
-  deleted    Boolean     @default(false)
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
-  type       MessageType @default(TEXT)
-  stickerId  String?
-  replyToId  String?
-  pinned     Boolean     @default(false)
-  pinnedAt   DateTime?
-  pinnedById String?
-  mentions   Mention[]
-  channel    Channel     @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  member     Member?     @relation(fields: [memberId], references: [id])
-  replyTo    Message?    @relation("MessageReplies", fields: [replyToId], references: [id])
-  replies    Message[]   @relation("MessageReplies")
-  sticker    Sticker?    @relation("MessageSticker", fields: [stickerId], references: [id])
-  reactions  Reaction[]
+  id                String         @id @default(uuid())
+  content           String
+  attachmentAssetId String?
+  memberId          String?
+  channelId         String
+  deleted           Boolean        @default(false)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  type              MessageType    @default(TEXT)
+  stickerId         String?
+  replyToId         String?
+  pinned            Boolean        @default(false)
+  pinnedAt          DateTime?
+  pinnedById        String?
+  mentions          Mention[]
+  attachmentAsset   UploadedAsset? @relation("MessageAttachmentAsset", fields: [attachmentAssetId], references: [id], onDelete: SetNull)
+  channel           Channel        @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  member            Member?        @relation(fields: [memberId], references: [id])
+  replyTo           Message?       @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies           Message[]      @relation("MessageReplies")
+  sticker           Sticker?       @relation("MessageSticker", fields: [stickerId], references: [id])
+  reactions         Reaction[]
 
   @@index([channelId])
   @@index([memberId])
+  @@index([attachmentAssetId])
   @@index([stickerId])
   @@index([replyToId])
   @@index([channelId, createdAt(sort: Desc)])
@@ -358,37 +419,30 @@ model Conversation {
 }
 
 model DirectMessage {
-  id             String          @id @default(uuid())
-  content        String
-  fileUrl        String?
-  /// Stable object key for private attachments (served via attachments gateway).
-  /// When present, APIs should generate a signed URL at read time and avoid persisting expiring URLs.
-  fileKey        String?
-  fileName       String?
-  fileType       String?
-  fileSize       Int?
-  /// Original asset dimensions (used by client to reserve layout space and avoid reflow).
-  fileWidth      Int?
-  fileHeight     Int?
-  conversationId String
-  deleted        Boolean         @default(false)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  senderId       String?
-  stickerId      String?
-  replyToId      String?
-  pinned         Boolean         @default(false)
-  pinnedAt       DateTime?
-  pinnedById     String?
-  conversation   Conversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  replyTo        DirectMessage?  @relation("DirectMessageReplies", fields: [replyToId], references: [id])
-  replies        DirectMessage[] @relation("DirectMessageReplies")
-  sender         Profile?        @relation(fields: [senderId], references: [id])
-  sticker        Sticker?        @relation("DirectMessageSticker", fields: [stickerId], references: [id])
-  reactions      Reaction[]
+  id                String         @id @default(uuid())
+  content           String
+  attachmentAssetId String?
+  conversationId    String
+  deleted           Boolean        @default(false)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  senderId          String?
+  stickerId         String?
+  replyToId         String?
+  pinned            Boolean        @default(false)
+  pinnedAt          DateTime?
+  pinnedById        String?
+  attachmentAsset   UploadedAsset? @relation("DirectMessageAttachmentAsset", fields: [attachmentAssetId], references: [id], onDelete: SetNull)
+  conversation      Conversation   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  replyTo           DirectMessage? @relation("DirectMessageReplies", fields: [replyToId], references: [id])
+  replies           DirectMessage[] @relation("DirectMessageReplies")
+  sender            Profile?       @relation(fields: [senderId], references: [id])
+  sticker           Sticker?       @relation("DirectMessageSticker", fields: [stickerId], references: [id])
+  reactions         Reaction[]
 
   @@index([senderId])
   @@index([conversationId])
+  @@index([attachmentAssetId])
   @@index([stickerId])
   @@index([replyToId])
   @@index([conversationId, createdAt(sort: Desc)])
@@ -397,17 +451,19 @@ model DirectMessage {
 model Sticker {
   id             String          @id @default(uuid())
   name           String
-  imageUrl       String
+  assetId        String
   category       String
   createdAt      DateTime        @default(now())
   isCustom       Boolean         @default(false)
-  publicId       String?
   uploaderId     String?
+  asset          UploadedAsset   @relation("StickerImageAsset", fields: [assetId], references: [id])
   directMessages DirectMessage[] @relation("DirectMessageSticker")
   messages       Message[]       @relation("MessageSticker")
   uploader       Profile?        @relation("StickerUploader", fields: [uploaderId], references: [id])
+  badgeForProfiles Profile[]     @relation("ProfileBadgeSticker")
 
   @@index([category])
+  @@index([assetId])
   @@index([uploaderId])
 }
 
@@ -542,6 +598,23 @@ enum Languages {
   ES
 }
 
+enum AssetVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum AssetContext {
+  PROFILE_AVATAR
+  PROFILE_BANNER
+  BOARD_IMAGE
+  COMMUNITY_IMAGE
+  COMMUNITY_POST_IMAGE
+  COMMUNITY_POST_COMMENT_IMAGE
+  MESSAGE_ATTACHMENT
+  DM_ATTACHMENT
+  STICKER_IMAGE
+}
+
 enum ReportTargetType {
   MESSAGE
   DIRECT_MESSAGE
@@ -549,6 +622,7 @@ enum ReportTargetType {
   BOARD
   COMMUNITY
   COMMUNITY_POST
+  COMMUNITY_POST_COMMENT
 }
 
 enum ReportCategory {
