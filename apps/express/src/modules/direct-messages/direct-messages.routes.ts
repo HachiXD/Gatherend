@@ -336,11 +336,18 @@ router.post("/:messageId/pin", async (req, res) => {
     if (!result)
       return res.status(404).json({ error: "Conversation not found" });
 
-    // Get original message to preserve updatedAt
-    const originalMessage = await db.directMessage.findUnique({
-      where: { id: messageId },
+    // Ensure the target DM belongs to the validated conversation
+    const originalMessage = await db.directMessage.findFirst({
+      where: {
+        id: messageId,
+        conversationId: conversationId as string,
+      },
       select: { updatedAt: true },
     });
+
+    if (!originalMessage) {
+      return res.status(404).json({ error: "Message not found" });
+    }
 
     const message = await db.directMessage.update({
       where: { id: messageId },
@@ -386,11 +393,18 @@ router.delete("/:messageId/pin", async (req, res) => {
     if (!result)
       return res.status(404).json({ error: "Conversation not found" });
 
-    // Get original message to preserve updatedAt
-    const originalMessage = await db.directMessage.findUnique({
-      where: { id: messageId },
+    // Ensure the target DM belongs to the validated conversation
+    const originalMessage = await db.directMessage.findFirst({
+      where: {
+        id: messageId,
+        conversationId: conversationId as string,
+      },
       select: { updatedAt: true },
     });
+
+    if (!originalMessage) {
+      return res.status(404).json({ error: "Message not found" });
+    }
 
     const message = await db.directMessage.update({
       where: { id: messageId },

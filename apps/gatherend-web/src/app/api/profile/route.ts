@@ -4,7 +4,12 @@ import { AuthProvider, AssetContext, AssetVisibility, Languages, Prisma } from "
 import { NextResponse } from "next/server";
 import { profileCache } from "@/lib/redis";
 import { v4 as uuidv4 } from "uuid";
-import { generateUniqueDiscriminator } from "@/lib/username";
+import {
+  changeUsername,
+  generateUniqueDiscriminator,
+  sanitizeUsername,
+  MAX_DISCRIMINATORS,
+} from "@/lib/username";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import {
   UUID_REGEX,
@@ -159,11 +164,57 @@ export async function PATCH(req: Request) {
       longDescription,
     } = body as Record<string, unknown>;
 
+    let resolvedUsername: string | undefined;
+
     if (username !== undefined && !profile.discriminator) {
       return NextResponse.json(
         { error: "Profile missing discriminator, cannot update username" },
         { status: 400 },
       );
+    }
+
+    if (username !== undefined) {
+      if (typeof username !== "string") {
+        return NextResponse.json(
+          { error: "Username must be a string" },
+          { status: 400 },
+        );
+      }
+
+      const sanitizedUsername = sanitizeUsername(username);
+
+      if (sanitizedUsername.length < 2) {
+        return NextResponse.json(
+          { error: "Username must be at least 2 characters" },
+          { status: 400 },
+        );
+      }
+
+      if (sanitizedUsername.length > 20) {
+        return NextResponse.json(
+          { error: "Username must be at most 20 characters" },
+          { status: 400 },
+        );
+      }
+
+      const usedCount = await db.profile.count({
+        where: {
+          id: { not: profile.id },
+          username: { equals: sanitizedUsername, mode: "insensitive" },
+        },
+      });
+
+      if (usedCount >= MAX_DISCRIMINATORS) {
+        return NextResponse.json(
+          {
+            error:
+              "This username is no longer available. Please choose a different one.",
+          },
+          { status: 400 },
+        );
+      }
+
+      resolvedUsername = sanitizedUsername;
     }
 
     if (usernameColor !== undefined && usernameColor !== null) {
@@ -435,7 +486,6 @@ export async function PATCH(req: Request) {
 
     const updateData: Prisma.ProfileUncheckedUpdateInput = {};
 
-    if (username !== undefined) updateData.username = username as string;
     if (resolvedAvatarAssetId !== undefined) {
       updateData.avatarAssetId = resolvedAvatarAssetId;
     }
@@ -458,11 +508,25 @@ export async function PATCH(req: Request) {
       updateData.longDescription = longDescription as string | null;
     }
 
-    const updatedProfile = await db.profile.update({
-      where: { id: profile.id },
-      data: updateData,
-      select: profileResponseSelect,
-    });
+    if (resolvedUsername !== undefined) {
+      await changeUsername(profile.id, resolvedUsername);
+    }
+
+    const updatedProfile =
+      Object.keys(updateData).length > 0
+        ? await db.profile.update({
+            where: { id: profile.id },
+            data: updateData,
+            select: profileResponseSelect,
+          })
+        : await db.profile.findUnique({
+            where: { id: profile.id },
+            select: profileResponseSelect,
+          });
+
+    if (!updatedProfile) {
+      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+    }
 
     await profileCache.invalidate(profile.userId);
     await profileCache.invalidate(`betterauth:${profile.userId}`);

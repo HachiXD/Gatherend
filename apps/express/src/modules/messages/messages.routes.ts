@@ -398,11 +398,18 @@ router.post("/:messageId/pin", async (req, res) => {
       return res.status(403).json({ error: "Insufficient permissions" });
     }
 
-    // Get original message to preserve updatedAt
-    const originalMessage = await db.message.findUnique({
-      where: { id: messageId },
+    // Ensure the target message belongs to the validated channel
+    const originalMessage = await db.message.findFirst({
+      where: {
+        id: messageId,
+        channelId: channelId as string,
+      },
       select: { updatedAt: true },
     });
+
+    if (!originalMessage) {
+      return res.status(404).json({ error: "Message not found" });
+    }
 
     const message = await db.message.update({
       where: { id: messageId },
@@ -465,11 +472,18 @@ router.delete("/:messageId/pin", async (req, res) => {
       return res.status(403).json({ error: "Insufficient permissions" });
     }
 
-    // Get original message to preserve updatedAt
-    const originalMessage = await db.message.findUnique({
-      where: { id: messageId },
+    // Ensure the target message belongs to the validated channel
+    const originalMessage = await db.message.findFirst({
+      where: {
+        id: messageId,
+        channelId: channelId as string,
+      },
       select: { updatedAt: true },
     });
+
+    if (!originalMessage) {
+      return res.status(404).json({ error: "Message not found" });
+    }
 
     const message = await db.message.update({
       where: { id: messageId },
