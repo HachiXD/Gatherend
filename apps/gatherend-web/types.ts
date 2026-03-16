@@ -41,8 +41,6 @@ export type BoardWithMembersWithProfiles = Board & {
       id: string;
       username: string;
       discriminator: string;
-      email: string;
-      userId: string;
       usernameColor: UsernameColor;
       profileTags: string[];
       badge: string | null;
