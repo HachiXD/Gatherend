@@ -90,6 +90,19 @@ export function adjustSaturation(hex: string, amount: number): string {
   return hslToHex(h, newS, l);
 }
 
+function toCommunityTabsFallbackBg(hex: string): string {
+  const { h, s, l } = hexToHsl(hex);
+  const mutedS = Math.max(8, s * 0.2);
+  const mutedL = Math.min(42, Math.max(18, l * 0.9 + 3));
+  return hslToHex(h, mutedS, mutedL);
+}
+
+function toCommunityTabsFallbackActiveBg(hex: string): string {
+  const { h, s, l } = hexToHsl(hex);
+  const darkerL = Math.max(8, l * 0.72);
+  return hslToHex(h, s, darkerL);
+}
+
 /**
  * Rangos de luminosidad para colores de degradado según el modo
  * Dark: colores oscuros (8-30%)
@@ -135,6 +148,11 @@ export function generatePaletteFromBase(baseColor: string): ThemeColors {
   const clampL = (ratio: number, min: number, max: number) =>
     Math.min(max, Math.max(min, l * ratio));
 
+  const bgSecondary = hslToHex(h + 4, clampS(0.32, 22, 43), clampL(0.47, 19, 22));
+  const communityTabsFallbackBg = toCommunityTabsFallbackBg(bgSecondary);
+  const communityTabsFallbackActiveBg =
+    toCommunityTabsFallbackActiveBg(communityTabsFallbackBg);
+
   return {
     // Backgrounds - Muy oscuros con el hue del color base
     // Jerarquía: Primary < Secondary < Tertiary < Quaternary (más oscuro a más claro)
@@ -149,7 +167,7 @@ export function generatePaletteFromBase(baseColor: string): ThemeColors {
       clampS(0.35, 24, 45),
       clampL(0.32, 13, 16)
     ), // Mismo que bgPrimary, para dropdown menus
-    bgSecondary: hslToHex(h + 4, clampS(0.32, 22, 43), clampL(0.47, 19, 22)),
+    bgSecondary,
     bgTertiary: hslToHex(h + 6, clampS(0.25, 17, 37), clampL(0.57, 23, 26)),
     bgQuaternary: hslToHex(h + 4, clampS(0.26, 18, 39), clampL(0.72, 29, 32)),
     bgInputPlus: hslToHex(h + 4, clampS(0.26, 18, 39), clampL(0.72, 29, 32)), // Igual que bgQuaternary
@@ -200,6 +218,8 @@ export function generatePaletteFromBase(baseColor: string): ThemeColors {
     tabActiveBg: hslToHex(h + 1, clampS(0.31, 48, 55), clampL(0.47, 35, 45)),
     tabButtonBg: hslToHex(h - 3, clampS(0.67, 44, 52), clampL(0.87, 32, 38)),
     tabButtonHover: hslToHex(h - 3, clampS(0.67, 44, 52), clampL(1.05, 39, 45)),
+    communityTabsFallbackBg,
+    communityTabsFallbackActiveBg,
 
     // Chat Toolbar
     toolbarBg: hslToHex(h, clampS(0.32, 20, 26), clampL(0.42, 15, 19)),
@@ -368,6 +388,11 @@ export function generateLightPaletteFromBase(baseColor: string): ThemeColors {
   const clampL = (ratio: number, min: number, max: number) =>
     Math.min(max, Math.max(min, l * ratio));
 
+  const bgSecondary = hslToHex(h + 34, clampS(1.43, 65, 100), clampL(2.17, 83, 91));
+  const communityTabsFallbackBg = toCommunityTabsFallbackBg(bgSecondary);
+  const communityTabsFallbackActiveBg =
+    toCommunityTabsFallbackActiveBg(communityTabsFallbackBg);
+
   return {
     // Backgrounds - Vibrantes/Candy con alta saturación
     // Jerarquía invertida para light: Primary > Secondary > Tertiary (más claro a menos claro)
@@ -382,7 +407,7 @@ export function generateLightPaletteFromBase(baseColor: string): ThemeColors {
       clampS(1.35, 70, 100),
       clampL(1.9, 72, 80)
     ), // Mismo que bgPrimary, para dropdown menus
-    bgSecondary: hslToHex(h + 34, clampS(1.43, 65, 100), clampL(2.17, 83, 91)),
+    bgSecondary,
     bgTertiary: hslToHex(h + 35, clampS(1.43, 75, 100), clampL(2.25, 86, 94)),
     bgQuaternary: hslToHex(h + 32, clampS(1.43, 75, 100), clampL(2.1, 80, 88)),
     bgInputPlus: hslToHex(h + 32, clampS(1.43, 75, 100), clampL(2.1, 80, 88)), // Igual que bgQuaternary
@@ -451,6 +476,8 @@ export function generateLightPaletteFromBase(baseColor: string): ThemeColors {
       clampS(0.55, 50, 62),
       clampL(1.45, 54, 62)
     ),
+    communityTabsFallbackBg,
+    communityTabsFallbackActiveBg,
 
     // Chat Toolbar
     toolbarBg: hslToHex(h + 30, clampS(1.0, 55, 75), clampL(1.87, 73, 81)),
@@ -759,6 +786,14 @@ export function applyThemeToDOM(colors: ThemeColors): void {
   root.style.setProperty("--theme-tab-active-bg", colors.tabActiveBg);
   root.style.setProperty("--theme-tab-button-bg", colors.tabButtonBg);
   root.style.setProperty("--theme-tab-button-hover", colors.tabButtonHover);
+  root.style.setProperty(
+    "--theme-community-tabs-fallback-bg",
+    colors.communityTabsFallbackBg
+  );
+  root.style.setProperty(
+    "--theme-community-tabs-fallback-active-bg",
+    colors.communityTabsFallbackActiveBg
+  );
   root.style.setProperty("--theme-toolbar-bg", colors.toolbarBg);
   root.style.setProperty("--theme-toolbar-icon", colors.toolbarIcon);
   root.style.setProperty("--theme-toolbar-border", colors.toolbarBorder);
