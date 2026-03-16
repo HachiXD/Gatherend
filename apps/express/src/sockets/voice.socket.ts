@@ -69,7 +69,7 @@ export function registerVoiceHandlers(io: Server, socket: Socket) {
       const context = getPayloadId(payload, "context");
       const username =
         getPayloadId(payload, "username") ?? getSocketUsername(socket);
-      const imageUrl = getNonEmptyString(getPayloadValue(payload, "imageUrl"));
+      const avatarUrl = getNonEmptyString(getPayloadValue(payload, "avatarUrl"));
       const usernameColor = getNonEmptyString(
         getPayloadValue(payload, "usernameColor"),
       );
@@ -156,7 +156,7 @@ export function registerVoiceHandlers(io: Server, socket: Socket) {
       const result = await voiceParticipantsManager.addParticipant(channelId, {
         profileId,
         username,
-        imageUrl,
+        avatarUrl,
         usernameColor,
       });
 
@@ -189,7 +189,7 @@ export function registerVoiceHandlers(io: Server, socket: Socket) {
         participant: {
           profileId,
           username,
-          imageUrl,
+          avatarUrl,
           usernameColor,
         },
       };
