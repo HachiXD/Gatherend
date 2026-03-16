@@ -20,10 +20,7 @@ interface BoardSettingsOverlayProps {
   board: Board & {
     imageAsset?: ClientUploadedAsset | null;
     members: (Member & {
-      profile: Pick<
-        Profile,
-        "id" | "username" | "discriminator" | "email" | "userId"
-      > & {
+      profile: Pick<Profile, "id" | "username" | "discriminator"> & {
         avatarAsset: ClientUploadedAsset | null;
         badgeSticker: ClientStickerAssetRef | null;
       };
