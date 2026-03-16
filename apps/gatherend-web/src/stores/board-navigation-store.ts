@@ -8,6 +8,7 @@ import { useNavigationStore } from "@/hooks/use-navigation-store";
 // LocalStorage helpers para memoria de último channel por board
 
 const LAST_CHANNEL_STORAGE_KEY = "gatherend:lastChannel";
+const LAST_DISCOVERY_CONTEXT_STORAGE_KEY = "gatherend:lastDiscoveryContext";
 
 function saveLastChannelForBoard(boardId: string, channelId: string): void {
   if (typeof window === "undefined") return;
@@ -34,6 +35,62 @@ export function getLastChannelForBoard(boardId: string): string | null {
   }
 }
 
+type DiscoverySection = "boards" | "posts";
+
+type LastDiscoveryContext =
+  | {
+      view: "feed";
+    }
+  | {
+      view: "community";
+      communityId: string;
+      section: DiscoverySection;
+    };
+
+function getLastDiscoveryContext(): LastDiscoveryContext | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = localStorage.getItem(LAST_DISCOVERY_CONTEXT_STORAGE_KEY);
+    if (!stored) return null;
+
+    const parsed: unknown = JSON.parse(stored);
+    if (!parsed || typeof parsed !== "object") return null;
+
+    if ("view" in parsed && parsed.view === "feed") {
+      return { view: "feed" };
+    }
+
+    const communityId =
+      "communityId" in parsed && typeof parsed.communityId === "string"
+        ? parsed.communityId
+        : null;
+    const section =
+      "section" in parsed &&
+      (parsed.section === "boards" || parsed.section === "posts")
+        ? parsed.section
+        : null;
+
+    if (!communityId || !section) return null;
+
+    return { view: "community", communityId, section };
+  } catch (error) {
+    logger.warn("Failed to read last discovery context:", error);
+    return null;
+  }
+}
+
+function saveLastDiscoveryContext(context: LastDiscoveryContext): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(
+      LAST_DISCOVERY_CONTEXT_STORAGE_KEY,
+      JSON.stringify(context),
+    );
+  } catch (error) {
+    logger.warn("Failed to save last discovery context:", error);
+  }
+}
+
 // Types
 
 interface NavigationState {
@@ -41,6 +98,7 @@ interface NavigationState {
   currentChannelId: string | null;
   currentConversationId: string | null;
   currentCommunityId: string | null;
+  currentCommunitySection: DiscoverySection;
   isDiscovery: boolean;
 }
 
@@ -64,6 +122,7 @@ interface BoardNavigationStore extends NavigationState {
   switchConversation: (conversationId: string) => void;
   switchToDiscovery: () => void;
   switchToCommunityBoards: (communityId: string) => void;
+  switchToCommunityPosts: (communityId: string) => void;
 
   // Internal - for popstate sync
   _syncFromPopstate: (state: NavigationState) => void;
@@ -73,13 +132,14 @@ interface BoardNavigationStore extends NavigationState {
 
 function parseUrlToState(): NavigationState {
   if (typeof window === "undefined") {
-    return {
-      currentBoardId: "",
-      currentChannelId: null,
-      currentConversationId: null,
-      currentCommunityId: null,
-      isDiscovery: false,
-    };
+      return {
+        currentBoardId: "",
+        currentChannelId: null,
+        currentConversationId: null,
+        currentCommunityId: null,
+        currentCommunitySection: "boards",
+        isDiscovery: false,
+      };
   }
 
   const pathParts = window.location.pathname.split("/");
@@ -91,6 +151,7 @@ function parseUrlToState(): NavigationState {
       currentChannelId: null,
       currentConversationId: null,
       currentCommunityId: null,
+      currentCommunitySection: "boards",
       isDiscovery: false,
     };
   }
@@ -101,6 +162,7 @@ function parseUrlToState(): NavigationState {
     currentChannelId: null,
     currentConversationId: null,
     currentCommunityId: null,
+    currentCommunitySection: "boards",
     isDiscovery: false,
   };
 
@@ -110,6 +172,8 @@ function parseUrlToState(): NavigationState {
     const communitiesIndex = pathParts.indexOf("communities");
     if (communitiesIndex !== -1 && pathParts[communitiesIndex + 1]) {
       state.currentCommunityId = pathParts[communitiesIndex + 1];
+      state.currentCommunitySection =
+        pathParts[communitiesIndex + 2] === "posts" ? "posts" : "boards";
     }
   } else {
     const roomsIndex = pathParts.indexOf("rooms");
@@ -129,16 +193,17 @@ function parseUrlToState(): NavigationState {
 // Store
 
 // Parse URL immediately on module load (client-side only)
-const initialState =
+const initialState: NavigationState =
   typeof window !== "undefined"
-    ? parseUrlToState()
-    : {
-        currentBoardId: "",
-        currentChannelId: null,
-        currentConversationId: null,
-        currentCommunityId: null,
-        isDiscovery: false,
-      };
+     ? parseUrlToState()
+      : {
+          currentBoardId: "",
+         currentChannelId: null,
+         currentConversationId: null,
+         currentCommunityId: null,
+         currentCommunitySection: "boards",
+         isDiscovery: false,
+       };
 
 export const useBoardNavigationStore = create<BoardNavigationStore>()(
   subscribeWithSelector((set, get) => ({
@@ -166,6 +231,18 @@ export const useBoardNavigationStore = create<BoardNavigationStore>()(
         });
       }
 
+      if (urlState.isDiscovery && urlState.currentCommunityId) {
+        saveLastDiscoveryContext({
+          view: "community",
+          communityId: urlState.currentCommunityId,
+          section: urlState.currentCommunitySection,
+        });
+      } else if (urlState.isDiscovery) {
+        saveLastDiscoveryContext({
+          view: "feed",
+        });
+      }
+
       if (state.isClientNavigationEnabled) return;
 
       // Enable client navigation after a tick (to allow hydration)
@@ -181,6 +258,8 @@ export const useBoardNavigationStore = create<BoardNavigationStore>()(
             currentChannelId: event.state.channelId || null,
             currentConversationId: event.state.conversationId || null,
             currentCommunityId: event.state.communityId || null,
+            currentCommunitySection:
+              event.state.communitySection === "posts" ? "posts" : "boards",
             isDiscovery: event.state.isDiscovery || false,
           });
         } else {
@@ -196,10 +275,6 @@ export const useBoardNavigationStore = create<BoardNavigationStore>()(
       const actions = get();
       useNavigationStore.getState().registerNavigation({
         switchBoard: actions.switchBoard,
-        switchChannel: actions.switchChannel,
-        switchConversation: actions.switchConversation,
-        switchToDiscovery: actions.switchToDiscovery,
-        switchToCommunityBoards: actions.switchToCommunityBoards,
       });
 
     },
@@ -213,6 +288,7 @@ export const useBoardNavigationStore = create<BoardNavigationStore>()(
         currentChannelId: channelId || null,
         currentConversationId: null,
         currentCommunityId: null,
+        currentCommunitySection: "boards",
         isDiscovery: false,
       });
 
@@ -260,6 +336,7 @@ export const useBoardNavigationStore = create<BoardNavigationStore>()(
       set({
         currentChannelId: channelId,
         currentConversationId: null,
+        currentCommunitySection: "boards",
         isDiscovery: false,
       });
 
@@ -280,6 +357,7 @@ export const useBoardNavigationStore = create<BoardNavigationStore>()(
       set({
         currentConversationId: conversationId,
         currentChannelId: null,
+        currentCommunitySection: "boards",
         isDiscovery: false,
       });
 
@@ -292,37 +370,130 @@ export const useBoardNavigationStore = create<BoardNavigationStore>()(
 
     switchToDiscovery: () => {
       const state = get();
-      if (state.isDiscovery && !state.currentCommunityId) return;
+      const lastDiscoveryContext = getLastDiscoveryContext();
+
+      const isAtStoredDiscoveryContext =
+        !!lastDiscoveryContext &&
+        state.isDiscovery &&
+        ((lastDiscoveryContext.view === "feed" && !state.currentCommunityId) ||
+          (lastDiscoveryContext.view === "community" &&
+            state.currentCommunityId === lastDiscoveryContext.communityId &&
+            state.currentCommunitySection === lastDiscoveryContext.section));
+
+      if (
+        !lastDiscoveryContext ||
+        lastDiscoveryContext.view === "feed" ||
+        isAtStoredDiscoveryContext
+      ) {
+        if (state.isDiscovery && !state.currentCommunityId) return;
+
+        set({
+          currentChannelId: null,
+          currentConversationId: null,
+          currentCommunityId: null,
+          currentCommunitySection: "boards",
+          isDiscovery: true,
+        });
+
+        saveLastDiscoveryContext({
+          view: "feed",
+        });
+
+        window.history.pushState(
+          { boardId: state.currentBoardId, isDiscovery: true },
+          "",
+          `/boards/${state.currentBoardId}/discovery`,
+        );
+        return;
+      }
 
       set({
         currentChannelId: null,
         currentConversationId: null,
-        currentCommunityId: null,
+        currentCommunityId: lastDiscoveryContext.communityId,
+        currentCommunitySection: lastDiscoveryContext.section,
         isDiscovery: true,
       });
 
       window.history.pushState(
-        { boardId: state.currentBoardId, isDiscovery: true },
+        {
+          boardId: state.currentBoardId,
+          communityId: lastDiscoveryContext.communityId,
+          communitySection: lastDiscoveryContext.section,
+          isDiscovery: true,
+        },
         "",
-        `/boards/${state.currentBoardId}/discovery`,
+        `/boards/${state.currentBoardId}/discovery/communities/${lastDiscoveryContext.communityId}/${lastDiscoveryContext.section}`,
       );
     },
 
     switchToCommunityBoards: (communityId) => {
       const state = get();
-      if (state.currentCommunityId === communityId) return;
+      if (
+        state.currentCommunityId === communityId &&
+        state.currentCommunitySection === "boards"
+      ) {
+        return;
+      }
 
       set({
         currentChannelId: null,
         currentConversationId: null,
         currentCommunityId: communityId,
+        currentCommunitySection: "boards",
         isDiscovery: true,
       });
 
+      saveLastDiscoveryContext({
+        view: "community",
+        communityId,
+        section: "boards",
+      });
+
       window.history.pushState(
-        { boardId: state.currentBoardId, communityId, isDiscovery: true },
+        {
+          boardId: state.currentBoardId,
+          communityId,
+          communitySection: "boards",
+          isDiscovery: true,
+        },
         "",
-        `/boards/${state.currentBoardId}/discovery/communities/${communityId}`,
+        `/boards/${state.currentBoardId}/discovery/communities/${communityId}/boards`,
+      );
+    },
+
+    switchToCommunityPosts: (communityId) => {
+      const state = get();
+      if (
+        state.currentCommunityId === communityId &&
+        state.currentCommunitySection === "posts"
+      ) {
+        return;
+      }
+
+      set({
+        currentChannelId: null,
+        currentConversationId: null,
+        currentCommunityId: communityId,
+        currentCommunitySection: "posts",
+        isDiscovery: true,
+      });
+
+      saveLastDiscoveryContext({
+        view: "community",
+        communityId,
+        section: "posts",
+      });
+
+      window.history.pushState(
+        {
+          boardId: state.currentBoardId,
+          communityId,
+          communitySection: "posts",
+          isDiscovery: true,
+        },
+        "",
+        `/boards/${state.currentBoardId}/discovery/communities/${communityId}/posts`,
       );
     },
 
@@ -343,6 +514,7 @@ export const selectRouting = (state: BoardNavigationStore) => ({
   currentChannelId: state.currentChannelId,
   currentConversationId: state.currentConversationId,
   currentCommunityId: state.currentCommunityId,
+  currentCommunitySection: state.currentCommunitySection,
   isDiscovery: state.isDiscovery,
 });
 
@@ -356,6 +528,7 @@ export const selectActions = (state: BoardNavigationStore) => ({
   switchConversation: state.switchConversation,
   switchToDiscovery: state.switchToDiscovery,
   switchToCommunityBoards: state.switchToCommunityBoards,
+  switchToCommunityPosts: state.switchToCommunityPosts,
   isClientNavigationEnabled: state.isClientNavigationEnabled,
 });
 
