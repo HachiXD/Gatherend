@@ -1,4 +1,8 @@
 import { Board, Member } from "@prisma/client";
+import type {
+  ClientStickerAssetRef,
+  ClientUploadedAsset,
+} from "./src/types/uploaded-assets";
 
 // Username format type - supports multiple style combinations
 export type UsernameFormatConfig = {
@@ -37,13 +41,13 @@ export type BoardWithMembersWithProfiles = Board & {
       id: string;
       username: string;
       discriminator: string;
-      imageUrl: string;
       email: string;
       userId: string;
       usernameColor: UsernameColor;
       profileTags: string[];
       badge: string | null;
-      badgeStickerUrl: string | null;
+      avatarAsset: ClientUploadedAsset | null;
+      badgeSticker: ClientStickerAssetRef | null;
       usernameFormat: UsernameFormatConfig | null;
       longDescription: string | null;
     };
