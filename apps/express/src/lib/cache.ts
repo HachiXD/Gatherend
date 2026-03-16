@@ -18,6 +18,7 @@ import { getRedisClient, isRedisConfigured } from "./redis.js";
 import { db } from "./db.js";
 import { logger } from "./logger.js";
 import { AuthProvider, type Prisma } from "@prisma/client";
+import { uploadedAssetSelect } from "./uploaded-assets.js";
 
 // Cache TTLs in seconds
 const CACHE_TTL = {
@@ -32,12 +33,21 @@ const PROFILE_SELECT = {
   id: true,
   username: true,
   discriminator: true,
-  imageUrl: true,
   usernameColor: true,
   profileTags: true,
   badge: true,
-  badgeStickerUrl: true,
   usernameFormat: true,
+  avatarAsset: {
+    select: uploadedAssetSelect,
+  },
+  badgeSticker: {
+    select: {
+      id: true,
+      asset: {
+        select: uploadedAssetSelect,
+      },
+    },
+  },
 };
 
 /**
@@ -121,12 +131,38 @@ async function cacheDeletePattern(pattern: string): Promise<void> {
 interface CachedMemberProfile {
   id: string;
   username: string;
-  imageUrl: string | null;
+  discriminator: string | null;
   usernameColor: Prisma.JsonValue | null;
   profileTags: string[];
   badge: string | null;
-  badgeStickerUrl: string | null;
   usernameFormat: Prisma.JsonValue | null;
+  avatarAsset: {
+    id: string;
+    key: string;
+    visibility: string;
+    context: string;
+    mimeType: string;
+    sizeBytes: number | null;
+    width: number | null;
+    height: number | null;
+    originalName: string | null;
+  } | null;
+  badgeSticker:
+    | {
+        id: string;
+        asset: {
+          id: string;
+          key: string;
+          visibility: string;
+          context: string;
+          mimeType: string;
+          sizeBytes: number | null;
+          width: number | null;
+          height: number | null;
+          originalName: string | null;
+        };
+      }
+    | null;
 }
 
 interface CachedMember {
@@ -288,7 +324,17 @@ interface CachedConversationProfile {
   id: string;
   username: string;
   discriminator: string;
-  imageUrl: string | null;
+  avatarAsset: {
+    id: string;
+    key: string;
+    visibility: string;
+    context: string;
+    mimeType: string;
+    sizeBytes: number | null;
+    width: number | null;
+    height: number | null;
+    originalName: string | null;
+  } | null;
 }
 
 interface CachedConversation {
@@ -349,7 +395,9 @@ export async function findConversationForProfileCached(
           id: true,
           username: true,
           discriminator: true,
-          imageUrl: true,
+          avatarAsset: {
+            select: uploadedAssetSelect,
+          },
         },
       },
       profileTwo: {
@@ -357,7 +405,9 @@ export async function findConversationForProfileCached(
           id: true,
           username: true,
           discriminator: true,
-          imageUrl: true,
+          avatarAsset: {
+            select: uploadedAssetSelect,
+          },
         },
       },
     },
@@ -400,12 +450,37 @@ interface CachedProfile {
   id: string;
   username: string;
   discriminator: string;
-  imageUrl: string | null;
   usernameColor: Prisma.JsonValue | null;
   profileTags: string[];
   badge: string | null;
-  badgeStickerUrl: string | null;
   usernameFormat: Prisma.JsonValue | null;
+  avatarAsset: {
+    id: string;
+    key: string;
+    visibility: string;
+    context: string;
+    mimeType: string;
+    sizeBytes: number | null;
+    width: number | null;
+    height: number | null;
+    originalName: string | null;
+  } | null;
+  badgeSticker:
+    | {
+        id: string;
+        asset: {
+          id: string;
+          key: string;
+          visibility: string;
+          context: string;
+          mimeType: string;
+          sizeBytes: number | null;
+          width: number | null;
+          height: number | null;
+          originalName: string | null;
+        };
+      }
+    | null;
 }
 
 /**
@@ -446,11 +521,21 @@ interface CachedAuthProfile {
   id: string;
   userId: string;
   username: string;
-  imageUrl: string | null;
   email: string;
   banned: boolean;
   bannedAt: Date | null;
   banReason: string | null;
+  avatarAsset: {
+    id: string;
+    key: string;
+    visibility: string;
+    context: string;
+    mimeType: string;
+    sizeBytes: number | null;
+    width: number | null;
+    height: number | null;
+    originalName: string | null;
+  } | null;
 }
 
 /**
@@ -474,11 +559,13 @@ export async function getProfileByUserIdCached(
       id: true,
       userId: true,
       username: true,
-      imageUrl: true,
       email: true,
       banned: true,
       bannedAt: true,
       banReason: true,
+      avatarAsset: {
+        select: uploadedAssetSelect,
+      },
     },
   });
 
@@ -532,11 +619,13 @@ export async function getProfileByIdentityCached(input: {
       id: true,
       userId: true,
       username: true,
-      imageUrl: true,
       email: true,
       banned: true,
       bannedAt: true,
       banReason: true,
+      avatarAsset: {
+        select: uploadedAssetSelect,
+      },
     },
   });
 
