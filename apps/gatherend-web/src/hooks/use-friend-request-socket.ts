@@ -3,22 +3,15 @@
 import { useSocketClient } from "@/components/providers/socket-provider";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-
-interface Profile {
-  id: string;
-  username: string;
-  discriminator: string;
-  imageUrl: string;
-  email?: string;
-}
+import type { ClientProfileSummary } from "@/types/uploaded-assets";
 
 interface Friendship {
   id: string;
   requesterId: string;
   receiverId: string;
   status: string;
-  requester: Profile;
-  receiver: Profile;
+  requester: ClientProfileSummary;
+  receiver: ClientProfileSummary;
   createdAt: string;
 }
 
@@ -32,10 +25,6 @@ interface UseFriendRequestSocketProps {
   onNewRequest?: (data: FriendRequestEvent) => void;
 }
 
-/**
- * Hook que escucha eventos de solicitudes de amistad via socket
- * Se usa para actualizar la lista de pending requests en tiempo real
- */
 export const useFriendRequestSocket = ({
   profileId,
   onNewRequest,

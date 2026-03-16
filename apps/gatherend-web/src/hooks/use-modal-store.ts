@@ -1,5 +1,10 @@
 import { create } from "zustand";
-import { Category, Channel, ChannelType, Board, Profile } from "@prisma/client";
+import { Category, Channel, ChannelType, Board } from "@prisma/client";
+import type {
+  ClientAttachmentAsset,
+  ClientProfileSummary,
+  ClientSticker,
+} from "@/types/uploaded-assets";
 
 export type ModalType =
   | "createBoard"
@@ -23,7 +28,9 @@ export type ModalType =
   | "reportMessage"
   | "reportBoard"
   | "reportProfile"
-  | "reportCommunity";
+  | "reportCommunity"
+  | "reportCommunityPost"
+  | "deleteCommunityPost";
 
 interface ModalData {
   channelId?: string;
@@ -43,13 +50,9 @@ interface ModalData {
   messageId?: string;
   messageContent?: string;
   messageType?: "MESSAGE" | "DIRECT_MESSAGE";
-  authorProfile?: Profile;
-  fileUrl?: string | null;
-  sticker?: {
-    id: string;
-    imageUrl: string;
-    name: string;
-  } | null;
+  authorProfile?: ClientProfileSummary;
+  attachmentAsset?: ClientAttachmentAsset | null;
+  sticker?: ClientSticker | null;
   // Report board modal data
   reportBoardId?: string;
   reportBoardName?: string;
@@ -64,6 +67,14 @@ interface ModalData {
   reportCommunityId?: string;
   reportCommunityName?: string;
   reportCommunityImageUrl?: string | null;
+  reportCommunityPostId?: string;
+  reportCommunityPostContent?: string;
+  reportCommunityPostImageUrl?: string | null;
+  reportCommunityPostAuthorId?: string;
+  reportCommunityPostAuthorUsername?: string;
+  reportCommunityPostAuthorDiscriminator?: string | null;
+  deleteCommunityPostId?: string;
+  deleteCommunityPostCommunityId?: string;
   communityId?: string;
   communityName?: string;
 }

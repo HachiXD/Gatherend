@@ -1,11 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 export interface MyCommunity {
   id: string;
   name: string;
-  imageUrl: string | null;
+  imageAsset: ClientUploadedAsset | null;
   boardCount: number; // boards del usuario en esta comunidad
   totalBoardCount: number; // total de boards de la comunidad
 }

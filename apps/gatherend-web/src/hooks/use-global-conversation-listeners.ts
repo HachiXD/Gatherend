@@ -1,54 +1,34 @@
+"use client";
+
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSocketClient } from "@/components/providers/socket-provider";
-import { logger } from "@/lib/logger";
 import { useUnreadStore } from "./use-unread-store";
 import { useConversationSubscriptionStore } from "./use-conversation-subscription-store";
-import type { ChatMessage } from "@/hooks/chat/types";
+import type {
+  ChatMessage,
+  ChatReaction,
+  DirectMessageWithSender,
+} from "@/hooks/chat/types";
 import { chatMessageWindowStore } from "@/hooks/chat/chat-message-window-store";
 import { clearOptimisticTimeout } from "./use-chat-socket";
-import { Member, Message, Profile } from "@prisma/client";
 import { MESSAGES_PER_PAGE } from "./chat/types";
 
 const MAX_ITEMS_PER_PAGE = MESSAGES_PER_PAGE;
 
-type MessageWithMemberWithProfile = Message & {
-  member: Member & {
-    profile: Profile;
-  };
-  reactions?: MessageReaction[];
-};
-
-interface MessageReaction {
-  id: string;
-  emoji: string;
-  profileId: string;
-  messageId: string;
-  profile?: Profile;
-}
-
-interface MessagePayload {
-  id: string;
-  content: string;
-  fileUrl?: string | null;
-  createdAt: Date | string;
-  updatedAt: Date | string;
+type ConversationMessagePayload = DirectMessageWithSender & {
   tempId?: string;
-  member?: Member & { profile: Profile };
-  sender?: Profile;
   isOptimistic?: boolean;
-  deleted?: boolean;
-  reactions?: MessageReaction[];
-}
+};
 
 interface ReactionPayload {
   messageId: string;
-  reaction: MessageReaction;
+  reaction: ChatReaction;
   action: "add" | "remove";
 }
 
 interface PaginatedMessagePage {
-  items: MessageWithMemberWithProfile[];
+  items: DirectMessageWithSender[];
   nextCursor?: string | null;
   previousCursor?: string | null;
 }
@@ -62,23 +42,14 @@ interface UseGlobalConversationListenersProps {
   currentProfileId: string;
 }
 
-/**
- * Hook global que mantiene listeners de socket activos para TODAS las conversaciones (DMs)
- * suscritas en `useConversationSubscriptionStore`.
- *
- * Nota:
- * - La lista de DMs (preview/unread) sigue viniendo por `profile:${profileId}`
- *   via `global:conversation:message` (ver `use-global-unread-socket.ts`).
- * - Este hook solo procesa el "heavy stream" por `conversation:${conversationId}`.
- */
 export function useGlobalConversationListeners({
   currentProfileId,
 }: UseGlobalConversationListenersProps) {
   const { socket } = useSocketClient();
   const queryClient = useQueryClient();
-  const addUnread = useUnreadStore((s) => s.addUnread);
+  const addUnread = useUnreadStore((state) => state.addUnread);
   const getSubscribedConversations = useConversationSubscriptionStore(
-    (s) => s.getSubscribedConversations,
+    (state) => state.getSubscribedConversations,
   );
 
   const subscribedConversationsRef = useRef<string[]>([]);
@@ -101,7 +72,7 @@ export function useGlobalConversationListeners({
 
     const handleConversationMessage = (
       conversationId: string,
-      message: MessagePayload,
+      message: ConversationMessagePayload,
     ) => {
       if (!subscribedConversationsRef.current.includes(conversationId)) {
         return;
@@ -114,20 +85,18 @@ export function useGlobalConversationListeners({
         clearOptimisticTimeout(message.tempId);
       }
 
-      // Keep React Query cache (if present) in sync for optimistic flows / retries.
       queryClient.setQueryData(
         key,
         (oldData: PaginatedMessageData | undefined) => {
           const pages = Array.isArray(oldData?.pages) ? [...oldData.pages] : [];
           const firstPage = pages[0];
-
           const { tempId: _, isOptimistic: __, ...cleanMessage } = message;
 
           if (!firstPage || !Array.isArray(firstPage.items)) {
             return {
               pages: [
                 {
-                  items: [cleanMessage as MessageWithMemberWithProfile],
+                  items: [cleanMessage as DirectMessageWithSender],
                   nextCursor: null,
                   previousCursor: null,
                 },
@@ -136,7 +105,6 @@ export function useGlobalConversationListeners({
             };
           }
 
-          // Replace optimistic by tempId across all pages.
           if (message.tempId) {
             for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
               const page = pages[pageIndex];
@@ -144,34 +112,35 @@ export function useGlobalConversationListeners({
 
               const optimisticIndex = page.items.findIndex(
                 (
-                  m: MessageWithMemberWithProfile & {
+                  item: DirectMessageWithSender & {
                     isOptimistic?: boolean;
                     tempId?: string;
                   },
-                ) => m.isOptimistic && m.tempId === message.tempId,
+                ) => item.isOptimistic && item.tempId === message.tempId,
               );
 
               if (optimisticIndex !== -1) {
                 const updatedItems = [...page.items];
                 updatedItems[optimisticIndex] =
-                  cleanMessage as MessageWithMemberWithProfile;
+                  cleanMessage as DirectMessageWithSender;
                 pages[pageIndex] = { ...page, items: updatedItems };
                 return { ...oldData, pages };
               }
             }
           }
 
-          // Dedupe.
           const alreadyExists = pages.some(
-            (p) =>
-              p &&
-              Array.isArray(p.items) &&
-              p.items.some((m) => m.id === message.id),
+            (page) =>
+              page &&
+              Array.isArray(page.items) &&
+              page.items.some((item) => item.id === message.id),
           );
-          if (alreadyExists) return oldData;
+          if (alreadyExists) {
+            return oldData;
+          }
 
           const newItems = [
-            cleanMessage as MessageWithMemberWithProfile,
+            cleanMessage as DirectMessageWithSender,
             ...firstPage.items,
           ];
 
@@ -191,11 +160,10 @@ export function useGlobalConversationListeners({
         },
       );
 
-      // Sync message-window store (ChatMessages source-of-truth).
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { tempId: ___, isOptimistic: ____, ...cleanMessage } = message;
+      const { tempId: _, isOptimistic: __, ...cleanMessage } = message;
       const live = chatMessageWindowStore.get(windowKey);
       const preferAfterCache = Boolean(live.hasMoreAfter);
+
       if (message.tempId) {
         chatMessageWindowStore.replaceOptimisticByTempId(
           windowKey,
@@ -203,6 +171,7 @@ export function useGlobalConversationListeners({
           cleanMessage as unknown as ChatMessage,
         );
       }
+
       chatMessageWindowStore.upsertById(
         windowKey,
         cleanMessage as unknown as ChatMessage,
@@ -212,11 +181,11 @@ export function useGlobalConversationListeners({
         },
       );
 
-      // Unread fallback: if heavy stream arrives and user isn't viewing.
       const unreadState = useUnreadStore.getState();
-      const sender = message.member?.profile || message.sender || null;
+      const sender = message.sender || null;
       const isOwnMessage = sender?.id === currentProfileId;
       const isViewingThisRoom = unreadState.viewingRoom === conversationId;
+
       if (!isOwnMessage && !isViewingThisRoom) {
         addUnread(conversationId, Date.now());
       }
@@ -224,7 +193,7 @@ export function useGlobalConversationListeners({
 
     const handleConversationUpdate = (
       conversationId: string,
-      message: MessageWithMemberWithProfile,
+      message: DirectMessageWithSender,
     ) => {
       if (!subscribedConversationsRef.current.includes(conversationId)) {
         return;
@@ -238,31 +207,34 @@ export function useGlobalConversationListeners({
         (oldData: PaginatedMessageData | undefined) => {
           if (!oldData || !oldData.pages) return oldData;
 
-          if ((message as unknown as { deleted?: boolean }).deleted) {
+          if (message.deleted) {
             const newPages = oldData.pages.map((page) => ({
               ...page,
-              items: page.items.filter((m) => m.id !== message.id),
+              items: page.items.filter((item) => item.id !== message.id),
             }));
             return { ...oldData, pages: newPages };
           }
 
           const newPages = oldData.pages.map((page) => ({
             ...page,
-            items: page.items.map((m) => (m.id === message.id ? message : m)),
+            items: page.items.map((item) =>
+              item.id === message.id ? message : item,
+            ),
           }));
           return { ...oldData, pages: newPages };
         },
       );
 
-      if ((message as unknown as { deleted?: boolean }).deleted) {
+      if (message.deleted) {
         chatMessageWindowStore.removeById(windowKey, message.id);
-      } else {
-        chatMessageWindowStore.upsertById(
-          windowKey,
-          message as unknown as ChatMessage,
-          { insertIfMissing: false },
-        );
+        return;
       }
+
+      chatMessageWindowStore.upsertById(
+        windowKey,
+        message as unknown as ChatMessage,
+        { insertIfMissing: false },
+      );
     };
 
     const handleConversationReaction = (
@@ -285,21 +257,28 @@ export function useGlobalConversationListeners({
             if (!page || !Array.isArray(page.items)) return page;
             return {
               ...page,
-              items: page.items.map((msg) => {
-                if (msg.id !== data.messageId) return msg;
-                const currentReactions = msg.reactions || [];
+              items: page.items.map((message) => {
+                if (message.id !== data.messageId) return message;
+                const currentReactions = message.reactions || [];
+
                 if (data.action === "add") {
                   if (
-                    currentReactions.some((r) => r.id === data.reaction.id)
+                    currentReactions.some(
+                      (reaction) => reaction.id === data.reaction.id,
+                    )
                   ) {
-                    return msg;
+                    return message;
                   }
-                  return { ...msg, reactions: [...currentReactions, data.reaction] };
+                  return {
+                    ...message,
+                    reactions: [...currentReactions, data.reaction],
+                  };
                 }
+
                 return {
-                  ...msg,
+                  ...message,
                   reactions: currentReactions.filter(
-                    (r) => r.id !== data.reaction.id,
+                    (reaction) => reaction.id !== data.reaction.id,
                   ),
                 };
               }),
@@ -314,17 +293,28 @@ export function useGlobalConversationListeners({
         windowKey,
         data.messageId,
         (prev) => {
-          const current = (prev as any).reactions as MessageReaction[] | undefined;
+          const current = (prev as DirectMessageWithSender).reactions;
           const currentReactions = Array.isArray(current) ? current : [];
+
           if (data.action === "add") {
-            if (currentReactions.some((r) => r.id === data.reaction.id)) {
+            if (
+              currentReactions.some(
+                (reaction) => reaction.id === data.reaction.id,
+              )
+            ) {
               return prev;
             }
-            return { ...(prev as any), reactions: [...currentReactions, data.reaction] };
+            return {
+              ...(prev as DirectMessageWithSender),
+              reactions: [...currentReactions, data.reaction],
+            };
           }
+
           return {
-            ...(prev as any),
-            reactions: currentReactions.filter((r) => r.id !== data.reaction.id),
+            ...(prev as DirectMessageWithSender),
+            reactions: currentReactions.filter(
+              (reaction) => reaction.id !== data.reaction.id,
+            ),
           };
         },
       );
@@ -335,10 +325,10 @@ export function useGlobalConversationListeners({
       const updateKey = `chat:${conversationId}:messages:update`;
       const reactionKey = `chat:${conversationId}:reactions`;
 
-      const onMessage = (message: MessagePayload) => {
+      const onMessage = (message: ConversationMessagePayload) => {
         handleConversationMessage(conversationId, message);
       };
-      const onUpdate = (message: MessageWithMemberWithProfile) => {
+      const onUpdate = (message: DirectMessageWithSender) => {
         handleConversationUpdate(conversationId, message);
       };
       const onReaction = (data: ReactionPayload) => {
@@ -368,7 +358,10 @@ export function useGlobalConversationListeners({
         const prev = prevState.subscribedConversations;
 
         current.forEach((conversationId) => {
-          if (!prev.has(conversationId) && !conversationCleanups.has(conversationId)) {
+          if (
+            !prev.has(conversationId) &&
+            !conversationCleanups.has(conversationId)
+          ) {
             const cleanup = setupListenersForConversation(conversationId);
             conversationCleanups.set(conversationId, cleanup);
           }
@@ -409,13 +402,13 @@ export function useGlobalConversationListeners({
 
     if (socket.connected) {
       joinAllSubscribedConversations();
-      // Do not mark catch-up on initial mount; we only do it after a real disconnect/reconnect.
     }
 
     const handleConnect = () => {
       joinAllSubscribedConversations();
       markAllSubscribedNeedsCatchUp();
     };
+
     const handleDisconnect = () => {
       markAllSubscribedNeedsCatchUp();
     };
@@ -442,4 +435,3 @@ export function useGlobalConversationListeners({
     };
   }, [socket, queryClient, addUnread, currentProfileId]);
 }
-

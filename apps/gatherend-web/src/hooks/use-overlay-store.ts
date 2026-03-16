@@ -3,6 +3,10 @@
 import { Board, Profile, Member } from "@prisma/client";
 import { create } from "zustand";
 import { useMobileDrawerStore } from "@/stores/mobile-drawer-store";
+import type {
+  ClientStickerAssetRef,
+  ClientUploadedAsset,
+} from "@/types/uploaded-assets";
 
 type OverlayType = "boardSettings" | "userSettings" | "profileSettings" | null;
 
@@ -12,8 +16,11 @@ interface OverlayData {
     members: (Member & {
       profile: Pick<
         Profile,
-        "id" | "username" | "discriminator" | "imageUrl" | "email" | "userId"
-      >;
+        "id" | "username" | "discriminator" | "email" | "userId"
+      > & {
+        avatarAsset: ClientUploadedAsset | null;
+        badgeSticker: ClientStickerAssetRef | null;
+      };
     })[];
   };
   user?: Profile;

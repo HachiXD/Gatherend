@@ -5,16 +5,20 @@ import axios from "axios";
 import type { UsernameFormatConfig } from "@/lib/username-format";
 import { useTokenGetter } from "@/components/providers/token-manager-provider";
 import { getExpressAxiosConfig } from "@/lib/express-fetch";
+import type {
+  ClientStickerAssetRef,
+  ClientUploadedAsset,
+} from "@/types/uploaded-assets";
 
 // Tipo para los datos del ProfileCard
 export interface ProfileCard {
   id: string;
   username: string;
   discriminator: string | null;
-  imageUrl: string;
+  avatarAsset: ClientUploadedAsset | null;
   usernameColor: unknown; // JSON field
   badge: string | null;
-  badgeStickerUrl: string | null;
+  badgeSticker: ClientStickerAssetRef | null;
   usernameFormat: UsernameFormatConfig | string | null; // Supports both legacy and new format
   longDescription: string | null;
 }

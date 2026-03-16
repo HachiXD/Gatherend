@@ -1,11 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 interface UserBoard {
   id: string;
   name: string;
-  imageUrl: string | null;
+  imageAsset: ClientUploadedAsset | null;
   channels: { id: string }[];
   mainChannelId: string | null;
 }

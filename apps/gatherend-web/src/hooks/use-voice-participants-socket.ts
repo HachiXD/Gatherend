@@ -2,14 +2,10 @@
 
 import { useEffect } from "react";
 import { useSocket } from "@/components/providers/socket-provider";
-import { useVoiceParticipantsStore } from "./use-voice-participants-store";
-
-interface VoiceParticipant {
-  profileId: string;
-  username: string;
-  imageUrl: string | null;
-  usernameColor?: string | null;
-}
+import {
+  useVoiceParticipantsStore,
+  type VoiceParticipant,
+} from "./use-voice-participants-store";
 
 interface VoiceJoinEvent {
   channelId: string;
@@ -41,7 +37,7 @@ export function useVoiceParticipantsSocket(boardId: string) {
       addParticipant(data.channelId, {
         profileId: data.participant.profileId,
         username: data.participant.username,
-        imageUrl: data.participant.imageUrl,
+        avatarUrl: data.participant.avatarUrl,
         usernameColor: data.participant.usernameColor,
       });
     };
@@ -56,7 +52,7 @@ export function useVoiceParticipantsSocket(boardId: string) {
         data.participants.map((p) => ({
           profileId: p.profileId,
           username: p.username,
-          imageUrl: p.imageUrl,
+          avatarUrl: p.avatarUrl,
           usernameColor: p.usernameColor,
         })),
       );

@@ -2,11 +2,12 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
+import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 export interface CommunityOption {
   id: string;
   name: string;
-  imageUrl: string | null;
+  imageAsset: ClientUploadedAsset | null;
   memberCount: number;
   boardCount: number;
 }

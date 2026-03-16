@@ -16,17 +16,19 @@ const IS_PRODUCTION = process.env.NODE_ENV === "production";
 // Context types that match the backend
 export type UploadContext =
   | "board_image"
+  | "community_image"
   | "community_post_image"
+  | "community_post_comment_image"
   | "profile_avatar"
   | "profile_banner"
   | "message_attachment"
   | "sticker"
   | "dm_attachment";
 
-// Legacy endpoint mapping (for backwards compatibility)
 const ENDPOINT_TO_CONTEXT: Record<string, UploadContext> = {
   messageFile: "message_attachment",
   boardImage: "board_image",
+  communityImage: "community_image",
   communityPostImage: "community_post_image",
   profileAvatar: "profile_avatar",
   profileBanner: "profile_banner",
@@ -35,26 +37,14 @@ const ENDPOINT_TO_CONTEXT: Record<string, UploadContext> = {
 };
 
 export interface UploadedFile {
+  assetId: string;
   url: string;
-  key?: string;
   storage: "s3";
   type: string;
   name: string;
   size: number;
   width?: number;
   height?: number;
-}
-
-export interface UploadResult {
-  success: boolean;
-  file?: UploadedFile;
-  error?: string;
-  moderation?: {
-    allowed: boolean;
-    reason?: string;
-    cached: boolean;
-    processingTimeMs: number;
-  };
 }
 
 export interface UseUploadOptions {
@@ -68,7 +58,6 @@ function useUploadInternal(
   context: UploadContext | keyof typeof ENDPOINT_TO_CONTEXT,
   profileId: string | undefined,
   options: UseUploadOptions = {},
-  source: "useUpload" | "useUploadWithProfile",
 ) {
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -83,31 +72,6 @@ function useUploadInternal(
   // Resolve context from legacy endpoint names
   const resolvedContext =
     ENDPOINT_TO_CONTEXT[context] || (context as UploadContext);
-
-  const prevCauseRef = useRef<{
-    profileId: string | undefined;
-    resolvedContext: string;
-    getToken: unknown;
-  } | null>(null);
-
-  useEffect(() => {
-    const prev = prevCauseRef.current;
-    const changed: string[] = [];
-
-    if (!prev || prev.profileId !== profileId) changed.push("profileId");
-    if (!prev || prev.resolvedContext !== resolvedContext)
-      changed.push("resolvedContext");
-    if (!prev || prev.getToken !== getToken) changed.push("getTokenRef");
-
-    if (changed.length > 0) {
-    }
-
-    prevCauseRef.current = {
-      profileId,
-      resolvedContext,
-      getToken,
-    };
-  }, [getToken, profileId, resolvedContext, source]);
 
   const startUpload = useCallback(
     async (files: File[]): Promise<UploadedFile[]> => {
@@ -172,8 +136,8 @@ function useUploadInternal(
           }
 
           const uploadedFile: UploadedFile = {
+            assetId: data.assetId,
             url: data.url,
-            key: data.key,
             storage: "s3",
             type: file.type,
             name: file.name,
@@ -216,7 +180,7 @@ export function useUpload(
   options: UseUploadOptions = {},
 ) {
   const { data: profile } = useCurrentProfile();
-  return useUploadInternal(context, profile?.id, options, "useUpload");
+  return useUploadInternal(context, profile?.id, options);
 }
 
 /**
@@ -228,32 +192,5 @@ export function useUploadWithProfile(
   profileId: string | undefined,
   options: UseUploadOptions = {},
 ) {
-  return useUploadInternal(context, profileId, options, "useUploadWithProfile");
-}
-
-/**
- * Backwards-compatible wrapper for legacy code
- *
- * @deprecated Use useUpload directly with proper context
- */
-export function useLegacyUpload(endpoint: "messageFile" | "boardImage") {
-  const context = ENDPOINT_TO_CONTEXT[endpoint] || "message_attachment";
-  const { startUpload: upload, isUploading } = useUpload(context);
-
-  // Wrap to match legacy return format
-  const startUpload = async (files: File[]) => {
-    try {
-      const results = await upload(files);
-      return results.map((file) => ({
-        url: file.url,
-        type: file.type,
-        name: file.name,
-        size: file.size,
-      }));
-    } catch {
-      return undefined;
-    }
-  };
-
-  return { startUpload, isUploading };
+  return useUploadInternal(context, profileId, options);
 }

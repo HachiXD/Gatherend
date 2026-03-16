@@ -2,7 +2,7 @@
 
 import { useQueryClient, QueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
-import { Profile } from "@prisma/client";
+import type { ClientProfileSummary } from "@/types/uploaded-assets";
 
 /**
  * Updates profile data within cached chat messages.
@@ -18,18 +18,18 @@ interface ChatPage {
 
 interface ChatMessage {
   id: string;
-  sender?: Profile;
+  sender?: CachedProfile;
   member?: {
     id: string;
-    profile: Profile;
+    profile: CachedProfile;
     [key: string]: unknown;
   };
   replyTo?: {
     id: string;
-    sender?: Profile;
+    sender?: CachedProfile;
     member?: {
       id: string;
-      profile: Profile;
+      profile: CachedProfile;
       [key: string]: unknown;
     };
     [key: string]: unknown;
@@ -42,32 +42,24 @@ interface InfiniteData {
   pageParams: unknown[];
 }
 
+type CachedProfile = ClientProfileSummary & {
+  longDescription?: string | null;
+};
+
 type ProfileUpdateFields = Partial<
   Pick<
-    Profile,
+    CachedProfile,
     | "username"
     | "discriminator"
-    | "imageUrl"
+    | "avatarAsset"
     | "usernameColor"
     | "usernameFormat"
     | "profileTags"
     | "badge"
-    | "badgeStickerUrl"
+    | "badgeSticker"
     | "longDescription"
   >
 >;
-
-/**
- * Updates a profile object with new data if it matches the target profileId
- */
-function updateProfileIfMatches(
-  profile: Profile | undefined,
-  targetProfileId: string,
-  updates: ProfileUpdateFields
-): Profile | undefined {
-  if (!profile || profile.id !== targetProfileId) return profile;
-  return { ...profile, ...updates };
-}
 
 /**
  * Updates all profile references within a single message
@@ -161,13 +153,9 @@ export function useUpdateCachedProfiles() {
 
   const updateCachedProfiles = useCallback(
     (profileId: string, updates: ProfileUpdateFields) => {
-
       // Get all chat queries (both channel and conversation types)
       const chatQueries = queryClient.getQueriesData<InfiniteData>({
         queryKey: ["chat"],
-      });
-
-      chatQueries.forEach(([key]) => {
       });
 
       // Update each chat query's cached data
@@ -176,17 +164,15 @@ export function useUpdateCachedProfiles() {
           return;
         }
 
-
         const updatedData = updateInfiniteDataProfiles(
           data,
           profileId,
-          updates
+          updates,
         );
 
         // Only update if data actually changed
         if (updatedData !== data) {
           queryClient.setQueryData(queryKey, updatedData);
-        } else {
         }
       });
 
@@ -201,7 +187,7 @@ export function useUpdateCachedProfiles() {
         const updatedData = updateInfiniteDataProfiles(
           data,
           profileId,
-          updates
+          updates,
         );
 
         if (updatedData !== data) {
@@ -209,7 +195,7 @@ export function useUpdateCachedProfiles() {
         }
       });
     },
-    [queryClient]
+    [queryClient],
   );
 
   return { updateCachedProfiles };
@@ -222,7 +208,7 @@ export function useUpdateCachedProfiles() {
 export function updateCachedProfilesInQueryClient(
   queryClient: QueryClient,
   profileId: string,
-  updates: ProfileUpdateFields
+  updates: ProfileUpdateFields,
 ) {
   // Get all chat queries
   const chatQueries = queryClient.getQueriesData<InfiniteData>({

@@ -1,6 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { v4 as uuidv4 } from "uuid";
-import { Profile, Member } from "@prisma/client";
 import type { ClientProfile } from "@/hooks/use-current-profile";
 import { useCallback, useRef } from "react";
 import type { ChatMessage } from "@/hooks/chat/types";
@@ -10,6 +9,11 @@ import {
   clearOptimisticTimeout,
 } from "./use-chat-socket";
 import { logger } from "@/lib/logger";
+import type {
+  ClientAttachmentAsset,
+  ClientProfileSummary,
+  ClientSticker,
+} from "@/types/uploaded-assets";
 
 // Type for server message response (can be channel message or direct message)
 export interface ServerMessage {
@@ -18,19 +22,17 @@ export interface ServerMessage {
   createdAt: string | Date;
   updatedAt: string | Date;
   deleted: boolean;
-  fileUrl?: string | null;
-  fileName?: string | null;
-  fileType?: string | null;
-  fileSize?: number | null;
-  sticker?: {
-    id: string;
-    imageUrl: string;
-    name: string;
-  } | null;
+  attachmentAssetId?: string | null;
+  attachmentAsset?: ClientAttachmentAsset | null;
+  sticker?: ClientSticker | null;
   // For channel messages
-  member?: Member & { profile: Profile };
+  member?: {
+    id: string;
+    role: string;
+    profile: ClientProfileSummary;
+  };
   // For direct messages
-  sender?: Profile;
+  sender?: ClientProfileSummary;
   tempId?: string;
 }
 
@@ -43,15 +45,9 @@ export interface OptimisticMessage {
   createdAt: Date;
   updatedAt: Date;
   deleted: boolean;
-  fileUrl: null;
-  fileName: null;
-  fileType: null;
-  fileSize: null;
-  sticker?: {
-    id: string;
-    imageUrl: string;
-    name: string;
-  } | null;
+  attachmentAssetId: null;
+  attachmentAsset: null;
+  sticker?: ClientSticker | null;
   sender: ClientProfile;
   isOptimistic: true;
   tempId: string;
@@ -207,7 +203,7 @@ export const useOptimisticMessages = () => {
       queryKey: string[],
       content: string,
       currentProfile: ClientProfile,
-      sticker?: { id: string; imageUrl: string; name: string },
+      sticker?: ClientSticker,
     ) => {
       const tempId = `optimistic-${uuidv4()}`;
       const now = getNormalizedOptimisticNow(queryKey);
@@ -218,10 +214,8 @@ export const useOptimisticMessages = () => {
         createdAt: now,
         updatedAt: now,
         deleted: false,
-        fileUrl: null,
-        fileName: null,
-        fileType: null,
-        fileSize: null,
+        attachmentAssetId: null,
+        attachmentAsset: null,
         sticker,
         sender: currentProfile,
         isOptimistic: true,

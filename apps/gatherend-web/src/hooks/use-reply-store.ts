@@ -1,23 +1,23 @@
 import { create } from "zustand";
-import { Profile } from "@prisma/client";
+import type {
+  ClientAttachmentAsset,
+  ClientProfileSummary,
+  ClientSticker,
+} from "@/types/uploaded-assets";
 
 interface ReplyMessage {
   id: string;
   content: string;
-  sender: Profile;
-  fileUrl?: string | null;
+  sender: ClientProfileSummary;
+  attachmentAsset?: ClientAttachmentAsset | null;
   fileName?: string | null;
-  sticker?: {
-    id: string;
-    imageUrl: string;
-    name: string;
-  } | null;
+  sticker?: ClientSticker | null;
 }
 
 interface ReplyStore {
   replyingTo: ReplyMessage | null;
-  roomId: string | null; // channelId or conversationId
-  focusTrigger: number; // Incrementa para disparar focus en el input
+  roomId: string | null;
+  focusTrigger: number;
   setReplyingTo: (message: ReplyMessage | null, roomId?: string) => void;
   clearReply: () => void;
 }

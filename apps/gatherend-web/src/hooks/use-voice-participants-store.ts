@@ -6,7 +6,7 @@ import { JsonValue } from "@prisma/client/runtime/library";
 export interface VoiceParticipant {
   profileId: string;
   username: string;
-  imageUrl: string | null;
+  avatarUrl: string | null;
   usernameColor?: JsonValue | string | null;
 }
 
@@ -41,7 +41,7 @@ export const useVoiceParticipantsStore = create<VoiceParticipantsState>(
             if (
               a.profileId !== b.profileId ||
               a.username !== b.username ||
-              a.imageUrl !== b.imageUrl ||
+              a.avatarUrl !== b.avatarUrl ||
               a.usernameColor !== b.usernameColor
             ) {
               same = false;
@@ -77,7 +77,7 @@ export const useVoiceParticipantsStore = create<VoiceParticipantsState>(
           if (
             prev.profileId === merged.profileId &&
             prev.username === merged.username &&
-            prev.imageUrl === merged.imageUrl &&
+            prev.avatarUrl === merged.avatarUrl &&
             prev.usernameColor === merged.usernameColor
           ) {
             return state;

@@ -3,16 +3,13 @@
 import { useEffect } from "react";
 import { useSocketClient } from "@/components/providers/socket-provider";
 import { useMentionStore } from "./use-mention-store";
+import type { ClientProfileSummary } from "@/types/uploaded-assets";
 
 interface MentionNotification {
   messageId: string;
   channelId: string;
   boardId: string;
-  sender: {
-    id: string;
-    username: string;
-    imageUrl: string;
-  };
+  sender: ClientProfileSummary;
   content: string;
 }
 
@@ -45,7 +42,7 @@ export const useMentionNotifications = ({
       if (Notification.permission === "granted") {
         new Notification(`${notification.sender.username} mentioned you`, {
           body: notification.content,
-          icon: notification.sender.imageUrl || "/default-avatar.png",
+          icon: notification.sender.avatarAsset?.url || "/default-avatar.png",
         });
       }
 

@@ -1,29 +1,25 @@
 import { useSocketClient } from "@/components/providers/socket-provider";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-
-interface Profile {
-  id: string;
-  username: string;
-  discriminator: string;
-  imageUrl: string;
-  email: string;
-  userId: string;
-}
+import type { ClientProfileSummary } from "@/types/uploaded-assets";
 
 interface Conversation {
   id: string;
   profileOneId: string;
   profileTwoId: string;
-  profileOne: Profile;
-  profileTwo: Profile;
+  profileOne: ClientProfileSummary & {
+    userId: string;
+  };
+  profileTwo: ClientProfileSummary & {
+    userId: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
 
 interface NewConversationEvent {
   conversation: Conversation;
-  otherProfile: Profile;
+  otherProfile: Conversation["profileOne"];
 }
 
 interface UseNewConversationSocketProps {
@@ -31,10 +27,6 @@ interface UseNewConversationSocketProps {
   onNewConversation?: (data: NewConversationEvent) => void;
 }
 
-/**
- * Hook que escucha eventos de nuevas conversaciones via socket
- * Se usa para actualizar la lista de DMs en tiempo real cuando se acepta una solicitud de amistad
- */
 export const useNewConversationSocket = ({
   profileId,
   onNewConversation,

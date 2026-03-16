@@ -3,19 +3,21 @@ import { useEffect, useMemo } from "react";
 import { useSocketClient } from "@/components/providers/socket-provider";
 import { useTokenGetter } from "@/components/providers/token-manager-provider";
 import { getExpressAuthHeaders } from "@/lib/express-fetch";
+import type {
+  ClientAttachmentAsset,
+  ClientProfileSummary,
+} from "@/types/uploaded-assets";
 
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
 interface LastMessageData {
   id: string;
   content: string;
-  fileUrl: string | null;
+  attachmentAsset: ClientAttachmentAsset | null;
+  hasAttachment?: boolean;
   deleted: boolean;
   member: {
-    profile: {
-      id: string;
-      username: string;
-    };
+    profile: ClientProfileSummary;
   };
   createdAt: string;
 }

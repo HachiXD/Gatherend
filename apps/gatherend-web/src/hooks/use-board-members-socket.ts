@@ -1,15 +1,11 @@
 import { useSocketClient } from "@/components/providers/socket-provider";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import type { BoardWithData } from "@/components/providers/board-provider";
+import type { ClientProfileSummary } from "@/types/uploaded-assets";
 
 interface MemberJoinedPayload {
   boardId: string;
-  profile: {
-    id: string;
-    username: string;
-    imageUrl: string | null;
-  };
+  profile: Pick<ClientProfileSummary, "id" | "username" | "avatarAsset">;
   timestamp: number;
 }
 

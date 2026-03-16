@@ -9,6 +9,10 @@ import {
   conversationsQueryKey,
 } from "./use-conversations";
 import { chatMessageWindowStore } from "@/hooks/chat/chat-message-window-store";
+import type {
+  ClientAttachmentAsset,
+  ClientProfileSummary,
+} from "@/types/uploaded-assets";
 
 interface UseGlobalUnreadSocketProps {
   currentProfileId: string;
@@ -16,12 +20,7 @@ interface UseGlobalUnreadSocketProps {
 }
 
 // Tipos para payloads de socket
-interface ProfileInfo {
-  id: string;
-  username: string;
-  discriminator: string;
-  imageUrl: string | null;
-}
+type ProfileInfo = ClientProfileSummary;
 
 interface ChannelMessagePayload {
   channelId: string;
@@ -37,7 +36,8 @@ interface DirectMessagePayload {
   sender?: ProfileInfo;
   lastMessage?: {
     content: string;
-    fileUrl: string | null;
+    attachmentAsset?: ClientAttachmentAsset | null;
+    hasAttachment?: boolean;
     deleted: boolean;
     senderId: string;
   };
@@ -94,7 +94,7 @@ export const useGlobalUnreadSocket = ({
     // Schedule a lightweight invalidate for a room (deduped within a small window)
     const scheduleChatInvalidate = (
       roomType: "channel" | "conversation",
-      roomId: string
+      roomId: string,
     ) => {
       const key = `${roomType}:${roomId}`;
       const existing = timers.get(key);
@@ -214,21 +214,26 @@ export const useGlobalUnreadSocket = ({
 
             // Buscar si la conversación ya existe en el cache
             const existingConvIndex = oldConversations.findIndex(
-              (conv) => conv.id === conversationId
-            );
+            (conv) => conv.id === conversationId,
+          );
 
             if (existingConvIndex >= 0) {
               // La conversación existe, actualizar lastMessage y moverla al tope
               const updatedConv: FormattedConversation = {
                 ...oldConversations[existingConvIndex],
-                lastMessage,
+                lastMessage: {
+                  ...lastMessage,
+                  hasAttachment:
+                    lastMessage.hasAttachment ??
+                    Boolean(lastMessage.attachmentAsset),
+                },
                 updatedAt: new Date(),
               };
 
               // Remover de su posición actual y añadir al inicio
               const filtered = oldConversations.filter(
-                (conv) => conv.id !== conversationId
-              );
+              (conv) => conv.id !== conversationId,
+            );
               return [updatedConv, ...filtered];
             } else {
               // La conversación no existe en el cache - invalidar para obtener datos frescos
