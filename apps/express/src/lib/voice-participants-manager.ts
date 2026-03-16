@@ -12,7 +12,7 @@ import type { RedisClientType } from "redis";
 export interface VoiceParticipant {
   profileId: string;
   username: string;
-  imageUrl: string | null;
+  avatarUrl: string | null;
   usernameColor: string | null;
   joinedAt: string;
   serverId: string;
