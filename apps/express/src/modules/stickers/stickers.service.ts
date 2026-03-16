@@ -1,5 +1,5 @@
 import { db } from "../../lib/db.js";
-import { getStoragePublicUrl } from "../../lib/s3.config.js";
+import { serializeUploadedAsset } from "../../lib/uploaded-assets.js";
 
 const stickerSelect = {
   id: true,
@@ -13,13 +13,8 @@ const stickerSelect = {
     select: {
       id: true,
       key: true,
-      context: true,
-      visibility: true,
-      mimeType: true,
-      sizeBytes: true,
       width: true,
       height: true,
-      originalName: true,
     },
   },
 } as const;
@@ -35,13 +30,8 @@ function serializeSticker(sticker: {
   asset: {
     id: string;
     key: string;
-    context: string;
-    visibility: string;
-    mimeType: string;
-    sizeBytes: number | null;
     width: number | null;
     height: number | null;
-    originalName: string | null;
   };
 }) {
   return {
@@ -52,10 +42,7 @@ function serializeSticker(sticker: {
     isCustom: sticker.isCustom,
     createdAt: sticker.createdAt,
     assetId: sticker.assetId,
-    asset: {
-      ...sticker.asset,
-      url: getStoragePublicUrl(sticker.asset.key),
-    },
+    asset: serializeUploadedAsset(sticker.asset),
   };
 }
 

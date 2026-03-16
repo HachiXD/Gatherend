@@ -16,6 +16,7 @@ import {
   looksLikeSvg,
   sniffFileType,
 } from "../../lib/file-sniff.js";
+import { serializeUploadedAsset } from "../../lib/uploaded-assets.js";
 
 const router = express.Router();
 
@@ -25,6 +26,33 @@ const MAX_IMAGE_DIMENSION = 8192;
 // UUID validation regex
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function serializeStickerResponse(sticker: {
+  id: string;
+  name: string;
+  category: string;
+  isCustom: boolean;
+  uploaderId: string | null;
+  createdAt: Date;
+  assetId: string;
+  asset: {
+    id: string;
+    key: string;
+    width: number | null;
+    height: number | null;
+  } | null;
+}) {
+  return {
+    id: sticker.id,
+    name: sticker.name,
+    category: sticker.category,
+    isCustom: sticker.isCustom,
+    uploaderId: sticker.uploaderId,
+    createdAt: sticker.createdAt,
+    assetId: sticker.assetId,
+    asset: serializeUploadedAsset(sticker.asset),
+  };
+}
 
 // Configure multer for memory storage
 const upload = multer({
@@ -169,13 +197,8 @@ router.post("/", upload.single("image"), async (req, res) => {
         select: {
           id: true,
           key: true,
-          context: true,
-          visibility: true,
-          mimeType: true,
-          sizeBytes: true,
           width: true,
           height: true,
-          originalName: true,
         },
       });
 
@@ -199,20 +222,15 @@ router.post("/", upload.single("image"), async (req, res) => {
             select: {
               id: true,
               key: true,
-              context: true,
-              visibility: true,
-              mimeType: true,
-              sizeBytes: true,
               width: true,
               height: true,
-              originalName: true,
             },
           },
         },
       });
     });
 
-    res.json(sticker);
+    res.json(serializeStickerResponse(sticker));
   } catch (error) {
     logger.error("[STICKERS_POST]", error);
     res.status(500).json({ error: "Internal Error" });
@@ -271,23 +289,40 @@ router.delete("/:id", async (req, res) => {
         data: { uploaderId: null },
       });
     } else {
-      const asset = await db.uploadedAsset.findUnique({
-        where: { id: sticker.assetId },
-        select: { id: true, key: true },
-      });
-
-      await db.$transaction(async (tx) => {
+      const deletedAssetKey = await db.$transaction(async (tx) => {
         await tx.sticker.delete({
           where: { id },
         });
 
+        const otherStickerUsingAsset = await tx.sticker.findFirst({
+          where: {
+            assetId: sticker.assetId,
+          },
+          select: { id: true },
+        });
+
+        if (otherStickerUsingAsset) {
+          return null;
+        }
+
+        const asset = await tx.uploadedAsset.findUnique({
+          where: { id: sticker.assetId },
+          select: { key: true },
+        });
+
+        if (!asset) {
+          return null;
+        }
+
         await tx.uploadedAsset.delete({
           where: { id: sticker.assetId },
         });
+
+        return asset.key;
       });
 
-      if (asset) {
-        await deleteFromStorage(asset.key);
+      if (deletedAssetKey) {
+        await deleteFromStorage(deletedAssetKey);
       }
     }
 
@@ -371,19 +406,14 @@ router.post("/:id/clone", async (req, res) => {
           select: {
             id: true,
             key: true,
-            context: true,
-            visibility: true,
-            mimeType: true,
-            sizeBytes: true,
             width: true,
             height: true,
-            originalName: true,
           },
         },
       },
     });
 
-    res.json(clonedSticker);
+    res.json(serializeStickerResponse(clonedSticker));
   } catch (error) {
     logger.error("[STICKERS_CLONE]", error);
     res.status(500).json({ error: "Internal Error" });
