@@ -40,7 +40,6 @@ async function tryBetterAuthSocket(
           id: true,
           userId: true,
           username: true,
-          imageUrl: true,
           email: true,
           banned: true,
           bannedAt: true,
