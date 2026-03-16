@@ -195,3 +195,16 @@ export function useIsDiscovery(): boolean {
 
   return isDiscovery;
 }
+
+export function useCurrentCommunitySection(): "boards" | "posts" {
+  const isInitialized = useBoardNavigationStore(selectIsInitialized);
+  const currentCommunitySection = useBoardNavigationStore(
+    (state) => state.currentCommunitySection,
+  );
+
+  if (!isInitialized) {
+    throw new Error("useCurrentCommunitySection requires BoardSwitchProvider");
+  }
+
+  return currentCommunitySection;
+}
