@@ -176,6 +176,8 @@ export interface DerivedColors extends ButtonColors {
   badgeBg: string;
   badgeText: string;
   badgeBorder: string;
+  reliefBorder: string;
+  reliefBorderLight: string;
   scrollbarThumb: string;
   scrollbarThumbHover: string;
 }
@@ -191,6 +193,8 @@ const DEFAULT_DERIVED_COLORS: DerivedColors = {
   badgeBg: "rgba(255, 255, 255, 0.1)",
   badgeText: "rgba(255, 255, 255, 0.8)",
   badgeBorder: "rgba(255, 255, 255, 0.1)",
+  reliefBorder: "rgba(0, 0, 0, 0.35)",
+  reliefBorderLight: "rgba(255, 255, 255, 0.12)",
   scrollbarThumb: "rgba(255, 255, 255, 0.15)",
   scrollbarThumbHover: "rgba(255, 255, 255, 0.25)",
 };
@@ -277,6 +281,29 @@ export function getDerivedColors(dominantColor: string): DerivedColors {
     255,
   )}, ${Math.min(b + 60, 255)}, 0.3)`;
 
+  // Relief border (old "table UI" feel): keep the same hue and darken slightly.
+  // With right/bottom-only borders, this reads as a classic "shadow" edge.
+  //
+  // Keep the delta small so it doesn't become a harsh outline; for very dark
+  // backgrounds we darken even less.
+  const luma = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  const darkenT =
+    luma < 0.25 ? 0.12 : luma < 0.4 ? 0.16 : luma < 0.6 ? 0.22 : 0.28;
+
+  const reliefR = Math.round(r * (1 - darkenT));
+  const reliefG = Math.round(g * (1 - darkenT));
+  const reliefB = Math.round(b * (1 - darkenT));
+  const reliefBorder = `rgba(${reliefR}, ${reliefG}, ${reliefB}, 0.9)`;
+
+  // Light relief edge for "raised table" look (top border highlight).
+  // Keep it subtle; for darker backgrounds we can brighten a bit more.
+  const lightenT =
+    luma < 0.25 ? 0.24 : luma < 0.4 ? 0.18 : luma < 0.6 ? 0.12 : 0.08;
+  const reliefLightR = Math.round(r + (255 - r) * lightenT);
+  const reliefLightG = Math.round(g + (255 - g) * lightenT);
+  const reliefLightB = Math.round(b + (255 - b) * lightenT);
+  const reliefBorderLight = `rgba(${reliefLightR}, ${reliefLightG}, ${reliefLightB}, 0.85)`;
+
   // Button colors
   const buttonColors = getButtonColors(dominantColor);
 
@@ -294,6 +321,8 @@ export function getDerivedColors(dominantColor: string): DerivedColors {
     badgeBg,
     badgeText,
     badgeBorder,
+    reliefBorder,
+    reliefBorderLight,
     ...buttonColors,
     scrollbarThumb,
     scrollbarThumbHover,

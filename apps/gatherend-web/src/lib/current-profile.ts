@@ -5,7 +5,7 @@
  */
 
 import { cache } from "react";
-import { Languages, Profile } from "@prisma/client";
+import { AssetContext, AssetVisibility, Languages } from "@prisma/client";
 import { db } from "@/lib/db";
 import { profileCache } from "@/lib/redis";
 import { normalizeLanguages } from "@/lib/detect-language";
@@ -15,7 +15,6 @@ import {
   sanitizeUsername,
 } from "@/lib/username";
 import { logger } from "@/lib/logger";
-import { generateProfileAvatarUrl } from "@/lib/avatar-utils";
 import {
   getServerSession,
   type ServerSession,
@@ -24,44 +23,68 @@ import {
   getProfileByIdentity,
   linkIdentityToProfile,
 } from "@/lib/auth/identity";
+import {
+  serializePublicAsset,
+  uploadedAssetSummarySelect,
+} from "@/lib/uploaded-assets";
 
 const isDevelopment = process.env.NODE_ENV !== "production";
 
-export type ProfileData = Pick<
-  Profile,
-  | "id"
-  | "userId"
-  | "username"
-  | "discriminator"
-  | "imageUrl"
-  | "email"
-  | "languages"
-  | "usernameColor"
-  | "profileTags"
-  | "badge"
-  | "badgeStickerUrl"
-  | "usernameFormat"
-  | "longDescription"
-  | "themeConfig"
-  | "banned"
-  | "bannedAt"
-  | "banReason"
-  | "createdAt"
-  | "updatedAt"
->;
+type UploadedAssetSummary = {
+  id: string;
+  key: string;
+  visibility: AssetVisibility;
+  context: AssetContext;
+  mimeType: string;
+  sizeBytes: number | null;
+  width: number | null;
+  height: number | null;
+  originalName: string | null;
+};
+
+type SerializedUploadedAsset = ReturnType<typeof serializePublicAsset>;
+
+export type ProfileData = {
+  id: string;
+  userId: string;
+  username: string;
+  discriminator: string | null;
+  email: string;
+  languages: Languages[];
+  usernameColor: unknown;
+  profileTags: string[];
+  badge: string | null;
+  usernameFormat: unknown;
+  longDescription: string | null;
+  themeConfig: unknown;
+  banned: boolean;
+  bannedAt: Date | null;
+  banReason: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  avatarAssetId: string | null;
+  bannerAssetId: string | null;
+  badgeStickerId: string | null;
+  avatarAsset: SerializedUploadedAsset;
+  bannerAsset: SerializedUploadedAsset;
+  badgeSticker:
+    | {
+        id: string;
+        asset: SerializedUploadedAsset;
+      }
+    | null;
+};
 
 const profileSelect = {
   id: true,
   userId: true,
   username: true,
   discriminator: true,
-  imageUrl: true,
   email: true,
   languages: true,
   usernameColor: true,
   profileTags: true,
   badge: true,
-  badgeStickerUrl: true,
   usernameFormat: true,
   longDescription: true,
   themeConfig: true,
@@ -70,7 +93,69 @@ const profileSelect = {
   banReason: true,
   createdAt: true,
   updatedAt: true,
-} satisfies { [K in keyof ProfileData]: true };
+  avatarAssetId: true,
+  bannerAssetId: true,
+  badgeStickerId: true,
+  avatarAsset: {
+    select: uploadedAssetSummarySelect,
+  },
+  bannerAsset: {
+    select: uploadedAssetSummarySelect,
+  },
+  badgeSticker: {
+    select: {
+      id: true,
+      asset: {
+        select: uploadedAssetSummarySelect,
+      },
+    },
+  },
+} as const;
+
+type ProfileRecord = {
+  id: string;
+  userId: string;
+  username: string;
+  discriminator: string | null;
+  email: string;
+  languages: Languages[];
+  usernameColor: unknown;
+  profileTags: string[];
+  badge: string | null;
+  usernameFormat: unknown;
+  longDescription: string | null;
+  themeConfig: unknown;
+  banned: boolean;
+  bannedAt: Date | null;
+  banReason: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  avatarAssetId: string | null;
+  bannerAssetId: string | null;
+  badgeStickerId: string | null;
+  avatarAsset: UploadedAssetSummary | null;
+  bannerAsset: UploadedAssetSummary | null;
+  badgeSticker:
+    | {
+        id: string;
+        asset: UploadedAssetSummary;
+      }
+    | null;
+};
+
+function serializeProfileRecord(profile: ProfileRecord): ProfileData {
+  return {
+    ...profile,
+    avatarAsset: serializePublicAsset(profile.avatarAsset),
+    bannerAsset: serializePublicAsset(profile.bannerAsset),
+    badgeSticker: profile.badgeSticker
+      ? {
+          id: profile.badgeSticker.id,
+          asset: serializePublicAsset(profile.badgeSticker.asset),
+        }
+      : null,
+  };
+}
 
 const devLog = (...args: Parameters<typeof logger.server>) => {
   if (isDevelopment) {
@@ -93,11 +178,13 @@ async function updateProfileLanguages(
   profile: { languages: Languages[] | null },
 ): Promise<ProfileData> {
   const normalized = normalizeLanguages(profile.languages || undefined);
-  return db.profile.update({
+  const updatedProfile = await db.profile.update({
     where: { id: profileId },
     data: { languages: normalized },
     select: profileSelect,
   });
+
+  return serializeProfileRecord(updatedProfile as ProfileRecord);
 }
 
 async function safeLinkIdentity(providerUserId: string, profileId: string) {
@@ -142,7 +229,7 @@ async function findProfileBySession(
 
   await safeLinkIdentity(session.userId, profile.id);
   await ensureUserNameMatchesProfile(session, profile);
-  return profile;
+  return serializeProfileRecord(profile as ProfileRecord);
 }
 
 async function resolveInitialUsername(
@@ -204,22 +291,6 @@ async function resolvePrimaryProviderId(
   }
 }
 
-function resolveInitialImageUrl(
-  session: ServerSession,
-  providerId: string | null,
-): string {
-  // - Google OAuth / email+password => always Dicebear
-  // - Discord OAuth => use Discord avatar if present, else fallback to Dicebear
-  if (providerId === "discord") {
-    if (session.imageUrl && session.imageUrl.trim() !== "") {
-      return session.imageUrl;
-    }
-  }
-
-  // Use a stable seed not tied to email.
-  return generateProfileAvatarUrl(session.userId) ?? "";
-}
-
 async function createProfileForSession(
   session: ServerSession,
 ): Promise<ProfileData | null> {
@@ -228,7 +299,6 @@ async function createProfileForSession(
 
   const discriminator = await generateUniqueDiscriminator(username);
   const normalizedLangs = normalizeLanguages(undefined);
-  const imageUrl = resolveInitialImageUrl(session, providerId);
 
   try {
     const profile = await db.profile.create({
@@ -237,7 +307,6 @@ async function createProfileForSession(
         username,
         discriminator,
         email: session.email ?? "",
-        imageUrl,
         languages: normalizedLangs,
       },
       select: profileSelect,
@@ -245,7 +314,7 @@ async function createProfileForSession(
 
     await safeLinkIdentity(session.userId, profile.id);
     await ensureUserNameMatchesProfile(session, profile);
-    return profile;
+    return serializeProfileRecord(profile as ProfileRecord);
   } catch (error: unknown) {
     if (
       error &&
@@ -260,7 +329,7 @@ async function createProfileForSession(
       if (existing) {
         await safeLinkIdentity(session.userId, existing.id);
         await ensureUserNameMatchesProfile(session, existing);
-        return existing;
+        return serializeProfileRecord(existing as ProfileRecord);
       }
     }
     throw error;
