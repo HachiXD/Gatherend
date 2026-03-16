@@ -9,11 +9,20 @@ import {
   User,
   MessageSquare,
   Users,
+  FileWarning,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 // Types
+interface ModerationProfile {
+  id: string;
+  username: string;
+  discriminator: string | null;
+  avatarAsset: ClientUploadedAsset | null;
+}
+
 interface ReportSnapshot {
   // For BOARD
   name?: string;
@@ -26,6 +35,10 @@ interface ReportSnapshot {
   fileUrl?: string;
   senderId?: string;
   senderUsername?: string;
+  // For COMMUNITY_POST
+  authorId?: string;
+  authorUsername?: string;
+  authorDiscriminator?: string;
   // For PROFILE
   username?: string;
   discriminator?: string;
@@ -35,26 +48,25 @@ interface ReportSnapshot {
 
 interface ReportItem {
   id: string;
-  targetType: "MESSAGE" | "DIRECT_MESSAGE" | "PROFILE" | "BOARD";
+  targetType:
+    | "MESSAGE"
+    | "DIRECT_MESSAGE"
+    | "PROFILE"
+    | "BOARD"
+    | "COMMUNITY"
+    | "COMMUNITY_POST";
   targetId: string;
   category: string;
   status: "PENDING" | "REVIEWING" | "ACTION_TAKEN" | "DISMISSED";
   priority: string;
   description: string | null;
   createdAt: string;
-  reporter: {
-    id: string;
-    username: string;
-    discriminator: string;
-    imageUrl: string;
-  };
-  targetOwner: {
-    id: string;
-    userId: string;
-    username: string;
-    discriminator: string;
-    imageUrl: string;
-  } | null;
+  reporter: ModerationProfile | null;
+  targetOwner:
+    | (ModerationProfile & {
+        userId: string;
+      })
+    | null;
   snapshot: ReportSnapshot;
 }
 
@@ -63,26 +75,33 @@ interface ReportDetail extends ReportItem {
   boardMembers?: Array<{
     id: string;
     role: string;
-    profile: {
-      id: string;
-      username: string;
-      discriminator: string;
-      imageUrl: string;
-    };
+    profile: ModerationProfile | null;
   }>;
   messageContext?: Array<{
     id: string;
     content: string;
     createdAt: string;
     member: {
-      profile: {
-        username: string;
-        discriminator: string;
-        imageUrl: string;
-      };
+      profile: ModerationProfile | null;
     } | null;
     isReported: boolean;
   }>;
+  community?: {
+    id: string;
+    name: string;
+    createdBy: ModerationProfile | null;
+  };
+  communityPost?: {
+    id: string;
+    content: string;
+    deleted: boolean;
+    createdAt: string;
+    community: {
+      id: string;
+      name: string;
+    };
+    author: ModerationProfile | null;
+  };
 }
 
 interface ReportsResponse {
@@ -200,6 +219,10 @@ export const ReportsTab = () => {
         return <User className="w-4 h-4" />;
       case "BOARD":
         return <Users className="w-4 h-4" />;
+      case "COMMUNITY":
+        return <Users className="w-4 h-4" />;
+      case "COMMUNITY_POST":
+        return <FileWarning className="w-4 h-4" />;
       default:
         return <Flag className="w-4 h-4" />;
     }
@@ -215,6 +238,10 @@ export const ReportsTab = () => {
         return "Profile";
       case "BOARD":
         return "Board";
+      case "COMMUNITY":
+        return "Community";
+      case "COMMUNITY_POST":
+        return "Community Post";
       default:
         return type;
     }
@@ -327,13 +354,17 @@ export const ReportsTab = () => {
                     {report.snapshot.content ||
                       report.snapshot.description ||
                       report.snapshot.name ||
+                      report.snapshot.authorUsername ||
                       report.snapshot.username ||
                       "No content"}
                   </p>
 
                   {/* Meta */}
                   <div className="flex items-center gap-4 mt-2 text-xs text-theme-text-tertiary">
-                    <span>Reported by @{report.reporter.username}</span>
+                    <span>
+                      Reported by @
+                      {report.reporter?.username || "unknown"}
+                    </span>
                     {report.targetOwner && (
                       <span>Against @{report.targetOwner.username}</span>
                     )}
@@ -427,13 +458,14 @@ const ReportDetailView = ({
         </h3>
         <div className="flex items-center gap-3">
           <img
-            src={report.reporter.imageUrl}
+            src={report.reporter?.avatarAsset?.url || undefined}
             alt=""
             className="w-8 h-8 rounded-full"
           />
           <div>
             <p className="text-sm text-theme-text-primary">
-              @{report.reporter.username}/{report.reporter.discriminator}
+              @{report.reporter?.username || "unknown"}/
+              {report.reporter?.discriminator || "unknown"}
             </p>
             {report.description && (
               <p className="text-xs text-theme-text-subtle mt-1">
@@ -452,6 +484,12 @@ const ReportDetailView = ({
       )}
       {report.targetType === "PROFILE" && (
         <ProfileReportContent report={report} />
+      )}
+      {report.targetType === "COMMUNITY" && (
+        <CommunityReportContent report={report} />
+      )}
+      {report.targetType === "COMMUNITY_POST" && (
+        <CommunityPostReportContent report={report} />
       )}
 
       {/* Actions */}
@@ -531,14 +569,14 @@ const BoardReportContent = ({ report }: { report: ReportDetail }) => {
                 className="flex items-center gap-3 p-2 rounded bg-theme-bg-tertiary"
               >
                 <img
-                  src={member.profile.imageUrl}
+                  src={member.profile?.avatarAsset?.url || undefined}
                   alt=""
                   className="w-8 h-8 rounded-full"
                 />
                 <div className="flex-1">
-                  <p className="text-sm text-theme-text-primary">
-                    @{member.profile.username}/{member.profile.discriminator}
-                  </p>
+                    <p className="text-sm text-theme-text-primary">
+                    @{member.profile?.username}/{member.profile?.discriminator}
+                    </p>
                 </div>
                 <span className="text-xs px-2 py-0.5 rounded bg-theme-bg-secondary text-theme-text-tertiary">
                   {member.role}
@@ -603,12 +641,12 @@ const MessageReportContent = ({ report }: { report: ReportDetail }) => {
                   {msg.member?.profile && (
                     <>
                       <img
-                        src={msg.member.profile.imageUrl}
+                        src={msg.member.profile?.avatarAsset?.url || undefined}
                         alt=""
                         className="w-5 h-5 rounded-full"
                       />
                       <span className="text-xs font-medium text-theme-text-primary">
-                        @{msg.member.profile.username}
+                        @{msg.member.profile?.username}
                       </span>
                     </>
                   )}
@@ -643,7 +681,7 @@ const ProfileReportContent = ({ report }: { report: ReportDetail }) => {
       <div className="flex items-start gap-4">
         {report.targetOwner && (
           <img
-            src={report.targetOwner.imageUrl}
+            src={report.targetOwner?.avatarAsset?.url || undefined}
             alt=""
             className="w-16 h-16 rounded-full"
           />
@@ -662,6 +700,83 @@ const ProfileReportContent = ({ report }: { report: ReportDetail }) => {
           )}
         </div>
       </div>
+    </div>
+  );
+};
+
+const CommunityReportContent = ({ report }: { report: ReportDetail }) => {
+  return (
+    <div className="p-4 rounded-lg bg-theme-bg-secondary border border-theme-border-primary">
+      <h3 className="text-sm font-medium text-theme-text-primary mb-3">
+        Reported Community
+      </h3>
+      <div className="space-y-2">
+        <p className="font-medium text-theme-text-primary">
+          {report.snapshot.name || report.community?.name || "Unknown"}
+        </p>
+        {report.snapshot.imageUrl && (
+          <img
+            src={report.snapshot.imageUrl}
+            alt=""
+            className="h-32 w-full rounded-lg object-cover"
+          />
+        )}
+        {report.community?.createdBy && (
+          <p className="text-sm text-theme-text-subtle">
+            Owner: @{report.community.createdBy.username}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const CommunityPostReportContent = ({ report }: { report: ReportDetail }) => {
+  return (
+    <div className="space-y-4">
+      <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
+        <h3 className="text-sm font-medium text-red-400 mb-3">
+          Reported Post (snapshot)
+        </h3>
+        <div className="space-y-2">
+          <p className="text-xs text-theme-text-tertiary">
+            From @{report.snapshot.authorUsername || "unknown"}
+          </p>
+          <p className="text-sm whitespace-pre-wrap text-theme-text-primary">
+            {report.snapshot.content || "No text content"}
+          </p>
+          {report.snapshot.imageUrl && (
+            <img
+              src={report.snapshot.imageUrl}
+              alt=""
+              className="max-w-xs rounded-lg"
+            />
+          )}
+        </div>
+      </div>
+
+      {report.communityPost && (
+        <div className="p-4 rounded-lg bg-theme-bg-secondary border border-theme-border-primary">
+          <h3 className="text-sm font-medium text-theme-text-primary mb-3">
+            Current Post State
+          </h3>
+          <div className="space-y-2">
+            <p className="text-sm text-theme-text-subtle">
+              Community: {report.communityPost.community.name}
+            </p>
+            {report.communityPost.author && (
+              <p className="text-sm text-theme-text-subtle">
+                Author: @{report.communityPost.author.username}
+              </p>
+            )}
+            <p className="text-sm whitespace-pre-wrap text-theme-text-primary">
+              {report.communityPost.deleted
+                ? "This post has been deleted."
+                : report.communityPost.content || "No text content"}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

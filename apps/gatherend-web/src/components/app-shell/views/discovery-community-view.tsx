@@ -166,7 +166,7 @@ export const DiscoveryCommunityView = memo(function DiscoveryCommunityView() {
                 key={community.id}
                 id={community.id}
                 name={community.name}
-                imageUrl={community.imageUrl}
+                imageAsset={community.imageAsset}
                 memberCount={community.memberCount || 0}
                 boardCount={community.boardCount || 0}
                 onExplore={() => handleExplore(community.id)}
@@ -214,7 +214,7 @@ export const DiscoveryCommunityView = memo(function DiscoveryCommunityView() {
                     key={community.id}
                     id={community.id}
                     name={community.name}
-                    imageUrl={community.imageUrl}
+                    imageAsset={community.imageAsset}
                     memberCount={community.memberCount || 0}
                     boardCount={community.boardCount || 0}
                     onExplore={() => handleExplore(community.id)}

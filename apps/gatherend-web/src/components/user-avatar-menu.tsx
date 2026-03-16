@@ -296,9 +296,10 @@ function UserAvatarMenuContent({
     usernameColor: profileCard?.usernameColor ?? usernameColor,
     usernameFormat: profileCard?.usernameFormat ?? usernameFormat,
     badge: profileCard?.badge ?? null,
-    badgeStickerUrl: profileCard?.badgeStickerUrl ?? null,
+    badgeStickerUrl: profileCard?.badgeSticker?.asset?.url ?? null,
     longDescription: profileCard?.longDescription ?? null,
   };
+  const displayProfileImageUrl = profileCard?.avatarAsset?.url || profileImageUrl;
 
   return (
     <PopoverContent
@@ -311,7 +312,7 @@ function UserAvatarMenuContent({
       <div className="flex items-start gap-3 pb-3 border-b border-theme-border-secondary">
         {/* Menu header avatar: not tied to external hover (always renders as-is). */}
         <UserAvatar
-          src={profileImageUrl}
+          src={displayProfileImageUrl}
           profileId={profileId}
           showStatus={showStatus}
           className="h-12 w-12"
@@ -438,7 +439,7 @@ function UserAvatarMenuContent({
             profileId={profileId}
             username={displayData.username}
             discriminator={displayData.discriminator}
-            profileImageUrl={profileImageUrl}
+            profileImageUrl={displayProfileImageUrl}
             currentProfileId={currentProfileId}
             onCloseParent={onClose}
           />

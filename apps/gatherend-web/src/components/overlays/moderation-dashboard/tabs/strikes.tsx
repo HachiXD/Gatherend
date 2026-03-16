@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AlertTriangle, Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 interface StrikeItem {
   id: string;
@@ -17,8 +18,8 @@ interface StrikeItem {
     id: string;
     userId: string;
     username: string;
-    discriminator: string;
-    imageUrl: string;
+    discriminator: string | null;
+    avatarAsset: ClientUploadedAsset | null;
     banned: boolean;
   };
   originReport: {
@@ -150,7 +151,7 @@ export const StrikesTab = () => {
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-3">
                   <img
-                    src={strike.profile.imageUrl}
+                    src={strike.profile.avatarAsset?.url || undefined}
                     alt=""
                     className="w-10 h-10 rounded-full"
                   />

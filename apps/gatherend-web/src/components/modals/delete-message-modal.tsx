@@ -1,6 +1,6 @@
 "use client";
 
-import qs from "query-string";
+import qs, { type StringifiableRecord } from "query-string";
 import {
   Dialog,
   DialogContent,
@@ -32,7 +32,7 @@ export const DeleteMessageModal = () => {
       setIsLoading(true);
       const url = qs.stringifyUrl({
         url: apiUrl || "",
-        query,
+        query: query as StringifiableRecord | undefined,
       });
 
       const token = await getToken();

@@ -1,33 +1,51 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { Pencil, X, Upload, FileIcon } from "lucide-react";
-import { useUpload, type UploadContext } from "@/hooks/use-upload";
-import { toast } from "sonner";
+import { useRef, useState } from "react";
+import { FileIcon, Pencil, Upload, X } from "lucide-react";
 import clsx from "clsx";
+import { toast } from "sonner";
 import { useTranslation } from "@/i18n";
+import { useUpload, type UploadContext } from "@/hooks/use-upload";
+import { parseStoredUploadValue } from "@/lib/upload-values";
 
-interface FileUploadProps {
-  onChange: (url?: string) => void;
-  value: string;
-  endpoint: "messageFile" | "boardImage" | "communityPostImage";
-}
-
-// Map legacy endpoint names to new context
 const CDN_DOMAIN = process.env.NEXT_PUBLIC_STORAGE_DOMAIN || "";
 
-const ENDPOINT_TO_CONTEXT: Record<string, UploadContext> = {
+const ENDPOINT_TO_CONTEXT = {
   messageFile: "message_attachment",
   boardImage: "board_image",
+  communityImage: "community_image",
   communityPostImage: "community_post_image",
-};
+} satisfies Record<string, UploadContext>;
 
-export const FileUpload = ({ onChange, value, endpoint }: FileUploadProps) => {
+type FileUploadEndpoint = keyof typeof ENDPOINT_TO_CONTEXT;
+
+interface FileUploadProps {
+  onChange: (value?: string) => void;
+  value: string;
+  endpoint: FileUploadEndpoint;
+  previewUrl?: string | null;
+}
+
+function looksLikeImageUrl(url: string) {
+  const cleanUrl = url.split("?")[0]?.split("#")[0] || "";
+  return /\.(png|jpe?g|gif|webp|svg|avif)$/i.test(cleanUrl);
+}
+
+export const FileUpload = ({
+  onChange,
+  value,
+  endpoint,
+  previewUrl,
+}: FileUploadProps) => {
   const [uploading, setUploading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { t } = useTranslation();
 
-  const context = ENDPOINT_TO_CONTEXT[endpoint] || "message_attachment";
+  const context = ENDPOINT_TO_CONTEXT[endpoint];
+  const isCircularImagePicker =
+    context === "board_image" || context === "community_image";
+  const acceptsMixedFiles = context === "message_attachment";
+
   const { startUpload } = useUpload(context, {
     onModerationBlock: (reason) => {
       toast.error(reason);
@@ -40,21 +58,23 @@ export const FileUpload = ({ onChange, value, endpoint }: FileUploadProps) => {
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
+
     setUploading(true);
 
     try {
       const res = await startUpload(Array.from(files));
-
       const file = res?.[0];
+
       if (file) {
-        // Guardar URL, tipo MIME y nombre original
         onChange(
           JSON.stringify({
+            assetId: file.assetId,
             url: file.url,
-            key: file.key,
             type: file.type,
             name: file.name,
             size: file.size,
+            width: file.width,
+            height: file.height,
           }),
         );
       }
@@ -62,45 +82,31 @@ export const FileUpload = ({ onChange, value, endpoint }: FileUploadProps) => {
       console.error("Upload failed:", err);
     } finally {
       setUploading(false);
-      if (inputRef.current) inputRef.current.value = "";
+      if (inputRef.current) {
+        inputRef.current.value = "";
+      }
     }
   };
 
-  // Parseamos el valor recibido
-  let fileData: {
-    url?: string;
-    type?: string;
-    name?: string;
-    size?: number;
-  } = {};
+  const fileData = parseStoredUploadValue(value);
+  const fileUrl = fileData?.url || previewUrl || "";
+  const fileType = fileData?.type;
+  const fileName = fileData?.name;
 
-  try {
-    fileData = value ? JSON.parse(value) : {};
-  } catch {
-    // Retrocompatibilidad: si es string simple, asumimos que es URL
-    fileData = { url: value };
-  }
-
-  const { url: fileUrl, type: fileType, name: fileName } = fileData;
   const isGatherendCdnUrl =
     !!fileUrl && CDN_DOMAIN !== "" && fileUrl.includes(CDN_DOMAIN);
-
-  // Helper: determinar si es imagen
-  const looksLikeImageUrl = (url: string) => {
-    const cleanUrl = url.split("?")[0]?.split("#")[0] || "";
-    return /\.(png|jpe?g|gif|webp|svg|avif)$/i.test(cleanUrl);
-  };
 
   const isImage =
     !!fileUrl &&
     (fileType?.startsWith("image/") ||
-      endpoint === "boardImage" ||
-      endpoint === "communityPostImage" ||
+      context === "board_image" ||
+      context === "community_image" ||
+      context === "community_post_image" ||
       looksLikeImageUrl(fileUrl));
+
   const isPdf = fileType === "application/pdf";
 
-  // Mostrar preview de imagen
-  if (isImage && fileUrl && endpoint === "boardImage") {
+  if (isImage && fileUrl && isCircularImagePicker) {
     return (
       <div className="shrink-0 mx-auto md:mx-0">
         <div className="relative h-20 w-20 mx-auto group">
@@ -116,7 +122,7 @@ export const FileUpload = ({ onChange, value, endpoint }: FileUploadProps) => {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={fileUrl}
-              alt="Board image"
+              alt="Upload"
               className="w-full h-full object-cover"
               loading="lazy"
               decoding="async"
@@ -128,7 +134,7 @@ export const FileUpload = ({ onChange, value, endpoint }: FileUploadProps) => {
             type="button"
             onClick={() => inputRef.current?.click()}
             disabled={uploading}
-            className="absolute bottom-0 bg-theme-tab-button-bg cursor-pointer right-0 w-8 h-8 rounded-full hover:bg-theme-tab-button-hover text-white flex items-center justify-center shadow-lg transition-all hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-theme-tab-button-bg text-white flex items-center justify-center shadow-lg transition-all hover:scale-110 hover:bg-theme-tab-button-hover disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             aria-label={t.common.uploadBoardImage}
           >
             <Pencil className="w-4 h-4" aria-hidden="true" />
@@ -167,7 +173,6 @@ export const FileUpload = ({ onChange, value, endpoint }: FileUploadProps) => {
     );
   }
 
-  // Mostrar preview de PDF u otros archivos
   if (fileUrl && isPdf) {
     return (
       <div className="relative flex items-center p-2 mt-2 rounded-md bg-background/10">
@@ -183,7 +188,7 @@ export const FileUpload = ({ onChange, value, endpoint }: FileUploadProps) => {
           </a>
           <p className="text-xs text-gray-500">
             {isPdf ? "PDF" : "Archivo"}
-            {fileData.size && ` • ${(fileData.size / 1024).toFixed(1)} KB`}
+            {fileData?.size ? ` • ${(fileData.size / 1024).toFixed(1)} KB` : ""}
           </p>
         </div>
         <button
@@ -197,8 +202,7 @@ export const FileUpload = ({ onChange, value, endpoint }: FileUploadProps) => {
     );
   }
 
-  // Botón de upload
-  const isCircular = endpoint === "boardImage";
+  const isCircular = isCircularImagePicker;
 
   return (
     <>
@@ -207,11 +211,7 @@ export const FileUpload = ({ onChange, value, endpoint }: FileUploadProps) => {
         type="file"
         className="hidden"
         onChange={handleFileSelect}
-        accept={
-          endpoint === "messageFile"
-            ? "image/*,.pdf"
-            : "image/*"
-        }
+        accept={acceptsMixedFiles ? "image/*,.pdf" : "image/*"}
       />
 
       <button

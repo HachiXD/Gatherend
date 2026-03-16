@@ -1,10 +1,11 @@
 import { memo, useMemo } from "react";
 import { getSlotPositions } from "./geometry/get-slot-positions";
 import { MemberAvatar } from "./member-avatar";
-import { Member, Profile, SlotMode } from "@prisma/client";
+import { SlotMode } from "@prisma/client";
 import type { ClientProfile } from "@/hooks/use-current-profile";
 import { SlotAvatar } from "./slot-avatar";
 import { logger } from "@/lib/logger";
+import type { BoardMember } from "@/components/providers/board-provider";
 
 const sizeClassMap: Record<number, string> = {
   4: "h-4 w-4",
@@ -25,24 +26,7 @@ interface MemberGridProps {
   slots: {
     id: string;
     mode: SlotMode;
-    member:
-      | (Member & {
-          profile: Pick<
-            Profile,
-            | "id"
-            | "username"
-            | "discriminator"
-            | "imageUrl"
-            | "email"
-            | "userId"
-            | "usernameColor"
-            | "badge"
-            | "badgeStickerUrl"
-            | "usernameFormat"
-            | "longDescription"
-          >;
-        })
-      | null;
+    member: BoardMember | null;
   }[];
   currentProfileId: string;
   currentProfile?: ClientProfile;

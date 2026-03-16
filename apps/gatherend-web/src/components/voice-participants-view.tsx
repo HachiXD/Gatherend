@@ -176,7 +176,7 @@ function ParticipantCard({
             isExpanded ? "w-32 h-32" : "w-16 h-16",
           )}
         >
-          <AvatarImage src={participant.imageUrl ?? undefined} />
+          <AvatarImage src={participant.avatarUrl ?? undefined} />
           <AvatarFallback
             className={cn(
               "bg-theme-bg-quaternary text-theme-text-light",
@@ -371,7 +371,7 @@ function VoiceParticipantsViewContent({ chatId }: VoiceParticipantsViewProps) {
           data.participants.map((p) => ({
             profileId: p.profileId,
             username: p.username,
-            imageUrl: p.imageUrl,
+            avatarUrl: p.avatarUrl,
             usernameColor: p.usernameColor,
           })),
         );
@@ -411,7 +411,7 @@ function VoiceParticipantsViewContent({ chatId }: VoiceParticipantsViewProps) {
       addParticipant(chatId, {
         profileId: data.participant.profileId,
         username: data.participant.username,
-        imageUrl: data.participant.imageUrl,
+        avatarUrl: data.participant.avatarUrl,
         usernameColor: data.participant.usernameColor,
       });
     };
@@ -431,7 +431,7 @@ function VoiceParticipantsViewContent({ chatId }: VoiceParticipantsViewProps) {
         data.participants.map((p) => ({
           profileId: p.profileId,
           username: p.username,
-          imageUrl: p.imageUrl,
+          avatarUrl: p.avatarUrl,
           usernameColor: p.usernameColor,
         })),
       );
@@ -556,7 +556,7 @@ function VoiceParticipantsViewContent({ chatId }: VoiceParticipantsViewProps) {
                 const displayData: VoiceParticipant = participantData || {
                   profileId: participant.identity,
                   username: participant.name || "User",
-                  imageUrl: null,
+                  avatarUrl: null,
                   usernameColor: null,
                 };
                 return (
@@ -620,7 +620,7 @@ function VoiceParticipantsViewContent({ chatId }: VoiceParticipantsViewProps) {
               const displayData: VoiceParticipant = participantData || {
                 profileId: participant.identity,
                 username: participant.name || "User",
-                imageUrl: null,
+                avatarUrl: null,
                 usernameColor: null,
               };
               return (
@@ -685,7 +685,7 @@ function VoiceParticipantsViewContent({ chatId }: VoiceParticipantsViewProps) {
             const displayData: VoiceParticipant = participantData || {
               profileId: participant.identity,
               username: participant.name || "User",
-              imageUrl: null,
+              avatarUrl: null,
               usernameColor: null,
             };
 

@@ -17,7 +17,7 @@ interface ChatHeaderProps {
   boardId: string;
   name: string;
   type: "channel" | "conversation";
-  imageUrl?: string;
+  avatarUrl?: string;
   profileId?: string; // Para mostrar el status en conversaciones
   channelType?: ChannelType;
   channelId?: string;
@@ -27,7 +27,7 @@ const ChatHeaderComponent = ({
   boardId,
   name,
   type,
-  imageUrl,
+  avatarUrl,
   profileId,
   channelType,
   channelId,
@@ -61,7 +61,7 @@ const ChatHeaderComponent = ({
         boardId={boardId}
         name={name}
         type={type}
-        imageUrl={imageUrl}
+        avatarUrl={avatarUrl}
         profileId={profileId}
         channelId={channelId}
       />

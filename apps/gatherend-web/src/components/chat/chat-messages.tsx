@@ -635,6 +635,15 @@ function ChatMessagesComponent({
 
       const sender = isMessageWithMember ? msg.member?.profile : msg.sender;
       if (!sender) return null;
+      const replyTo = msg.replyTo
+        ? {
+            ...msg.replyTo,
+            sender:
+              msg.replyTo.sender || msg.replyTo.member?.profile || sender,
+            fileUrl: msg.replyTo.attachmentAsset?.url || null,
+            fileName: msg.replyTo.attachmentAsset?.originalName || null,
+          }
+        : null;
 
       const stableCompact = chatWindow.compactById[msg.id] ?? false;
       const prevMessage = index > 0 ? messages[index - 1] : undefined;
@@ -654,14 +663,6 @@ function ChatMessagesComponent({
           : null;
 
       const isLast = index === messages.length - 1;
-      const fileWidth =
-        "fileWidth" in msg
-          ? ((msg as { fileWidth?: number | null }).fileWidth ?? null)
-          : null;
-      const fileHeight =
-        "fileHeight" in msg
-          ? ((msg as { fileHeight?: number | null }).fileHeight ?? null)
-          : null;
 
       return (
         <ChatItemOptimized
@@ -671,12 +672,7 @@ function ChatMessagesComponent({
           member={isMessageWithMember ? msg.member : undefined}
           sender={sender}
           content={msg.content}
-          fileUrl={msg.fileUrl}
-          fileName={msg.fileName}
-          fileType={msg.fileType}
-          fileSize={msg.fileSize}
-          fileWidth={fileWidth}
-          fileHeight={fileHeight}
+          attachmentAsset={msg.attachmentAsset}
           filePreviewUrl={"filePreviewUrl" in msg ? msg.filePreviewUrl : null}
           fileStaticPreviewUrl={
             "fileStaticPreviewUrl" in msg ? msg.fileStaticPreviewUrl : null
@@ -691,7 +687,7 @@ function ChatMessagesComponent({
           tempId={tempId}
           apiUrl={apiUrl}
           socketQuery={socketQuery}
-          replyTo={msg.replyTo || null}
+          replyTo={replyTo}
           pinned={msg.pinned || false}
           isCompact={stableCompact}
           isLastMessage={isLast}

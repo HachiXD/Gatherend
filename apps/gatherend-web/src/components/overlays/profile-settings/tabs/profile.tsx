@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { useParams } from "next/navigation";
 import { useState, useRef, useCallback, useMemo } from "react";
 import { toast } from "sonner";
-import { Profile, Languages } from "@prisma/client";
+import { Languages } from "@prisma/client";
 import type { ClientProfile } from "@/hooks/use-current-profile";
 import { useUploadWithProfile } from "@/hooks/use-upload";
 import { useQueryClient } from "@tanstack/react-query";
@@ -15,7 +15,6 @@ import { useInvalidateProfileCard } from "@/hooks/use-profile-card";
 import { useUpdateCachedProfiles } from "@/hooks/use-update-cached-profiles";
 import { useTranslation, localeToLanguage, languageToLocale } from "@/i18n";
 import { Button } from "@/components/ui/button";
-import { logger } from "@/lib/logger";
 
 // Import optimized hooks
 import {
@@ -45,13 +44,13 @@ const schema = z.object({
     .string()
     .min(2, { message: "Username must be at least 2 characters" })
     .max(32, { message: "Username must be at most 32 characters" }),
-  imageUrl: z.string().optional(),
+  avatarAssetId: z.string().optional().nullable(),
   badge: z
     .string()
     .max(30, { message: "Badge must be at most 30 characters" })
     .optional()
     .nullable(),
-  badgeStickerUrl: z.string().optional().nullable(),
+  badgeStickerId: z.string().optional().nullable(),
   longDescription: z
     .string()
     .max(200, { message: "Description must be at most 200 characters" })
@@ -83,9 +82,9 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
     resolver: zodResolver(schema),
     defaultValues: {
       username: user.username,
-      imageUrl: user.imageUrl || "",
+      avatarAssetId: user.avatarAssetId || "",
       badge: extendedUser.badge || "",
-      badgeStickerUrl: extendedUser.badgeStickerUrl || "",
+      badgeStickerId: extendedUser.badgeStickerId || "",
       longDescription: extendedUser.longDescription || "",
     },
   });
@@ -181,7 +180,9 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
 
   // Avatar Upload
 
-  const [imagePreview, setImagePreview] = useState<string>(user.imageUrl || "");
+  const [imagePreview, setImagePreview] = useState<string>(
+    user.avatarAsset?.url || "",
+  );
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -201,7 +202,7 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
         const file = res?.[0];
         if (file) {
           setImagePreview(file.url);
-          form.setValue("imageUrl", file.url);
+          form.setValue("avatarAssetId", file.assetId);
         }
       } catch {
         toast.error("Failed to upload image");
@@ -226,12 +227,12 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
 
         const updatedProfileData = {
           username: values.username,
-          imageUrl: values.imageUrl,
+          avatarAssetId: values.avatarAssetId,
           languages: selectedLanguages,
           usernameColor: usernameColor.buildColor(),
           profileTags: profileTags.state.tags,
           badge: values.badge || null,
-          badgeStickerUrl: values.badgeStickerUrl || null,
+          badgeStickerId: values.badgeStickerId || null,
           usernameFormat: usernameFormat.buildFormat(),
           longDescription: values.longDescription || null,
         };
@@ -242,7 +243,7 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
         // Update React Query cache (simplified - let invalidation handle the rest)
         queryClient.setQueryData(
           ["current-profile"],
-          (oldProfile: Profile | undefined) =>
+          (oldProfile: ClientProfile | undefined) =>
             oldProfile ? { ...oldProfile, ...serverProfile } : serverProfile,
         );
 
@@ -251,12 +252,12 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
         updateCachedProfiles(user.id, {
           username: serverProfile.username,
           discriminator: serverProfile.discriminator,
-          imageUrl: serverProfile.imageUrl,
+          avatarAsset: serverProfile.avatarAsset,
           usernameColor: serverProfile.usernameColor,
           usernameFormat: serverProfile.usernameFormat,
           profileTags: serverProfile.profileTags,
           badge: serverProfile.badge,
-          badgeStickerUrl: serverProfile.badgeStickerUrl,
+          badgeSticker: serverProfile.badgeSticker,
           longDescription: serverProfile.longDescription,
         });
 
@@ -298,7 +299,7 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
   // Memoized form values (avoid watch() re-renders)
 
   // Use getValues with a controlled re-render trigger via form state
-  const { username, longDescription, badge, badgeStickerUrl } = form.watch();
+  const { username, longDescription, badge, badgeStickerId } = form.watch();
 
   // Render
 
@@ -382,12 +383,12 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
 
           <BadgeSection
             badgeText={badge}
-            badgeStickerUrl={badgeStickerUrl}
+            badgeStickerId={badgeStickerId}
             profileId={user.id}
             isSaving={isSaving}
             onBadgeTextChange={(value) => form.setValue("badge", value)}
-            onBadgeStickerUrlChange={(url) =>
-              form.setValue("badgeStickerUrl", url)
+            onBadgeStickerIdChange={(stickerId) =>
+              form.setValue("badgeStickerId", stickerId)
             }
             t={t}
           />

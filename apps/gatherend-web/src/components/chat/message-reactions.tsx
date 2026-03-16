@@ -14,7 +14,6 @@ interface Reaction {
   profile: {
     id: string;
     username: string;
-    imageUrl: string;
   };
 }
 

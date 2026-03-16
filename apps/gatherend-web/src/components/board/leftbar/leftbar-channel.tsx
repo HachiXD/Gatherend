@@ -94,7 +94,7 @@ const LeftbarChannelComponent = ({
     const username = lastMessage.member?.profile?.username || "";
     let preview = "";
 
-    if (lastMessage.fileUrl) {
+    if (lastMessage.hasAttachment || lastMessage.attachmentAsset) {
       preview = `📎 ${t.dm.sentAFile}`;
     } else {
       const maxLength = 30;

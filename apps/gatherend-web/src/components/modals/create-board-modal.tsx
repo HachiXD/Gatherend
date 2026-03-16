@@ -54,11 +54,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/file-upload";
-import { normalizeImageUrl } from "@/lib/avatar-utils";
 import { Slider } from "../ui/slider";
 import { Textarea } from "../ui/textarea";
 import { detectBoardLanguages } from "@/lib/detect-language";
 import { Crown, Globe, Mail } from "lucide-react";
+import { getStoredUploadAssetId } from "@/lib/upload-values";
 
 // CONSTANTES CENTRALIZADAS
 // MAX_SEATS = 48 porque el owner cuenta como 1, entonces 48 + 1 = 49 personas totales
@@ -74,7 +74,7 @@ const schema = z
       .string()
       .max(300, { message: "La descripción no puede exceder 300 caracteres" })
       .optional(),
-    imageUrl: z.string().optional(),
+    imageUpload: z.string().optional(),
     publicSeats: z.number().min(0).max(MAX_SEATS),
     invitationSeats: z.number().min(0).max(MAX_SEATS),
     communityId: z.string().optional(),
@@ -113,7 +113,7 @@ type FormSchema = z.infer<typeof schema>;
 const DEFAULTS: FormSchema = {
   name: "",
   description: "",
-  imageUrl: "",
+  imageUpload: "",
   publicSeats: 0,
   invitationSeats: 4,
   communityId: undefined,
@@ -211,8 +211,12 @@ export const CreateBoardModal = () => {
   const createBoardMutation = useMutation({
     mutationFn: async (values: FormSchema) => {
       const boardData = {
-        ...values,
-        imageUrl: normalizeImageUrl(values.imageUrl) || "",
+        name: values.name,
+        description: values.description,
+        publicSeats: values.publicSeats,
+        invitationSeats: values.invitationSeats,
+        communityId: values.communityId,
+        imageAssetId: getStoredUploadAssetId(values.imageUpload),
         languages: detectBoardLanguages(),
       };
       const response = await axios.post("/api/boards", boardData);
@@ -416,7 +420,7 @@ export const CreateBoardModal = () => {
                 <div className="flex items-center justify-center text-center">
                   <FormField
                     control={form.control}
-                    name="imageUrl"
+                    name="imageUpload"
                     render={({ field }) => (
                       <FormItem>
                         <FormControl>

@@ -28,9 +28,9 @@ export function CommunitySelectCard({
       )}
     >
       <div className="relative w-8 h-8 rounded-md overflow-hidden shrink-0 bg-theme-bg-tertiary">
-        {community.imageUrl ? (
+        {community.imageAsset?.url ? (
           <Image
-            src={community.imageUrl}
+            src={community.imageAsset.url}
             alt={community.name}
             fill
             className="object-cover"

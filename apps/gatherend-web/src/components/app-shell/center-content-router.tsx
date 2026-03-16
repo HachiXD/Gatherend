@@ -1,14 +1,12 @@
 "use client";
 
-import { memo, Suspense, useCallback, useMemo } from "react";
+import { memo, Suspense, useMemo } from "react";
 import { useBoardSwitchRouting } from "@/contexts/board-switch-context";
 import { ChannelView } from "./views/channel-view";
 import { ConversationView } from "./views/conversation-view";
 import { BoardView } from "./views/board-view";
 import { DiscoveryCommunityView } from "./views/discovery-community-view";
-import { DiscoveryBoardView } from "./views/discovery-board-view";
-import { useCommunityBoardsFeed } from "@/hooks/discovery/boards-feed/use-community-boards-feed";
-import { useNewBoardsIndicator } from "@/hooks/discovery/use-new-boards-indicator";
+import { CommunityView } from "./views/community-view";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ViewLoadingFallback, ViewErrorFallback } from "./views/view-fallbacks";
 // Instancia estable de loading fallback — evita recrear JSX en cada render
@@ -29,7 +27,7 @@ const ERROR_FALLBACK_RENDER = ({ reset }: { reset: () => void }) => (
  * para evitar re-renders cuando cambian propiedades que no afectan el routing.
  *
  * Vistas posibles:
- * - DiscoveryBoardView: cuando hay un currentCommunityId (boards de una comunidad)
+ * - CommunityView: cuando hay un currentCommunityId
  * - DiscoveryCommunityView: cuando isDiscovery es true (lista de comunidades)
  * - ConversationView: cuando hay un currentConversationId
  * - ChannelView: cuando hay un currentChannelId
@@ -42,16 +40,17 @@ function CenterContentRouterInner() {
     currentChannelId,
     currentConversationId,
     currentCommunityId,
+    currentCommunitySection,
     isDiscovery,
   } = useBoardSwitchRouting();
 
   // Memoizar la vista para evitar recrear JSX innecesariamente
   const currentView = useMemo(() => {
     // Prioridad de renderizado:
-    // 1. Discovery con communityId (boards de una comunidad)
+    // 1. Discovery con communityId
     if (isDiscovery && currentCommunityId) {
       return (
-        <CommunityBoardsView
+        <CommunityView
           key={`community-${currentCommunityId}`}
           communityId={currentCommunityId}
         />
@@ -96,15 +95,23 @@ function CenterContentRouterInner() {
   ]);
 
   const routeKey = useMemo(
-    () =>
-      `${currentBoardId}:${currentChannelId ?? "none"}:${
+    () => {
+      if (isDiscovery && currentCommunityId) {
+        return `${currentBoardId}:community:${currentCommunityId}`;
+      }
+
+      return `${currentBoardId}:${currentChannelId ?? "none"}:${
         currentConversationId ?? "none"
-      }:${currentCommunityId ?? "none"}:${isDiscovery ? "1" : "0"}`,
+      }:${currentCommunityId ?? "none"}:${currentCommunitySection}:${
+        isDiscovery ? "1" : "0"
+      }`;
+    },
     [
       currentBoardId,
       currentChannelId,
       currentConversationId,
       currentCommunityId,
+      currentCommunitySection,
       isDiscovery,
     ],
   );
@@ -118,54 +125,3 @@ function CenterContentRouterInner() {
 
 // Memoizar para evitar re-renders innecesarios del padre
 export const CenterContentRouter = memo(CenterContentRouterInner);
-
-/**
- * Componente wrapper que carga los boards de una comunidad y los pasa a DiscoveryBoardView
- *
- * OPTIMIZACIÓN: Memoizado para evitar re-renders cuando el router cambia
- * pero el communityId sigue siendo el mismo.
- */
-const CommunityBoardsView = memo(function CommunityBoardsView({
-  communityId,
-}: {
-  communityId: string;
-}) {
-  const {
-    community,
-    pageSlots,
-    isLoading,
-    isFetchingNextPage,
-    hasNextPage,
-    error,
-    refresh,
-    containerRef,
-    bottomSentinelRef,
-    measurePage,
-  } = useCommunityBoardsFeed(communityId);
-
-  // Hook para indicador de nuevos boards via WebSocket
-  const { hasNewBoards, clearIndicator } = useNewBoardsIndicator(communityId);
-
-  // Wrap refresh para limpiar el indicador al refrescar
-  const handleRefresh = useCallback(async () => {
-    clearIndicator();
-    return refresh();
-  }, [clearIndicator, refresh]);
-
-  return (
-    <DiscoveryBoardView
-      community={community}
-      pageSlots={pageSlots}
-      isLoading={isLoading}
-      isFetchingNextPage={isFetchingNextPage}
-      hasNextPage={hasNextPage}
-      error={error}
-      emptyText="No hay boards en esta comunidad."
-      onRefresh={handleRefresh}
-      hasNewBoards={hasNewBoards}
-      containerRef={containerRef}
-      bottomSentinelRef={bottomSentinelRef}
-      measurePage={measurePage}
-    />
-  );
-});

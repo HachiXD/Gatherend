@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useState, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Member, MemberRole, Profile } from "@prisma/client";
+import { Member, MemberRole } from "@prisma/client";
 import type { ClientProfile } from "@/hooks/use-current-profile";
 import {
   Edit,
@@ -26,17 +26,17 @@ import { cn } from "@/lib/utils";
 import axios from "axios";
 import { useTokenGetter } from "@/components/providers/token-manager-provider";
 import { getExpressAxiosConfig } from "@/lib/express-fetch";
+import type {
+  ClientAttachmentAsset,
+  ClientProfileSummary,
+  ClientSticker,
+} from "@/types/uploaded-assets";
 
 interface ChatItemActionsProps {
   id: string;
   content: string;
-  fileUrl: string | null;
-  fileName: string | null;
-  sticker?: {
-    id: string;
-    imageUrl: string;
-    name: string;
-  } | null;
+  attachmentAsset: ClientAttachmentAsset | null;
+  sticker?: ClientSticker | null;
   reactions: Array<{
     id: string;
     emoji: string;
@@ -44,14 +44,17 @@ interface ChatItemActionsProps {
     profile: {
       id: string;
       username: string;
-      imageUrl: string;
     };
   }>;
   deleted: boolean;
   currentProfile: ClientProfile;
   currentMember?: Member | null;
-  member?: Member & { profile: Profile };
-  sender: Profile;
+  member?: {
+    id: string;
+    role: MemberRole;
+    profile: ClientProfileSummary;
+  };
+  sender: ClientProfileSummary;
   apiUrl: string;
   socketQuery: Record<string, string>;
   pinned: boolean;
@@ -62,8 +65,7 @@ interface ChatItemActionsProps {
 export const ChatItemActions = memo(function ChatItemActions({
   id,
   content,
-  fileUrl,
-  fileName,
+  attachmentAsset,
   sticker,
   reactions,
   deleted,
@@ -106,6 +108,8 @@ export const ChatItemActions = memo(function ChatItemActions({
   const channelId = socketQuery.channelId as string | undefined;
   const conversationId = socketQuery.conversationId as string | undefined;
   const authorProfile = isChannel ? member!.profile : sender;
+  const fileUrl = attachmentAsset?.url || null;
+  const fileName = attachmentAsset?.originalName || null;
 
   const isOwnMessage = isChannel
     ? currentMember?.id === member?.id
@@ -136,7 +140,14 @@ export const ChatItemActions = memo(function ChatItemActions({
     if (!roomId) return;
 
     setReplyingTo(
-      { id, content, sender: authorProfile, fileUrl, fileName, sticker },
+      {
+        id,
+        content,
+        sender: authorProfile,
+        attachmentAsset,
+        fileName,
+        sticker,
+      },
       roomId
     );
     triggerScroll();
@@ -334,7 +345,7 @@ export const ChatItemActions = memo(function ChatItemActions({
                     authorProfile,
                     channelId,
                     conversationId,
-                    fileUrl,
+                    attachmentAsset,
                     sticker,
                     profileId: currentProfile.id,
                   });

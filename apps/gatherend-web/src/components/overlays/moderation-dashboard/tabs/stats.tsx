@@ -10,6 +10,14 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
+import type { ClientUploadedAsset } from "@/types/uploaded-assets";
+
+interface ModerationProfile {
+  id: string;
+  username: string;
+  discriminator: string | null;
+  avatarAsset: ClientUploadedAsset | null;
+}
 
 interface ModerationStats {
   overview: {
@@ -42,18 +50,14 @@ interface ModerationStats {
   topReporters: Array<{
     id: string;
     username: string;
-    discriminator: string;
-    imageUrl: string;
+    discriminator: string | null;
+    avatarAsset: ClientUploadedAsset | null;
     validReports: number;
     falseReports: number;
     reportAccuracy: number | null;
   }>;
-  mostReportedUsers: Array<{
-    id: string;
+  mostReportedUsers: Array<ModerationProfile & {
     userId: string;
-    username: string;
-    discriminator: string;
-    imageUrl: string;
     banned: boolean;
     _count: {
       reportsAgainst: number;
@@ -278,7 +282,7 @@ export const StatsTab = () => {
               >
                 <div className="flex items-center gap-3">
                   <img
-                    src={user.imageUrl}
+                    src={user.avatarAsset?.url || undefined}
                     alt=""
                     className={cn(
                       "w-8 h-8 rounded-full",
@@ -324,7 +328,7 @@ export const StatsTab = () => {
               >
                 <div className="flex items-center gap-3">
                   <img
-                    src={reporter.imageUrl}
+                    src={reporter.avatarAsset?.url || undefined}
                     alt=""
                     className="w-8 h-8 rounded-full"
                   />

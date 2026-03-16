@@ -9,12 +9,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useTranslation } from "@/i18n";
+import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 interface BannedUser {
   id: string;
   profileId: string;
   createdAt: string;
-  profile: Pick<Profile, "id" | "username" | "imageUrl" | "email" | "userId">;
+  profile: Pick<Profile, "id" | "username" | "email" | "userId"> & {
+    avatarAsset: ClientUploadedAsset | null;
+  };
 }
 
 interface BansTabProps {
@@ -106,7 +109,10 @@ export const BansTab = ({ boardId }: BansTabProps) => {
           <div className="space-y-4">
             {bannedUsers.map((ban) => (
               <div key={ban.id} className="flex items-center gap-x-2">
-                <UserAvatar src={ban.profile.imageUrl} showStatus={false} />
+                <UserAvatar
+                  src={ban.profile.avatarAsset?.url || ""}
+                  showStatus={false}
+                />
                 <div className="flex flex-col gap-y-1 flex-1">
                   <div className="text-sm font-semibold text-theme-text-primary">
                     {ban.profile.username}

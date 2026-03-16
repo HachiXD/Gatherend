@@ -14,6 +14,10 @@ import {
 } from "@prisma/client";
 import { useBoardMembersSocket } from "@/hooks/use-board-members-socket";
 import type { UsernameColor, UsernameFormatConfig } from "../../../types";
+import type {
+  ClientStickerAssetRef,
+  ClientUploadedAsset,
+} from "@/types/uploaded-assets";
 
 // Tipos para el board con todas sus relaciones
 export type BoardChannel = {
@@ -40,13 +44,13 @@ export type BoardMember = Member & {
     id: string;
     username: string;
     discriminator: string;
-    imageUrl: string;
+    avatarAsset: ClientUploadedAsset | null;
     email: string;
     userId: string;
     usernameColor: UsernameColor;
     profileTags: string[];
     badge: string | null;
-    badgeStickerUrl: string | null;
+    badgeSticker: ClientStickerAssetRef | null;
     usernameFormat: UsernameFormatConfig | null;
     longDescription: string | null;
   };
@@ -57,6 +61,7 @@ export type BoardSlot = Slot & {
 };
 
 export type BoardWithData = Board & {
+  imageAsset: ClientUploadedAsset | null;
   channels: BoardChannel[];
   categories: BoardCategory[];
   members: BoardMember[];

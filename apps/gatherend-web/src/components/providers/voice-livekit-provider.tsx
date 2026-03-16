@@ -403,7 +403,7 @@ export function VoiceLiveKitProvider({ children }: VoiceLiveKitProviderProps) {
         context,
         profileId: profile.id,
         username: profile.username,
-        imageUrl: profile.imageUrl,
+        avatarUrl: profile.avatarAsset?.url || null,
         usernameColor: profile.usernameColor,
         boardId, // Include boardId for backend optimization
       });
@@ -481,7 +481,7 @@ export function VoiceLiveKitProvider({ children }: VoiceLiveKitProviderProps) {
         context: state.context,
         profileId: profile.id,
         username: profile.username,
-        imageUrl: profile.imageUrl,
+        avatarUrl: profile.avatarAsset?.url || null,
         usernameColor: profile.usernameColor,
         boardId: state.boardId, // Include boardId for backend optimization
       });

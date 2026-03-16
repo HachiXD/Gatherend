@@ -3,22 +3,12 @@
 import { memo, useCallback, useState } from "react";
 import { UserAvatarMenu } from "@/components/user-avatar-menu";
 import { UserAvatar } from "@/components/user-avatar";
-import { Member, Profile } from "@prisma/client";
 import type { ClientProfile } from "@/hooks/use-current-profile";
 import { getRingBackground } from "@/lib/username-color";
+import type { BoardMember } from "@/components/providers/board-provider";
 
 interface MemberAvatarProps {
-  member: Member & {
-    profile: Pick<
-      Profile,
-      | "id"
-      | "username"
-      | "discriminator"
-      | "imageUrl"
-      | "usernameColor"
-      | "usernameFormat"
-    >;
-  };
+  member: BoardMember;
   currentProfileId: string;
   currentProfile?: ClientProfile;
   x: number;
@@ -47,7 +37,7 @@ const MemberAvatarComponent = ({
 
   const effectiveProfile = isCurrent && currentProfile ? currentProfile : null;
   const profileImageUrl =
-    (effectiveProfile?.imageUrl ?? member.profile.imageUrl ?? "") || "";
+    (effectiveProfile?.avatarAsset?.url ?? member.profile.avatarAsset?.url ?? "") || "";
   const username = effectiveProfile?.username ?? member.profile.username;
   const discriminator =
     effectiveProfile?.discriminator ?? member.profile.discriminator;
@@ -158,7 +148,9 @@ export const MemberAvatar = memo(MemberAvatarComponent, (prev, next) => {
   const nextIsCurrent = next.member.profile.id === next.currentProfileId;
 
   if (prevIsCurrent && nextIsCurrent) {
-    if (prev.currentProfile?.imageUrl !== next.currentProfile?.imageUrl)
+    if (
+      prev.currentProfile?.avatarAsset?.id !== next.currentProfile?.avatarAsset?.id
+    )
       return false;
     if (prev.currentProfile?.username !== next.currentProfile?.username)
       return false;
@@ -182,7 +174,7 @@ export const MemberAvatar = memo(MemberAvatarComponent, (prev, next) => {
     prev.member.profile.id === next.member.profile.id &&
     prev.member.profile.username === next.member.profile.username &&
     prev.member.profile.discriminator === next.member.profile.discriminator &&
-    prev.member.profile.imageUrl === next.member.profile.imageUrl &&
+    prev.member.profile.avatarAsset?.id === next.member.profile.avatarAsset?.id &&
     prev.member.profile.usernameColor === next.member.profile.usernameColor &&
     prev.member.profile.usernameFormat === next.member.profile.usernameFormat &&
     prev.x === next.x &&

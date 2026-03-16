@@ -8,11 +8,12 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { useBoardSwitchSafe } from "@/contexts/board-switch-context";
+import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 interface BoardPreviewData {
   id: string;
   name: string;
-  imageUrl: string | null;
+  imageAsset: ClientUploadedAsset | null;
   memberCount: number;
   size: number;
   inviteCode: string;
@@ -156,9 +157,9 @@ export const InviteLinkPreview = ({
     >
       {/* Board Image */}
       <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-theme-bg-tertiary shrink-0">
-        {boardData.imageUrl ? (
+        {boardData.imageAsset?.url ? (
           <Image
-            src={boardData.imageUrl}
+            src={boardData.imageAsset.url}
             alt={boardData.name}
             fill
             className="object-cover"

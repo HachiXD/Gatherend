@@ -26,10 +26,13 @@ import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/file-upload";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
-import { getBoardImageUrl, normalizeImageUrl } from "@/lib/avatar-utils";
+import { getBoardImageUrl } from "@/lib/avatar-utils";
+import { getStoredUploadAssetId, parseStoredUploadValue } from "@/lib/upload-values";
+import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 interface GeneralTabProps {
   board: Board & {
+    imageAsset?: ClientUploadedAsset | null;
     slots?: Array<{
       id: string;
       mode: SlotMode;
@@ -51,7 +54,7 @@ const schema = z
       .string()
       .max(300, { message: "Description cannot exceed 300 characters" })
       .optional(),
-    imageUrl: z.string().optional(),
+    imageUpload: z.string().optional(),
     publicSeats: z.number().min(0).max(MAX_SEATS),
     invitationSeats: z.number().min(0).max(MAX_SEATS),
   })
@@ -109,7 +112,7 @@ export const GeneralTab = ({ board }: GeneralTabProps) => {
     defaultValues: {
       name: board.name,
       description: board.description || "",
-      imageUrl: board.imageUrl || "",
+      imageUpload: "",
       publicSeats: currentPublicSeats,
       invitationSeats: currentInvitationSeats,
     },
@@ -123,7 +126,7 @@ export const GeneralTab = ({ board }: GeneralTabProps) => {
   const cols = Math.max(2, Math.ceil(Math.sqrt(totalSeats + 1)));
 
   const boardImagePreviewUrl = getBoardImageUrl(
-    board.imageUrl,
+    board.imageAsset?.url,
     board.id,
     watchedBoardName || board.name,
     256,
@@ -222,12 +225,12 @@ export const GeneralTab = ({ board }: GeneralTabProps) => {
       setIsSaving(true);
 
       // Actualizar información básica del board
-      // FileUpload stores a JSON string with metadata; the boards API expects a plain URL.
-      const normalizedBoardImageUrl = normalizeImageUrl(values.imageUrl);
+      const imageUpload = parseStoredUploadValue(values.imageUpload);
+      const imageAssetId = imageUpload?.assetId ?? null;
 
       await axios.patch(`/api/boards/${board.id}`, {
         name: values.name,
-        imageUrl: normalizedBoardImageUrl,
+        imageAssetId,
         description: values.description,
       });
 
@@ -249,7 +252,15 @@ export const GeneralTab = ({ board }: GeneralTabProps) => {
       // SPA: Actualizar cache local de React Query
       updateBoard({
         name: values.name,
-        imageUrl: normalizedBoardImageUrl,
+        imageAssetId,
+        imageAsset: imageAssetId
+          ? {
+              id: imageAssetId,
+              width: null,
+              height: null,
+              url: imageUpload?.url ?? boardImagePreviewUrl,
+            }
+          : null,
         description: values.description || null,
       });
 
@@ -304,13 +315,14 @@ export const GeneralTab = ({ board }: GeneralTabProps) => {
               <div className="flex items-center justify-center text-center">
                 <FormField
                   control={form.control}
-                  name="imageUrl"
+                  name="imageUpload"
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
                         <FileUpload
                           endpoint="boardImage"
-                          value={field.value || boardImagePreviewUrl || ""}
+                          value={field.value || ""}
+                          previewUrl={boardImagePreviewUrl}
                           onChange={field.onChange}
                         />
                       </FormControl>

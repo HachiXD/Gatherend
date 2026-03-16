@@ -18,19 +18,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatedSticker } from "@/components/ui/animated-sticker";
 import { toast } from "sonner";
 import { useTranslation } from "@/i18n";
+import type { ClientSticker } from "@/types/uploaded-assets";
 
 interface StickerPickerProps {
-  onChange: (sticker: { id: string; name: string; imageUrl: string }) => void;
+  onChange: (sticker: ClientSticker) => void;
   profileId: string;
-}
-
-interface StickerData {
-  id: string;
-  name: string;
-  imageUrl: string;
-  category: string;
-  uploaderId?: string;
-  isCustom?: boolean;
 }
 
 function StickerPickerPopover({
@@ -226,7 +218,7 @@ function StickerPickerPopover({
                     title={sticker.name}
                   >
                     <AnimatedSticker
-                      src={sticker.imageUrl}
+                      src={sticker.asset?.url || ""}
                       alt={sticker.name}
                       containerClassName="w-full h-full"
                       className="group-hover:scale-110 transition"

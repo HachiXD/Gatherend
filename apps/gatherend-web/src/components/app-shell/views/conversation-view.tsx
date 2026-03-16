@@ -12,15 +12,15 @@ import { useConversations } from "@/hooks/use-conversations";
 import { useVoiceStore } from "@/hooks/use-voice-store";
 import { useProfileRoomSubscriptions } from "@/hooks/use-profile-room-subscriptions";
 import { useConversationSubscriptionStore } from "@/hooks/use-conversation-subscription-store";
-import { Profile } from "@prisma/client";
+import type { FormattedConversation } from "@/hooks/use-conversations";
 
 // Tipo para el fetch individual (retorna profileOne y profileTwo completos)
 interface ConversationWithProfiles {
   id: string;
   profileOneId: string;
   profileTwoId: string;
-  profileOne: Profile;
-  profileTwo: Profile;
+  profileOne: FormattedConversation["profileOne"];
+  profileTwo: FormattedConversation["profileTwo"];
 }
 
 interface ConversationViewProps {
@@ -149,7 +149,7 @@ export function ConversationView({
     <div className="flex flex-col h-full">
       {/* Header fijo - igual que en ChannelView */}
       <ChatHeader
-        imageUrl={otherProfile.imageUrl}
+        avatarUrl={otherProfile.avatarAsset?.url || undefined}
         name={otherProfile.username}
         boardId={boardId}
         type="conversation"

@@ -5,6 +5,10 @@ import { createPortal } from "react-dom";
 import { Board, Member, Profile } from "@prisma/client";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type {
+  ClientStickerAssetRef,
+  ClientUploadedAsset,
+} from "@/types/uploaded-assets";
 
 import { GeneralTab } from "@/components/overlays/board-settings/tabs/general";
 import { MembersTab } from "@/components/overlays/board-settings/tabs/members";
@@ -14,11 +18,15 @@ import { SettingsSidebar } from "@/components/overlays/board-settings/sidebar";
 
 interface BoardSettingsOverlayProps {
   board: Board & {
+    imageAsset?: ClientUploadedAsset | null;
     members: (Member & {
       profile: Pick<
         Profile,
-        "id" | "username" | "discriminator" | "imageUrl" | "email" | "userId"
-      >;
+        "id" | "username" | "discriminator" | "email" | "userId"
+      > & {
+        avatarAsset: ClientUploadedAsset | null;
+        badgeSticker: ClientStickerAssetRef | null;
+      };
     })[];
   };
   currentProfileId?: string;

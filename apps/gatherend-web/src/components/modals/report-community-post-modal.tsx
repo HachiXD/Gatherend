@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import axios from "axios";
 import { cn } from "@/lib/utils";
-import { TriangleAlert, Loader2 } from "lucide-react";
+import { FileWarning, Loader2 } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { useTokenGetter } from "@/components/providers/token-manager-provider";
 import { getExpressAuthHeaders } from "@/lib/express-fetch";
@@ -27,7 +27,7 @@ type ReportCategory =
   | "IMPERSONATION"
   | "OTHER";
 
-export const ReportMessageModal = () => {
+export const ReportCommunityPostModal = () => {
   const { isOpen, onClose, type, data } = useModal();
   const { t } = useTranslation();
   const getToken = useTokenGetter();
@@ -70,16 +70,14 @@ export const ReportMessageModal = () => {
     },
   ];
 
-  const isModalOpen = isOpen && type === "reportMessage";
+  const isModalOpen = isOpen && type === "reportCommunityPost";
   const {
-    messageId,
-    messageContent,
-    messageType,
-    authorProfile,
-    channelId,
-    conversationId,
-    attachmentAsset,
-    sticker,
+    reportCommunityPostId,
+    reportCommunityPostContent,
+    reportCommunityPostImageUrl,
+    reportCommunityPostAuthorId,
+    reportCommunityPostAuthorUsername,
+    reportCommunityPostAuthorDiscriminator,
     profileId,
   } = data;
 
@@ -99,7 +97,7 @@ export const ReportMessageModal = () => {
   };
 
   const onSubmit = async () => {
-    if (!selectedCategory || !messageId || !messageType || !profileId) {
+    if (!selectedCategory || !reportCommunityPostId || !profileId) {
       setError(t.modals.report.selectCategory);
       return;
     }
@@ -112,37 +110,25 @@ export const ReportMessageModal = () => {
       await axios.post(
         "/api/reports",
         {
-          targetType: messageType,
-          targetId: messageId,
+          targetType: "COMMUNITY_POST",
+          targetId: reportCommunityPostId,
           category: selectedCategory,
           description: description.trim() || null,
-          // Snapshot data for evidence
           snapshot: {
-            content: messageContent,
-            attachmentAsset,
-            sticker: sticker
-              ? {
-                  id: sticker.id,
-                  name: sticker.name,
-                  asset: sticker.asset,
-                }
-              : null,
-            senderId: authorProfile?.id,
-            senderUsername: authorProfile?.username,
-            senderDiscriminator: authorProfile?.discriminator,
+            content: reportCommunityPostContent,
+            imageUrl: reportCommunityPostImageUrl,
+            authorId: reportCommunityPostAuthorId,
+            authorUsername: reportCommunityPostAuthorUsername,
+            authorDiscriminator: reportCommunityPostAuthorDiscriminator,
           },
-          targetOwnerId: authorProfile?.id,
-          channelId,
-          conversationId,
+          targetOwnerId: reportCommunityPostAuthorId,
         },
         {
           headers: getExpressAuthHeaders(profileId, token),
-        }
+        },
       );
 
       setSuccess(true);
-
-      // Auto close after success
       setTimeout(() => {
         handleClose();
       }, 1500);
@@ -157,40 +143,37 @@ export const ReportMessageModal = () => {
     }
   };
 
-  // Truncate content for preview
-  const previewContent = messageContent
-    ? messageContent.length > 100
-      ? messageContent.substring(0, 100) + "..."
-      : messageContent
-    : sticker
-    ? `🎨 Sticker: ${sticker.name}`
-    : attachmentAsset
-    ? "📎 File attachment"
-    : "No content";
+  const previewContent = reportCommunityPostContent?.trim()
+    ? reportCommunityPostContent.length > 140
+      ? `${reportCommunityPostContent.substring(0, 140)}...`
+      : reportCommunityPostContent
+    : reportCommunityPostImageUrl
+      ? "Image-only post"
+      : "No content";
 
   return (
     <Dialog open={isModalOpen} onOpenChange={handleClose}>
       <DialogContent className="bg-theme-bg-modal max-w-md text-theme-text-subtle p-0 overflow-hidden">
         <DialogHeader className="pt-6 px-6">
-          <div className="flex items-center gap-2 justify-center mb-2">
-            <TriangleAlert className="w-6 h-6 text-red-400" />
+          <div className="mb-2 flex items-center justify-center gap-2">
+            <FileWarning className="h-6 w-6 text-red-400" />
             <DialogTitle className="text-xl text-center font-bold">
-              {t.modals.report.reportMessage}
+              Report Post
             </DialogTitle>
           </div>
           <DialogDescription className="text-center text-sm text-theme-text-tertiary">
-            {t.modals.report.reportMessageDescription}{" "}
+            Report this community post by{" "}
             <span className="font-semibold text-theme-text-subtle">
-              {authorProfile?.username || "Unknown"}
+              {reportCommunityPostAuthorUsername || "Unknown"}
             </span>
           </DialogDescription>
         </DialogHeader>
 
         {success ? (
           <div className="px-6 py-8 text-center">
-            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-green-500/20 flex items-center justify-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-500/20">
               <svg
-                className="w-6 h-6 text-green-500"
+                className="h-6 w-6 text-green-500"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -203,41 +186,41 @@ export const ReportMessageModal = () => {
                 />
               </svg>
             </div>
-            <p className="text-theme-text-subtle font-medium">
+            <p className="font-medium text-theme-text-subtle">
               {t.modals.report.success}
             </p>
-            <p className="text-sm text-theme-text-tertiary mt-1">
+            <p className="mt-1 text-sm text-theme-text-tertiary">
               {t.modals.report.successMessage}
             </p>
           </div>
         ) : (
           <>
-            {/* Message Preview */}
             <div className="px-6 py-2">
-              <p className="text-xs text-theme-text-tertiary mb-1">
-                {t.modals.report.messagePreview}
+              <p className="mb-1 text-xs text-theme-text-tertiary">
+                Post preview
               </p>
-              <div className="bg-theme-bg-overlay-secondary rounded-md p-2.5 text-sm text-theme-text-secondary break-words">
-                {previewContent}
+              <div className="rounded-md bg-theme-bg-overlay-secondary p-2.5">
+                <p className="break-words text-sm text-theme-text-secondary">
+                  {previewContent}
+                </p>
               </div>
             </div>
 
-            {/* Category Selection */}
             <div className="px-6 py-1">
-              <p className="text-xs text-theme-text-tertiary mb-2">
+              <p className="mb-2 text-xs text-theme-text-tertiary">
                 {t.modals.report.whyReporting}
               </p>
-              <div className="space-y-1.5 max-h-[140px] overflow-y-auto">
+              <div className="max-h-[140px] space-y-1.5 overflow-y-auto">
                 {REPORT_CATEGORIES.map((category) => (
                   <button
                     key={category.value}
                     onClick={() => setSelectedCategory(category.value)}
                     disabled={isLoading}
                     className={cn(
-                      "w-full flex flex-col items-start p-2.5 rounded-md border transition cursor-pointer",
+                      "w-full cursor-pointer rounded-md border p-2.5 text-left transition",
                       selectedCategory === category.value
                         ? "border-red-500 bg-red-500/10"
-                        : "border-theme-border-subtle hover:border-theme-border-accent hover:bg-theme-bg-overlay-secondary"
+                        : "border-theme-border-subtle hover:border-theme-border-accent hover:bg-theme-bg-overlay-secondary",
                     )}
                   >
                     <span
@@ -245,22 +228,21 @@ export const ReportMessageModal = () => {
                         "text-sm font-medium",
                         selectedCategory === category.value
                           ? "text-red-400"
-                          : "text-theme-text-subtle"
+                          : "text-theme-text-subtle",
                       )}
                     >
                       {category.label}
                     </span>
-                    <span className="text-xs text-theme-text-tertiary">
+                    <p className="text-xs text-theme-text-tertiary">
                       {category.description}
-                    </span>
+                    </p>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Additional Description */}
             <div className="px-6 py-2">
-              <p className="text-xs text-theme-text-tertiary mb-1">
+              <p className="mb-1 text-xs text-theme-text-tertiary">
                 {t.modals.report.additionalDetails}
               </p>
               <textarea
@@ -268,19 +250,19 @@ export const ReportMessageModal = () => {
                 onChange={(e) => setDescription(e.target.value)}
                 disabled={isLoading}
                 placeholder={t.modals.report.additionalDetailsPlaceholder}
-                className="w-full h-20 px-3 py-2 text-sm bg-theme-bg-overlay-secondary border border-theme-border-subtle rounded-md text-theme-text-subtle placeholder:text-theme-text-tertiary focus:outline-none focus:border-theme-border-accent resize-none"
+                className="h-20 w-full resize-none rounded-md border border-theme-border-subtle bg-theme-bg-overlay-secondary px-3 py-2 text-sm text-theme-text-subtle placeholder:text-theme-text-tertiary focus:outline-none focus:border-theme-border-accent"
                 maxLength={500}
               />
             </div>
 
             {error && (
               <div className="px-6">
-                <p className="text-sm text-red-400 text-center">{error}</p>
+                <p className="text-center text-sm text-red-400">{error}</p>
               </div>
             )}
 
             <DialogFooter className="bg-theme-bg-modal px-6 py-4">
-              <div className="flex items-center justify-between w-full gap-3">
+              <div className="flex w-full items-center justify-between gap-3">
                 <Button
                   disabled={isLoading}
                   onClick={handleClose}
@@ -290,11 +272,11 @@ export const ReportMessageModal = () => {
                 </Button>
                 <Button
                   disabled={isLoading || !selectedCategory}
-                  className="flex-1 bg-red-500 cursor-pointer hover:bg-red-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 cursor-pointer bg-red-500 text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
                   onClick={onSubmit}
                 >
                   {isLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     t.modals.report.submit
                   )}
@@ -307,4 +289,3 @@ export const ReportMessageModal = () => {
     </Dialog>
   );
 };
-

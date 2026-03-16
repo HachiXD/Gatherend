@@ -179,7 +179,7 @@ export const MentionAutocomplete = ({
             )}
           >
             <UserAvatar
-              src={member.profile.imageUrl || undefined}
+              src={member.profile.avatarAsset?.url || undefined}
               profileId={member.profileId ?? undefined}
               className="h-6 w-6"
             />

@@ -18,11 +18,12 @@ import { getBoardImageUrl, isDicebearUrl } from "@/lib/avatar-utils";
 import { logger } from "@/lib/logger";
 import { useTranslation } from "@/i18n";
 import { getOptimizedStaticUiImageUrl } from "@/lib/ui-image-optimizer";
+import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 const STORAGE_DOMAIN = process.env.NEXT_PUBLIC_STORAGE_DOMAIN || "";
 
 interface LeftbarBannerProps {
-  imageUrl?: string | null;
+  imageAsset?: ClientUploadedAsset | null;
   boardName: string;
   boardId: string;
   board: BoardWithMembersWithProfiles;
@@ -31,7 +32,7 @@ interface LeftbarBannerProps {
 }
 
 export const LeftbarBanner = ({
-  imageUrl,
+  imageAsset,
   boardName,
   boardId,
   board,
@@ -47,13 +48,18 @@ export const LeftbarBanner = ({
   const [menuEnabled, setMenuEnabled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const { t } = useTranslation();
+  const boardImageUrl = imageAsset?.url ?? null;
 
   const isOwner = role === MemberRole.OWNER;
   const isAdmin = isOwner || role === MemberRole.ADMIN;
   const isModerator = isAdmin || role === MemberRole.MODERATOR;
 
-  // Generar imagen automática si imageUrl está vacío - usar color consistente basado en boardId
-  const finalImageUrl = getBoardImageUrl(imageUrl, boardId, boardName, 512);
+  const finalImageUrl = getBoardImageUrl(
+    boardImageUrl,
+    boardId,
+    boardName,
+    512,
+  );
 
   // Detectar si es Dicebear para usar quality máxima
   const isDicebear = finalImageUrl ? isDicebearUrl(finalImageUrl) : false;

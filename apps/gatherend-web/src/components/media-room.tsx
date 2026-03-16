@@ -166,7 +166,7 @@ function ParticipantCard({
               }}
             >
               <UserAvatar
-                src={participant.imageUrl || undefined}
+                src={participant.avatarUrl || undefined}
                 profileId={participant.profileId}
                 className="w-16 h-16"
                 showStatus={false}
@@ -228,7 +228,7 @@ function CustomVoiceUI({ chatId }: { chatId: string }) {
           data.participants.map((p) => ({
             profileId: p.profileId,
             username: p.username,
-            imageUrl: p.imageUrl,
+            avatarUrl: p.avatarUrl,
             usernameColor: p.usernameColor,
           })),
         );
@@ -353,7 +353,7 @@ function CustomVoiceUI({ chatId }: { chatId: string }) {
             const displayData: VoiceParticipant = participantData || {
               profileId: participant.identity,
               username: participant.name || "User",
-              imageUrl: null,
+              avatarUrl: null,
               usernameColor: null,
             };
 
@@ -447,7 +447,7 @@ export const MediaRoom = ({
   const [profileData, setProfileData] = useState<{
     id: string;
     username: string;
-    imageUrl: string | null;
+    avatarUrl: string | null;
     usernameColor: string | null;
   } | null>(null);
 
@@ -475,7 +475,7 @@ export const MediaRoom = ({
           setProfileData({
             id: data.id,
             username: data.username,
-            imageUrl: data.imageUrl,
+            avatarUrl: data.avatarAsset?.url || null,
             usernameColor: data.usernameColor || null,
           });
         }
@@ -525,7 +525,7 @@ export const MediaRoom = ({
         channelId: chatId,
         profileId: profileData.id,
         username: profileData.username,
-        imageUrl: profileData.imageUrl,
+        avatarUrl: profileData.avatarUrl,
         usernameColor: profileData.usernameColor,
         boardId, // Include boardId for backend optimization
       });

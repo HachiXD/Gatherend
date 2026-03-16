@@ -1,10 +1,11 @@
-import { Profile, Languages } from "@prisma/client";
+import { Languages } from "@prisma/client";
 import type { UsernameFormatConfig } from "@/lib/username-format";
 import type { GradientColorStop } from "@/components/ui/gradient-slider";
 import type { UsernameColorState } from "./hooks/use-username-color-reducer";
 import type { UsernameFormatState } from "./hooks/use-username-format-reducer";
 import type { ProfileTagsState } from "./hooks/use-profile-tags";
 import type { TranslationKeys } from "@/i18n/types";
+import type { ClientProfile } from "@/hooks/use-current-profile";
 
 // Types for Profile Tab Components
 
@@ -23,11 +24,10 @@ export type UsernameColor =
   | null;
 
 // Extended profile type that includes customization fields
-export type ExtendedProfile = Profile & {
+export type ExtendedProfile = ClientProfile & {
   usernameColor?: UsernameColor;
   profileTags?: string[];
   badge?: string | null;
-  badgeStickerUrl?: string | null;
   usernameFormat?: UsernameFormatConfig | null;
   longDescription?: string | null;
 };
@@ -105,10 +105,10 @@ export interface AboutMeSectionProps
 export interface BadgeSectionProps
   extends ProfileSectionProps, WithTranslations {
   badgeText: string | null | undefined;
-  badgeStickerUrl: string | null | undefined;
+  badgeStickerId: string | null | undefined;
   profileId: string; // For lazy loading stickers
   onBadgeTextChange: (value: string) => void;
-  onBadgeStickerUrlChange: (url: string) => void;
+  onBadgeStickerIdChange: (stickerId: string) => void;
 }
 
 // Profile Tags Section (refactored to use hook state)

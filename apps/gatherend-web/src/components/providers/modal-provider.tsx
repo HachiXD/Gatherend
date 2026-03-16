@@ -14,6 +14,8 @@ import { ReportMessageModal } from "@/components/modals/report-message-modal";
 import { ReportBoardModal } from "@/components/modals/report-board-modal";
 import { ReportProfileModal } from "@/components/modals/report-profile-modal";
 import { ReportCommunityModal } from "@/components/modals/report-community-modal";
+import { ReportCommunityPostModal } from "@/components/modals/report-community-post-modal";
+import { DeleteCommunityPostModal } from "@/components/modals/delete-community-post-modal";
 
 export const ModalProvider = () => {
   const isMounted = typeof window !== "undefined";
@@ -38,6 +40,8 @@ export const ModalProvider = () => {
       <ReportBoardModal />
       <ReportProfileModal />
       <ReportCommunityModal />
+      <ReportCommunityPostModal />
+      <DeleteCommunityPostModal />
     </>
   );
 };

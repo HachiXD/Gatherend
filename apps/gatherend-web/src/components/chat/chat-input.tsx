@@ -32,6 +32,10 @@ import {
 import { useTokenGetter } from "@/components/providers/token-manager-provider";
 import { getExpressAxiosConfig } from "@/lib/express-fetch";
 import { logger } from "@/lib/logger";
+import type {
+  ClientAttachmentAsset,
+  ClientSticker,
+} from "@/types/uploaded-assets";
 
 interface ChatInputProps {
   apiUrl: string;
@@ -131,8 +135,8 @@ const ChatInputComponent = ({
     setContent(next);
   }, []);
   const [filePreview, setFilePreview] = useState<{
+    assetId: string;
     url: string;
-    key?: string;
     type: string;
     name: string;
     size: number;
@@ -317,7 +321,7 @@ const ChatInputComponent = ({
   // Helper to update conversation lastMessage cache
   const updateConversationLastMessage = (
     content: string,
-    fileUrl: string | null = null,
+    attachmentAsset: ClientAttachmentAsset | null = null,
   ) => {
     if (type !== "conversation") return;
 
@@ -337,7 +341,7 @@ const ChatInputComponent = ({
           ...oldConversations[convIndex],
           lastMessage: {
             content,
-            fileUrl,
+            attachmentAsset,
             deleted: false,
             senderId: currentProfile.id,
           },
@@ -542,8 +546,8 @@ const ChatInputComponent = ({
       if (file) {
         // Set file preview instead of sending immediately
         setFilePreview({
+          assetId: file.assetId,
           url: file.url,
-          key: file.key,
           type: file.type,
           name: file.name,
           size: file.size,
@@ -596,8 +600,8 @@ const ChatInputComponent = ({
       if (uploaded) {
         // Pasted images should be uploaded + sent immediately (no preview).
         const fileToSend = {
+          assetId: uploaded.assetId,
           url: uploaded.url,
-          key: uploaded.key,
           type: uploaded.type,
           name: uploaded.name,
           size: uploaded.size,
@@ -621,15 +625,22 @@ const ChatInputComponent = ({
           await axios.post(
             url,
             {
-              fileUrl: JSON.stringify(fileToSend),
-              // Keep DB content stable (avoid persisting signed URLs that expire).
+              attachmentAssetId: fileToSend.assetId,
               content: fileToSend.name,
             },
             getExpressAxiosConfig(currentProfile.id, token),
           );
 
           // Update conversation lastMessage cache for SPA preview
-          updateConversationLastMessage(fileToSend.name, fileToSend.url);
+          updateConversationLastMessage(fileToSend.name, {
+            id: fileToSend.assetId,
+            mimeType: fileToSend.type,
+            sizeBytes: fileToSend.size,
+            width: fileToSend.width ?? null,
+            height: fileToSend.height ?? null,
+            originalName: fileToSend.name,
+            url: fileToSend.url,
+          });
         } catch (error) {
           console.error("Pasted image send failed:", error);
           // Fall back to preview so the user can retry sending manually.
@@ -680,15 +691,22 @@ const ChatInputComponent = ({
       await axios.post(
         url,
         {
-          fileUrl: JSON.stringify(fileToSend),
-          // Keep DB content stable (avoid persisting signed URLs that expire).
+          attachmentAssetId: fileToSend.assetId,
           content: fileToSend.name,
         },
         getExpressAxiosConfig(currentProfile.id, token),
       );
 
       // Update conversation lastMessage cache for SPA preview
-      updateConversationLastMessage(fileToSend.name, fileToSend.url);
+      updateConversationLastMessage(fileToSend.name, {
+        id: fileToSend.assetId,
+        mimeType: fileToSend.type,
+        sizeBytes: fileToSend.size,
+        width: fileToSend.width ?? null,
+        height: fileToSend.height ?? null,
+        originalName: fileToSend.name,
+        url: fileToSend.url,
+      });
     } catch (error) {
       console.error("File send failed:", error);
       // Restore file preview on error so user can retry
@@ -710,9 +728,7 @@ const ChatInputComponent = ({
   };
 
   const handleStickerSubmit = async (
-    stickerId: string,
-    stickerUrl: string,
-    stickerName: string,
+    sticker: ClientSticker,
   ) => {
     // Reset typing state so the next keystroke can re-trigger typing-start
     stopTyping();
@@ -727,17 +743,13 @@ const ChatInputComponent = ({
     }
 
     // Optimistic update
-    const tempId = addOptimisticMessage(chatQueryKey, "", currentProfile, {
-      id: stickerId,
-      imageUrl: stickerUrl,
-      name: stickerName,
-    });
+    const tempId = addOptimisticMessage(chatQueryKey, "", currentProfile, sticker);
 
     // Store retry data
     setRetryData(tempId, {
       tempId,
       content: "",
-      sticker: { id: stickerId, imageUrl: stickerUrl, name: stickerName },
+      sticker,
       apiUrl,
       query,
       profileId: currentProfile.id,
@@ -757,7 +769,7 @@ const ChatInputComponent = ({
       await axios
         .post(
           url,
-          { stickerId, tempId }, // Send tempId for socket replacement
+          { stickerId: sticker.id, tempId },
           getExpressAxiosConfig(currentProfile.id, token),
         )
         .then((response) => {
@@ -771,7 +783,7 @@ const ChatInputComponent = ({
         });
 
       // Update conversation lastMessage cache for SPA preview (stickers show as [Sticker])
-      updateConversationLastMessage(`[Sticker: ${stickerName}]`);
+      updateConversationLastMessage(`[Sticker: ${sticker.name}]`);
 
       // Remove retry data on success
       removeRetryData(tempId);
@@ -833,7 +845,7 @@ const ChatInputComponent = ({
               <p className="text-[13px] text-theme-text-tertiary truncate break-words">
                 {replyingTo.sticker
                   ? `🎨 ${t.chat.sticker}`
-                  : replyingTo.fileUrl
+                  : replyingTo.attachmentAsset
                     ? `📎 ${replyingTo.fileName || t.chat.file}`
                     : replyingTo.content.length > 50
                       ? replyingTo.content.substring(0, 50) + "..."
@@ -1101,13 +1113,7 @@ const ChatInputComponent = ({
                       ) : (
                         <>
                           <StickerPicker
-                            onChange={(sticker) =>
-                              handleStickerSubmit(
-                                sticker.id,
-                                sticker.imageUrl,
-                                sticker.name,
-                              )
-                            }
+                            onChange={(sticker) => handleStickerSubmit(sticker)}
                             profileId={currentProfile.id}
                           />
                           <EmojiPicker

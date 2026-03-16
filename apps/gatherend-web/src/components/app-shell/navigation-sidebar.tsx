@@ -7,11 +7,13 @@ import { NavigationAction } from "@/components/navigation/navigation-action";
 import { NavigationItem } from "@/components/navigation/navigation-item";
 import { getBoardImageUrl } from "@/lib/avatar-utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 interface BoardItem {
   id: string;
   name: string;
-  imageUrl: string | null;
+  boardImageUrl: string | null;
+  imageAsset: ClientUploadedAsset | null;
   channelIds: string[];
   mainChannelId: string | null;
 }
@@ -36,7 +38,13 @@ function NavigationSidebarClientInner() {
     return boards.map((board) => ({
       id: board.id,
       name: board.name,
-      imageUrl: getBoardImageUrl(board.imageUrl, board.id, board.name, 96),
+      boardImageUrl: getBoardImageUrl(
+        board.imageAsset?.url,
+        board.id,
+        board.name,
+        96,
+      ),
+      imageAsset: board.imageAsset,
       channelIds: board.channels?.map((c) => c.id) || [],
       mainChannelId: board.mainChannelId ?? null,
     }));
@@ -57,7 +65,8 @@ function NavigationSidebarClientInner() {
             key={board.id}
             id={board.id}
             name={board.name}
-            imageUrl={board.imageUrl}
+            boardImageUrl={board.boardImageUrl}
+            imageAsset={board.imageAsset}
             channelIds={board.channelIds}
             mainChannelId={board.mainChannelId}
             isActive={currentBoardId === board.id}

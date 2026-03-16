@@ -10,7 +10,7 @@ import {
   lazy,
   Suspense,
 } from "react";
-import { Member, MemberRole, Profile } from "@prisma/client";
+import { Member, MemberRole } from "@prisma/client";
 import { UserAvatarMenu } from "../user-avatar-menu";
 import { FileIcon } from "lucide-react";
 import { AnimatedSticker } from "@/components/ui/animated-sticker";
@@ -35,6 +35,11 @@ import {
 import qs from "query-string";
 import { useTokenGetter } from "@/components/providers/token-manager-provider";
 import { getExpressAuthHeaders } from "@/lib/express-fetch";
+import type {
+  ClientAttachmentAsset,
+  ClientProfileSummary,
+  ClientSticker,
+} from "@/types/uploaded-assets";
 
 // Lazy load heavy components - only loaded when needed
 const ChatItemActions = lazy(() =>
@@ -49,31 +54,22 @@ const ChatItemEditForm = lazy(() =>
 interface ChatItemOptimizedProps {
   id: string;
   content: string;
-  member?: Member & { profile: Profile };
-  sender: Profile;
+  member?: {
+    id: string;
+    role: MemberRole;
+    profile: ClientProfileSummary;
+  };
+  sender: ClientProfileSummary;
   timestamp: string;
-  fileUrl: string | null;
-  fileName: string | null;
-  fileType: string | null;
-  fileSize: number | null;
-  fileWidth?: number | null;
-  fileHeight?: number | null;
+  attachmentAsset: ClientAttachmentAsset | null;
   filePreviewUrl?: string | null;
   fileStaticPreviewUrl?: string | null;
-  sticker?: {
-    id: string;
-    imageUrl: string;
-    name: string;
-  } | null;
+  sticker?: ClientSticker | null;
   reactions?: Array<{
     id: string;
     emoji: string;
     profileId: string;
-    profile: {
-      id: string;
-      username: string;
-      imageUrl: string;
-    };
+    profile: ClientProfileSummary;
   }>;
   deleted: boolean;
   currentProfile: ClientProfile;
@@ -87,15 +83,12 @@ interface ChatItemOptimizedProps {
   replyTo?: {
     id: string;
     content: string;
-    sender: Profile;
-    member?: Member & { profile: Profile };
+    sender: ClientProfileSummary;
+    member?: { id: string; profile: ClientProfileSummary };
+    attachmentAsset?: ClientAttachmentAsset | null;
     fileUrl?: string | null;
     fileName?: string | null;
-    sticker?: {
-      id: string;
-      imageUrl: string;
-      name: string;
-    } | null;
+    sticker?: ClientSticker | null;
   } | null;
   pinned?: boolean;
   isCompact?: boolean;
@@ -239,12 +232,7 @@ const ChatItemOptimizedComponent = ({
   member,
   sender,
   timestamp,
-  fileUrl,
-  fileName,
-  fileType,
-  fileSize,
-  fileWidth = null,
-  fileHeight = null,
+  attachmentAsset,
   filePreviewUrl = null,
   fileStaticPreviewUrl = null,
   sticker,
@@ -340,7 +328,21 @@ const ChatItemOptimizedComponent = ({
   const isChannel = !!member;
   const channelId = socketQuery.channelId as string | undefined;
   const conversationId = socketQuery.conversationId as string | undefined;
-  const authorProfile = isChannel ? member!.profile : sender;
+  const authorProfileBase = isChannel ? member!.profile : sender;
+  const authorProfile = useMemo(
+    () => ({
+      ...authorProfileBase,
+      imageUrl: authorProfileBase.avatarAsset?.url || "",
+      badgeStickerUrl: authorProfileBase.badgeSticker?.asset?.url || null,
+    }),
+    [authorProfileBase],
+  );
+  const fileUrl = attachmentAsset?.url || null;
+  const fileName = attachmentAsset?.originalName || null;
+  const fileType = attachmentAsset?.mimeType || null;
+  const fileSize = attachmentAsset?.sizeBytes ?? null;
+  const fileWidth = attachmentAsset?.width ?? null;
+  const fileHeight = attachmentAsset?.height ?? null;
 
   const isOwnMessage = isChannel
     ? currentMember?.id === member?.id
@@ -364,11 +366,12 @@ const ChatItemOptimizedComponent = ({
     const effectiveQueryKey = retryData?.queryKey ?? fallbackQueryKey;
     if (effectiveQueryKey.length === 0) return;
 
-    const effectiveData = retryData ?? {
-      content,
-      sticker: sticker || undefined,
-      apiUrl,
-      query: socketQuery,
+      const effectiveData = retryData ?? {
+        content,
+        attachmentAsset: attachmentAsset || null,
+        sticker: sticker || undefined,
+        apiUrl,
+        query: socketQuery,
       profileId: currentProfile.id,
       queryKey: effectiveQueryKey,
       replyToId: replyTo?.id,
@@ -388,11 +391,12 @@ const ChatItemOptimizedComponent = ({
       effectiveData.sticker,
     );
 
-    setRetryData(newTempId, {
-      tempId: newTempId,
-      content: effectiveData.content,
-      sticker: effectiveData.sticker,
-      apiUrl: effectiveData.apiUrl,
+      setRetryData(newTempId, {
+        tempId: newTempId,
+        content: effectiveData.content,
+        attachmentAsset: effectiveData.attachmentAsset,
+        sticker: effectiveData.sticker,
+        apiUrl: effectiveData.apiUrl,
       query: effectiveData.query,
       profileId: effectiveData.profileId,
       queryKey: effectiveQueryKey,
@@ -408,6 +412,10 @@ const ChatItemOptimizedComponent = ({
       const payload: Record<string, unknown> = { tempId: newTempId };
       if (effectiveData.sticker) {
         payload.stickerId = effectiveData.sticker.id;
+      } else if (effectiveData.attachmentAsset) {
+        payload.attachmentAssetId = effectiveData.attachmentAsset.id;
+        payload.content =
+          effectiveData.attachmentAsset.originalName || effectiveData.content;
       } else {
         payload.content = effectiveData.content;
         if (effectiveData.replyToId) {
@@ -448,6 +456,7 @@ const ChatItemOptimizedComponent = ({
     getRetryData,
     fallbackQueryKey,
     content,
+    attachmentAsset,
     sticker,
     apiUrl,
     socketQuery,
@@ -1230,7 +1239,7 @@ const ChatItemOptimizedComponent = ({
                   className={cn("relative h-32 w-32", isFailed && "opacity-50")}
                 >
                   <AnimatedSticker
-                    src={sticker.imageUrl}
+                    src={sticker.asset?.url || ""}
                     alt={sticker.name}
                     containerClassName="h-full w-full"
                     fallbackWidthPx={128}
@@ -1444,8 +1453,7 @@ const ChatItemOptimizedComponent = ({
           <ChatItemActions
             id={id}
             content={content}
-            fileUrl={fileUrl}
-            fileName={fileName}
+            attachmentAsset={attachmentAsset}
             sticker={sticker}
             reactions={reactions}
             deleted={deleted}
@@ -1487,8 +1495,7 @@ export const ChatItemOptimized = memo(
     const replyEqual =
       prev.replyTo?.id === next.replyTo?.id &&
       prev.replyTo?.content === next.replyTo?.content &&
-      prev.replyTo?.fileUrl === next.replyTo?.fileUrl &&
-      prev.replyTo?.fileName === next.replyTo?.fileName &&
+      prev.replyTo?.attachmentAsset?.id === next.replyTo?.attachmentAsset?.id &&
       prev.replyTo?.sticker?.id === next.replyTo?.sticker?.id;
 
     // Compare sender/member profile fields that affect rendering
@@ -1499,9 +1506,9 @@ export const ChatItemOptimized = memo(
       prevProfile?.id === nextProfile?.id &&
       prevProfile?.username === nextProfile?.username &&
       prevProfile?.discriminator === nextProfile?.discriminator &&
-      prevProfile?.imageUrl === nextProfile?.imageUrl &&
+      prevProfile?.avatarAsset?.id === nextProfile?.avatarAsset?.id &&
       prevProfile?.badge === nextProfile?.badge &&
-      prevProfile?.badgeStickerUrl === nextProfile?.badgeStickerUrl &&
+      prevProfile?.badgeSticker?.id === nextProfile?.badgeSticker?.id &&
       JSON.stringify(prevProfile?.usernameColor) ===
         JSON.stringify(nextProfile?.usernameColor) &&
       JSON.stringify(prevProfile?.usernameFormat) ===
@@ -1519,12 +1526,7 @@ export const ChatItemOptimized = memo(
       prev.isCompact === next.isCompact &&
       prev.isLastMessage === next.isLastMessage &&
       reactionsEqual &&
-      prev.fileUrl === next.fileUrl &&
-      prev.fileName === next.fileName &&
-      prev.fileType === next.fileType &&
-      prev.fileSize === next.fileSize &&
-      prev.fileWidth === next.fileWidth &&
-      prev.fileHeight === next.fileHeight &&
+      prev.attachmentAsset?.id === next.attachmentAsset?.id &&
       prev.filePreviewUrl === next.filePreviewUrl &&
       prev.fileStaticPreviewUrl === next.fileStaticPreviewUrl &&
       prev.sticker?.id === next.sticker?.id &&

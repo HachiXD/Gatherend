@@ -1,0 +1,1093 @@
+"use client";
+
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import {
+  memo,
+  type ReactNode,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { useQueryClient, type InfiniteData } from "@tanstack/react-query";
+import axios from "axios";
+import { useTheme } from "next-themes";
+import { AnimatedSticker } from "@/components/ui/animated-sticker";
+import { Edit, Lock, Pin, RefreshCw, Trash, TriangleAlert } from "lucide-react";
+import { DiscoverySkeleton } from "@/components/discovery/discovery-skeleton";
+import { FeedBottomSkeleton } from "@/components/discovery/feed-bottom-skeleton";
+import {
+  communityPostsKey,
+  type CommunityPostsFeedPage,
+  useCommunityPostsFeed,
+} from "@/hooks/discovery/posts-feed/use-community-posts-feed";
+import { useProfile } from "@/components/app-shell/providers/profile-provider";
+import { UserAvatarMenu } from "@/components/user-avatar-menu";
+import { useUpload } from "@/hooks/use-upload";
+import {
+  getGradientAnimationClass,
+  getUsernameColorStyle,
+} from "@/lib/username-color";
+import { getUsernameFormatClasses } from "@/lib/username-format";
+import { cn } from "@/lib/utils";
+import { ActionTooltip } from "@/components/action-tooltip";
+import { useModal } from "@/hooks/use-modal-store";
+import { useCommunityOverview } from "@/hooks/discovery/use-community-overview";
+import { ImagePlus, X } from "lucide-react";
+import {
+  CommunityPostCommentItem,
+  type CommunityPostCommentItemData,
+} from "./community-post-comment-item";
+
+interface CommunityPostsSectionProps {
+  communityId: string;
+  onHeaderActionChange?: (action: ReactNode | null) => void;
+  scrollContainerRef?: RefObject<HTMLDivElement | null>;
+}
+
+function formatPostDate(value: string) {
+  return new Intl.DateTimeFormat("es-ES", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
+function PostImageAttachment({
+  imageUrl,
+  alt,
+}: {
+  imageUrl: string;
+  alt: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setIsOpen(true)}
+        className="float-left mr-3 mt-1 block cursor-pointer overflow-hidden rounded-md border bg-secondary"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={imageUrl}
+          alt={alt}
+          className="block max-h-[220px] max-w-[180px] object-contain"
+          loading="lazy"
+          decoding="async"
+        />
+      </button>
+
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent
+          showCloseButton={false}
+          className="max-w-none gap-0 rounded-none border-0 bg-transparent p-0 shadow-none sm:max-w-none"
+          overlayClassName="bg-black/70"
+        >
+          <DialogTitle className="sr-only">Vista previa de imagen</DialogTitle>
+          <div className="fixed inset-0 flex items-center justify-center p-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={imageUrl}
+              alt={alt}
+              className="block max-h-[92vh] max-w-[92vw] object-contain"
+              loading="eager"
+              decoding="async"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+function splitPostContentForFirstLine(
+  content: string,
+  availableWidth: number,
+  font: string,
+) {
+  if (!content || availableWidth <= 0) {
+    return {
+      firstLine: "",
+      remainder: content,
+    };
+  }
+
+  const newlineIndex = content.indexOf("\n");
+  const candidate =
+    newlineIndex >= 0 ? content.slice(0, newlineIndex) : content;
+  const trailing = newlineIndex >= 0 ? content.slice(newlineIndex + 1) : "";
+
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return {
+      firstLine: candidate,
+      remainder: newlineIndex >= 0 ? `${trailing ? `\n${trailing}` : ""}` : "",
+    };
+  }
+
+  context.font = font;
+
+  const chars = Array.from(candidate);
+  let low = 0;
+  let high = chars.length;
+
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2);
+    const sample = chars.slice(0, mid).join("");
+    if (context.measureText(sample).width <= availableWidth) {
+      low = mid;
+    } else {
+      high = mid - 1;
+    }
+  }
+
+  const firstLine = chars.slice(0, low).join("");
+  const remainingCandidate = chars.slice(low).join("");
+  const remainder = [remainingCandidate, trailing].filter(Boolean).join("\n");
+
+  return {
+    firstLine,
+    remainder,
+  };
+}
+
+function PostBodyWithImage({
+  usernameSlot,
+  content,
+  imageUrl,
+  alt,
+}: {
+  usernameSlot: ReactNode;
+  content: string;
+  imageUrl: string;
+  alt: string;
+}) {
+  const lineRef = useRef<HTMLDivElement | null>(null);
+  const usernameRef = useRef<HTMLSpanElement | null>(null);
+  const [split, setSplit] = useState(() => ({
+    firstLine: content,
+    remainder: "",
+  }));
+
+  useLayoutEffect(() => {
+    const lineElement = lineRef.current;
+    const usernameElement = usernameRef.current;
+    if (!lineElement || !usernameElement) return;
+
+    const recompute = () => {
+      const styles = window.getComputedStyle(lineElement);
+      const font = `${styles.fontStyle} ${styles.fontWeight} ${styles.fontSize} ${styles.fontFamily}`;
+      const usernameWidth = usernameElement.getBoundingClientRect().width;
+      const fontSize = Number.parseFloat(styles.fontSize) || 0;
+      const availableWidth =
+        lineElement.clientWidth - usernameWidth - fontSize * 0.35;
+
+      setSplit(splitPostContentForFirstLine(content, availableWidth, font));
+    };
+
+    recompute();
+
+    const observer = new ResizeObserver(recompute);
+    observer.observe(lineElement);
+    observer.observe(usernameElement);
+
+    return () => observer.disconnect();
+  }, [content]);
+
+  return (
+    <>
+      <div
+        ref={lineRef}
+        className="-mt-0.5 whitespace-pre-wrap break-words text-[12px] leading-5 text-theme-text-secondary [overflow-wrap:anywhere]"
+      >
+        <span ref={usernameRef} className="whitespace-nowrap">
+          {usernameSlot}
+        </span>
+        {"\u00A0"}
+        <span>{split.firstLine}</span>
+      </div>
+
+      <div className="whitespace-pre-wrap break-words text-[12px] leading-5 text-theme-text-secondary [overflow-wrap:anywhere]">
+        <PostImageAttachment imageUrl={imageUrl} alt={alt} />
+        <span>{split.remainder}</span>
+      </div>
+    </>
+  );
+}
+
+function CommunityPostEditForm({
+  postId,
+  communityId,
+  content,
+  hasImage,
+  onCancel,
+}: {
+  postId: string;
+  communityId: string;
+  content: string;
+  hasImage: boolean;
+  onCancel: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [draft, setDraft] = useState(content);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      if (!textareaRef.current) return;
+
+      textareaRef.current.focus();
+      const length = textareaRef.current.value.length;
+      textareaRef.current.setSelectionRange(length, length);
+    }, 50);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onCancel();
+        return;
+      }
+
+      if (
+        event.key === "Enter" &&
+        (event.metaKey || event.ctrlKey) &&
+        !isSaving
+      ) {
+        event.preventDefault();
+        void handleSubmit();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  });
+
+  const trimmedDraft = draft.trim();
+  const canSave = hasImage || trimmedDraft.length > 0;
+
+  const handleSubmit = async () => {
+    if (isSaving || !canSave) return;
+
+    try {
+      setIsSaving(true);
+      const response = await axios.patch(`/api/posts/${postId}`, {
+        content: trimmedDraft,
+      });
+
+      const updatedPost = response.data as {
+        id: string;
+        content: string;
+        updatedAt: string;
+      };
+
+      queryClient.setQueryData<InfiniteData<CommunityPostsFeedPage>>(
+        communityPostsKey(communityId),
+        (current) => {
+          if (!current) return current;
+
+          return {
+            ...current,
+            pages: current.pages.map((page) => ({
+              ...page,
+              items: page.items.map((post) =>
+                post.id === updatedPost.id
+                  ? {
+                      ...post,
+                      content: updatedPost.content,
+                      updatedAt: updatedPost.updatedAt,
+                    }
+                  : post,
+              ),
+            })),
+          };
+        },
+      );
+
+      onCancel();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="rounded-md bg-theme-bg-edit-form/80 p-3">
+      <textarea
+        ref={textareaRef}
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        disabled={isSaving}
+        rows={Math.max(3, Math.min(10, draft.split("\n").length + 1))}
+        className="min-h-[88px] w-full resize-none rounded-md border border-theme-border-subtle bg-transparent px-3 py-2 text-[12px] leading-5 text-theme-text-light outline-none focus:border-theme-border-accent"
+        placeholder="Edit post content"
+      />
+      <div className="mt-2 flex items-center gap-x-2">
+        <Button
+          type="button"
+          disabled={isSaving}
+          size="sm"
+          onClick={onCancel}
+          className="h-7 cursor-pointer bg-theme-bg-cancel-button px-3 text-[13px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+        >
+          Cancel
+        </Button>
+        <Button
+          type="button"
+          disabled={isSaving || !canSave}
+          size="sm"
+          onClick={() => void handleSubmit()}
+          className="h-7 cursor-pointer bg-theme-tab-button-bg px-3 text-[13px] text-theme-text-light hover:bg-theme-tab-button-hover"
+        >
+          Save
+        </Button>
+        <span className="ml-1 text-[11px] text-theme-text-muted">
+          Esc to cancel • Ctrl/Cmd+Enter to save
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function CommunityPostCommentComposer({
+  postId,
+  communityId,
+  replyToCommentId,
+  onCancel,
+}: {
+  postId: string;
+  communityId: string;
+  replyToCommentId?: string | null;
+  onCancel: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [content, setContent] = useState("");
+  const [imageAsset, setImageAsset] = useState<{
+    assetId: string;
+    url: string;
+    width?: number;
+    height?: number;
+  } | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { startUpload, isUploading } = useUpload("community_post_comment_image");
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      if (!textareaRef.current) return;
+
+      textareaRef.current.focus();
+      const length = textareaRef.current.value.length;
+      textareaRef.current.setSelectionRange(length, length);
+    }, 50);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onCancel();
+        return;
+      }
+
+      if (
+        event.key === "Enter" &&
+        (event.metaKey || event.ctrlKey) &&
+        !isSubmitting
+      ) {
+        event.preventDefault();
+        void handleSubmit();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  });
+
+  const trimmedContent = content.trim();
+  const canSubmit = trimmedContent.length > 0 || Boolean(imageAsset);
+
+  const handleFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    try {
+      const uploadedFiles = await startUpload(Array.from(files));
+      const uploadedFile = uploadedFiles[0];
+      if (!uploadedFile) return;
+
+      setImageAsset({
+        assetId: uploadedFile.assetId,
+        url: uploadedFile.url,
+        width: uploadedFile.width,
+        height: uploadedFile.height,
+      });
+    } catch (error) {
+      console.error(error);
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (isSubmitting || !canSubmit) return;
+
+    try {
+      setIsSubmitting(true);
+      await axios.post(`/api/posts/${postId}/comments`, {
+        content: trimmedContent,
+        imageAssetId: imageAsset?.assetId ?? null,
+        replyToCommentId: replyToCommentId ?? null,
+      });
+
+      await queryClient.invalidateQueries({
+        queryKey: communityPostsKey(communityId),
+      });
+
+      setContent("");
+      setImageAsset(null);
+      onCancel();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="mt-2 border border-theme-border bg-theme-bg-edit-form/60 p-3">
+      <textarea
+        ref={textareaRef}
+        value={content}
+        onChange={(event) => setContent(event.target.value)}
+        disabled={isSubmitting}
+        rows={3}
+        className="min-h-[88px] w-full resize-none border border-theme-border-subtle bg-transparent px-3 py-2 text-[12px] leading-5 text-theme-text-light outline-none focus:border-theme-border-accent"
+        placeholder="Write a comment..."
+      />
+
+      {imageAsset && (
+        <div className="mt-2 inline-flex items-start gap-2 border border-theme-border bg-theme-bg-secondary/40 p-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={imageAsset.url}
+            alt="comment attachment"
+            className="max-h-[96px] max-w-[96px] object-contain"
+            loading="lazy"
+            decoding="async"
+          />
+          <button
+            type="button"
+            onClick={() => setImageAsset(null)}
+            className="cursor-pointer text-theme-text-tertiary transition hover:text-theme-text-light"
+            aria-label="Remove image"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        className="hidden"
+        accept="image/*"
+        onChange={handleFileChange}
+      />
+
+      <div className="mt-2 flex items-center gap-x-2">
+        <Button
+          type="button"
+          size="sm"
+          disabled={isSubmitting || isUploading}
+          onClick={() => fileInputRef.current?.click()}
+          className="h-7 cursor-pointer bg-theme-bg-cancel-button px-3 text-[13px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+        >
+          <ImagePlus className="mr-1 h-4 w-4" />
+          Attach image
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          disabled={isSubmitting || isUploading || !canSubmit}
+          onClick={() => void handleSubmit()}
+          className="h-7 cursor-pointer bg-theme-tab-button-bg px-3 text-[13px] text-theme-text-light hover:bg-theme-tab-button-hover"
+        >
+          Send
+        </Button>
+        <span className="ml-1 text-[11px] text-theme-text-muted">
+          Esc to cancel • Ctrl/Cmd+Enter to send
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function CommunityPostsSectionInner({
+  communityId,
+  onHeaderActionChange,
+  scrollContainerRef,
+}: CommunityPostsSectionProps) {
+  const profile = useProfile();
+  const onOpen = useModal(useCallback((state) => state.onOpen, []));
+  const { resolvedTheme } = useTheme();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [replyingToPostId, setReplyingToPostId] = useState<string | null>(null);
+  const [replyingToComment, setReplyingToComment] = useState<{
+    postId: string;
+    commentId: string;
+  } | null>(null);
+  const [expandedCommentsByPostId, setExpandedCommentsByPostId] = useState<
+    Record<string, CommunityPostCommentItemData[]>
+  >({});
+  const [loadingExpandedPostId, setLoadingExpandedPostId] = useState<
+    string | null
+  >(null);
+  const { community } = useCommunityOverview(communityId, {
+    enabled: !!communityId,
+  });
+  const {
+    pageSlots,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    error,
+    refresh,
+    bottomSentinelRef,
+    measurePage,
+  } = useCommunityPostsFeed(communityId, {
+    externalContainerRef: scrollContainerRef,
+  });
+
+  const handleRefresh = useCallback(async () => {
+    if (isRefreshing) return;
+
+    setIsRefreshing(true);
+    try {
+      await refresh();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [isRefreshing, refresh]);
+
+  const headerAction = useMemo(
+    () => (
+      <button
+        onClick={handleRefresh}
+        disabled={isRefreshing}
+        className="inline-flex h-9 cursor-pointer items-center gap-2 border border-white/12 bg-white/8 px-3 text-[13px] font-semibold text-white hover:bg-white/14 focus-visible:ring-2 focus-visible:ring-white/30 focus-visible:outline-none disabled:opacity-50 rounded-none"
+        title="Refrescar posts"
+      >
+        <RefreshCw
+          className={`h-4 w-4 text-white/70 ${
+            isRefreshing ? "animate-spin" : ""
+          }`}
+        />
+        <span className="text-white/90">Refrescar</span>
+      </button>
+    ),
+    [handleRefresh, isRefreshing],
+  );
+
+  useEffect(() => {
+    onHeaderActionChange?.(headerAction);
+
+    return () => onHeaderActionChange?.(null);
+  }, [headerAction, onHeaderActionChange]);
+
+  const handleToggleOmittedComments = useCallback(async (postId: string) => {
+    if (loadingExpandedPostId === postId) return;
+
+    if (expandedCommentsByPostId[postId]) {
+      setExpandedCommentsByPostId((current) => {
+        const next = { ...current };
+        delete next[postId];
+        return next;
+      });
+      return;
+    }
+
+    try {
+      setLoadingExpandedPostId(postId);
+      const response = await fetch(`/api/posts/${postId}/comments`);
+      if (!response.ok) {
+        throw new Error("Failed to load omitted comments");
+      }
+
+      const data = (await response.json()) as {
+        items: CommunityPostCommentItemData[];
+      };
+
+      setExpandedCommentsByPostId((current) => ({
+        ...current,
+        [postId]: data.items,
+      }));
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoadingExpandedPostId((current) =>
+        current === postId ? null : current,
+      );
+    }
+  }, [expandedCommentsByPostId, loadingExpandedPostId]);
+
+  return (
+    <div className="w-full">
+      <div className="px-6 pt-0 pb-4">
+        {isLoading ? (
+          <DiscoverySkeleton />
+        ) : error ? (
+          <div className="py-8 text-center text-destructive">
+            Error: {error}
+          </div>
+        ) : pageSlots.length === 0 ? (
+          <div className="py-8 text-center text-theme-text-muted">
+            No hay posts en esta comunidad.
+          </div>
+        ) : (
+          <>
+            {pageSlots.map((slot) => {
+              if (slot.type === "virtualized") {
+                return (
+                  <div
+                    key={`placeholder-${slot.pageIndex}`}
+                    style={{ height: slot.height }}
+                    className="shrink-0"
+                  />
+                );
+              }
+
+              return (
+                <div
+                  key={`page-${slot.pageIndex}`}
+                  ref={(el) => measurePage(slot.pageIndex, el)}
+                >
+                  {slot.page.items.map((post) =>
+                    (() => {
+                      const authorAvatarUrl =
+                        post.author.avatarAsset?.url || "";
+                      const authorBadgeStickerUrl =
+                        post.author.badgeSticker?.asset?.url || null;
+                      const postImageUrl = post.imageAsset?.url || null;
+                      const isOwnPost = post.author.id === profile.id;
+                      const canDeletePost =
+                        isOwnPost || Boolean(community?.canDeleteAnyPost);
+                      const isEditing = editingPostId === post.id;
+                      const isReplying = replyingToPostId === post.id;
+                      const latestCommentIds = new Set(
+                        post.latestComments.map((comment) => comment.id),
+                      );
+                      const expandedComments =
+                        expandedCommentsByPostId[post.id] || null;
+                      const omittedComments = expandedComments
+                        ? expandedComments.filter(
+                            (comment) => !latestCommentIds.has(comment.id),
+                          )
+                        : [];
+                      const commentsToRender = expandedComments
+                        ? [...omittedComments, ...post.latestComments]
+                        : post.latestComments;
+                      const omittedCount = Math.max(
+                        post.commentCount - post.latestComments.length,
+                        0,
+                      );
+                      const isExpandedCommentsLoading =
+                        loadingExpandedPostId === post.id;
+                      const isOmittedExpanded = Boolean(expandedComments);
+
+                      return (
+                        <article
+                          key={post.id}
+                          className="-mx-6 group relative border-b border-theme-border px-6 py-3 transition-colors hover:bg-theme-bg-secondary/35"
+                        >
+                          {!isEditing && (
+                            <div className="absolute right-5 top-2 z-10 hidden items-center gap-x-2 rounded-sm border border-theme-toolbar-border bg-theme-toolbar-bg p-1 group-hover:flex hover:flex">
+                            {isOwnPost && (
+                              <ActionTooltip label="Edit post">
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingPostId(post.id)}
+                                  className="cursor-pointer"
+                                  aria-label="Edit post"
+                                >
+                                  <Edit className="h-5 w-5 text-theme-toolbar-icon transition hover:text-theme-text-light" />
+                                </button>
+                              </ActionTooltip>
+                            )}
+                            {canDeletePost && (
+                              <ActionTooltip label="Delete post">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    onOpen("deleteCommunityPost", {
+                                      deleteCommunityPostId: post.id,
+                                      deleteCommunityPostCommunityId:
+                                        communityId,
+                                    })
+                                  }
+                                  className="cursor-pointer"
+                                  aria-label="Delete post"
+                                >
+                                  <Trash className="h-5 w-5 text-theme-toolbar-icon transition hover:text-theme-text-light" />
+                                </button>
+                              </ActionTooltip>
+                            )}
+                            {!isOwnPost && (
+                              <ActionTooltip label="Report post">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    onOpen("reportCommunityPost", {
+                                      profileId: profile.id,
+                                      reportCommunityPostId: post.id,
+                                      reportCommunityPostContent: post.content,
+                                      reportCommunityPostImageUrl: postImageUrl,
+                                      reportCommunityPostAuthorId:
+                                        post.author.id,
+                                      reportCommunityPostAuthorUsername:
+                                        post.author.username,
+                                      reportCommunityPostAuthorDiscriminator:
+                                        post.author.discriminator,
+                                    })
+                                  }
+                                  className="cursor-pointer"
+                                  aria-label="Report post"
+                                >
+                                  <TriangleAlert className="h-5 w-5 text-theme-toolbar-icon transition hover:text-theme-text-light" />
+                                </button>
+                              </ActionTooltip>
+                            )}
+                            </div>
+                          )}
+                          <div className="flex items-start gap-3">
+                            <div className="shrink-0">
+                              <UserAvatarMenu
+                                profileId={post.author.id}
+                                profileImageUrl={authorAvatarUrl}
+                                username={post.author.username}
+                                discriminator={post.author.discriminator}
+                                currentProfileId={profile.id}
+                                className="h-10 w-10"
+                                showStatus={false}
+                                disableHoverShadow
+                                avatarAnimationMode="never"
+                              />
+                            </div>
+
+                            <div className="-mt-1.5 min-w-0 flex-1">
+                              {isEditing ? (
+                                <CommunityPostEditForm
+                                  postId={post.id}
+                                  communityId={communityId}
+                                  content={post.content}
+                                  hasImage={Boolean(post.imageAsset)}
+                                  onCancel={() => setEditingPostId(null)}
+                                />
+                              ) : (
+                                <>
+                              <div className="mb-0 flex flex-wrap items-center gap-1">
+                                {(post.author.badge ||
+                                  authorBadgeStickerUrl) && (
+                                  <>
+                                    <span className="inline-flex items-center gap-0.5">
+                                      {authorBadgeStickerUrl && (
+                                        <AnimatedSticker
+                                          src={authorBadgeStickerUrl}
+                                          alt="badge"
+                                          containerClassName="h-5 w-5"
+                                          fallbackWidthPx={20}
+                                          fallbackHeightPx={20}
+                                          className="object-contain"
+                                          isHovered={false}
+                                        />
+                                      )}
+                                      {post.author.badge && (
+                                        <span className="pt-2.5 text-[11px] leading-none text-theme-text-tertiary">
+                                          {post.author.badge}
+                                        </span>
+                                      )}
+                                    </span>
+                                    <span className="pt-2.5 text-[11px] text-theme-text-tertiary">
+                                      |
+                                    </span>
+                                  </>
+                                )}
+                                <span className="pt-2.5 text-[11px] text-theme-text-tertiary">
+                                  {formatPostDate(post.createdAt)}
+                                </span>
+                                {post.pinnedAt && (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[11px] font-medium leading-none text-theme-text-subtle">
+                                    <Pin className="h-3 w-3" />
+                                    Fijado
+                                  </span>
+                                )}
+                                {post.lockedAt && (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[11px] font-medium leading-none text-theme-text-subtle">
+                                    <Lock className="h-3 w-3" />
+                                    Cerrado
+                                  </span>
+                                )}
+                              </div>
+
+                              {postImageUrl ? (
+                                <PostBodyWithImage
+                                  imageUrl={postImageUrl}
+                                  alt={post.content || "community post image"}
+                                  content={post.content}
+                                  usernameSlot={
+                                    <>
+                                      <UserAvatarMenu
+                                        profileId={post.author.id}
+                                        profileImageUrl={authorAvatarUrl}
+                                        username={post.author.username}
+                                        discriminator={
+                                          post.author.discriminator
+                                        }
+                                        currentProfileId={profile.id}
+                                        currentProfile={profile}
+                                        showStatus={false}
+                                        usernameColor={
+                                          post.author.usernameColor
+                                        }
+                                        usernameFormat={
+                                          post.author.usernameFormat
+                                        }
+                                        hideAvatar
+                                      >
+                                        <span
+                                          className={cn(
+                                            "cursor-pointer text-[12px] font-semibold text-white hover:underline",
+                                            getUsernameFormatClasses(
+                                              post.author.usernameFormat,
+                                            ),
+                                            getGradientAnimationClass(
+                                              post.author.usernameColor,
+                                            ),
+                                          )}
+                                          style={getUsernameColorStyle(
+                                            post.author.usernameColor,
+                                            {
+                                              isOwnProfile:
+                                                post.author.id === profile.id,
+                                              themeMode:
+                                                (resolvedTheme as
+                                                  | "dark"
+                                                  | "light") || "dark",
+                                            },
+                                          )}
+                                        >
+                                          {post.author.username}
+                                        </span>
+                                      </UserAvatarMenu>
+                                      <span
+                                        className={cn(
+                                          "text-[12px] font-semibold",
+                                          getGradientAnimationClass(
+                                            post.author.usernameColor,
+                                          ),
+                                        )}
+                                        style={getUsernameColorStyle(
+                                          post.author.usernameColor,
+                                          {
+                                            isOwnProfile:
+                                              post.author.id === profile.id,
+                                            themeMode:
+                                              (resolvedTheme as
+                                                | "dark"
+                                                | "light") || "dark",
+                                          },
+                                        )}
+                                      >
+                                        :
+                                      </span>
+                                    </>
+                                  }
+                                />
+                              ) : (
+                                <div className="-mt-0.5 whitespace-pre-wrap break-words text-[12px] leading-5 text-theme-text-secondary [overflow-wrap:anywhere]">
+                                  <span className="whitespace-nowrap">
+                                    <UserAvatarMenu
+                                      profileId={post.author.id}
+                                      profileImageUrl={authorAvatarUrl}
+                                      username={post.author.username}
+                                      discriminator={post.author.discriminator}
+                                      currentProfileId={profile.id}
+                                      currentProfile={profile}
+                                      showStatus={false}
+                                      usernameColor={post.author.usernameColor}
+                                      usernameFormat={
+                                        post.author.usernameFormat
+                                      }
+                                      hideAvatar
+                                    >
+                                      <span
+                                        className={cn(
+                                          "cursor-pointer text-[12px] font-semibold text-white hover:underline",
+                                          getUsernameFormatClasses(
+                                            post.author.usernameFormat,
+                                          ),
+                                          getGradientAnimationClass(
+                                            post.author.usernameColor,
+                                          ),
+                                        )}
+                                        style={getUsernameColorStyle(
+                                          post.author.usernameColor,
+                                          {
+                                            isOwnProfile:
+                                              post.author.id === profile.id,
+                                            themeMode:
+                                              (resolvedTheme as
+                                                | "dark"
+                                                | "light") || "dark",
+                                          },
+                                        )}
+                                      >
+                                        {post.author.username}
+                                      </span>
+                                    </UserAvatarMenu>
+                                    <span
+                                      className={cn(
+                                        "text-[12px] font-semibold",
+                                        getGradientAnimationClass(
+                                          post.author.usernameColor,
+                                        ),
+                                      )}
+                                      style={getUsernameColorStyle(
+                                        post.author.usernameColor,
+                                        {
+                                          isOwnProfile:
+                                            post.author.id === profile.id,
+                                          themeMode:
+                                            (resolvedTheme as
+                                              | "dark"
+                                              | "light") || "dark",
+                                        },
+                                      )}
+                                    >
+                                      :
+                                    </span>
+                                  </span>
+                                  {"\u00A0"}
+                                  <span>{post.content}</span>
+                                </div>
+                              )}
+                                </>
+                              )}
+
+                              {!isEditing && (
+                                <div className="mt-2 flex items-center gap-x-3">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      {
+                                        setReplyingToComment(null);
+                                        setReplyingToPostId((current) =>
+                                          current === post.id ? null : post.id,
+                                        );
+                                      }
+                                    }
+                                    className="cursor-pointer text-[12px] text-theme-text-tertiary transition hover:underline"
+                                  >
+                                    Reply
+                                  </button>
+                                  {omittedCount > 0 && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        void handleToggleOmittedComments(post.id)
+                                      }
+                                      className="cursor-pointer text-[12px] text-theme-text-tertiary transition hover:underline"
+                                    >
+                                      {isExpandedCommentsLoading
+                                        ? "Loading comments..."
+                                        : isOmittedExpanded
+                                          ? "Hide omitted comments"
+                                          : `Expand ${omittedCount} omitted comments`}
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+
+                              {!isEditing && commentsToRender.length > 0 && (
+                                <div className="mt-3 space-y-2">
+                                  {commentsToRender.map((comment) => (
+                                    <div key={comment.id} className="space-y-2">
+                                      <CommunityPostCommentItem
+                                        comment={comment}
+                                        currentProfileId={profile.id}
+                                        onReply={(commentId) => {
+                                          setReplyingToPostId(null);
+                                          setReplyingToComment((current) =>
+                                            current?.postId === post.id &&
+                                            current.commentId === commentId
+                                              ? null
+                                              : {
+                                                  postId: post.id,
+                                                  commentId,
+                                                },
+                                          );
+                                        }}
+                                      />
+                                      {replyingToComment?.postId === post.id &&
+                                        replyingToComment.commentId ===
+                                          comment.id && (
+                                          <CommunityPostCommentComposer
+                                            postId={post.id}
+                                            communityId={communityId}
+                                            replyToCommentId={comment.id}
+                                            onCancel={() =>
+                                              setReplyingToComment(null)
+                                            }
+                                          />
+                                        )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {isReplying && !isEditing && (
+                                <CommunityPostCommentComposer
+                                  postId={post.id}
+                                  communityId={communityId}
+                                  onCancel={() => setReplyingToPostId(null)}
+                                />
+                              )}
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })(),
+                  )}
+                </div>
+              );
+            })}
+
+            <div ref={bottomSentinelRef} className="h-1 shrink-0" />
+
+            {(isFetchingNextPage || hasNextPage) && <FeedBottomSkeleton />}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export const CommunityPostsSection = memo(CommunityPostsSectionInner);

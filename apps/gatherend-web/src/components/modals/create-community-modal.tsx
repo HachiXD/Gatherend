@@ -21,6 +21,8 @@ import {
   COMMUNITIES_FEED_KEY,
   type CommunityFeedItem,
 } from "@/hooks/discovery/community-feed/use-communities-feed";
+import { getStoredUploadAssetId } from "@/lib/upload-values";
+import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 import {
   Form,
@@ -40,14 +42,18 @@ const schema = z.object({
     .string()
     .min(2, { message: "El nombre debe tener al menos 2 caracteres" })
     .max(32, { message: "El nombre no puede exceder 32 caracteres" }),
-  imageUrl: z.string().optional(),
+  imageUpload: z.string().optional(),
 });
 
 type FormSchema = z.infer<typeof schema>;
+type CreateCommunityPayload = {
+  name: string;
+  imageAssetId: string | null;
+};
 
 const DEFAULTS: FormSchema = {
   name: "",
-  imageUrl: "",
+  imageUpload: "",
 };
 
 // Componente interno reutilizable
@@ -58,7 +64,7 @@ interface CreateCommunityDialogProps {
   onSuccess?: (community: {
     id: string;
     name: string;
-    imageUrl: string | null;
+    imageAsset: ClientUploadedAsset | null;
   }) => void;
   /** When true, uses higher z-index to stack over other modals */
   stackAbove?: boolean;
@@ -85,12 +91,12 @@ export function CreateCommunityDialog({
   }, [isOpen, form]);
 
   const { mutate: createCommunity, isPending: isLoading } = useMutation({
-    mutationFn: async (values: FormSchema) => {
+    mutationFn: async (values: CreateCommunityPayload) => {
       const response = await axios.post("/api/communities", values);
       return response.data as {
         id: string;
         name: string;
-        imageUrl: string | null;
+        imageAsset: ClientUploadedAsset | null;
       };
     },
     onSuccess: (newCommunity) => {
@@ -115,7 +121,7 @@ export function CreateCommunityDialog({
         const newCommunityItem: CommunityFeedItem = {
           id: newCommunity.id,
           name: newCommunity.name,
-          imageUrl: newCommunity.imageUrl,
+          imageAsset: newCommunity.imageAsset,
           description: null,
           memberCount: 1,
           boardCount: 0,
@@ -156,7 +162,10 @@ export function CreateCommunityDialog({
   };
 
   const onSubmit = (values: FormSchema) => {
-    createCommunity(values);
+    createCommunity({
+      name: values.name,
+      imageAssetId: getStoredUploadAssetId(values.imageUpload),
+    });
   };
 
   return (
@@ -181,12 +190,12 @@ export function CreateCommunityDialog({
               <div className="flex items-center justify-center">
                 <FormField
                   control={form.control}
-                  name="imageUrl"
+                  name="imageUpload"
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
                         <FileUpload
-                          endpoint="boardImage"
+                          endpoint="communityImage"
                           value={field.value || ""}
                           onChange={field.onChange}
                         />

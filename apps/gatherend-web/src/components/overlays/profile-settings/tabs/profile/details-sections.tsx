@@ -63,21 +63,23 @@ export const AboutMeSection = memo(function AboutMeSection({
 
 export const BadgeSection = memo(function BadgeSection({
   badgeText,
-  badgeStickerUrl,
+  badgeStickerId,
   profileId,
   isSaving,
   onBadgeTextChange,
-  onBadgeStickerUrlChange,
+  onBadgeStickerIdChange,
   t,
 }: BadgeSectionProps) {
   // Lazy load stickers only when this section is interacted with
-  const [stickersEnabled, setStickersEnabled] = useState(!!badgeStickerUrl);
+  const [stickersEnabled, setStickersEnabled] = useState(!!badgeStickerId);
 
   const { data: allStickers, isLoading: stickersLoading } = useStickers(
     stickersEnabled ? profileId : undefined,
   );
   const myStickers =
     allStickers?.filter((s) => s.uploaderId === profileId) || [];
+  const selectedSticker =
+    myStickers.find((sticker) => sticker.id === badgeStickerId) || null;
 
   // Enable stickers loading when user focuses on the section
   const handleEnableStickers = () => {
@@ -132,11 +134,11 @@ export const BadgeSection = memo(function BadgeSection({
           aria-labelledby="badge-sticker-label"
         >
           {/* Current selection preview */}
-          {badgeStickerUrl && (
+          {selectedSticker?.asset?.url && (
             <div className="flex items-center gap-2 p-2 bg-theme-bg-input rounded-md">
               <div className="relative h-8 w-8">
                 <AnimatedSticker
-                  src={badgeStickerUrl}
+                  src={selectedSticker.asset.url}
                   alt="Badge sticker"
                   containerClassName="h-full w-full"
                   fallbackWidthPx={32}
@@ -150,7 +152,7 @@ export const BadgeSection = memo(function BadgeSection({
                 type="button"
                 variant="ghost"
                 size="sm"
-                onClick={() => onBadgeStickerUrlChange("")}
+                onClick={() => onBadgeStickerIdChange("")}
                 className="text-theme-text-muted hover:text-theme-text-light h-6 w-6 p-0"
                 aria-label="Remove badge sticker"
               >
@@ -167,25 +169,25 @@ export const BadgeSection = memo(function BadgeSection({
                   <button
                     key={sticker.id}
                     type="button"
-                    onClick={() => onBadgeStickerUrlChange(sticker.imageUrl)}
+                    onClick={() => onBadgeStickerIdChange(sticker.id)}
                     className={`relative h-10 w-10 rounded-md hover:bg-theme-accent-primary cursor-pointer transition p-1 ${
-                      badgeStickerUrl === sticker.imageUrl
+                      badgeStickerId === sticker.id
                         ? "ring-2 ring-theme-accent-primary"
                         : ""
                     }`}
                     disabled={isSaving}
                     aria-label={`Select ${sticker.name} sticker`}
-                    aria-pressed={badgeStickerUrl === sticker.imageUrl}
+                    aria-pressed={badgeStickerId === sticker.id}
                   >
                     <AnimatedSticker
-                      src={sticker.imageUrl}
+                      src={sticker.asset?.url || ""}
                       alt={sticker.name}
                       containerClassName="h-full w-full"
                       className="p-0.5"
                       fallbackWidthPx={40}
                       fallbackHeightPx={40}
                     />
-                    {badgeStickerUrl === sticker.imageUrl && (
+                    {badgeStickerId === sticker.id && (
                       <div className="absolute -top-1 -right-1 bg-theme-accent-primary rounded-full p-0.5">
                         <Check className="h-2.5 w-2.5 text-white" />
                       </div>

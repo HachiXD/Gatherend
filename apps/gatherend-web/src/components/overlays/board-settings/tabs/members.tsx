@@ -28,6 +28,10 @@ import axios from "axios";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useBoardMutations } from "@/hooks/use-board-data";
 import { useTranslation } from "@/i18n";
+import type {
+  ClientStickerAssetRef,
+  ClientUploadedAsset,
+} from "@/types/uploaded-assets";
 
 const roleIconMap = {
   GUEST: null,
@@ -62,8 +66,11 @@ interface MembersTabProps {
     members: (Member & {
       profile: Pick<
         Profile,
-        "id" | "username" | "discriminator" | "imageUrl" | "email" | "userId"
-      >;
+        "id" | "username" | "discriminator" | "email" | "userId"
+      > & {
+        avatarAsset: ClientUploadedAsset | null;
+        badgeSticker: ClientStickerAssetRef | null;
+      };
     })[];
   };
   currentProfileId?: string;
@@ -173,7 +180,10 @@ export const MembersTab = ({ board, currentProfileId }: MembersTabProps) => {
 
             return (
               <div key={member.id} className="flex items-center gap-x-2">
-                <UserAvatar src={member.profile.imageUrl} showStatus={false} />
+                <UserAvatar
+                  src={member.profile.avatarAsset?.url || ""}
+                  showStatus={false}
+                />
                 <div className="flex flex-col gap-y-1">
                   <div className="text-sm font-semibold flex items-center gap-x-1 text-theme-text-primary">
                     {member.profile.username}

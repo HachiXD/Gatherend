@@ -42,7 +42,7 @@ export function CustomUserButton() {
   }, [isOpen]);
 
   // Usar datos del profile (fuente de verdad para SPA client-side)
-  const imageUrl = profile.imageUrl || "";
+  const avatarUrl = profile.avatarAsset?.url || "";
   const userName = profile.username || "User";
   const discriminator = profile.discriminator || null;
   const [avatarFailed, setAvatarFailed] = useState(false);
@@ -51,34 +51,34 @@ export function CustomUserButton() {
   useEffect(() => {
     setAvatarFailed(false);
     setForceOriginalImage(false);
-  }, [imageUrl]);
+  }, [avatarUrl]);
 
   const displayImageUrl32 = useMemo(() => {
-    if (!imageUrl) return "";
-    if (forceOriginalImage) return imageUrl;
-    return getOptimizedStaticUiImageUrl(imageUrl, {
+    if (!avatarUrl) return "";
+    if (forceOriginalImage) return avatarUrl;
+    return getOptimizedStaticUiImageUrl(avatarUrl, {
       w: 32,
       h: 32,
       q: 82,
       resize: "fill",
       gravity: "sm",
     });
-  }, [forceOriginalImage, imageUrl]);
+  }, [forceOriginalImage, avatarUrl]);
 
   const displayImageUrl40 = useMemo(() => {
-    if (!imageUrl) return "";
-    if (forceOriginalImage) return imageUrl;
-    return getOptimizedStaticUiImageUrl(imageUrl, {
+    if (!avatarUrl) return "";
+    if (forceOriginalImage) return avatarUrl;
+    return getOptimizedStaticUiImageUrl(avatarUrl, {
       w: 40,
       h: 40,
       q: 82,
       resize: "fill",
       gravity: "sm",
     });
-  }, [forceOriginalImage, imageUrl]);
+  }, [forceOriginalImage, avatarUrl]);
 
   const handleAvatarError = () => {
-    if (!forceOriginalImage && imageUrl) {
+    if (!forceOriginalImage && avatarUrl) {
       setForceOriginalImage(true);
       return;
     }
@@ -118,7 +118,7 @@ export function CustomUserButton() {
         )}
         aria-label={t.userMenu.userMenuLabel}
       >
-        {imageUrl && displayImageUrl32 && !avatarFailed ? (
+        {avatarUrl && displayImageUrl32 && !avatarFailed ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={displayImageUrl32}
@@ -149,7 +149,7 @@ export function CustomUserButton() {
           <div className="px-4 py-3 border-b border-theme-border-secondary">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full overflow-hidden bg-theme-bg-secondary flex items-center justify-center">
-                {imageUrl && displayImageUrl40 && !avatarFailed ? (
+                {avatarUrl && displayImageUrl40 && !avatarFailed ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={displayImageUrl40}

@@ -76,7 +76,7 @@ export const DirectMessageItem = memo(function DirectMessageItemComponent({
 
     let preview = "";
 
-    if (lastMessage.fileUrl) {
+    if (lastMessage.hasAttachment || lastMessage.attachmentAsset) {
       preview = `📎 ${t.dm.sentAFile}`;
     } else {
       // Truncar contenido si es muy largo
@@ -151,7 +151,7 @@ export const DirectMessageItem = memo(function DirectMessageItemComponent({
           }}
         >
           <UserAvatar
-            src={otherProfile.imageUrl}
+            src={otherProfile.avatarAsset?.url || undefined}
             profileId={otherProfile.id}
             usernameColor={otherProfile.usernameColor}
             className="h-8 w-8 md:h-8 md:w-8"

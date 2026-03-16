@@ -14,14 +14,18 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { ClientUploadedAsset } from "@/types/uploaded-assets";
+
+interface ModerationProfile {
+  id: string;
+  username: string;
+  discriminator: string | null;
+  avatarAsset: ClientUploadedAsset | null;
+}
 
 interface UserLookupResult {
-  profile: {
-    id: string;
+  profile: ModerationProfile & {
     userId: string;
-    username: string;
-    discriminator: string;
-    imageUrl: string;
     banned: boolean;
     bannedAt: string | null;
     banReason: string | null;
@@ -54,12 +58,7 @@ interface UserLookupResult {
     status: string;
     createdAt: string;
     targetType: string;
-    reporter: {
-      id: string;
-      username: string;
-      discriminator: string;
-      imageUrl: string;
-    };
+    reporter: ModerationProfile | null;
   }>;
   strikes: Array<{
     id: string;
@@ -72,7 +71,7 @@ interface UserLookupResult {
   boardsOwned: Array<{
     id: string;
     name: string;
-    imageUrl: string | null;
+    imageAsset: ClientUploadedAsset | null;
     reportCount: number;
     hiddenFromFeed: boolean;
     createdAt: string;
@@ -80,12 +79,8 @@ interface UserLookupResult {
   }>;
 }
 
-interface SearchProfile {
-  id: string;
+interface SearchProfile extends ModerationProfile {
   userId: string;
-  username: string;
-  discriminator: string;
-  imageUrl: string;
   banned: boolean;
   createdAt: string;
 }
@@ -261,7 +256,7 @@ export const UserLookupTab = () => {
             >
               <div className="flex items-center gap-3">
                 <img
-                  src={profile.imageUrl}
+                  src={profile.avatarAsset?.url || undefined}
                   alt=""
                   className={cn(
                     "w-10 h-10 rounded-full",
@@ -296,7 +291,7 @@ export const UserLookupTab = () => {
           <div className="p-5 rounded-lg bg-theme-bg-secondary border border-theme-border-primary">
             <div className="flex items-start gap-4">
               <img
-                src={result.profile.imageUrl}
+                src={result.profile.avatarAsset?.url || undefined}
                 alt=""
                 className={cn(
                   "w-16 h-16 rounded-full",
@@ -475,7 +470,7 @@ export const UserLookupTab = () => {
                   >
                     <div className="flex items-center gap-3">
                       <img
-                        src={report.reporter.imageUrl}
+                        src={report.reporter?.avatarAsset?.url || undefined}
                         alt=""
                         className="w-6 h-6 rounded-full"
                       />
@@ -485,8 +480,8 @@ export const UserLookupTab = () => {
                           {report.targetType})
                         </p>
                         <p className="text-xs text-theme-text-tertiary">
-                          by @{report.reporter.username}/
-                          {report.reporter.discriminator} •{" "}
+                          by @{report.reporter?.username || "unknown"}/
+                          {report.reporter?.discriminator || "unknown"} •{" "}
                           {new Date(report.createdAt).toLocaleDateString()}
                         </p>
                       </div>
@@ -524,9 +519,9 @@ export const UserLookupTab = () => {
                     className="flex items-center justify-between p-3 rounded bg-theme-bg-tertiary"
                   >
                     <div className="flex items-center gap-3">
-                      {board.imageUrl && (
+                      {board.imageAsset?.url && (
                         <img
-                          src={board.imageUrl}
+                          src={board.imageAsset.url}
                           alt=""
                           className="w-8 h-8 rounded object-cover"
                         />

@@ -50,7 +50,7 @@ const VoiceChannelParticipantsComponent = ({
         {displayedParticipants.map((participant: VoiceParticipant) => (
           <UserAvatar
             key={participant.profileId}
-            src={participant.imageUrl || undefined}
+            src={participant.avatarUrl || undefined}
             profileId={participant.profileId}
             usernameColor={participant.usernameColor}
             className="h-5 w-5"

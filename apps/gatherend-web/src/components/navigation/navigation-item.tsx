@@ -13,12 +13,14 @@ import { AtSign } from "lucide-react";
 import type { BoardWithData } from "@/components/providers/board-provider";
 import { fetchWithRetry } from "@/lib/fetch-with-retry";
 import { getOptimizedStaticUiImageUrl } from "@/lib/ui-image-optimizer";
+import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 const STORAGE_DOMAIN = process.env.NEXT_PUBLIC_STORAGE_DOMAIN || "";
 
 interface NavigationItemProps {
   id: string;
-  imageUrl: string | null;
+  boardImageUrl: string | null;
+  imageAsset?: ClientUploadedAsset | null;
   name: string;
   channelIds: string[];
   mainChannelId?: string | null;
@@ -40,7 +42,8 @@ const arraysEqual = (a: string[], b: string[]): boolean => {
 
 const NavigationItemComponent = ({
   id,
-  imageUrl,
+  boardImageUrl,
+  imageAsset: _imageAsset,
   name,
   channelIds,
   mainChannelId = null,
@@ -78,16 +81,16 @@ const NavigationItemComponent = ({
   const [forceOriginalImage, setForceOriginalImage] = useState(false);
 
   const displayImageUrl = useMemo(() => {
-    if (!imageUrl) return null;
-    if (forceOriginalImage) return imageUrl;
-    return getOptimizedStaticUiImageUrl(imageUrl, {
+    if (!boardImageUrl) return null;
+    if (forceOriginalImage) return boardImageUrl;
+    return getOptimizedStaticUiImageUrl(boardImageUrl, {
       w: 96,
       h: 96,
       q: 82,
       resize: "fill",
       gravity: "sm",
     });
-  }, [forceOriginalImage, imageUrl]);
+  }, [forceOriginalImage, boardImageUrl]);
 
   const isGatherendCdnUrl = (() => {
     try {
@@ -292,7 +295,7 @@ const NavigationItemComponent = ({
 export const NavigationItem = memo(NavigationItemComponent, (prev, next) => {
   return (
     prev.id === next.id &&
-    prev.imageUrl === next.imageUrl &&
+    prev.boardImageUrl === next.boardImageUrl &&
     prev.name === next.name &&
     prev.isActive === next.isActive &&
     arraysEqual(prev.channelIds, next.channelIds)

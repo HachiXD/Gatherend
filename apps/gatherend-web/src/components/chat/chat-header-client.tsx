@@ -8,7 +8,7 @@ interface ChatHeaderClientProps {
   boardId: string;
   name: string;
   type: "channel" | "conversation";
-  imageUrl?: string;
+  avatarUrl?: string;
   profileId?: string;
   channelId?: string;
 }
@@ -17,7 +17,7 @@ export const ChatHeaderClient = ({
   boardId,
   name: initialName,
   type,
-  imageUrl,
+  avatarUrl,
   profileId,
   channelId,
 }: ChatHeaderClientProps) => {
@@ -34,7 +34,7 @@ export const ChatHeaderClient = ({
       )}
       {type === "conversation" && (
         <UserAvatar
-          src={imageUrl}
+          src={avatarUrl}
           profileId={profileId}
           className="h-8 w-8 md:h-8 md:w-8 mr-2"
           statusOffset="right-2"

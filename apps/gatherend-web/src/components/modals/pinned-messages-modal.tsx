@@ -17,32 +17,24 @@ import { cn } from "@/lib/utils";
 import { AnimatedSticker } from "@/components/ui/animated-sticker";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "@/i18n";
+import type {
+  ClientAttachmentAsset,
+  ClientProfileSummary,
+  ClientSticker,
+} from "@/types/uploaded-assets";
 
 interface PinnedMessage {
   id: string;
   content: string;
   createdAt: string;
   pinnedAt: string;
-  fileUrl?: string | null;
+  attachmentAsset?: ClientAttachmentAsset | null;
   fileName?: string | null;
-  fileType?: string | null;
-  sticker?: {
-    id: string;
-    imageUrl: string;
-    name: string;
-  } | null;
+  sticker?: ClientSticker | null;
   member?: {
-    profile: {
-      id: string;
-      username: string;
-      imageUrl: string;
-    };
+    profile: ClientProfileSummary;
   };
-  sender?: {
-    id: string;
-    username: string;
-    imageUrl: string;
-  };
+  sender?: ClientProfileSummary;
 }
 
 export const PinnedMessagesModal = () => {
@@ -137,7 +129,9 @@ export const PinnedMessagesModal = () => {
             <div className="space-y-4">
               {pinnedMessages.map((message) => {
                 const author = message.member?.profile || message.sender;
-                const isImage = message.fileType?.startsWith("image/");
+                const isImage = message.attachmentAsset?.mimeType?.startsWith(
+                  "image/",
+                );
 
                 return (
                   <div
@@ -145,7 +139,7 @@ export const PinnedMessagesModal = () => {
                     className="group relative flex gap-x-3 p-3 rounded-md bg-theme-bg-tertiary/30 hover:bg-theme-bg-tertiary/50 transition border border-theme-border-primary/30"
                   >
                     <UserAvatar
-                      src={author?.imageUrl}
+                      src={author?.avatarAsset?.url || undefined}
                       profileId={author?.id}
                       showStatus={false}
                       className="h-10 w-10"
@@ -168,7 +162,7 @@ export const PinnedMessagesModal = () => {
                         <div className="mt-2">
                           <div className="relative h-20 w-20">
                             <AnimatedSticker
-                              src={message.sticker.imageUrl}
+                              src={message.sticker.asset?.url || ""}
                               alt={message.sticker.name}
                               containerClassName="h-full w-full"
                               fallbackWidthPx={80}
@@ -176,20 +170,20 @@ export const PinnedMessagesModal = () => {
                             />
                           </div>
                         </div>
-                      ) : isImage && message.fileUrl ? (
+                      ) : isImage && message.attachmentAsset?.url ? (
                         <div className="mt-2">
                           <div className="relative h-32 w-32 rounded overflow-hidden border border-theme-border-primary/50">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
-                              src={message.fileUrl}
-                              alt={message.fileName || "Image"}
+                              src={message.attachmentAsset.url}
+                              alt={message.attachmentAsset.originalName || "Image"}
                               className="absolute inset-0 h-full w-full object-cover"
                               loading="lazy"
                               decoding="async"
                             />
                           </div>
                         </div>
-                      ) : message.fileUrl ? (
+                      ) : message.attachmentAsset?.url ? (
                         <p className="text-sm text-theme-accent-primary mt-1 hover:underline cursor-pointer">
                           📎 {message.fileName}
                         </p>

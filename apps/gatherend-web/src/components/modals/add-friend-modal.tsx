@@ -20,6 +20,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
 import { useFriendRequestSocket } from "@/hooks/use-friend-request-socket";
 import { useTranslation } from "@/i18n";
+import type { ClientProfileSummary } from "@/types/uploaded-assets";
 
 interface PendingRequest {
   id: string;
@@ -27,12 +28,8 @@ interface PendingRequest {
   receiverId: string;
   status: string;
   createdAt: string;
-  requester: {
-    id: string;
-    username: string;
-    discriminator: string;
-    imageUrl: string;
-    email: string;
+  requester: ClientProfileSummary & {
+    fullUsername: string;
   };
 }
 
@@ -244,7 +241,7 @@ export const AddFriendModal = () => {
                     >
                       <div className="flex items-center gap-3">
                         <UserAvatar
-                          src={request.requester.imageUrl}
+                          src={request.requester.avatarAsset?.url || undefined}
                           showStatus={false}
                           className="h-8 w-8 md:h-8 md:w-8"
                         />

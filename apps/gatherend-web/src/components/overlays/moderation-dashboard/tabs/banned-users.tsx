@@ -2,13 +2,14 @@
 
 import { Loader2, RefreshCw, UserX, UserCheck } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 interface BannedUser {
   id: string;
   userId: string;
   username: string;
-  discriminator: string;
-  imageUrl: string;
+  discriminator: string | null;
+  avatarAsset: ClientUploadedAsset | null;
   bannedAt: string;
   banReason: string | null;
   _count: {
@@ -134,7 +135,7 @@ export const BannedUsersTab = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <img
-                    src={user.imageUrl}
+                    src={user.avatarAsset?.url || undefined}
                     alt=""
                     className="w-10 h-10 rounded-full opacity-50"
                   />

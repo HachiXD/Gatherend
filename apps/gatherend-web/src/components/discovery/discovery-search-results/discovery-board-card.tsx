@@ -24,13 +24,14 @@ import { useTranslation } from "@/i18n";
 import { useBoardSwitchSafe } from "@/contexts/board-switch-context";
 import { useColorExtraction } from "@/hooks/use-color-extraction";
 import { getNeverAnimatedImageUrl } from "@/lib/media-static";
+import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 interface DiscoveryBoardCardProps {
   board: {
     id: string;
     name: string;
     description: string | null;
-    imageUrl: string | null;
+    imageAsset: ClientUploadedAsset | null;
     size: number;
     occupiedSlots: number;
     freeSlots: number;
@@ -63,7 +64,7 @@ function DiscoveryBoardCardComponent({ board }: DiscoveryBoardCardProps) {
 
   // Generar imagen automática si no hay una - usar color consistente basado en board.id
   const finalImageUrl = getBoardImageUrl(
-    board.imageUrl,
+    board.imageAsset?.url || null,
     board.id,
     board.name,
     256,
@@ -146,12 +147,24 @@ function DiscoveryBoardCardComponent({ board }: DiscoveryBoardCardProps) {
     <div
       data-board-id={board.id}
       className={cn(
-        "border border-white/10 rounded-xl overflow-hidden",
-        "shadow-md hover:shadow-xl hover:border-white/20 transition-all duration-300",
+        "border-t-1 border-r-2 border-b-2 overflow-hidden",
+        "shadow-md hover:shadow-xl transition-all duration-300",
         "w-full h-fit flex flex-col group",
       )}
-      style={{ backgroundColor: dominantColor || "#1F2D2C" }}
+      style={{
+        backgroundColor: dominantColor || "#1F2D2C",
+        borderTopColor: derivedColors.reliefBorderLight,
+        borderRightColor: derivedColors.reliefBorder,
+        borderBottomColor: derivedColors.reliefBorder,
+      }}
     >
+      {/* TITLE */}
+      <div className="px-3 py-2">
+        <h3 className="text-white font-bold text-lg tracking-tight drop-shadow-md line-clamp-2 break-words">
+          {board.name}
+        </h3>
+      </div>
+
       {/* HEADER IMAGE */}
       <div className="relative w-full h-[120px] overflow-hidden">
         {displayImageUrl && !imageFailed ? (
@@ -185,25 +198,25 @@ function DiscoveryBoardCardComponent({ board }: DiscoveryBoardCardProps) {
                   reportBoardId: board.id,
                   reportBoardName: board.name,
                   reportBoardDescription: board.description,
-                  reportBoardImageUrl: board.imageUrl,
+                  reportBoardImageUrl: board.imageAsset?.url || null,
                   profileId: currentProfile?.id,
                 });
               }}
-              className="p-1.5 rounded-md bg-black/50 hover:bg-red-500/30 transition-colors cursor-pointer"
+              className="cursor-pointer border bg-black/50 p-1.5 text-white/70 transition-colors hover:bg-red-500/30 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/30 rounded-none border-[color:var(--report-border)]"
+              style={
+                {
+                  "--report-border": derivedColors.reliefBorderLight,
+                } as React.CSSProperties
+              }
             >
-              <Siren className="w-4 h-4 text-red-400" />
+              <Siren className="h-4 w-4" />
             </button>
           </ActionTooltip>
         </div>
       </div>
 
       {/* BODY */}
-      <div className="px-3 pb-4 pt-3 flex flex-col gap-2.5">
-        {/* TITLE - max 2 líneas, wrap si hay espacios, truncate si palabra larga */}
-        <h3 className="text-white font-bold text-lg tracking-tight drop-shadow-md line-clamp-2 break-words">
-          {board.name}
-        </h3>
-
+      <div className="px-3 pb-4 pt-2 flex flex-col gap-2.5">
         {/* DESCRIPTION - Scrollable con altura máxima */}
         <div
           className="w-[calc(100%+8px)] max-h-[140px] overflow-y-auto scrollbar-ultra-thin -mr-2"
@@ -223,7 +236,7 @@ function DiscoveryBoardCardComponent({ board }: DiscoveryBoardCardProps) {
         <div className="flex items-center justify-between mt-auto pt-3 border-t border-white/5">
           {/* MEMBERS / SIZE */}
           <div
-            className="px-2 py-0.5 rounded-md text-[19px] font-semibold transition-colors shadow-sm"
+            className="px-2 py-0.5 text-[19px] font-semibold transition-colors shadow-sm"
             style={{
               backgroundColor: derivedColors.badgeBg,
               color: derivedColors.badgeText,
@@ -241,7 +254,7 @@ function DiscoveryBoardCardComponent({ board }: DiscoveryBoardCardProps) {
             onMouseLeave={() => setIsHoveringJoin(false)}
             disabled={isJoining || isPending}
             className={cn(
-              "px-4 py-1.5 rounded-md text-[15px] font-semibold transition-all shadow-md",
+              "px-4 py-1.5 text-[15px] font-semibold transition-all shadow-md",
               "active:scale-[0.96] cursor-pointer",
               (isJoining || isPending) && "opacity-50 cursor-not-allowed",
             )}

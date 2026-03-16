@@ -59,7 +59,7 @@ export const BoardLeftbar = ({
     <div className="flex flex-col h-full w-full text-primary">
       {/* Banner con imagen del board y dropdown menu */}
       <LeftbarBanner
-        imageUrl={board.imageUrl}
+        imageAsset={board.imageAsset}
         boardName={board.name}
         boardId={board.id}
         board={board}
