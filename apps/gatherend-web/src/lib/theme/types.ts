@@ -59,6 +59,8 @@ export interface ThemeColors {
   tabActiveBg: string; // Fondo del tab activo en settings
   tabButtonBg: string; // Fondo de botones dentro de tabs
   tabButtonHover: string; // Hover de botones dentro de tabs
+  communityTabsFallbackBg: string; // Fondo fallback para tabs de comunidad
+  communityTabsFallbackActiveBg: string; // Fondo fallback activo para tabs de comunidad
 
   // Chat Toolbar
   toolbarBg: string; // Fondo del toolbar de chat
@@ -216,6 +218,8 @@ export const THEME_CSS_VAR_MAP: Record<ThemeColorKey, string> = {
   tabActiveBg: "--theme-tab-active-bg",
   tabButtonBg: "--theme-tab-button-bg",
   tabButtonHover: "--theme-tab-button-hover",
+  communityTabsFallbackBg: "--theme-community-tabs-fallback-bg",
+  communityTabsFallbackActiveBg: "--theme-community-tabs-fallback-active-bg",
   toolbarBg: "--theme-toolbar-bg",
   toolbarIcon: "--theme-toolbar-icon",
   toolbarBorder: "--theme-toolbar-border",
