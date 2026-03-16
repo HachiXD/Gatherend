@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Open_Sans, Belanosima } from "next/font/google";
 import { headers } from "next/headers";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { cn } from "@/lib/utils";
@@ -16,17 +15,6 @@ import { getServerLocale } from "@/i18n/server";
 
 // Dynamic because of nonce-based CSP.
 export const dynamic = "force-dynamic";
-
-const font = Open_Sans({
-  variable: "--font-open-sans",
-  subsets: ["latin"],
-});
-
-export const belanosima = Belanosima({
-  variable: "--font-belanosima",
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.SITE_URL || "http://localhost:3000"),
@@ -69,8 +57,6 @@ export default async function RootLayout({
     <html lang={locale} suppressHydrationWarning>
       <body
         className={cn(
-          font.className,
-          belanosima.variable,
           "bg-theme-bg-quaternary",
         )}
       >
