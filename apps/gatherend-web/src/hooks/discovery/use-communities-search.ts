@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 const DEBOUNCE_MS = 350;
 
@@ -8,7 +9,7 @@ const DEBOUNCE_MS = 350;
 export interface CommunitySearchResult {
   id: string;
   name: string;
-  imageUrl: string | null;
+  imageAsset: ClientUploadedAsset | null;
   memberCount: number;
   boardCount: number;
 }

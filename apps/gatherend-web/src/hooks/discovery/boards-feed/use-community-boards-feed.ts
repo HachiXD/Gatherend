@@ -1,7 +1,15 @@
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import type { Languages } from "@prisma/client";
 import { mergeCommunityToFeedCache } from "../community-feed/use-communities-feed";
+import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 // TYPES
 
@@ -9,7 +17,7 @@ export interface CommunityBoardFeedItem {
   id: string;
   name: string;
   description: string | null;
-  imageUrl: string | null;
+  imageAsset: ClientUploadedAsset | null;
   size: number;
   occupiedSlots: number;
   freeSlots: number;
@@ -20,7 +28,7 @@ export interface CommunityBoardFeedItem {
 export interface CommunityInfo {
   id: string;
   name: string;
-  imageUrl: string | null;
+  imageAsset: ClientUploadedAsset | null;
   memberCount: number;
   activeBoardsCount: number; // Real-time count from /boards endpoint
 }
@@ -48,7 +56,7 @@ const ESTIMATED_BOARD_CARD_HEIGHT = 280; // Estimated height for board cards (va
 const BOARD_CARD_GAP = 16; // Gap between cards (gap-4 = 16px)
 const LRU_BUFFER = 6; // Number of pages to keep outside rendered window for LRU eviction
 
-// Responsive column counts matching Tailwind breakpoints in discovery-board-view.tsx
+// Responsive column counts matching Tailwind breakpoints in community-boards-section.tsx
 // grid-cols-1 (default) | md:grid-cols-2 (768px) | xl:grid-cols-3 (1280px)
 const BREAKPOINT_MD = 768;
 const BREAKPOINT_XL = 1280;
@@ -80,6 +88,7 @@ interface UseCommunityBoardsFeedOptions {
   maxRenderedPages?: number;
   expandThreshold?: number;
   enabled?: boolean;
+  externalContainerRef?: RefObject<HTMLDivElement | null>;
 }
 
 export function useCommunityBoardsFeed(
@@ -88,6 +97,7 @@ export function useCommunityBoardsFeed(
     maxRenderedPages = 3,
     expandThreshold = 0.4,
     enabled = true,
+    externalContainerRef,
   }: UseCommunityBoardsFeedOptions = {},
 ) {
   const queryClient = useQueryClient();
@@ -95,6 +105,7 @@ export function useCommunityBoardsFeed(
   // Refs
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomSentinelRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = externalContainerRef ?? containerRef;
 
   // Track measured heights for each page (for variable height cards)
   const pageHeightsRef = useRef<Map<number, number>>(new Map());
@@ -344,7 +355,7 @@ export function useCommunityBoardsFeed(
   // SCROLL HANDLER - O(log N)
 
   const handleScroll = useCallback(() => {
-    const container = containerRef.current;
+    const container = scrollContainerRef.current;
     const positions = pagePositionsRef.current;
     if (!container || totalChunks === 0 || positions.length === 0) return;
 
@@ -390,6 +401,7 @@ export function useCommunityBoardsFeed(
     findPageAtPosition,
     expandThreshold,
     evictDistantHeights,
+    scrollContainerRef,
   ]);
 
   // INTERSECTION OBSERVER
@@ -419,7 +431,7 @@ export function useCommunityBoardsFeed(
         }
       },
       {
-        root: containerRef.current,
+        root: scrollContainerRef.current,
         // rootMargin: 0 means trigger exactly when viewport bottom touches skeleton top
         rootMargin: "0px",
         threshold: 0,
@@ -428,12 +440,12 @@ export function useCommunityBoardsFeed(
 
     observer.observe(bottomSentinel);
     return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, scrollContainerRef]);
 
   // SCROLL EVENT LISTENER
 
   useEffect(() => {
-    const container = containerRef.current;
+    const container = scrollContainerRef.current;
     if (!container) return;
 
     let ticking = false;
@@ -449,7 +461,7 @@ export function useCommunityBoardsFeed(
 
     container.addEventListener("scroll", onScroll, { passive: true });
     return () => container.removeEventListener("scroll", onScroll);
-  }, [handleScroll]);
+  }, [handleScroll, scrollContainerRef]);
 
   // ACTIONS
 
@@ -493,7 +505,7 @@ export function useCommunityBoardsFeed(
     measurePage,
 
     // Refs
-    containerRef: containerRef as React.RefObject<HTMLDivElement>,
+    containerRef: scrollContainerRef as React.RefObject<HTMLDivElement>,
     bottomSentinelRef: bottomSentinelRef as React.RefObject<HTMLDivElement>,
   };
 }

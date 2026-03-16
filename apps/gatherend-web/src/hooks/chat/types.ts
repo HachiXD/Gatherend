@@ -1,99 +1,80 @@
-import { Member, Profile, Message, DirectMessage, Board } from "@prisma/client";
+import { Board, Member, MemberRole } from "@prisma/client";
 import type { ClientProfile } from "@/hooks/use-current-profile";
+import type {
+  ClientAttachmentAsset,
+  ClientProfileSummary,
+  ClientSticker,
+} from "@/types/uploaded-assets";
 
-// MESSAGE TYPES
+export interface ChatMember {
+  id: string;
+  role: MemberRole;
+  profile: ClientProfileSummary;
+}
 
-export type MessageWithMember = Message & {
-  member: Member & {
-    profile: Profile;
-  };
+export interface ChatReaction {
+  id: string;
+  emoji: string;
+  profileId: string;
+  profile: ClientProfileSummary;
+}
+
+export interface ChatReplyTarget {
+  id: string;
+  content: string;
+  attachmentAssetId?: string | null;
+  attachmentAsset?: ClientAttachmentAsset | null;
+  sender?: ClientProfileSummary;
+  member?: ChatMember;
+  sticker?: ClientSticker | null;
+}
+
+export interface MessageWithMember {
+  id: string;
+  content: string;
+  type?: string;
+  attachmentAssetId: string | null;
+  attachmentAsset: ClientAttachmentAsset | null;
+  deleted: boolean;
+  pinned?: boolean;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+  member: ChatMember;
+  sticker?: ClientSticker | null;
+  reactions?: ChatReaction[];
+  replyTo?: ChatReplyTarget | null;
   filePreviewUrl?: string | null;
   fileStaticPreviewUrl?: string | null;
-  sticker?: {
-    id: string;
-    imageUrl: string;
-    name: string;
-  } | null;
-  reactions?: Array<{
-    id: string;
-    emoji: string;
-    profileId: string;
-    profile: {
-      id: string;
-      username: string;
-      imageUrl: string;
-    };
-  }>;
-  replyTo?: {
-    id: string;
-    content: string;
-    sender: Profile;
-    member?: Member & {
-      profile: Profile;
-    };
-    fileUrl?: string | null;
-    fileName?: string | null;
-    sticker?: {
-      id: string;
-      imageUrl: string;
-      name: string;
-    } | null;
-  } | null;
-};
+}
 
-export type DirectMessageWithSender = DirectMessage & {
-  sender: Profile;
+export interface DirectMessageWithSender {
+  id: string;
+  content: string;
+  attachmentAssetId: string | null;
+  attachmentAsset: ClientAttachmentAsset | null;
+  deleted: boolean;
+  pinned?: boolean;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+  sender: ClientProfileSummary;
+  sticker?: ClientSticker | null;
+  reactions?: ChatReaction[];
+  replyTo?: ChatReplyTarget | null;
   filePreviewUrl?: string | null;
   fileStaticPreviewUrl?: string | null;
-  sticker?: {
-    id: string;
-    imageUrl: string;
-    name: string;
-  } | null;
-  reactions?: Array<{
-    id: string;
-    emoji: string;
-    profileId: string;
-    profile: {
-      id: string;
-      username: string;
-      imageUrl: string;
-    };
-  }>;
-  replyTo?: {
-    id: string;
-    content: string;
-    sender: Profile;
-    member?: Member & {
-      profile: Profile;
-    };
-    fileUrl?: string | null;
-    fileName?: string | null;
-    sticker?: {
-      id: string;
-      imageUrl: string;
-      name: string;
-    } | null;
-  } | null;
-};
+}
 
 export type ChatMessage = MessageWithMember | DirectMessageWithSender;
 
-// PAGE TYPES
-
 export interface ChatPage {
-  id: string; // Cursor or unique identifier
+  id: string;
   messages: ChatMessage[];
-  nextCursor: string | null; // Cursor for older messages
-  previousCursor: string | null; // Cursor for newer messages
+  nextCursor: string | null;
+  previousCursor: string | null;
 }
 
-// CONSTANTS
-
-export const SKELETON_HEIGHT = 700; // Fixed skeleton height
+export const SKELETON_HEIGHT = 700;
 export const MESSAGES_PER_PAGE = 40;
-
-// HOOK PROPS
 
 export interface ChatPagesProps {
   queryKey: string[];
@@ -101,7 +82,7 @@ export interface ChatPagesProps {
   paramKey: "channelId" | "conversationId";
   paramValue: string;
   profileId: string;
-  boardId?: string; // Optional: for channel messages optimization
+  boardId?: string;
 }
 
 export interface ChatMessagesProps {

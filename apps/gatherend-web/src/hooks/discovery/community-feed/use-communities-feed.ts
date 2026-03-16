@@ -1,5 +1,6 @@
 import { useInfiniteQuery, QueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 // TYPES
 
@@ -7,7 +8,7 @@ export interface CommunityFeedItem {
   id: string;
   name: string;
   description: string | null;
-  imageUrl: string | null;
+  imageAsset: ClientUploadedAsset | null;
   memberCount: number;
   boardCount: number;
 }
