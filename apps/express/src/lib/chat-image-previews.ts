@@ -21,8 +21,10 @@ function canProxySourceUrl(sourceUrl: string): boolean {
 }
 
 type WithFile = {
-  fileUrl?: string | null;
-  fileType?: string | null;
+  attachmentAsset?: {
+    url?: string | null;
+    mimeType?: string | null;
+  } | null;
 };
 
 export type WithFilePreviews = {
@@ -41,14 +43,14 @@ const PREVIEW_OPTIONS = {
 export function attachFilePreviews<T extends WithFile>(
   item: T,
 ): T & WithFilePreviews {
-  const fileUrl = item.fileUrl ?? null;
-  const fileType = item.fileType ?? null;
+  const assetUrl = item.attachmentAsset?.url ?? null;
+  const assetMimeType = item.attachmentAsset?.mimeType ?? null;
 
-  if (!fileUrl || !fileType?.startsWith("image/")) {
+  if (!assetUrl || !assetMimeType?.startsWith("image/")) {
     return { ...item, filePreviewUrl: null, fileStaticPreviewUrl: null };
   }
 
-  if (!canProxySourceUrl(fileUrl)) {
+  if (!canProxySourceUrl(assetUrl)) {
     return { ...item, filePreviewUrl: null, fileStaticPreviewUrl: null };
   }
 
@@ -56,15 +58,17 @@ export function attachFilePreviews<T extends WithFile>(
   // For GIF we intentionally avoid generating an animated WebP preview because Next won't optimize it
   // and we want "static by default, animate on hover" behavior in the UI.
   const wantsStaticPreview =
-    fileType === "image/webp" ||
-    fileType === "image/gif" ||
-    fileType === "image/apng";
+    assetMimeType === "image/webp" ||
+    assetMimeType === "image/gif" ||
+    assetMimeType === "image/apng";
 
   const filePreviewUrl =
-    fileType === "image/gif" ? null : getImgproxyUrl(fileUrl, PREVIEW_OPTIONS);
+    assetMimeType === "image/gif"
+      ? null
+      : getImgproxyUrl(assetUrl, PREVIEW_OPTIONS);
 
   const fileStaticPreviewUrl = wantsStaticPreview
-    ? getImgproxyUrl(fileUrl, {
+    ? getImgproxyUrl(assetUrl, {
         width: PREVIEW_OPTIONS.width,
         height: PREVIEW_OPTIONS.height,
         resize: PREVIEW_OPTIONS.resize,
