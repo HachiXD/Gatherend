@@ -5,7 +5,6 @@ export interface ServerSession {
   userId: string;
   name: string | null;
   email: string | null;
-  imageUrl: string | null;
 }
 
 export async function getServerSession(): Promise<ServerSession | null> {
@@ -23,10 +22,8 @@ export async function getServerSession(): Promise<ServerSession | null> {
       userId: session.user.id,
       name: session.user.name ?? null,
       email: session.user.email ?? null,
-      imageUrl: session.user.image ?? null,
     };
   } catch {
     return null;
   }
 }
-
