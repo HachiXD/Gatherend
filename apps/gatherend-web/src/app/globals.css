@@ -6,8 +6,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: Arial, Helvetica, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -85,6 +86,12 @@
   --color-theme-tab-active-bg: var(--theme-tab-active-bg);
   --color-theme-tab-button-bg: var(--theme-tab-button-bg);
   --color-theme-tab-button-hover: var(--theme-tab-button-hover);
+  --color-theme-community-tabs-fallback-bg: var(
+    --theme-community-tabs-fallback-bg
+  );
+  --color-theme-community-tabs-fallback-active-bg: var(
+    --theme-community-tabs-fallback-active-bg
+  );
   --color-theme-toolbar-bg: var(--theme-toolbar-bg);
   --color-theme-toolbar-icon: var(--theme-toolbar-icon);
   --color-theme-toolbar-border: var(--theme-toolbar-border);
@@ -224,6 +231,8 @@
   --theme-tab-active-bg: #263b3a;
   --theme-tab-button-bg: #2e8376;
   --theme-tab-button-hover: #3c9c94;
+  --theme-community-tabs-fallback-bg: #2f3737;
+  --theme-community-tabs-fallback-active-bg: #222827;
   --theme-toolbar-bg: #233b38;
   --theme-toolbar-icon: #adc4c0;
   --theme-toolbar-border: #2b4744;
@@ -278,6 +287,10 @@ html,
 body,
 :root {
   height: 100%;
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 /* Theme Gradient Background Support */
