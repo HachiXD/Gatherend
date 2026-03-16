@@ -20,7 +20,6 @@ declare global {
         id: string;
         userId: string;
         username: string;
-        imageUrl: string;
         email: string;
         banned?: boolean;
         bannedAt?: Date | null;
@@ -59,7 +58,6 @@ async function tryBetterAuth(req: Request): Promise<{
           id: true,
           userId: true,
           username: true,
-          imageUrl: true,
           email: true,
           banned: true,
           bannedAt: true,
@@ -112,7 +110,6 @@ export const authenticateRequest = async (
           id: true,
           userId: true,
           username: true,
-          imageUrl: true,
           email: true,
           banned: true,
           bannedAt: true,
@@ -165,7 +162,6 @@ export const optionalAuth = async (
           id: true,
           userId: true,
           username: true,
-          imageUrl: true,
           email: true,
         },
       });
