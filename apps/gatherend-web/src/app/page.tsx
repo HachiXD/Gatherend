@@ -2,7 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { Belanosima } from "next/font/google";
 import { getServerTranslations } from "@/i18n/server";
+
+const belanosima = Belanosima({
+  subsets: ["latin"],
+  weight: ["400", "600", "700"],
+});
 
 export default async function LandingPage() {
   const t = await getServerTranslations();
@@ -65,7 +71,7 @@ export default async function LandingPage() {
             <div className="flex items-center gap-3">
               <Link
                 href="/sign-up"
-                className="px-6 py-3 text-[20px] font-normal font-(family-name:--font-belanosima) bg-theme-button-primary hover:bg-theme-button-hover text-theme-text-light rounded-lg transition-colors"
+                className={`${belanosima.className} px-6 py-3 text-[20px] font-normal bg-theme-button-primary hover:bg-theme-button-hover text-theme-text-light rounded-lg transition-colors`}
               >
                 {t.landing.ctaButton}
               </Link>
@@ -73,7 +79,7 @@ export default async function LandingPage() {
                 href="https://github.com/HachiXD/Gatherend"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 px-6 py-3 text-[20px] font-normal font-(family-name:--font-belanosima) bg-theme-button-primary hover:bg-theme-button-hover text-theme-text-light rounded-lg transition-colors"
+                className={`${belanosima.className} flex items-center gap-2 px-6 py-3 text-[20px] font-normal bg-theme-button-primary hover:bg-theme-button-hover text-theme-text-light rounded-lg transition-colors`}
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
