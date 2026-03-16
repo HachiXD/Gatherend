@@ -1,28 +1,17 @@
-import { db } from "@/lib/db";
+import { MemberRole, AssetContext, AssetVisibility } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { moderateDescription } from "@/lib/text-moderation";
-import { MemberRole } from "@prisma/client";
-import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/require-auth";
+import { moderateDescription } from "@/lib/text-moderation";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import {
+  UUID_REGEX,
+  findOwnedUploadedAsset,
+  serializeUploadedAsset,
+  uploadedAssetSummarySelect,
+} from "@/lib/uploaded-assets";
 
-// UUID validation regex
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-// Allowed image URL prefixes (same as /api/boards/route.ts)
-const ALLOWED_IMAGE_PREFIXES = [
-  ...(process.env.NEXT_PUBLIC_DICEBEAR_URL
-    ? [process.env.NEXT_PUBLIC_DICEBEAR_URL]
-    : []),
-  ...(process.env.NEXT_PUBLIC_CDN_URL ? [process.env.NEXT_PUBLIC_CDN_URL] : []),
-];
-
-function isAllowedImageUrl(url: string): boolean {
-  return ALLOWED_IMAGE_PREFIXES.some((prefix) => url.startsWith(prefix));
-}
-
-// No cachear requests
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -31,19 +20,16 @@ export async function GET(
   context: { params: Promise<{ boardId: string }> },
 ) {
   try {
-    // Rate limiting (más permisivo para navegación)
     const rateLimitResponse = await checkRateLimit(RATE_LIMITS.api);
     if (rateLimitResponse) return rateLimitResponse;
 
     const params = await context.params;
     const boardId = params.boardId;
 
-    // Validate UUID
     if (!boardId || !UUID_REGEX.test(boardId)) {
       return NextResponse.json({ error: "Invalid board ID" }, { status: 400 });
     }
 
-    // Usar autenticación real del servidor, no headers manipulables
     const auth = await requireAuth();
     if (!auth.success) return auth.response;
     const profile = auth.profile;
@@ -54,6 +40,9 @@ export async function GET(
         members: { some: { profileId: profile.id } },
       },
       include: {
+        imageAsset: {
+          select: uploadedAssetSummarySelect,
+        },
         channels: {
           where: { parentId: null },
           orderBy: { position: "asc" },
@@ -74,15 +63,24 @@ export async function GET(
                 id: true,
                 username: true,
                 discriminator: true,
-                imageUrl: true,
+                email: true,
                 userId: true,
                 usernameColor: true,
                 profileTags: true,
                 badge: true,
-                badgeStickerUrl: true,
                 usernameFormat: true,
-                // email omitido - no exponer en respuestas públicas
-                // longDescription omitido - solo se necesita al abrir perfil completo
+                longDescription: true,
+                avatarAsset: {
+                  select: uploadedAssetSummarySelect,
+                },
+                badgeSticker: {
+                  select: {
+                    id: true,
+                    asset: {
+                      select: uploadedAssetSummarySelect,
+                    },
+                  },
+                },
               },
             },
           },
@@ -96,15 +94,24 @@ export async function GET(
                     id: true,
                     username: true,
                     discriminator: true,
-                    imageUrl: true,
-                    // email omitido - solo se muestra en board settings que usa board.members
+                    email: true,
                     userId: true,
                     usernameColor: true,
                     profileTags: true,
                     badge: true,
-                    badgeStickerUrl: true,
                     usernameFormat: true,
-                    // longDescription omitido - solo se necesita al abrir perfil completo
+                    longDescription: true,
+                    avatarAsset: {
+                      select: uploadedAssetSummarySelect,
+                    },
+                    badgeSticker: {
+                      select: {
+                        id: true,
+                        asset: {
+                          select: uploadedAssetSummarySelect,
+                        },
+                      },
+                    },
                   },
                 },
               },
@@ -118,7 +125,41 @@ export async function GET(
       return NextResponse.json({ error: "Board not found" }, { status: 404 });
     }
 
-    return NextResponse.json(board);
+    const serializeProfile = <
+      T extends {
+        avatarAsset: typeof board.members[number]["profile"]["avatarAsset"];
+        badgeSticker: typeof board.members[number]["profile"]["badgeSticker"];
+      },
+    >(
+      targetProfile: T,
+    ) => ({
+      ...targetProfile,
+      avatarAsset: serializeUploadedAsset(targetProfile.avatarAsset),
+      badgeSticker: targetProfile.badgeSticker
+        ? {
+            id: targetProfile.badgeSticker.id,
+            asset: serializeUploadedAsset(targetProfile.badgeSticker.asset),
+          }
+        : null,
+    });
+
+    return NextResponse.json({
+      ...board,
+      imageAsset: serializeUploadedAsset(board.imageAsset),
+      members: board.members.map((member) => ({
+        ...member,
+        profile: serializeProfile(member.profile),
+      })),
+      slots: board.slots.map((slot) => ({
+        ...slot,
+        member: slot.member
+          ? {
+              ...slot.member,
+              profile: serializeProfile(slot.member.profile),
+            }
+          : null,
+      })),
+    });
   } catch (error) {
     console.error("[BOARD_GET]", error);
     return NextResponse.json({ error: "Internal Error" }, { status: 500 });
@@ -130,7 +171,6 @@ export async function DELETE(
   context: { params: Promise<{ boardId: string }> },
 ) {
   try {
-    // Rate limiting
     const rateLimitResponse = await checkRateLimit(RATE_LIMITS.api);
     if (rateLimitResponse) return rateLimitResponse;
 
@@ -141,14 +181,11 @@ export async function DELETE(
     const params = await context.params;
     const boardId = params.boardId;
 
-    // Validate UUID
     if (!boardId || !UUID_REGEX.test(boardId)) {
       return NextResponse.json({ error: "Invalid board ID" }, { status: 400 });
     }
 
-    // Ejecutar verificación de permisos y eliminación en transacción
     await db.$transaction(async (tx) => {
-      // Verificar que el usuario es OWNER del board
       const member = await tx.member.findFirst({
         where: { boardId, profileId: profile.id },
         select: { role: true },
@@ -162,26 +199,26 @@ export async function DELETE(
         throw new Error("FORBIDDEN");
       }
 
-      // Eliminar el board (cascade eliminará members, channels, etc.)
       await tx.board.delete({
         where: { id: boardId },
       });
     });
 
-    // Invalidar cache de la lista de boards
     revalidatePath("/boards");
 
     return NextResponse.json({ success: true, deletedBoardId: boardId });
   } catch (error) {
-    // Manejar errores personalizados lanzados desde la transacción
     if (error instanceof Error) {
-      if (error.message === "NOT_A_MEMBER")
+      if (error.message === "NOT_A_MEMBER") {
         return NextResponse.json({ error: "Not a member" }, { status: 403 });
-      if (error.message === "FORBIDDEN")
+      }
+
+      if (error.message === "FORBIDDEN") {
         return NextResponse.json(
           { error: "Only the owner can delete the board" },
           { status: 403 },
         );
+      }
     }
 
     console.error("[BOARD_ID_DELETE]", error);
@@ -194,7 +231,6 @@ export async function PATCH(
   context: { params: Promise<{ boardId: string }> },
 ) {
   try {
-    // Rate limiting
     const rateLimitResponse = await checkRateLimit(RATE_LIMITS.api);
     if (rateLimitResponse) return rateLimitResponse;
 
@@ -205,22 +241,23 @@ export async function PATCH(
     const params = await context.params;
     const boardId = params.boardId;
 
-    // Validate UUID
     if (!boardId || !UUID_REGEX.test(boardId)) {
       return NextResponse.json({ error: "Invalid board ID" }, { status: 400 });
     }
 
-    // Parse body with error handling
-    let body: { name?: unknown; imageUrl?: unknown; description?: unknown };
+    let body: {
+      name?: unknown;
+      imageAssetId?: unknown;
+      description?: unknown;
+    };
     try {
       body = await req.json();
     } catch {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const { name, imageUrl, description } = body;
+    const { name, imageAssetId, description } = body;
 
-    // Validar tipos y longitudes
     if (name !== undefined) {
       if (typeof name !== "string" || name.trim().length < 2) {
         return NextResponse.json(
@@ -228,26 +265,10 @@ export async function PATCH(
           { status: 400 },
         );
       }
+
       if (name.length > 50) {
         return NextResponse.json(
           { error: "Board name cannot exceed 50 characters" },
-          { status: 400 },
-        );
-      }
-    }
-
-    // Validar imageUrl si se proporciona
-    if (imageUrl !== undefined && imageUrl !== null && imageUrl !== "") {
-      if (typeof imageUrl !== "string") {
-        return NextResponse.json(
-          { error: "Image URL must be a string" },
-          { status: 400 },
-        );
-      }
-      // Validar que sea una URL de nuestros CDNs permitidos
-      if (!isAllowedImageUrl(imageUrl)) {
-        return NextResponse.json(
-          { error: "Image must be from an allowed source" },
           { status: 400 },
         );
       }
@@ -260,6 +281,7 @@ export async function PATCH(
           { status: 400 },
         );
       }
+
       if (description.length > 300) {
         return NextResponse.json(
           { error: "Description cannot exceed 300 characters" },
@@ -268,9 +290,34 @@ export async function PATCH(
       }
     }
 
-    // MODERACIÓN DE CONTENIDO
+    let resolvedImageAssetId: string | null | undefined = undefined;
+    if (imageAssetId !== undefined) {
+      if (imageAssetId === null || imageAssetId === "") {
+        resolvedImageAssetId = null;
+      } else if (typeof imageAssetId !== "string" || !UUID_REGEX.test(imageAssetId)) {
+        return NextResponse.json(
+          { error: "Image asset ID must be a valid UUID" },
+          { status: 400 },
+        );
+      } else {
+        const imageAsset = await findOwnedUploadedAsset(
+          imageAssetId,
+          profile.id,
+          AssetContext.BOARD_IMAGE,
+          AssetVisibility.PUBLIC,
+        );
 
-    // Moderar descripción si se está actualizando
+        if (!imageAsset) {
+          return NextResponse.json(
+            { error: "Board image asset not found" },
+            { status: 400 },
+          );
+        }
+
+        resolvedImageAssetId = imageAsset.id;
+      }
+    }
+
     if (
       description &&
       typeof description === "string" &&
@@ -291,7 +338,6 @@ export async function PATCH(
       }
     }
 
-    // Moderar nombre si se está actualizando
     if (name && typeof name === "string" && name.trim().length > 0) {
       const nameModeration = moderateDescription(name);
       if (!nameModeration.allowed) {
@@ -306,9 +352,7 @@ export async function PATCH(
       }
     }
 
-    // Ejecutar verificación de permisos y actualización en transacción para evitar TOCTOU
     const board = await db.$transaction(async (tx) => {
-      // Verificar permisos: solo owner o admin pueden editar
       const member = await tx.member.findFirst({
         where: { boardId, profileId: profile.id },
         select: { role: true },
@@ -329,31 +373,54 @@ export async function PATCH(
         where: { id: boardId },
         data: {
           ...(name !== undefined && { name: (name as string).trim() }),
-          ...(imageUrl !== undefined && {
-            imageUrl: imageUrl as string | null,
+          ...(resolvedImageAssetId !== undefined && {
+            imageAssetId: resolvedImageAssetId,
           }),
           ...(description !== undefined && {
             description: description ? (description as string).trim() : null,
           }),
         },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          imageAsset: {
+            select: uploadedAssetSummarySelect,
+          },
+          inviteCode: true,
+          inviteEnabled: true,
+          size: true,
+          profileId: true,
+          createdAt: true,
+          refreshedAt: true,
+          updatedAt: true,
+          languages: true,
+          hiddenFromFeed: true,
+          reportCount: true,
+          communityId: true,
+        },
       });
     });
 
-    // Invalidar cache del layout del board y lista de boards
     revalidatePath(`/boards/${boardId}`);
     revalidatePath("/boards");
 
-    return NextResponse.json(board);
+    return NextResponse.json({
+      ...board,
+      imageAsset: serializeUploadedAsset(board.imageAsset),
+    });
   } catch (error) {
-    // Manejar errores personalizados lanzados desde la transacción
     if (error instanceof Error) {
-      if (error.message === "NOT_A_MEMBER")
+      if (error.message === "NOT_A_MEMBER") {
         return NextResponse.json({ error: "Not a member" }, { status: 403 });
-      if (error.message === "FORBIDDEN")
+      }
+
+      if (error.message === "FORBIDDEN") {
         return NextResponse.json(
           { error: "Only owner or admin can edit board settings" },
           { status: 403 },
         );
+      }
     }
 
     console.error("[BOARD_ID_PATCH]", error);

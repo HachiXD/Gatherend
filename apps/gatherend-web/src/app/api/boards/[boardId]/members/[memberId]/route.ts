@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
 import { MemberRole } from "@prisma/client";
+import {
+  serializeProfileSummary,
+  uploadedAssetSummarySelect,
+} from "@/lib/uploaded-assets";
 
 // No cachear PATCH
 export const revalidate = 0;
@@ -170,9 +174,24 @@ export async function PATCH(
                   id: true,
                   username: true,
                   discriminator: true,
-                  imageUrl: true,
                   email: true,
                   userId: true,
+                  usernameColor: true,
+                  profileTags: true,
+                  badge: true,
+                  usernameFormat: true,
+                  longDescription: true,
+                  avatarAsset: {
+                    select: uploadedAssetSummarySelect,
+                  },
+                  badgeSticker: {
+                    select: {
+                      id: true,
+                      asset: {
+                        select: uploadedAssetSummarySelect,
+                      },
+                    },
+                  },
                 },
               },
             },
@@ -182,7 +201,13 @@ export async function PATCH(
       });
     });
 
-    return NextResponse.json(result);
+    return NextResponse.json({
+      ...result,
+      members: result?.members.map((member) => ({
+        ...member,
+        profile: serializeProfileSummary(member.profile),
+      })),
+    });
   } catch (error) {
     // Handle known transaction errors
     if (error instanceof Error) {

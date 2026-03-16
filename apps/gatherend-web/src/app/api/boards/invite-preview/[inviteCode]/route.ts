@@ -9,6 +9,10 @@ import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
+import {
+  serializeUploadedAsset,
+  uploadedAssetSummarySelect,
+} from "@/lib/uploaded-assets";
 
 // UUID validation regex (invite codes are UUIDs generated with uuidv4())
 const UUID_REGEX =
@@ -45,7 +49,9 @@ export async function GET(
       select: {
         id: true,
         name: true,
-        imageUrl: true,
+        imageAsset: {
+          select: uploadedAssetSummarySelect,
+        },
         inviteEnabled: true,
         size: true,
         _count: {
@@ -70,7 +76,7 @@ export async function GET(
     return NextResponse.json({
       id: board.id,
       name: board.name,
-      imageUrl: board.imageUrl,
+      imageAsset: serializeUploadedAsset(board.imageAsset),
       memberCount: board._count.members,
       size: board.size,
       inviteCode,

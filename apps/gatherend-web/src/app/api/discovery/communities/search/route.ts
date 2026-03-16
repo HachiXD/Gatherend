@@ -2,6 +2,10 @@ import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
+import {
+  loadSerializedUploadedAssetMap,
+  serializeUploadedAsset,
+} from "@/lib/uploaded-assets";
 
 // NO cachear - búsqueda siempre fresh
 export const dynamic = "force-dynamic";
@@ -15,7 +19,7 @@ const MAX_LIMIT = 50;
 interface CommunitySearchResult {
   id: string;
   name: string;
-  imageUrl: string | null;
+  imageAsset: ReturnType<typeof serializeUploadedAsset>;
   memberCount: number;
   boardCount: number;
   rankingScore: number;
@@ -107,7 +111,7 @@ export async function GET(req: Request) {
     interface CommunityRow {
       id: string;
       name: string;
-      imageUrl: string | null;
+      imageAssetId: string | null;
       memberCount: number;
       feedBoardCount: number;
       rankingScore: number;
@@ -121,7 +125,7 @@ export async function GET(req: Request) {
         SELECT
           c.id,
           c.name,
-          c."imageUrl",
+          c."imageAssetId",
           c."memberCount",
           c."feedBoardCount",
           c."rankingScore"
@@ -140,7 +144,7 @@ export async function GET(req: Request) {
         SELECT
           c.id,
           c.name,
-          c."imageUrl",
+          c."imageAssetId",
           c."memberCount",
           c."feedBoardCount",
           c."rankingScore"
@@ -154,11 +158,14 @@ export async function GET(req: Request) {
     // --- PAGINACIÓN ---
     const hasMore = communities.length > limit;
     const items = hasMore ? communities.slice(0, limit) : communities;
+    const assetMap = await loadSerializedUploadedAssetMap(
+      items.map((item) => item.imageAssetId),
+    );
 
     const result: CommunitySearchResult[] = items.map((c) => ({
       id: c.id,
       name: c.name,
-      imageUrl: c.imageUrl,
+      imageAsset: c.imageAssetId ? (assetMap.get(c.imageAssetId) ?? null) : null,
       memberCount: c.memberCount,
       boardCount: c.feedBoardCount,
       rankingScore: c.rankingScore,

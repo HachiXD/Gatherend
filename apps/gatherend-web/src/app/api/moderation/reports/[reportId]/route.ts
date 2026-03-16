@@ -3,6 +3,11 @@ import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin-auth";
 import { ReportTargetType } from "@prisma/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import {
+  moderationProfileSelect,
+  moderationProfileWithUserIdSelect,
+  serializeModerationProfile,
+} from "@/lib/moderation-serialization";
 
 // UUID validation regex
 const UUID_REGEX =
@@ -33,21 +38,10 @@ export async function GET(
       where: { id: reportId },
       include: {
         reporter: {
-          select: {
-            id: true,
-            username: true,
-            discriminator: true,
-            imageUrl: true,
-          },
+          select: moderationProfileSelect,
         },
         targetOwner: {
-          select: {
-            id: true,
-            userId: true,
-            username: true,
-            discriminator: true,
-            imageUrl: true,
-          },
+          select: moderationProfileWithUserIdSelect,
         },
       },
     });
@@ -67,12 +61,7 @@ export async function GET(
           members: {
             include: {
               profile: {
-                select: {
-                  id: true,
-                  username: true,
-                  discriminator: true,
-                  imageUrl: true,
-                },
+                select: moderationProfileSelect,
               },
             },
           },
@@ -83,8 +72,124 @@ export async function GET(
         additionalContext.boardMembers = board.members.map((m) => ({
           id: m.id,
           role: m.role,
-          profile: m.profile,
+          profile: serializeModerationProfile(m.profile),
         }));
+      }
+    }
+
+    if (report.targetType === ReportTargetType.COMMUNITY) {
+      const community = await db.community.findUnique({
+        where: { id: report.targetId },
+        select: {
+          id: true,
+          name: true,
+          createdBy: {
+            select: moderationProfileSelect,
+          },
+        },
+      });
+
+      if (community) {
+        additionalContext.community = {
+          id: community.id,
+          name: community.name,
+          createdBy: serializeModerationProfile(community.createdBy),
+        };
+      }
+    }
+
+    if (report.targetType === ReportTargetType.COMMUNITY_POST) {
+      const post = await db.communityPost.findUnique({
+        where: { id: report.targetId },
+        select: {
+          id: true,
+          content: true,
+          deleted: true,
+          createdAt: true,
+          community: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          author: {
+            select: moderationProfileSelect,
+          },
+        },
+      });
+
+      if (post) {
+        additionalContext.communityPost = {
+          id: post.id,
+          content: post.content,
+          deleted: post.deleted,
+          createdAt: post.createdAt.toISOString(),
+          community: post.community,
+          author: serializeModerationProfile(post.author),
+        };
+      }
+    }
+
+    // COMMENT OF POST
+    if (report.targetType === ReportTargetType.COMMUNITY_POST_COMMENT) {
+      const comment = await db.communityPostComment.findUnique({
+        where: { id: report.targetId },
+        select: {
+          id: true,
+          content: true,
+          deleted: true,
+          createdAt: true,
+          post: {
+            select: {
+              id: true,
+              content: true,
+              community: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+          author: {
+            select: moderationProfileSelect,
+          },
+          replyToComment: {
+            select: {
+              id: true,
+              content: true,
+              deleted: true,
+              author: {
+                select: moderationProfileSelect,
+              },
+            },
+          },
+        },
+      });
+
+      if (comment) {
+        additionalContext.communityPostComment = {
+          id: comment.id,
+          content: comment.content,
+          deleted: comment.deleted,
+          createdAt: comment.createdAt.toISOString(),
+          post: {
+            id: comment.post.id,
+            content: comment.post.content,
+            community: comment.post.community,
+          },
+          author: serializeModerationProfile(comment.author),
+          replyToComment: comment.replyToComment
+            ? {
+                id: comment.replyToComment.id,
+                content: comment.replyToComment.content,
+                deleted: comment.replyToComment.deleted,
+                author: serializeModerationProfile(
+                  comment.replyToComment.author,
+                ),
+              }
+            : null,
+        };
       }
     }
 
@@ -107,11 +212,7 @@ export async function GET(
             member: {
               include: {
                 profile: {
-                  select: {
-                    username: true,
-                    discriminator: true,
-                    imageUrl: true,
-                  },
+                  select: moderationProfileSelect,
                 },
               },
             },
@@ -131,11 +232,7 @@ export async function GET(
             member: {
               include: {
                 profile: {
-                  select: {
-                    username: true,
-                    discriminator: true,
-                    imageUrl: true,
-                  },
+                  select: moderationProfileSelect,
                 },
               },
             },
@@ -151,11 +248,7 @@ export async function GET(
             member: {
               include: {
                 profile: {
-                  select: {
-                    username: true,
-                    discriminator: true,
-                    imageUrl: true,
-                  },
+                  select: moderationProfileSelect,
                 },
               },
             },
@@ -175,7 +268,7 @@ export async function GET(
           createdAt: msg.createdAt.toISOString(),
           member: msg.member
             ? {
-                profile: msg.member.profile,
+                profile: serializeModerationProfile(msg.member.profile),
               }
             : null,
           isReported: msg.id === report.targetId,
@@ -199,11 +292,7 @@ export async function GET(
           },
           include: {
             sender: {
-              select: {
-                username: true,
-                discriminator: true,
-                imageUrl: true,
-              },
+              select: moderationProfileSelect,
             },
           },
           orderBy: { createdAt: "desc" },
@@ -218,11 +307,7 @@ export async function GET(
           },
           include: {
             sender: {
-              select: {
-                username: true,
-                discriminator: true,
-                imageUrl: true,
-              },
+              select: moderationProfileSelect,
             },
           },
           orderBy: { createdAt: "asc" },
@@ -234,11 +319,7 @@ export async function GET(
           where: { id: report.targetId },
           include: {
             sender: {
-              select: {
-                username: true,
-                discriminator: true,
-                imageUrl: true,
-              },
+              select: moderationProfileSelect,
             },
           },
         });
@@ -255,7 +336,7 @@ export async function GET(
           content: dm.content,
           createdAt: dm.createdAt.toISOString(),
           member: {
-            profile: dm.sender,
+            profile: serializeModerationProfile(dm.sender),
           },
           isReported: dm.id === report.targetId,
         }));
@@ -271,8 +352,8 @@ export async function GET(
       priority: report.priority,
       description: report.description,
       createdAt: report.createdAt.toISOString(),
-      reporter: report.reporter,
-      targetOwner: report.targetOwner,
+      reporter: serializeModerationProfile(report.reporter),
+      targetOwner: serializeModerationProfile(report.targetOwner),
       snapshot: report.snapshot as Record<string, unknown>,
       ...additionalContext,
     });

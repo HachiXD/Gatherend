@@ -115,7 +115,7 @@ export async function PATCH(
         throw new Error("FORBIDDEN");
       }
 
-      if (directMessage.fileUrl) {
+      if (directMessage.attachmentAssetId) {
         throw new Error("CANNOT_EDIT_FILE_MESSAGE");
       }
 
@@ -246,10 +246,7 @@ export async function DELETE(
       return tx.directMessage.update({
         where: { id: directMessageId },
         data: {
-          fileUrl: null,
-          fileName: null,
-          fileType: null,
-          fileSize: null,
+          attachmentAssetId: null,
           content: "This message has been deleted.",
           deleted: true,
         },

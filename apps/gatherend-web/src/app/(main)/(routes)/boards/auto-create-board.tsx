@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
-import { generateBoardAvatarUrl } from "@/lib/avatar-utils";
 
 interface AutoCreateBoardProps {
   profile: {
@@ -14,7 +13,6 @@ interface AutoCreateBoardProps {
   };
 }
 
-// Clave para sessionStorage
 const IDEMPOTENCY_STORAGE_KEY = "auto-create-board-idempotency-key";
 
 export function AutoCreateBoard({ profile }: AutoCreateBoardProps) {
@@ -22,7 +20,6 @@ export function AutoCreateBoard({ profile }: AutoCreateBoardProps) {
   const hasRunRef = useRef(false);
 
   useEffect(() => {
-    // Evitar múltiples ejecuciones en React 18 Strict Mode
     if (hasRunRef.current) {
       return;
     }
@@ -30,27 +27,16 @@ export function AutoCreateBoard({ profile }: AutoCreateBoardProps) {
 
     async function create() {
       try {
-        // --- 1. Obtener o generar Idempotency Key persistente en sessionStorage ---
         let idempotencyKey = sessionStorage.getItem(IDEMPOTENCY_STORAGE_KEY);
         if (!idempotencyKey) {
           idempotencyKey = uuidv4();
           sessionStorage.setItem(IDEMPOTENCY_STORAGE_KEY, idempotencyKey);
         }
 
-        // --- 2. Preparar imagen automática ---
-        const firstLetter =
-          (profile.username ?? profile.userId ?? "G")[0]?.toUpperCase() ?? "G";
-
-        const autoImage =
-          generateBoardAvatarUrl(profile.userId, firstLetter, 256) ?? "";
-
-        // --- 3. Preparar nombre automático ---
         const displayName =
           profile.username || profile.email?.split("@")[0] || "User";
-
         const autoBoardName = `${displayName}'s Board`;
 
-        // --- 4. Request idempotente al backend ---
         const res = await fetch("/api/boards/auto-create", {
           method: "POST",
           headers: {
@@ -59,7 +45,6 @@ export function AutoCreateBoard({ profile }: AutoCreateBoardProps) {
           },
           body: JSON.stringify({
             name: autoBoardName,
-            ...(autoImage ? { imageUrl: autoImage } : {}),
           }),
         });
 
@@ -72,8 +57,6 @@ export function AutoCreateBoard({ profile }: AutoCreateBoardProps) {
         }
 
         const board = await res.json();
-
-        // --- 5. Limpiar idempotency key y redirigir al board discovery ---
         sessionStorage.removeItem(IDEMPOTENCY_STORAGE_KEY);
         router.replace(`/boards/${board.id}/discovery`);
       } catch (error) {

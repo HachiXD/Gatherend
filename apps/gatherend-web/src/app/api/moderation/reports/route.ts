@@ -3,6 +3,11 @@ import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin-auth";
 import { ReportStatus } from "@prisma/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import {
+  moderationProfileSelect,
+  moderationProfileWithUserIdSelect,
+  serializeModerationProfile,
+} from "@/lib/moderation-serialization";
 
 export const dynamic = "force-dynamic";
 
@@ -32,21 +37,10 @@ export async function GET(req: Request) {
         statusFilter.length > 0 ? { status: { in: statusFilter } } : undefined,
       include: {
         reporter: {
-          select: {
-            id: true,
-            username: true,
-            discriminator: true,
-            imageUrl: true,
-          },
+          select: moderationProfileSelect,
         },
         targetOwner: {
-          select: {
-            id: true,
-            userId: true,
-            username: true,
-            discriminator: true,
-            imageUrl: true,
-          },
+          select: moderationProfileWithUserIdSelect,
         },
       },
       orderBy: [
@@ -66,8 +60,8 @@ export async function GET(req: Request) {
       priority: report.priority,
       description: report.description,
       createdAt: report.createdAt.toISOString(),
-      reporter: report.reporter,
-      targetOwner: report.targetOwner,
+      reporter: serializeModerationProfile(report.reporter),
+      targetOwner: serializeModerationProfile(report.targetOwner),
       snapshot: report.snapshot as Record<string, unknown>,
     }));
 

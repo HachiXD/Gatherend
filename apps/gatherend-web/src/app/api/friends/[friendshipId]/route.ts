@@ -3,10 +3,40 @@ import { NextResponse } from "next/server";
 import { FriendshipStatus } from "@prisma/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
+import {
+  serializeProfileSummary,
+  uploadedAssetSummarySelect,
+} from "@/lib/uploaded-assets";
 
 // UUID validation regex
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const friendshipProfileSelect = {
+  id: true,
+  username: true,
+  discriminator: true,
+  usernameColor: true,
+  profileTags: true,
+  badge: true,
+  usernameFormat: true,
+  avatarAsset: {
+    select: uploadedAssetSummarySelect,
+  },
+  badgeSticker: {
+    select: {
+      id: true,
+      asset: {
+        select: uploadedAssetSummarySelect,
+      },
+    },
+  },
+} as const;
+
+const conversationProfileSelect = {
+  ...friendshipProfileSelect,
+  userId: true,
+} as const;
 
 export async function PATCH(
   req: Request,
@@ -85,20 +115,10 @@ export async function PATCH(
         data: { status: newStatus },
         include: {
           requester: {
-            select: {
-              id: true,
-              username: true,
-              discriminator: true,
-              imageUrl: true,
-            },
+            select: friendshipProfileSelect,
           },
           receiver: {
-            select: {
-              id: true,
-              username: true,
-              discriminator: true,
-              imageUrl: true,
-            },
+            select: friendshipProfileSelect,
           },
         },
       });
@@ -130,22 +150,10 @@ export async function PATCH(
             },
             include: {
               profileOne: {
-                select: {
-                  id: true,
-                  username: true,
-                  discriminator: true,
-                  imageUrl: true,
-                  userId: true,
-                },
+                select: conversationProfileSelect,
               },
               profileTwo: {
-                select: {
-                  id: true,
-                  username: true,
-                  discriminator: true,
-                  imageUrl: true,
-                  userId: true,
-                },
+                select: conversationProfileSelect,
               },
             },
           });
@@ -164,6 +172,12 @@ export async function PATCH(
     if (result.newConversation) {
       const socketUrl = process.env.SOCKET_SERVER_URL;
       if (socketUrl) {
+        const serializedConversation = {
+          ...result.newConversation,
+          profileOne: serializeProfileSummary(result.newConversation.profileOne!),
+          profileTwo: serializeProfileSummary(result.newConversation.profileTwo!),
+        };
+
         // Notify the requester
         fetch(`${socketUrl}/emit`, {
           method: "POST",
@@ -174,8 +188,8 @@ export async function PATCH(
           body: JSON.stringify({
             channelKey: `user:${result.requesterId}:new-conversation`,
             data: {
-              conversation: result.newConversation,
-              otherProfile: result.newConversation.profileTwo,
+              conversation: serializedConversation,
+              otherProfile: serializedConversation.profileTwo,
             },
           }),
           signal: AbortSignal.timeout(3000),
@@ -191,8 +205,8 @@ export async function PATCH(
           body: JSON.stringify({
             channelKey: `user:${result.receiverId}:new-conversation`,
             data: {
-              conversation: result.newConversation,
-              otherProfile: result.newConversation.profileOne,
+              conversation: serializedConversation,
+              otherProfile: serializedConversation.profileOne,
             },
           }),
           signal: AbortSignal.timeout(3000),
@@ -200,7 +214,11 @@ export async function PATCH(
       }
     }
 
-    return NextResponse.json(result.updatedFriendship);
+    return NextResponse.json({
+      ...result.updatedFriendship,
+      requester: serializeProfileSummary(result.updatedFriendship.requester),
+      receiver: serializeProfileSummary(result.updatedFriendship.receiver),
+    });
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === "NOT_FOUND")

@@ -4,6 +4,15 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { profileCache } from "@/lib/redis";
 import { AuthProvider } from "@prisma/client";
+import {
+  serializeUploadedAsset,
+  uploadedAssetSummarySelect,
+} from "@/lib/uploaded-assets";
+import {
+  moderationProfileSelect,
+  moderationProfileWithUserIdSelect,
+  serializeModerationProfile,
+} from "@/lib/moderation-serialization";
 
 export const dynamic = "force-dynamic";
 
@@ -74,11 +83,7 @@ export async function GET(
     const profile = await db.profile.findUnique({
       where: { id: profileId },
       select: {
-        id: true,
-        userId: true,
-        username: true,
-        discriminator: true,
-        imageUrl: true,
+        ...moderationProfileWithUserIdSelect,
         banned: true,
         bannedAt: true,
         banReason: true,
@@ -116,12 +121,7 @@ export async function GET(
       take: 20,
       include: {
         reporter: {
-          select: {
-            id: true,
-            username: true,
-            discriminator: true,
-            imageUrl: true,
-          },
+          select: moderationProfileSelect,
         },
       },
     });
@@ -139,7 +139,11 @@ export async function GET(
       select: {
         id: true,
         name: true,
-        imageUrl: true,
+        imageAsset: {
+          select: uploadedAssetSummarySelect,
+        },
+        reportCount: true,
+        hiddenFromFeed: true,
         createdAt: true,
         _count: {
           select: { members: true },
@@ -179,11 +183,17 @@ export async function GET(
     };
 
     return NextResponse.json({
-      profile,
+      profile: serializeModerationProfile(profile),
       reportsFiled,
-      reportsAgainst,
+      reportsAgainst: reportsAgainst.map((report) => ({
+        ...report,
+        reporter: serializeModerationProfile(report.reporter),
+      })),
       strikes,
-      boardsOwned,
+      boardsOwned: boardsOwned.map((board) => ({
+        ...board,
+        imageAsset: serializeUploadedAsset(board.imageAsset),
+      })),
       stats,
     });
   } catch (error) {

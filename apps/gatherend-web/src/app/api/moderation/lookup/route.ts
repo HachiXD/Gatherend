@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin-auth";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import {
+  moderationProfileWithUserIdSelect,
+  serializeModerationProfile,
+} from "@/lib/moderation-serialization";
 
 export const dynamic = "force-dynamic";
 
@@ -42,11 +46,7 @@ export async function GET(req: Request) {
           discriminator: discriminator,
         },
         select: {
-          id: true,
-          userId: true,
-          username: true,
-          discriminator: true,
-          imageUrl: true,
+          ...moderationProfileWithUserIdSelect,
           banned: true,
           bannedAt: true,
           banReason: true,
@@ -58,7 +58,10 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: "User not found" }, { status: 404 });
       }
 
-      return NextResponse.json({ profiles: [profile], exact: true });
+      return NextResponse.json({
+        profiles: [serializeModerationProfile(profile)],
+        exact: true,
+      });
     }
 
     // Partial search by username (returns multiple results)
@@ -67,11 +70,7 @@ export async function GET(req: Request) {
         username: { contains: query, mode: "insensitive" },
       },
       select: {
-        id: true,
-        userId: true,
-        username: true,
-        discriminator: true,
-        imageUrl: true,
+        ...moderationProfileWithUserIdSelect,
         banned: true,
         bannedAt: true,
         banReason: true,
@@ -84,7 +83,10 @@ export async function GET(req: Request) {
       take: 20,
     });
 
-    return NextResponse.json({ profiles, exact: false });
+    return NextResponse.json({
+      profiles: profiles.map(serializeModerationProfile),
+      exact: false,
+    });
   } catch (error) {
     console.error("[MODERATION_LOOKUP]", error);
     return NextResponse.json(

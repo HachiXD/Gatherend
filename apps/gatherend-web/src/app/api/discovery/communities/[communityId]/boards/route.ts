@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 import { Languages, Prisma } from "@prisma/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
+import {
+  loadSerializedUploadedAssetMap,
+  serializeUploadedAsset,
+} from "@/lib/uploaded-assets";
 
 // UUID validation regex
 const UUID_REGEX =
@@ -123,7 +127,7 @@ export async function GET(
       id: string;
       name: string;
       description: string | null;
-      imageUrl: string | null;
+      imageAssetId: string | null;
       size: number;
       languages: Languages[];
       refreshedAt: Date;
@@ -136,19 +140,20 @@ export async function GET(
     interface CommunityMetadata {
       id: string;
       name: string;
-      imageUrl: string | null;
+      imageAsset: ReturnType<typeof serializeUploadedAsset>;
       memberCount: number;
       activeBoardsCount: number;
     }
 
     let communityMetadata: CommunityMetadata | null = null;
+    let communityImageAssetId: string | null = null;
 
     if (isFirstPage) {
       // Query para obtener metadata de comunidad + conteo real-time de boards activos
       interface CommunityRow {
         id: string;
         name: string;
-        imageUrl: string | null;
+        imageAssetId: string | null;
         memberCount: number;
         active_boards_count: bigint;
       }
@@ -157,7 +162,7 @@ export async function GET(
         SELECT 
           c.id,
           c.name,
-          c."imageUrl",
+          c."imageAssetId",
           -- Real-time unique members across all boards in the community.
           -- We don't rely on the materialized Community.memberCount here because
           -- it can be stale when cron is not running (dev) or between cron ticks.
@@ -191,10 +196,11 @@ export async function GET(
       }
 
       const community = communityResult[0];
+      communityImageAssetId = community.imageAssetId;
       communityMetadata = {
         id: community.id,
         name: community.name,
-        imageUrl: community.imageUrl,
+        imageAsset: null,
         memberCount: community.memberCount,
         activeBoardsCount: Number(community.active_boards_count),
       };
@@ -275,7 +281,7 @@ export async function GET(
         b.id,
         b.name,
         b.description,
-        b."imageUrl",
+        b."imageAssetId",
         b.size,
         b.languages,
         b."refreshedAt",
@@ -295,11 +301,22 @@ export async function GET(
     const hasMore = boards.length > limit;
     const items = hasMore ? boards.slice(0, limit) : boards;
 
+    const assetMap = await loadSerializedUploadedAssetMap([
+      communityImageAssetId,
+      ...items.map((item) => item.imageAssetId),
+    ]);
+
+    if (communityMetadata) {
+      communityMetadata.imageAsset = communityImageAssetId
+        ? (assetMap.get(communityImageAssetId) ?? null)
+        : null;
+    }
+
     const result = items.map((r: BoardRow) => ({
       id: r.id,
       name: r.name,
       description: r.description,
-      imageUrl: r.imageUrl,
+      imageAsset: r.imageAssetId ? (assetMap.get(r.imageAssetId) ?? null) : null,
       size: r.size,
       occupiedSlots: r.occupied_count,
       freeSlots: r.size - r.occupied_count,

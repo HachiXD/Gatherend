@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin-auth";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import {
+  moderationProfileWithUserIdSelect,
+  serializeModerationProfile,
+} from "@/lib/moderation-serialization";
 
 export const dynamic = "force-dynamic";
 
@@ -44,11 +48,7 @@ export async function GET(req: Request) {
         include: {
           profile: {
             select: {
-              id: true,
-              userId: true,
-              username: true,
-              discriminator: true,
-              imageUrl: true,
+              ...moderationProfileWithUserIdSelect,
               banned: true,
             },
           },
@@ -68,7 +68,10 @@ export async function GET(req: Request) {
     ]);
 
     return NextResponse.json({
-      strikes,
+      strikes: strikes.map((strike) => ({
+        ...strike,
+        profile: serializeModerationProfile(strike.profile),
+      })),
       pagination: {
         page,
         limit,

@@ -3,6 +3,11 @@ import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin-auth";
 import { ReportStatus } from "@prisma/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import {
+  moderationProfileSelect,
+  moderationProfileWithUserIdSelect,
+  serializeModerationProfile,
+} from "@/lib/moderation-serialization";
 
 export const dynamic = "force-dynamic";
 
@@ -91,10 +96,7 @@ export async function GET() {
         OR: [{ validReports: { gt: 0 } }, { falseReports: { gt: 0 } }],
       },
       select: {
-        id: true,
-        username: true,
-        discriminator: true,
-        imageUrl: true,
+        ...moderationProfileSelect,
         validReports: true,
         falseReports: true,
         reportAccuracy: true,
@@ -111,11 +113,7 @@ export async function GET() {
         },
       },
       select: {
-        id: true,
-        userId: true,
-        username: true,
-        discriminator: true,
-        imageUrl: true,
+        ...moderationProfileWithUserIdSelect,
         banned: true,
         _count: {
           select: {
@@ -156,8 +154,8 @@ export async function GET() {
         })),
       },
       recentReports,
-      topReporters,
-      mostReportedUsers,
+      topReporters: topReporters.map(serializeModerationProfile),
+      mostReportedUsers: mostReportedUsers.map(serializeModerationProfile),
     });
   } catch (error) {
     console.error("[MODERATION_STATS]", error);

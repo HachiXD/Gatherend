@@ -16,17 +16,6 @@ const IDEMPOTENCY_STATUS_FAILED = -1;
 const ENDPOINT = "/api/boards/auto-create";
 const MAX_NAME_LENGTH = 50;
 
-const ALLOWED_PREFIXES = [
-  ...(process.env.NEXT_PUBLIC_DICEBEAR_URL
-    ? [process.env.NEXT_PUBLIC_DICEBEAR_URL]
-    : []),
-  ...(process.env.NEXT_PUBLIC_CDN_URL ? [process.env.NEXT_PUBLIC_CDN_URL] : []),
-];
-
-function isAllowedUrl(url: string) {
-  return ALLOWED_PREFIXES.some((prefix) => url.startsWith(prefix));
-}
-
 /**
  * Check if error is a Prisma unique constraint violation
  */
@@ -70,7 +59,7 @@ export async function POST(req: Request) {
     // 2. Read and validate body
     const rawBody = await req.text();
 
-    // Limit body size to prevent abuse (~10KB is more than enough for name + imageUrl)
+    // Limit body size to prevent abuse.
     if (rawBody.length > 10000) {
       return NextResponse.json(
         { error: "Request body too large" },
@@ -88,8 +77,6 @@ export async function POST(req: Request) {
     }
 
     const name = typeof body.name === "string" ? body.name.trim() : "";
-    const imageUrl = body.imageUrl;
-
     // Validar longitud mínima
     if (name.length < 2) {
       return NextResponse.json(
@@ -115,21 +102,6 @@ export async function POST(req: Request) {
           message: "Board name contains prohibited content",
           reason: nameModeration.reason,
         },
-        { status: 400 },
-      );
-    }
-
-    // Validar imageUrl
-    if (typeof imageUrl !== "string") {
-      return NextResponse.json(
-        { error: "Image URL must be a string" },
-        { status: 400 },
-      );
-    }
-
-    if (!isAllowedUrl(imageUrl)) {
-      return NextResponse.json(
-        { error: "Image must be from an allowed source" },
         { status: 400 },
       );
     }
@@ -236,7 +208,6 @@ export async function POST(req: Request) {
         data: {
           profileId: profile.id,
           name,
-          imageUrl,
           inviteCode: uuidv4(),
           size: INITIAL_SLOTS,
           languages: profile.languages.length ? profile.languages : ["EN"],

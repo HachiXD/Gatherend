@@ -1,12 +1,62 @@
 import { requireAuth } from "@/lib/require-auth";
 import { db } from "@/lib/db";
-import { AuthProvider, Prisma } from "@prisma/client";
+import { AuthProvider, AssetContext, AssetVisibility, Languages, Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { profileCache } from "@/lib/redis";
-import { generateProfileAvatarUrl } from "@/lib/avatar-utils";
 import { v4 as uuidv4 } from "uuid";
 import { generateUniqueDiscriminator } from "@/lib/username";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import {
+  UUID_REGEX,
+  findOwnedSticker,
+  findOwnedUploadedAsset,
+  serializePublicAsset,
+  uploadedAssetSummarySelect,
+} from "@/lib/uploaded-assets";
+
+const profileResponseSelect = {
+  id: true,
+  userId: true,
+  username: true,
+  discriminator: true,
+  email: true,
+  languages: true,
+  badge: true,
+  longDescription: true,
+  themeConfig: true,
+  banReason: true,
+  banned: true,
+  bannedAt: true,
+  falseReports: true,
+  reportAccuracy: true,
+  validReports: true,
+  profileTags: true,
+  usernameColor: true,
+  usernameFormat: true,
+  createdAt: true,
+  updatedAt: true,
+  avatarAssetId: true,
+  bannerAssetId: true,
+  badgeStickerId: true,
+  avatarAsset: {
+    select: uploadedAssetSummarySelect,
+  },
+  bannerAsset: {
+    select: uploadedAssetSummarySelect,
+  },
+  badgeSticker: {
+    select: {
+      id: true,
+      asset: {
+        select: uploadedAssetSummarySelect,
+      },
+    },
+  },
+} satisfies Prisma.ProfileSelect;
+
+type ProfileResponseRecord = Prisma.ProfileGetPayload<{
+  select: typeof profileResponseSelect;
+}>;
 
 async function emitProfileUpdated(
   profileId: string,
@@ -17,10 +67,8 @@ async function emitProfileUpdated(
       process.env.SOCKET_SERVER_URL || process.env.NEXT_PUBLIC_SOCKET_URL;
     const secret = process.env.INTERNAL_API_SECRET;
 
-    // Skip if socket URL or secret is not configured
     if (!socketUrl || !secret) return;
 
-    // Fire-and-forget - never block profile changes on sockets
     fetch(`${socketUrl}/emit-to-room`, {
       method: "POST",
       headers: {
@@ -39,9 +87,22 @@ async function emitProfileUpdated(
   }
 }
 
+function serializeProfileResponse(profile: ProfileResponseRecord) {
+  return {
+    ...profile,
+    avatarAsset: serializePublicAsset(profile.avatarAsset),
+    bannerAsset: serializePublicAsset(profile.bannerAsset),
+    badgeSticker: profile.badgeSticker
+      ? {
+          id: profile.badgeSticker.id,
+          asset: serializePublicAsset(profile.badgeSticker.asset),
+        }
+      : null,
+  };
+}
+
 export async function GET() {
   try {
-    // Rate limiting
     const rateLimitResponse = await checkRateLimit(RATE_LIMITS.api);
     if (rateLimitResponse) return rateLimitResponse;
 
@@ -49,7 +110,16 @@ export async function GET() {
     if (!auth.success) return auth.response;
     const { profile } = auth;
 
-    return NextResponse.json(profile);
+    const currentProfile = await db.profile.findUnique({
+      where: { id: profile.id },
+      select: profileResponseSelect,
+    });
+
+    if (!currentProfile) {
+      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(serializeProfileResponse(currentProfile));
   } catch (error) {
     console.error("[PROFILE_GET]", error);
     return NextResponse.json({ error: "Internal Error" }, { status: 500 });
@@ -58,36 +128,37 @@ export async function GET() {
 
 export async function PATCH(req: Request) {
   try {
-    // Rate limiting
     const rateLimitResponse = await checkRateLimit(RATE_LIMITS.api);
     if (rateLimitResponse) return rateLimitResponse;
 
-    // requireAuth checks both authentication AND ban status
     const auth = await requireAuth();
     if (!auth.success) return auth.response;
     const profile = auth.profile;
 
-    // Parse body with error handling
-    let body;
+    let body: unknown;
     try {
       body = await req.json();
     } catch {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
+    if (!body || typeof body !== "object") {
+      return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    }
+
     const {
       username,
-      imageUrl,
+      avatarAssetId,
+      bannerAssetId,
       languages,
       usernameColor,
       profileTags,
       badge,
-      badgeStickerUrl,
+      badgeStickerId,
       usernameFormat,
       longDescription,
-    } = body;
+    } = body as Record<string, unknown>;
 
-    // No permitir actualizar username sin discriminator válido
     if (username !== undefined && !profile.discriminator) {
       return NextResponse.json(
         { error: "Profile missing discriminator, cannot update username" },
@@ -95,67 +166,84 @@ export async function PATCH(req: Request) {
       );
     }
 
-    // Validate usernameColor format (solid color or gradient)
     if (usernameColor !== undefined && usernameColor !== null) {
       const hexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
 
       if (typeof usernameColor === "object") {
-        if (usernameColor.type === "solid") {
-          if (!hexColorRegex.test(usernameColor.color)) {
+        const colorData = usernameColor as Record<string, unknown>;
+
+        if (colorData.type === "solid") {
+          if (
+            typeof colorData.color !== "string" ||
+            !hexColorRegex.test(colorData.color)
+          ) {
             return NextResponse.json(
               { error: "Invalid solid color format" },
               { status: 400 },
             );
           }
-        } else if (usernameColor.type === "gradient") {
-          // Validate gradient with color stops
+        } else if (colorData.type === "gradient") {
           if (
-            !Array.isArray(usernameColor.colors) ||
-            usernameColor.colors.length < 2 ||
-            usernameColor.colors.length > 4
+            !Array.isArray(colorData.colors) ||
+            colorData.colors.length < 2 ||
+            colorData.colors.length > 4
           ) {
             return NextResponse.json(
               { error: "Gradient must have 2-4 color stops" },
               { status: 400 },
             );
           }
-          for (const colorStop of usernameColor.colors) {
+
+          for (const colorStop of colorData.colors) {
             if (
               typeof colorStop !== "object" ||
-              !colorStop.color ||
-              typeof colorStop.position !== "number"
+              !colorStop ||
+              typeof (colorStop as Record<string, unknown>).color !== "string" ||
+              typeof (colorStop as Record<string, unknown>).position !== "number"
             ) {
               return NextResponse.json(
                 { error: "Invalid color stop format" },
                 { status: 400 },
               );
             }
-            if (!hexColorRegex.test(colorStop.color)) {
+
+            if (
+              !hexColorRegex.test(
+                (colorStop as Record<string, unknown>).color as string,
+              )
+            ) {
               return NextResponse.json(
                 { error: "Invalid gradient color format" },
                 { status: 400 },
               );
             }
-            if (colorStop.position < 0 || colorStop.position > 100) {
+
+            const position = (colorStop as Record<string, unknown>)
+              .position as number;
+            if (position < 0 || position > 100) {
               return NextResponse.json(
                 { error: "Color position must be 0-100" },
                 { status: 400 },
               );
             }
           }
+
           if (
-            typeof usernameColor.angle !== "number" ||
-            usernameColor.angle < 0 ||
-            usernameColor.angle > 360
+            typeof colorData.angle !== "number" ||
+            colorData.angle < 0 ||
+            colorData.angle > 360
           ) {
             return NextResponse.json(
               { error: "Gradient angle must be 0-360" },
               { status: 400 },
             );
           }
+
           if (
-            usernameColor.animationType &&
-            !["shift", "shimmer", "pulse"].includes(usernameColor.animationType)
+            colorData.animationType &&
+            !["shift", "shimmer", "pulse"].includes(
+              colorData.animationType as string,
+            )
           ) {
             return NextResponse.json(
               { error: "Invalid animation type" },
@@ -176,7 +264,6 @@ export async function PATCH(req: Request) {
       }
     }
 
-    // Validate profileTags
     if (profileTags !== undefined && profileTags !== null) {
       if (!Array.isArray(profileTags)) {
         return NextResponse.json(
@@ -184,12 +271,14 @@ export async function PATCH(req: Request) {
           { status: 400 },
         );
       }
+
       if (profileTags.length > 10) {
         return NextResponse.json(
           { error: "Maximum 10 profile tags allowed" },
           { status: 400 },
         );
       }
+
       for (const tag of profileTags) {
         if (typeof tag !== "string" || tag.length > 10 || tag.length < 1) {
           return NextResponse.json(
@@ -197,8 +286,8 @@ export async function PATCH(req: Request) {
             { status: 400 },
           );
         }
-        // Only allow alphanumeric, spaces, and some special chars
-        if (!/^[a-zA-Z0-9áéíóúñÁÉÍÓÚÑ\s\-_]+$/.test(tag)) {
+
+        if (!/^[a-zA-Z0-9Ã¡Ã©Ã­Ã³ÃºÃ±ÃÃ‰ÃÃ“ÃšÃ‘\s\-_]+$/.test(tag)) {
           return NextResponse.json(
             {
               error:
@@ -210,34 +299,17 @@ export async function PATCH(req: Request) {
       }
     }
 
-    // Validate badge length
-    if (badge !== undefined && badge !== null && badge.length > 30) {
+    if (badge !== undefined && badge !== null && typeof badge === "string" && badge.length > 30) {
       return NextResponse.json(
         { error: "Badge must be 30 characters or less" },
         { status: 400 },
       );
     }
 
-    // Validate badgeStickerUrl (should be a valid URL if provided)
-    if (
-      badgeStickerUrl !== undefined &&
-      badgeStickerUrl !== null &&
-      badgeStickerUrl !== ""
-    ) {
-      try {
-        new URL(badgeStickerUrl);
-      } catch {
-        return NextResponse.json(
-          { error: "Invalid badge sticker URL" },
-          { status: 400 },
-        );
-      }
-    }
-
-    // Validate longDescription length
     if (
       longDescription !== undefined &&
       longDescription !== null &&
+      typeof longDescription === "string" &&
       longDescription.length > 200
     ) {
       return NextResponse.json(
@@ -246,7 +318,6 @@ export async function PATCH(req: Request) {
       );
     }
 
-    // Validate usernameFormat (now JSON: { bold?: boolean, italic?: boolean, underline?: boolean })
     if (usernameFormat !== undefined && usernameFormat !== null) {
       if (typeof usernameFormat !== "object") {
         return NextResponse.json(
@@ -254,20 +325,29 @@ export async function PATCH(req: Request) {
           { status: 400 },
         );
       }
-      const { bold, italic, underline } = usernameFormat;
-      if (bold !== undefined && typeof bold !== "boolean") {
+
+      const formatData = usernameFormat as Record<string, unknown>;
+      if (formatData.bold !== undefined && typeof formatData.bold !== "boolean") {
         return NextResponse.json(
           { error: "Invalid username format - bold must be boolean" },
           { status: 400 },
         );
       }
-      if (italic !== undefined && typeof italic !== "boolean") {
+
+      if (
+        formatData.italic !== undefined &&
+        typeof formatData.italic !== "boolean"
+      ) {
         return NextResponse.json(
           { error: "Invalid username format - italic must be boolean" },
           { status: 400 },
         );
       }
-      if (underline !== undefined && typeof underline !== "boolean") {
+
+      if (
+        formatData.underline !== undefined &&
+        typeof formatData.underline !== "boolean"
+      ) {
         return NextResponse.json(
           { error: "Invalid username format - underline must be boolean" },
           { status: 400 },
@@ -275,23 +355,115 @@ export async function PATCH(req: Request) {
       }
     }
 
+    let resolvedAvatarAssetId: string | null | undefined = undefined;
+    if (avatarAssetId !== undefined) {
+      if (avatarAssetId === null || avatarAssetId === "") {
+        resolvedAvatarAssetId = null;
+      } else if (typeof avatarAssetId !== "string" || !UUID_REGEX.test(avatarAssetId)) {
+        return NextResponse.json(
+          { error: "Avatar asset ID must be a valid UUID" },
+          { status: 400 },
+        );
+      } else {
+        const avatarAsset = await findOwnedUploadedAsset(
+          avatarAssetId,
+          profile.id,
+          AssetContext.PROFILE_AVATAR,
+          AssetVisibility.PUBLIC,
+        );
+
+        if (!avatarAsset) {
+          return NextResponse.json(
+            { error: "Avatar asset not found" },
+            { status: 400 },
+          );
+        }
+
+        resolvedAvatarAssetId = avatarAsset.id;
+      }
+    }
+
+    let resolvedBannerAssetId: string | null | undefined = undefined;
+    if (bannerAssetId !== undefined) {
+      if (bannerAssetId === null || bannerAssetId === "") {
+        resolvedBannerAssetId = null;
+      } else if (typeof bannerAssetId !== "string" || !UUID_REGEX.test(bannerAssetId)) {
+        return NextResponse.json(
+          { error: "Banner asset ID must be a valid UUID" },
+          { status: 400 },
+        );
+      } else {
+        const bannerAsset = await findOwnedUploadedAsset(
+          bannerAssetId,
+          profile.id,
+          AssetContext.PROFILE_BANNER,
+          AssetVisibility.PUBLIC,
+        );
+
+        if (!bannerAsset) {
+          return NextResponse.json(
+            { error: "Banner asset not found" },
+            { status: 400 },
+          );
+        }
+
+        resolvedBannerAssetId = bannerAsset.id;
+      }
+    }
+
+    let resolvedBadgeStickerId: string | null | undefined = undefined;
+    if (badgeStickerId !== undefined) {
+      if (badgeStickerId === null || badgeStickerId === "") {
+        resolvedBadgeStickerId = null;
+      } else if (typeof badgeStickerId !== "string" || !UUID_REGEX.test(badgeStickerId)) {
+        return NextResponse.json(
+          { error: "Badge sticker ID must be a valid UUID" },
+          { status: 400 },
+        );
+      } else {
+        const badgeSticker = await findOwnedSticker(badgeStickerId, profile.id);
+        if (!badgeSticker) {
+          return NextResponse.json(
+            { error: "Badge sticker not found" },
+            { status: 400 },
+          );
+        }
+
+        resolvedBadgeStickerId = badgeSticker.id;
+      }
+    }
+
+    const updateData: Prisma.ProfileUncheckedUpdateInput = {};
+
+    if (username !== undefined) updateData.username = username as string;
+    if (resolvedAvatarAssetId !== undefined) {
+      updateData.avatarAssetId = resolvedAvatarAssetId;
+    }
+    if (resolvedBannerAssetId !== undefined) {
+      updateData.bannerAssetId = resolvedBannerAssetId;
+    }
+    if (languages !== undefined) updateData.languages = languages as Languages[];
+    if (usernameColor !== undefined) {
+      updateData.usernameColor = usernameColor as Prisma.InputJsonValue;
+    }
+    if (profileTags !== undefined) updateData.profileTags = profileTags as string[];
+    if (badge !== undefined) updateData.badge = badge as string | null;
+    if (resolvedBadgeStickerId !== undefined) {
+      updateData.badgeStickerId = resolvedBadgeStickerId;
+    }
+    if (usernameFormat !== undefined) {
+      updateData.usernameFormat = usernameFormat as Prisma.InputJsonValue;
+    }
+    if (longDescription !== undefined) {
+      updateData.longDescription = longDescription as string | null;
+    }
+
     const updatedProfile = await db.profile.update({
       where: { id: profile.id },
-      data: {
-        username,
-        imageUrl,
-        languages,
-        usernameColor,
-        profileTags,
-        badge,
-        badgeStickerUrl: badgeStickerUrl || null,
-        usernameFormat,
-        longDescription,
-      },
+      data: updateData,
+      select: profileResponseSelect,
     });
 
-    // Invalidate Redis cache keys for this profile so reloads reflect changes.
-    // currentProfile caches by provider identity (legacy id, betterauth:<userId>).
     await profileCache.invalidate(profile.userId);
     await profileCache.invalidate(`betterauth:${profile.userId}`);
 
@@ -311,101 +483,71 @@ export async function PATCH(req: Request) {
     emitProfileUpdated(profile.id, {
       username: updatedProfile.username,
       discriminator: updatedProfile.discriminator,
-      imageUrl: updatedProfile.imageUrl,
+      avatarAssetId: updatedProfile.avatarAssetId,
+      bannerAssetId: updatedProfile.bannerAssetId,
       usernameColor: updatedProfile.usernameColor,
       usernameFormat: updatedProfile.usernameFormat,
       badge: updatedProfile.badge,
-      badgeStickerUrl: updatedProfile.badgeStickerUrl,
+      badgeStickerId: updatedProfile.badgeStickerId,
       longDescription: updatedProfile.longDescription,
     });
 
-    return NextResponse.json(updatedProfile);
+    return NextResponse.json(serializeProfileResponse(updatedProfile));
   } catch (error) {
     console.error("[PROFILE_PATCH]", error);
     return NextResponse.json({ error: "Internal Error" }, { status: 500 });
   }
 }
 
-/**
- * DELETE /api/profile
- *
- * Soft delete: Anonymizes the profile instead of deleting it.
- * - Replaces username with "Deleted_User_{shortId}"
- * - Clears all personal information (email, description, etc.)
- * - Generates a generic avatar
- * - Deletes the auth user (frees the email for re-registration)
- * - Invalidates Redis cache
- *
- * All related data (messages, memberships, etc.) remains intact
- * but points to an anonymized profile.
- */
 export async function DELETE() {
   try {
-    // Rate limiting - strict for destructive action
     const rateLimitResponse = await checkRateLimit(RATE_LIMITS.moderation);
     if (rateLimitResponse) return rateLimitResponse;
 
-    // requireAuth checks both authentication AND ban status
     const auth = await requireAuth();
     if (!auth.success) return auth.response;
     const profile = auth.profile;
 
-    // Generate anonymized data
     const shortId = uuidv4().slice(0, 8);
     const anonymizedUsername = `Deleted_User_${shortId}`;
-
-    // Generate a unique discriminator for the anonymized username
     const anonymizedDiscriminator =
       await generateUniqueDiscriminator(anonymizedUsername);
 
-    // Generate a generic avatar based on the anonymized username
-    const anonymizedImageUrl =
-      generateProfileAvatarUrl(anonymizedUsername) ?? "";
-
-    // Anonymize the profile in database
     const deletedProfile = await db.profile.update({
       where: { id: profile.id },
       data: {
-        // Identity
         username: anonymizedUsername,
         discriminator: anonymizedDiscriminator,
-        imageUrl: anonymizedImageUrl,
-        email: "", // Clear email (required field, use empty string)
-
-        // Customization - clear all (use Prisma.JsonNull for nullable JSON fields)
+        avatarAssetId: null,
+        bannerAssetId: null,
+        email: "",
         usernameColor: Prisma.JsonNull,
         profileTags: [],
         badge: null,
-        badgeStickerUrl: null,
+        badgeStickerId: null,
         usernameFormat: Prisma.JsonNull,
         longDescription: null,
         themeConfig: Prisma.JsonNull,
-
-        // Languages - reset to default
         languages: ["EN"],
-
-        // Reporter reputation - reset
         reportAccuracy: null,
         falseReports: 0,
         validReports: 0,
-
-        // Note: banned, bannedAt, banReason are preserved for moderation history
       },
+      select: profileResponseSelect,
     });
 
     emitProfileUpdated(profile.id, {
       username: deletedProfile.username,
       discriminator: deletedProfile.discriminator,
-      imageUrl: deletedProfile.imageUrl,
+      avatarAssetId: deletedProfile.avatarAssetId,
+      bannerAssetId: deletedProfile.bannerAssetId,
       usernameColor: deletedProfile.usernameColor,
       usernameFormat: deletedProfile.usernameFormat,
       badge: deletedProfile.badge,
-      badgeStickerUrl: deletedProfile.badgeStickerUrl,
+      badgeStickerId: deletedProfile.badgeStickerId,
       longDescription: deletedProfile.longDescription,
     });
 
-    // Invalidate Redis cache keys for this profile.
-    // currentProfile caches by provider identity (legacy id, betterauth:<userId>).
     await profileCache.invalidate(profile.userId);
 
     const identities = await db.authIdentity.findMany({
@@ -421,10 +563,8 @@ export async function DELETE() {
       await profileCache.invalidate(cacheKey);
     }
 
-    // BetterAuth hardening: revoke sessions + delete auth user (frees email reuse),
-    // without depending on third-party provider APIs.
     const betterAuthIdentity = identities.find(
-      (i) => i.provider === AuthProvider.BETTER_AUTH,
+      (identity) => identity.provider === AuthProvider.BETTER_AUTH,
     );
     if (betterAuthIdentity) {
       await db.session.deleteMany({
@@ -448,6 +588,7 @@ export async function DELETE() {
     return NextResponse.json({
       success: true,
       message: "Account deleted successfully",
+      profile: serializeProfileResponse(deletedProfile),
     });
   } catch (error) {
     console.error("[PROFILE_DELETE]", error);

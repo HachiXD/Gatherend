@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { MemberRole, Prisma, SlotMode } from "@prisma/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
+import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 // UUID validation regex
 const UUID_REGEX =
@@ -40,7 +41,7 @@ async function notifyMemberJoined(
   newMemberProfile: {
     id: string;
     username: string;
-    imageUrl: string | null;
+    avatarAsset: ClientUploadedAsset | null;
   },
 ) {
   try {
@@ -250,7 +251,7 @@ export async function POST(
     notifyMemberJoined(boardId, {
       id: profile.id,
       username: profile.username,
-      imageUrl: profile.imageUrl,
+      avatarAsset: profile.avatarAsset,
     });
 
     if (firstChannelId && welcomeMessage) {

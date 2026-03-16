@@ -5,6 +5,7 @@ import { currentProfile } from "@/lib/current-profile";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { MemberRole, SlotMode } from "@prisma/client"; // Importar tipos necesarios
+import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 interface InviteCodePageProps {
   params: Promise<{
@@ -18,7 +19,7 @@ async function notifyMemberJoined(
   newMemberProfile: {
     id: string;
     username: string;
-    imageUrl: string | null;
+    avatarAsset: ClientUploadedAsset | null;
   },
 ) {
   try {
@@ -172,7 +173,7 @@ const InviteCodePage = async ({ params }: InviteCodePageProps) => {
     notifyMemberJoined(boardId, {
       id: profile.id,
       username: profile.username,
-      imageUrl: profile.imageUrl,
+      avatarAsset: profile.avatarAsset,
     });
 
     // ÉXITO: Redirigir directamente al board

@@ -169,6 +169,75 @@ export async function POST(req: Request) {
           { status: 400 },
         );
       }
+    } else if (targetType === "COMMUNITY") {
+      const community = await db.community.findUnique({
+        where: { id: targetId },
+        select: { id: true, createdById: true },
+      });
+      if (!community) {
+        return NextResponse.json(
+          { error: "Community not found" },
+          { status: 404 },
+        );
+      }
+
+      resolvedTargetOwnerId = community.createdById || null;
+
+      if (community.createdById === profile.id) {
+        return NextResponse.json(
+          { error: "You cannot report your own community" },
+          { status: 400 },
+        );
+      }
+    } else if (targetType === "COMMUNITY_POST") {
+      const post = await db.communityPost.findUnique({
+        where: { id: targetId },
+        select: { id: true, authorProfileId: true, deleted: true },
+      });
+      if (!post || post.deleted) {
+        return NextResponse.json(
+          { error: "Community post not found" },
+          { status: 404 },
+        );
+      }
+
+      resolvedTargetOwnerId = post.authorProfileId;
+
+      if (post.authorProfileId === profile.id) {
+        return NextResponse.json(
+          { error: "You cannot report your own post" },
+          { status: 400 },
+        );
+      }
+    } else if (targetType === "COMMUNITY_POST_COMMENT") {
+      const comment = await db.communityPostComment.findUnique({
+        where: { id: targetId },
+        select: {
+          id: true,
+          authorProfileId: true,
+          deleted: true,
+          post: {
+            select: {
+              deleted: true,
+            },
+          },
+        },
+      });
+      if (!comment || comment.deleted || comment.post.deleted) {
+        return NextResponse.json(
+          { error: "Community post comment not found" },
+          { status: 404 },
+        );
+      }
+
+      resolvedTargetOwnerId = comment.authorProfileId;
+
+      if (comment.authorProfileId === profile.id) {
+        return NextResponse.json(
+          { error: "You cannot report your own comment" },
+          { status: 400 },
+        );
+      }
     } else if (targetType === "PROFILE") {
       const targetProfile = await db.profile.findUnique({
         where: { id: targetId },

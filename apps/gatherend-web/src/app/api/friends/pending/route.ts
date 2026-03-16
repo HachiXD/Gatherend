@@ -2,9 +2,34 @@ import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
+import {
+  serializeProfileSummary,
+  uploadedAssetSummarySelect,
+} from "@/lib/uploaded-assets";
 
 // Cache control for GET
 export const dynamic = "force-dynamic";
+
+const friendshipProfileSelect = {
+  id: true,
+  username: true,
+  discriminator: true,
+  usernameColor: true,
+  profileTags: true,
+  badge: true,
+  usernameFormat: true,
+  avatarAsset: {
+    select: uploadedAssetSummarySelect,
+  },
+  badgeSticker: {
+    select: {
+      id: true,
+      asset: {
+        select: uploadedAssetSummarySelect,
+      },
+    },
+  },
+} as const;
 
 export async function GET() {
   try {
@@ -24,12 +49,7 @@ export async function GET() {
       },
       include: {
         requester: {
-          select: {
-            id: true,
-            username: true,
-            discriminator: true,
-            imageUrl: true,
-          },
+          select: friendshipProfileSelect,
         },
       },
       orderBy: {
@@ -44,7 +64,7 @@ export async function GET() {
       .map((request) => ({
         ...request,
         requester: {
-          ...request.requester,
+          ...serializeProfileSummary(request.requester!),
           fullUsername: `${request.requester!.username}/${request.requester!.discriminator}`,
         },
       }));

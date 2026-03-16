@@ -2,9 +2,34 @@ import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
+import {
+  serializeProfileSummary,
+  uploadedAssetSummarySelect,
+} from "@/lib/uploaded-assets";
 
 // Límites
 const MAX_USERNAME_LENGTH = 100;
+
+const friendshipProfileSelect = {
+  id: true,
+  username: true,
+  discriminator: true,
+  usernameColor: true,
+  profileTags: true,
+  badge: true,
+  usernameFormat: true,
+  avatarAsset: {
+    select: uploadedAssetSummarySelect,
+  },
+  badgeSticker: {
+    select: {
+      id: true,
+      asset: {
+        select: uploadedAssetSummarySelect,
+      },
+    },
+  },
+} as const;
 
 export async function POST(req: Request) {
   try {
@@ -84,7 +109,9 @@ export async function POST(req: Request) {
           id: true,
           username: true,
           discriminator: true,
-          imageUrl: true,
+          avatarAsset: {
+            select: uploadedAssetSummarySelect,
+          },
         },
       });
 
@@ -124,20 +151,10 @@ export async function POST(req: Request) {
             },
             include: {
               requester: {
-                select: {
-                  id: true,
-                  username: true,
-                  discriminator: true,
-                  imageUrl: true,
-                },
+                select: friendshipProfileSelect,
               },
               receiver: {
-                select: {
-                  id: true,
-                  username: true,
-                  discriminator: true,
-                  imageUrl: true,
-                },
+                select: friendshipProfileSelect,
               },
             },
           });
@@ -157,20 +174,10 @@ export async function POST(req: Request) {
         },
         include: {
           requester: {
-            select: {
-              id: true,
-              username: true,
-              discriminator: true,
-              imageUrl: true,
-            },
+            select: friendshipProfileSelect,
           },
           receiver: {
-            select: {
-              id: true,
-              username: true,
-              discriminator: true,
-              imageUrl: true,
-            },
+            select: friendshipProfileSelect,
           },
         },
       });
@@ -181,6 +188,12 @@ export async function POST(req: Request) {
     // Emitir evento de socket (fuera de la transacción)
     const socketUrl = process.env.SOCKET_SERVER_URL;
     if (socketUrl) {
+      const serializedFriendship = {
+        ...result.friendship,
+        requester: serializeProfileSummary(result.friendship.requester),
+        receiver: serializeProfileSummary(result.friendship.receiver),
+      };
+
       fetch(`${socketUrl}/emit`, {
         method: "POST",
         headers: {
@@ -191,7 +204,7 @@ export async function POST(req: Request) {
           channelKey: `user:${result.targetProfileId}:friend-request`,
           data: {
             type: "new",
-            friendship: result.friendship,
+            friendship: serializedFriendship,
           },
         }),
         signal: AbortSignal.timeout(3000),
@@ -203,7 +216,11 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       message: "Friend request sent!",
-      friendship: result.friendship,
+      friendship: {
+        ...result.friendship,
+        requester: serializeProfileSummary(result.friendship.requester),
+        receiver: serializeProfileSummary(result.friendship.receiver),
+      },
     });
   } catch (error) {
     // Manejar errores de la transacción

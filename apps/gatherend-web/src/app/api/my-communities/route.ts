@@ -7,11 +7,15 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
+import {
+  serializeUploadedAsset,
+  uploadedAssetSummarySelect,
+} from "@/lib/uploaded-assets";
 
 export interface MyCommunity {
   id: string;
   name: string;
-  imageUrl: string | null;
+  imageAsset: ReturnType<typeof serializeUploadedAsset>;
   boardCount: number; // boards del usuario en esta comunidad
   totalBoardCount: number; // total de boards de la comunidad
 }
@@ -46,7 +50,9 @@ export async function GET() {
           select: {
             id: true,
             name: true,
-            imageUrl: true,
+            imageAsset: {
+              select: uploadedAssetSummarySelect,
+            },
             _count: {
               select: {
                 boards: true,
@@ -70,7 +76,7 @@ export async function GET() {
         communityMap.set(board.communityId, {
           id: board.community.id,
           name: board.community.name,
-          imageUrl: board.community.imageUrl,
+          imageAsset: serializeUploadedAsset(board.community.imageAsset),
           boardCount: 1,
           totalBoardCount: board.community._count.boards,
         });

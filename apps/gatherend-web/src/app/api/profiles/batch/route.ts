@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
+import {
+  serializeProfileSummary,
+  uploadedAssetSummarySelect,
+} from "@/lib/uploaded-assets";
 
 // UUID validation regex
 const UUID_REGEX =
@@ -13,11 +17,21 @@ const PROFILE_SELECT = {
   id: true,
   username: true,
   discriminator: true,
-  imageUrl: true,
   usernameColor: true,
   usernameFormat: true,
   badge: true,
-  badgeStickerUrl: true,
+  profileTags: true,
+  avatarAsset: {
+    select: uploadedAssetSummarySelect,
+  },
+  badgeSticker: {
+    select: {
+      id: true,
+      asset: {
+        select: uploadedAssetSummarySelect,
+      },
+    },
+  },
   longDescription: true,
 } as const;
 
@@ -66,7 +80,7 @@ export async function POST(req: Request) {
       select: PROFILE_SELECT,
     });
 
-    return NextResponse.json(profiles);
+    return NextResponse.json(profiles.map(serializeProfileSummary));
   } catch (error) {
     console.error("[PROFILES_BATCH]", error);
     return NextResponse.json({ error: "Internal Error" }, { status: 500 });

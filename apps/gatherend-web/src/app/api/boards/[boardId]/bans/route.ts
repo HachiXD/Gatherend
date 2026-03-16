@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 import { MemberRole } from "@prisma/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
+import {
+  serializeUploadedAsset,
+  uploadedAssetSummarySelect,
+} from "@/lib/uploaded-assets";
 
 // UUID validation regex
 const UUID_REGEX =
@@ -50,7 +54,11 @@ export async function GET(
                 id: true,
                 username: true,
                 discriminator: true,
-                imageUrl: true,
+                email: true,
+                userId: true,
+                avatarAsset: {
+                  select: uploadedAssetSummarySelect,
+                },
               },
             },
           },
@@ -70,7 +78,15 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    return NextResponse.json(board.boardBans);
+    return NextResponse.json(
+      board.boardBans.map((ban) => ({
+        ...ban,
+        profile: {
+          ...ban.profile,
+          avatarAsset: serializeUploadedAsset(ban.profile.avatarAsset),
+        },
+      })),
+    );
   } catch (error) {
     console.error("[GET_BANS]", error);
     return NextResponse.json({ error: "Internal Error" }, { status: 500 });

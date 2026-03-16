@@ -5,6 +5,10 @@ import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
 import { communityFeedCache } from "@/lib/redis";
 import { logger } from "@/lib/logger";
+import {
+  loadSerializedUploadedAssetMap,
+  serializeUploadedAsset,
+} from "@/lib/uploaded-assets";
 
 // NO cachear a nivel de Next.js - usamos Redis para cache
 export const dynamic = "force-dynamic";
@@ -21,7 +25,7 @@ interface CommunityResult {
   id: string;
   name: string;
   description: null;
-  imageUrl: string | null;
+  imageAsset: ReturnType<typeof serializeUploadedAsset>;
   memberCount: number;
   boardCount: number;
 }
@@ -129,7 +133,7 @@ export async function GET(req: Request) {
     interface CommunityRow {
       id: string;
       name: string;
-      imageUrl: string | null;
+      imageAssetId: string | null;
       memberCount: number;
       feedBoardCount: number;
       rankingScore: number;
@@ -161,10 +165,10 @@ export async function GET(req: Request) {
     // Index-only scan possible with (rankingScore DESC, id)
     const communities = await db.$queryRaw<CommunityRow[]>`
       SELECT
-        c.id,
-        c.name,
-        c."imageUrl",
-        c."memberCount",
+          c.id,
+          c.name,
+          c."imageAssetId",
+          c."memberCount",
         c."feedBoardCount",
         c."rankingScore"
       FROM "Community" c
@@ -176,12 +180,15 @@ export async function GET(req: Request) {
     // --- Mapeo a la respuesta final con paginación ---
     const hasMore = communities.length > limit;
     const items = hasMore ? communities.slice(0, limit) : communities;
+    const assetMap = await loadSerializedUploadedAssetMap(
+      items.map((item) => item.imageAssetId),
+    );
 
     const result: CommunityResult[] = items.map((r: CommunityRow) => ({
       id: r.id,
       name: r.name,
       description: null, // Community no tiene description
-      imageUrl: r.imageUrl,
+      imageAsset: r.imageAssetId ? (assetMap.get(r.imageAssetId) ?? null) : null,
       memberCount: r.memberCount,
       boardCount: r.feedBoardCount, // Boards actualmente en el feed
     }));
