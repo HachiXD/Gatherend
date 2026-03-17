@@ -1,79 +1,27 @@
-/*
-  Warnings:
-
-  - You are about to drop the column `imageUrl` on the `Board` table. All the data in the column will be lost.
-  - You are about to drop the column `imageUrl` on the `Community` table. All the data in the column will be lost.
-  - You are about to drop the column `imageUrl` on the `CommunityPost` table. All the data in the column will be lost.
-  - You are about to drop the column `fileHeight` on the `DirectMessage` table. All the data in the column will be lost.
-  - You are about to drop the column `fileKey` on the `DirectMessage` table. All the data in the column will be lost.
-  - You are about to drop the column `fileName` on the `DirectMessage` table. All the data in the column will be lost.
-  - You are about to drop the column `fileSize` on the `DirectMessage` table. All the data in the column will be lost.
-  - You are about to drop the column `fileType` on the `DirectMessage` table. All the data in the column will be lost.
-  - You are about to drop the column `fileUrl` on the `DirectMessage` table. All the data in the column will be lost.
-  - You are about to drop the column `fileWidth` on the `DirectMessage` table. All the data in the column will be lost.
-  - You are about to drop the column `fileHeight` on the `Message` table. All the data in the column will be lost.
-  - You are about to drop the column `fileKey` on the `Message` table. All the data in the column will be lost.
-  - You are about to drop the column `fileName` on the `Message` table. All the data in the column will be lost.
-  - You are about to drop the column `fileSize` on the `Message` table. All the data in the column will be lost.
-  - You are about to drop the column `fileType` on the `Message` table. All the data in the column will be lost.
-  - You are about to drop the column `fileUrl` on the `Message` table. All the data in the column will be lost.
-  - You are about to drop the column `fileWidth` on the `Message` table. All the data in the column will be lost.
-  - You are about to drop the column `badgeStickerUrl` on the `Profile` table. All the data in the column will be lost.
-  - You are about to drop the column `imageUrl` on the `Profile` table. All the data in the column will be lost.
-  - You are about to drop the column `imageUrl` on the `Sticker` table. All the data in the column will be lost.
-  - You are about to drop the column `publicId` on the `Sticker` table. All the data in the column will be lost.
-  - Added the required column `assetId` to the `Sticker` table without a default value. This is not possible if the table is not empty.
-
-*/
+-- Create the new upload schema without deleting legacy columns.
 -- CreateEnum
 CREATE TYPE "AssetVisibility" AS ENUM ('PUBLIC', 'PRIVATE');
 
 -- CreateEnum
 CREATE TYPE "AssetContext" AS ENUM ('PROFILE_AVATAR', 'PROFILE_BANNER', 'BOARD_IMAGE', 'COMMUNITY_IMAGE', 'COMMUNITY_POST_IMAGE', 'MESSAGE_ATTACHMENT', 'DM_ATTACHMENT', 'STICKER_IMAGE');
 
--- AlterTable
-ALTER TABLE "Board" DROP COLUMN "imageUrl",
-ADD COLUMN     "imageAssetId" TEXT;
+-- Add new columns
+ALTER TABLE "Board" ADD COLUMN "imageAssetId" TEXT;
 
--- AlterTable
-ALTER TABLE "Community" DROP COLUMN "imageUrl",
-ADD COLUMN     "imageAssetId" TEXT;
+ALTER TABLE "Community" ADD COLUMN "imageAssetId" TEXT;
 
--- AlterTable
-ALTER TABLE "CommunityPost" DROP COLUMN "imageUrl",
-ADD COLUMN     "imageAssetId" TEXT;
+ALTER TABLE "CommunityPost" ADD COLUMN "imageAssetId" TEXT;
 
--- AlterTable
-ALTER TABLE "DirectMessage" DROP COLUMN "fileHeight",
-DROP COLUMN "fileKey",
-DROP COLUMN "fileName",
-DROP COLUMN "fileSize",
-DROP COLUMN "fileType",
-DROP COLUMN "fileUrl",
-DROP COLUMN "fileWidth",
-ADD COLUMN     "attachmentAssetId" TEXT;
+ALTER TABLE "DirectMessage" ADD COLUMN "attachmentAssetId" TEXT;
 
--- AlterTable
-ALTER TABLE "Message" DROP COLUMN "fileHeight",
-DROP COLUMN "fileKey",
-DROP COLUMN "fileName",
-DROP COLUMN "fileSize",
-DROP COLUMN "fileType",
-DROP COLUMN "fileUrl",
-DROP COLUMN "fileWidth",
-ADD COLUMN     "attachmentAssetId" TEXT;
+ALTER TABLE "Message" ADD COLUMN "attachmentAssetId" TEXT;
 
--- AlterTable
-ALTER TABLE "Profile" DROP COLUMN "badgeStickerUrl",
-DROP COLUMN "imageUrl",
-ADD COLUMN     "avatarAssetId" TEXT,
-ADD COLUMN     "badgeStickerId" TEXT,
-ADD COLUMN     "bannerAssetId" TEXT;
+ALTER TABLE "Profile"
+ADD COLUMN "avatarAssetId" TEXT,
+ADD COLUMN "badgeStickerId" TEXT,
+ADD COLUMN "bannerAssetId" TEXT;
 
--- AlterTable
-ALTER TABLE "Sticker" DROP COLUMN "imageUrl",
-DROP COLUMN "publicId",
-ADD COLUMN     "assetId" TEXT NOT NULL;
+ALTER TABLE "Sticker" ADD COLUMN "assetId" TEXT;
 
 -- CreateTable
 CREATE TABLE "UploadedAsset" (
