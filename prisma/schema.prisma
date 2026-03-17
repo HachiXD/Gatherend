@@ -152,6 +152,7 @@ model Community {
   // Materialized fields for discovery feed ranking (updated by cron)
   memberCount    Int               @default(0)
   feedBoardCount Int               @default(0)
+  recentPostCount7d Int            @default(0)
   rankingScore   Float             @default(0)
   rankedAt       DateTime          @default(now())
   boards         Board[]

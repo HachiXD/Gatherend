@@ -125,6 +125,7 @@ export function CreateCommunityDialog({
           description: null,
           memberCount: 1,
           boardCount: 0,
+          recentPostCount7d: 0,
         };
 
         return {

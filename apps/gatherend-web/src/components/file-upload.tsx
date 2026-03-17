@@ -24,6 +24,10 @@ interface FileUploadProps {
   value: string;
   endpoint: FileUploadEndpoint;
   previewUrl?: string | null;
+  uploadButtonClassName?: string;
+  imagePreviewWrapperClassName?: string;
+  imagePreviewClassName?: string;
+  removeButtonClassName?: string;
 }
 
 function looksLikeImageUrl(url: string) {
@@ -36,6 +40,10 @@ export const FileUpload = ({
   value,
   endpoint,
   previewUrl,
+  uploadButtonClassName,
+  imagePreviewWrapperClassName,
+  imagePreviewClassName,
+  removeButtonClassName,
 }: FileUploadProps) => {
   const [uploading, setUploading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -152,19 +160,27 @@ export const FileUpload = ({
 
   if (isImage && fileUrl) {
     return (
-      <div className="relative h-20 w-20">
+      <div
+        className={clsx("relative h-20 w-20", imagePreviewWrapperClassName)}
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={fileUrl}
           alt="Upload"
-          className="h-20 w-20 rounded-full object-cover"
+          className={clsx(
+            "h-20 w-20 rounded-full object-cover",
+            imagePreviewClassName,
+          )}
           loading="lazy"
           decoding="async"
           crossOrigin={isGatherendCdnUrl ? "anonymous" : undefined}
         />
         <button
           onClick={() => onChange("")}
-          className="absolute -top-2 -right-2 bg-rose-500 text-white p-1 rounded-full shadow-sm"
+          className={clsx(
+            "absolute -top-2 -right-2 bg-rose-500 p-1 text-white rounded-full",
+            removeButtonClassName,
+          )}
           type="button"
         >
           <X className="h-4 w-4" />
@@ -223,6 +239,7 @@ export const FileUpload = ({
           uploading
             ? "opacity-50 cursor-not-allowed"
             : "hover:border-gray-300 cursor-pointer",
+          uploadButtonClassName,
         )}
         disabled={uploading}
       >

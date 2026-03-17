@@ -12,6 +12,7 @@ export interface CommunityFeedItem {
   imageAsset: ClientUploadedAsset | null;
   memberCount: number;
   boardCount: number;
+  recentPostCount7d: number;
 }
 
 export interface CommunityFeedPage {

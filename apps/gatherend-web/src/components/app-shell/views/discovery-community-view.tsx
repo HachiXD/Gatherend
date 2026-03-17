@@ -169,6 +169,7 @@ export const DiscoveryCommunityView = memo(function DiscoveryCommunityView() {
                 imageAsset={community.imageAsset}
                 memberCount={community.memberCount || 0}
                 boardCount={community.boardCount || 0}
+                recentPostCount7d={community.recentPostCount7d || 0}
                 onExplore={() => handleExplore(community.id)}
               />
             ))}
@@ -217,6 +218,7 @@ export const DiscoveryCommunityView = memo(function DiscoveryCommunityView() {
                     imageAsset={community.imageAsset}
                     memberCount={community.memberCount || 0}
                     boardCount={community.boardCount || 0}
+                    recentPostCount7d={community.recentPostCount7d || 0}
                     onExplore={() => handleExplore(community.id)}
                   />
                 ))}

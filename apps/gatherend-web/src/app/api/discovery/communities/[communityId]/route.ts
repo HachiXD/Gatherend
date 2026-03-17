@@ -43,49 +43,42 @@ export async function GET(
       Date.now() - MAX_ACTIVE_BOARD_AGE_MS,
     );
 
-    const [community, postCount] = await Promise.all([
-      db.community.findUnique({
-        where: { id: communityId },
-        select: {
-          id: true,
-          name: true,
-          createdById: true,
-          memberCount: true,
-          helpers: {
-            where: {
-              profileId: profile.id,
-            },
-            select: {
-              id: true,
-            },
+    const community = await db.community.findUnique({
+      where: { id: communityId },
+      select: {
+        id: true,
+        name: true,
+        createdById: true,
+        memberCount: true,
+        recentPostCount7d: true,
+        helpers: {
+          where: {
+            profileId: profile.id,
           },
-          boards: {
-            where: {
-              OR: [
-                { createdAt: { gte: activeBoardWindowStart } },
-                { refreshedAt: { gte: activeBoardWindowStart } },
-              ],
-              slots: {
-                some: {
-                  mode: "BY_DISCOVERY",
-                  memberId: null,
-                },
+          select: {
+            id: true,
+          },
+        },
+        boards: {
+          where: {
+            OR: [
+              { createdAt: { gte: activeBoardWindowStart } },
+              { refreshedAt: { gte: activeBoardWindowStart } },
+            ],
+            slots: {
+              some: {
+                mode: "BY_DISCOVERY",
+                memberId: null,
               },
             },
-            select: { id: true },
           },
-          imageAsset: {
-            select: uploadedAssetSummarySelect,
-          },
+          select: { id: true },
         },
-      }),
-      db.communityPost.count({
-        where: {
-          communityId,
-          deleted: false,
+        imageAsset: {
+          select: uploadedAssetSummarySelect,
         },
-      }),
-    ]);
+      },
+    });
 
     if (!community) {
       return NextResponse.json(
@@ -100,7 +93,7 @@ export async function GET(
       imageAsset: serializeUploadedAsset(community.imageAsset),
       memberCount: community.memberCount,
       activeBoardsCount: community.boards.length,
-      postCount,
+      recentPostCount7d: community.recentPostCount7d,
       canDeleteAnyPost:
         community.createdById === profile.id || community.helpers.length > 0,
     });

@@ -18,6 +18,7 @@ export interface CommunityCardProps {
   imageAsset: ClientUploadedAsset | null;
   memberCount: number;
   boardCount: number;
+  recentPostCount7d: number;
   onExplore: () => void;
   className?: string;
 }
@@ -28,6 +29,7 @@ function CommunityCardInner({
   imageAsset,
   memberCount,
   boardCount,
+  recentPostCount7d,
   onExplore,
   className,
 }: CommunityCardProps) {
@@ -137,7 +139,8 @@ function CommunityCardInner({
           <div className="text-[14px] text-white/70 font-medium">
             {memberCount} miembro{memberCount === 1 ? "" : "s"} — {boardCount}{" "}
             board{boardCount === 1 ? "" : "s"} abierto
-            {boardCount === 1 ? "" : "s"}
+            {boardCount === 1 ? "" : "s"} — {recentPostCount7d} post
+            {recentPostCount7d === 1 ? "" : "s"} esta semana
           </div>
         </div>
       </div>

@@ -124,36 +124,37 @@ export const CreateCommunityPostModal = () => {
 
   return (
     <Dialog open={isModalOpen} onOpenChange={handleClose}>
-      <DialogContent className="bg-theme-bg-modal max-w-2xl! text-theme-text-subtle p-0 overflow-hidden">
-        <DialogHeader className="pt-8 px-6">
+      <DialogContent className="max-w-2xl! overflow-hidden rounded-none border border-theme-border bg-theme-bg-modal p-0 text-theme-text-subtle">
+        <DialogHeader className="px-6 pt-2">
           <DialogTitle className="text-2xl text-center font-bold">
             Crear post
           </DialogTitle>
-          <DialogDescription className="text-center text-[15px] text-theme-text-subtle">
+          <DialogDescription className="text-center text-[15px] -mt-2 text-theme-text-subtle">
             Publica contenido permanente en {communityName}.
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="space-y-6"
-          >
-            <div className="space-y-5 px-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="space-y-2 -mt-5 px-6">
               <FormField
                 control={form.control}
                 name="imageUpload"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="uppercase text-[15px] font-bold text-theme-text-subtle">
+                    <FormLabel className="uppercase text-[15px] -mb-1.5 font-bold text-theme-text-subtle">
                       Imagen (opcional)
                     </FormLabel>
                     <FormControl>
-                      <div className="rounded-xl border border-dashed border-theme-border-primary bg-theme-bg-secondary/60 p-4">
+                      <div className="border border-theme-border bg-theme-bg-edit-form/60 px-3 py-1.5">
                         <FileUpload
                           endpoint="communityPostImage"
                           value={field.value || ""}
                           onChange={field.onChange}
+                          uploadButtonClassName="h-7 w-auto flex-row gap-1 rounded-none border-theme-border-subtle border-solid bg-theme-bg-cancel-button px-3 text-[12px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+                          imagePreviewWrapperClassName="relative mt-0 inline-flex h-[112px] w-full items-start gap-2 overflow-hidden border border-theme-border bg-theme-bg-secondary/40 p-2"
+                          imagePreviewClassName="h-full max-h-full w-auto -mr-1.5 max-w-[calc(100%-24px)] rounded-none object-contain"
+                          removeButtonClassName="static bg-transparent cursor-pointer py-0 pr-4.5 pl-0 text-theme-text-tertiary shadow-none hover:bg-transparent hover:text-theme-text-light"
                         />
                       </div>
                     </FormControl>
@@ -169,20 +170,20 @@ export const CreateCommunityPostModal = () => {
                   <FormItem>
                     <FormLabel
                       htmlFor="community-post-content"
-                      className="uppercase text-[15px] font-bold text-theme-text-subtle"
+                      className="uppercase text-[15px] -mb-1.5 font-bold text-theme-text-subtle"
                     >
                       Contenido
                     </FormLabel>
                     <FormControl>
                       <Textarea
                         id="community-post-content"
-                        className="min-h-[160px] resize-none border-0 bg-theme-bg-input-modal text-[15px] text-theme-text-primary focus-visible:ring-0 focus-visible:ring-offset-0"
+                          className="scrollbar-ultra-thin h-[160px] resize-none overflow-y-auto rounded-none border border-theme-border-subtle bg-transparent px-3 py-2 text-[12px] leading-5 text-theme-text-light focus-visible:border-theme-border-accent focus-visible:ring-0 focus-visible:ring-offset-0"
                         maxLength={2000}
                         placeholder="Escribe tu post..."
                         {...field}
                       />
                     </FormControl>
-                    <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center justify-between gap-3 -mt-1 -mb-4.5">
                       <p className="text-xs text-theme-text-tertiary">
                         M&aacute;ximo 2000 caracteres.
                       </p>
@@ -196,11 +197,11 @@ export const CreateCommunityPostModal = () => {
               />
             </div>
 
-            <DialogFooter className="bg-theme-bg-secondary px-6 py-4">
+            <DialogFooter className="border-t border-theme-border bg-theme-bg-secondary/40 px-6 py-1.5">
               <Button
                 type="button"
                 variant="ghost"
-                className="cursor-pointer bg-theme-bg-cancel-button text-theme-text-light hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+                className="h-6 cursor-pointer rounded-none bg-theme-bg-cancel-button px-3 text-[12px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
                 onClick={handleClose}
                 disabled={createPostMutation.isPending}
               >
@@ -209,7 +210,7 @@ export const CreateCommunityPostModal = () => {
               <Button
                 type="submit"
                 disabled={createPostMutation.isPending}
-                className="bg-theme-button-primary text-white hover:bg-theme-button-hover disabled:cursor-not-allowed disabled:opacity-70"
+                className="h-6 cursor-pointer rounded-none bg-theme-tab-button-bg px-3 text-[12px] text-theme-text-light hover:bg-theme-tab-button-hover disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {createPostMutation.isPending ? "Publicando..." : "Publicar"}
               </Button>

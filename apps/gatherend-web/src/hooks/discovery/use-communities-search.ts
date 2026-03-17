@@ -12,6 +12,7 @@ export interface CommunitySearchResult {
   imageAsset: ClientUploadedAsset | null;
   memberCount: number;
   boardCount: number;
+  recentPostCount7d: number;
 }
 
 interface UseCommunitiesSearchReturn {

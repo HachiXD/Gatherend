@@ -7,6 +7,7 @@
  * - memberCount: Total unique members across all boards
  * - feedBoardCount: Boards currently in discovery feed (within 48h window + has vacant slots)
  * - rankingScore: LOG(memberCount + 1) + feedBoardCount * 0.5
+ * - recentPostCount7d: Non-deleted posts created in the last 7 days
  * - rankedAt: Timestamp of last update
  *
  * After update, invalidates Redis cache so fresh data is served.
@@ -64,6 +65,7 @@ export async function POST(req: Request) {
 
     // Window start for feed visibility (same as boards endpoint)
     const windowStart = new Date(Date.now() - MAX_AGE_HOURS * 60 * 60 * 1000);
+    const postsWindowStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
     // Update all community rankings in a single query
     const result = await db.$executeRaw`
@@ -90,14 +92,22 @@ export async function POST(req: Request) {
                 WHERE s."boardId" = b.id
                   AND s.mode = 'BY_DISCOVERY'
                   AND s."memberId" IS NULL
-              )
-          ), 0)::INTEGER as feed_board_count
+                )
+          ), 0)::INTEGER as feed_board_count,
+          COALESCE((
+            SELECT COUNT(*)
+            FROM "CommunityPost" p
+            WHERE p."communityId" = c.id
+              AND p.deleted = false
+              AND p."createdAt" >= ${postsWindowStart}
+          ), 0)::INTEGER as recent_post_count_7d
         FROM "Community" c
       )
       UPDATE "Community" c
       SET 
         "memberCount" = cs.member_count,
         "feedBoardCount" = cs.feed_board_count,
+        "recentPostCount7d" = cs.recent_post_count_7d,
         "rankingScore" = LN(cs.member_count + 1) + cs.feed_board_count * 0.5,
         "rankedAt" = CURRENT_TIMESTAMP
       FROM community_stats cs

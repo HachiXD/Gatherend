@@ -21,7 +21,7 @@ import {
 import axios from "axios";
 import { useTheme } from "next-themes";
 import { AnimatedSticker } from "@/components/ui/animated-sticker";
-import { Edit, Lock, Pin, RefreshCw, Trash, TriangleAlert } from "lucide-react";
+import { Edit, Lock, Pin, RefreshCw, Siren, Trash } from "lucide-react";
 import { DiscoverySkeleton } from "@/components/discovery/discovery-skeleton";
 import { FeedBottomSkeleton } from "@/components/discovery/feed-bottom-skeleton";
 import {
@@ -535,7 +535,10 @@ function CommunityPostCommentComposer({
                 return {
                   ...post,
                   commentCount: post.commentCount + 1,
-                  latestComments: [...post.latestComments, createdComment].slice(-5),
+                  latestComments: [
+                    ...post.latestComments,
+                    createdComment,
+                  ].slice(-5),
                 };
               }),
             })),
@@ -612,7 +615,7 @@ function CommunityPostCommentComposer({
           size="sm"
           disabled={isSubmitting || isUploading}
           onClick={() => fileInputRef.current?.click()}
-          className="h-7 cursor-pointer bg-theme-bg-cancel-button px-3 text-[13px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+          className="h-7 cursor-pointer rounded-none bg-theme-bg-cancel-button px-3 text-[12px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
         >
           <ImagePlus className="mr-1 h-4 w-4" />
           Attach image
@@ -622,7 +625,7 @@ function CommunityPostCommentComposer({
           size="sm"
           disabled={isSubmitting || isUploading || !canSubmit}
           onClick={() => void handleSubmit()}
-          className="h-7 cursor-pointer bg-theme-tab-button-bg px-3 text-[13px] text-theme-text-light hover:bg-theme-tab-button-hover"
+          className="h-7 cursor-pointer rounded-none bg-theme-tab-button-bg px-3 text-[12px] text-theme-text-light hover:bg-theme-tab-button-hover"
         >
           Send
         </Button>
@@ -808,10 +811,7 @@ function CommunityPostsSectionInner({
           postId,
           expandedCommentsQueries[index],
         ]),
-      ) as Record<
-        string,
-        (typeof expandedCommentsQueries)[number] | undefined
-      >,
+      ) as Record<string, (typeof expandedCommentsQueries)[number] | undefined>,
     [expandedCommentsQueries, expandedPostIds],
   );
 
@@ -1069,9 +1069,11 @@ function CommunityPostsSectionInner({
                         !expandedComments &&
                         Boolean(
                           expandedCommentsQuery?.isLoading ||
-                            expandedCommentsQuery?.isFetching,
+                          expandedCommentsQuery?.isFetching,
                         );
-                      const isOmittedExpanded = Boolean(expandedPostsById[post.id]);
+                      const isOmittedExpanded = Boolean(
+                        expandedPostsById[post.id],
+                      );
 
                       const themeMode =
                         (resolvedTheme as "dark" | "light") || "dark";
@@ -1136,7 +1138,7 @@ function CommunityPostsSectionInner({
                                     className="cursor-pointer"
                                     aria-label="Report post"
                                   >
-                                    <TriangleAlert className="h-5 w-5 text-theme-toolbar-icon transition hover:text-theme-text-light" />
+                                    <Siren className="h-5 w-5 text-theme-toolbar-icon transition hover:text-theme-text-light" />
                                   </button>
                                 </ActionTooltip>
                               )}

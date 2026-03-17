@@ -25,7 +25,7 @@ interface CommunityMetadata {
   name: string;
   imageAsset: ReturnType<typeof serializeUploadedAsset>;
   memberCount: number;
-  postCount: number;
+  recentPostCount7d: number;
 }
 
 interface CommunityPostFeedItem {
@@ -207,25 +207,18 @@ export async function GET(
     let communityMetadata: CommunityMetadata | null = null;
 
     if (isFirstPage) {
-      const [community, postCount] = await Promise.all([
-        db.community.findUnique({
-          where: { id: communityId },
-          select: {
-            id: true,
-            name: true,
-            memberCount: true,
-            imageAsset: {
-              select: uploadedAssetSummarySelect,
-            },
+      const community = await db.community.findUnique({
+        where: { id: communityId },
+        select: {
+          id: true,
+          name: true,
+          memberCount: true,
+          recentPostCount7d: true,
+          imageAsset: {
+            select: uploadedAssetSummarySelect,
           },
-        }),
-        db.communityPost.count({
-          where: {
-            communityId,
-            deleted: false,
-          },
-        }),
-      ]);
+        },
+      });
 
       if (!community) {
         return NextResponse.json(
@@ -239,7 +232,7 @@ export async function GET(
         name: community.name,
         imageAsset: serializeUploadedAsset(community.imageAsset),
         memberCount: community.memberCount,
-        postCount,
+        recentPostCount7d: community.recentPostCount7d,
       };
     } else {
       const communityExists = await db.community.findUnique({

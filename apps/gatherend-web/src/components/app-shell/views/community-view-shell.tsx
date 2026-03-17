@@ -198,9 +198,10 @@ function CommunityViewShellInner({
     const memberLabel = community.memberCount === 1 ? "miembro" : "miembros";
     const boardLabel =
       community.activeBoardsCount === 1 ? "board abierto" : "boards abiertos";
-    const postLabel = community.postCount === 1 ? "post" : "posts";
+    const postLabel =
+      community.recentPostCount7d === 1 ? "post esta semana" : "posts esta semana";
 
-    return `${community.memberCount} ${memberLabel} • ${community.activeBoardsCount} ${boardLabel} • ${community.postCount} ${postLabel}`;
+    return `${community.memberCount} ${memberLabel} • ${community.activeBoardsCount} ${boardLabel} • ${community.recentPostCount7d} ${postLabel}`;
   }, [community]);
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-theme-bg-tertiary">

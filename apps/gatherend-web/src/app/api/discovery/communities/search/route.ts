@@ -22,6 +22,7 @@ interface CommunitySearchResult {
   imageAsset: ReturnType<typeof serializeUploadedAsset>;
   memberCount: number;
   boardCount: number;
+  recentPostCount7d: number;
   rankingScore: number;
 }
 
@@ -114,6 +115,7 @@ export async function GET(req: Request) {
       imageAssetId: string | null;
       memberCount: number;
       feedBoardCount: number;
+      recentPostCount7d: number;
       rankingScore: number;
     }
 
@@ -128,6 +130,7 @@ export async function GET(req: Request) {
           c."imageAssetId",
           c."memberCount",
           c."feedBoardCount",
+          c."recentPostCount7d",
           c."rankingScore"
         FROM "Community" c
         WHERE c.name ILIKE ${`%${sanitizedQuery}%`}
@@ -147,6 +150,7 @@ export async function GET(req: Request) {
           c."imageAssetId",
           c."memberCount",
           c."feedBoardCount",
+          c."recentPostCount7d",
           c."rankingScore"
         FROM "Community" c
         WHERE c.name ILIKE ${`%${sanitizedQuery}%`}
@@ -168,6 +172,7 @@ export async function GET(req: Request) {
       imageAsset: c.imageAssetId ? (assetMap.get(c.imageAssetId) ?? null) : null,
       memberCount: c.memberCount,
       boardCount: c.feedBoardCount,
+      recentPostCount7d: c.recentPostCount7d,
       rankingScore: c.rankingScore,
     }));
 

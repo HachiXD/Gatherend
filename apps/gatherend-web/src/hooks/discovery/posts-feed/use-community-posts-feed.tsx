@@ -60,7 +60,7 @@ export interface CommunityPostsInfo {
   name: string;
   imageAsset: ClientUploadedAsset | null;
   memberCount: number;
-  postCount: number;
+  recentPostCount7d: number;
 }
 
 export interface CommunityPostsFeedPage {

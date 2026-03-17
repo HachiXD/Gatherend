@@ -28,6 +28,7 @@ interface CommunityResult {
   imageAsset: ReturnType<typeof serializeUploadedAsset>;
   memberCount: number;
   boardCount: number;
+  recentPostCount7d: number;
 }
 
 interface PageResponse {
@@ -136,6 +137,7 @@ export async function GET(req: Request) {
       imageAssetId: string | null;
       memberCount: number;
       feedBoardCount: number;
+      recentPostCount7d: number;
       rankingScore: number;
     }
 
@@ -169,8 +171,9 @@ export async function GET(req: Request) {
           c.name,
           c."imageAssetId",
           c."memberCount",
-        c."feedBoardCount",
-        c."rankingScore"
+          c."feedBoardCount",
+          c."recentPostCount7d",
+          c."rankingScore"
       FROM "Community" c
       ${cursorFilter}
       ORDER BY c."rankingScore" DESC, c.id ASC
@@ -191,6 +194,7 @@ export async function GET(req: Request) {
       imageAsset: r.imageAssetId ? (assetMap.get(r.imageAssetId) ?? null) : null,
       memberCount: r.memberCount,
       boardCount: r.feedBoardCount, // Boards actualmente en el feed
+      recentPostCount7d: r.recentPostCount7d,
     }));
 
     // Cursor compuesto: "rankingScore_id" para keyset pagination correcta

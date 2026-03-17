@@ -1,8 +1,12 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
-import { mergeCommunityToFeedCache } from "./community-feed/use-communities-feed";
+import { useEffect, useMemo } from "react";
+import {
+  COMMUNITIES_FEED_KEY,
+  type CommunityFeedPage,
+  mergeCommunityToFeedCache,
+} from "./community-feed/use-communities-feed";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 export interface CommunityOverview {
@@ -11,7 +15,7 @@ export interface CommunityOverview {
   imageAsset: ClientUploadedAsset | null;
   memberCount: number;
   activeBoardsCount: number;
-  postCount: number;
+  recentPostCount7d: number;
   canDeleteAnyPost: boolean;
 }
 
@@ -32,6 +36,20 @@ async function fetchCommunityOverview(
   return res.json();
 }
 
+async function fetchCommunityPermissions(
+  communityId: string,
+): Promise<{ canManageCommunityContent: boolean }> {
+  const url = new URL(
+    `/api/discovery/communities/${communityId}/permissions`,
+    window.location.origin,
+  );
+
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error("Error al cargar permisos de la comunidad");
+
+  return res.json();
+}
+
 interface UseCommunityOverviewOptions {
   enabled?: boolean;
 }
@@ -42,9 +60,56 @@ export function useCommunityOverview(
 ) {
   const queryClient = useQueryClient();
 
+  const cachedFeedCommunity = useMemo(() => {
+    if (!communityId) return null;
+
+    const feedData = queryClient.getQueryData<{
+      pages: CommunityFeedPage[];
+      pageParams: unknown[];
+    }>(COMMUNITIES_FEED_KEY);
+
+    if (!feedData) return null;
+
+    for (const page of feedData.pages) {
+      const community = page.items.find((item) => item.id === communityId);
+      if (community) {
+        return community;
+      }
+    }
+
+    return null;
+  }, [communityId, queryClient]);
+
   const query = useQuery({
     queryKey: communityOverviewKey(communityId),
-    queryFn: () => fetchCommunityOverview(communityId),
+    queryFn: async () => {
+      if (cachedFeedCommunity) {
+        const permissions = await fetchCommunityPermissions(communityId);
+
+        return {
+          id: cachedFeedCommunity.id,
+          name: cachedFeedCommunity.name,
+          imageAsset: cachedFeedCommunity.imageAsset,
+          memberCount: cachedFeedCommunity.memberCount,
+          activeBoardsCount: cachedFeedCommunity.boardCount,
+          recentPostCount7d: cachedFeedCommunity.recentPostCount7d,
+          canDeleteAnyPost: permissions.canManageCommunityContent,
+        };
+      }
+
+      return fetchCommunityOverview(communityId);
+    },
+    placeholderData: cachedFeedCommunity
+      ? {
+          id: cachedFeedCommunity.id,
+          name: cachedFeedCommunity.name,
+          imageAsset: cachedFeedCommunity.imageAsset,
+          memberCount: cachedFeedCommunity.memberCount,
+          activeBoardsCount: cachedFeedCommunity.boardCount,
+          recentPostCount7d: cachedFeedCommunity.recentPostCount7d,
+          canDeleteAnyPost: false,
+        }
+      : undefined,
     staleTime: 1000 * 60,
     enabled: enabled && !!communityId,
   });
