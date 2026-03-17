@@ -1085,7 +1085,7 @@ function CommunityPostsSectionInner({
                           className="-mx-6 group relative border-b border-theme-border px-6 pt-3 pb-1 transition-colors hover:bg-theme-bg-secondary/35"
                         >
                           {!isEditing && (
-                            <div className="absolute right-5 top-2 z-10 hidden items-center gap-x-2 rounded-sm border border-theme-toolbar-border bg-theme-toolbar-bg p-1 group-hover:flex hover:flex">
+                            <div className="absolute right-5 top-0.5 z-10 hidden items-center gap-x-2 rounded-sm border border-theme-toolbar-border bg-theme-toolbar-bg p-1 group-hover:flex hover:flex">
                               {isOwnPost && (
                                 <ActionTooltip label="Edit post">
                                   <button
