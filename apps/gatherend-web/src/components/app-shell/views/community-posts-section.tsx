@@ -780,6 +780,7 @@ function CommunityPostsSectionInner({
     enabled: !!communityId,
   });
   const {
+    allPosts,
     pageSlots,
     isLoading,
     isFetchingNextPage,
@@ -1011,7 +1012,7 @@ function CommunityPostsSectionInner({
           <div className="py-8 text-center text-destructive">
             Error: {error}
           </div>
-        ) : pageSlots.length === 0 ? (
+        ) : allPosts.length === 0 ? (
           <div className="py-8 text-center text-theme-text-muted">
             No hay posts en esta comunidad.
           </div>
