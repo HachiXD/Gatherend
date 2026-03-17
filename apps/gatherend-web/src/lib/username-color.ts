@@ -58,6 +58,10 @@ function hslToHex(h: number, s: number, l: number): string {
   return `#${f(0)}${f(8)}${f(4)}`;
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
 // Username Color Adaptation for Theme Contrast
 
 /**
@@ -178,6 +182,35 @@ export function getDisplayColor(
   }
 
   return DEFAULT_USERNAME_COLOR;
+}
+
+/**
+ * Derive a subtle card background tint from the username color.
+ * For gradients, we intentionally use only the first stop to keep the card
+ * background stable and cheap to compute.
+ */
+export function getUsernameTintBackgroundStyle(
+  color: JsonValue | string | null | undefined,
+  themeMode: "dark" | "light",
+): React.CSSProperties {
+  const parsed = parseUsernameColor(color);
+  if (!parsed) return {};
+
+  const sourceColor =
+    parsed.type === "solid"
+      ? parsed.color
+      : (parsed.colors[0]?.color ?? DEFAULT_USERNAME_COLOR);
+
+  const { h, s, l } = hexToHsl(sourceColor);
+  const mutedS = clamp(Math.round(s * 0.34), 12, 30);
+  const tintedL =
+    themeMode === "dark"
+      ? clamp(Math.round(16 + l * 0.16), 18, 30)
+      : clamp(Math.round(94 + (l - 50) * 0.04), 91, 97);
+
+  return {
+    backgroundColor: hslToHex(h, mutedS, tintedL),
+  };
 }
 
 /**

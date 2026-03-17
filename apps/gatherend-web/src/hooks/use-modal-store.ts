@@ -30,7 +30,9 @@ export type ModalType =
   | "reportProfile"
   | "reportCommunity"
   | "reportCommunityPost"
-  | "deleteCommunityPost";
+  | "reportCommunityPostComment"
+  | "deleteCommunityPost"
+  | "deleteCommunityPostComment";
 
 interface ModalData {
   channelId?: string;
@@ -73,8 +75,16 @@ interface ModalData {
   reportCommunityPostAuthorId?: string;
   reportCommunityPostAuthorUsername?: string;
   reportCommunityPostAuthorDiscriminator?: string | null;
+  reportCommunityPostCommentId?: string;
+  reportCommunityPostCommentContent?: string;
+  reportCommunityPostCommentImageUrl?: string | null;
+  reportCommunityPostCommentAuthorId?: string;
+  reportCommunityPostCommentAuthorUsername?: string;
+  reportCommunityPostCommentAuthorDiscriminator?: string | null;
   deleteCommunityPostId?: string;
   deleteCommunityPostCommunityId?: string;
+  deleteCommunityPostCommentId?: string;
+  onDeleteCommunityPostCommentConfirm?: (() => Promise<void>) | (() => void);
   communityId?: string;
   communityName?: string;
 }

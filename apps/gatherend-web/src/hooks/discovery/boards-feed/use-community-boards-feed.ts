@@ -10,6 +10,8 @@ import {
 import type { Languages } from "@prisma/client";
 import { mergeCommunityToFeedCache } from "../community-feed/use-communities-feed";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
+import { feedScrollStore } from "@/stores/feed-scroll-store";
+import { useMeasuredPageObserver } from "@/hooks/use-measured-page-observer";
 
 // TYPES
 
@@ -64,6 +66,8 @@ const BREAKPOINT_XL = 1280;
 // Query key factory
 export const communityBoardsKey = (communityId: string) =>
   ["community-boards-feed", communityId] as const;
+export const communityBoardsScrollKey = (communityId: string) =>
+  `community:boards:${communityId}`;
 
 // FETCH FUNCTION
 
@@ -88,6 +92,7 @@ interface UseCommunityBoardsFeedOptions {
   maxRenderedPages?: number;
   expandThreshold?: number;
   enabled?: boolean;
+  isActive?: boolean;
   externalContainerRef?: RefObject<HTMLDivElement | null>;
 }
 
@@ -97,10 +102,14 @@ export function useCommunityBoardsFeed(
     maxRenderedPages = 3,
     expandThreshold = 0.4,
     enabled = true,
+    isActive = true,
     externalContainerRef,
   }: UseCommunityBoardsFeedOptions = {},
 ) {
   const queryClient = useQueryClient();
+  const scrollStateKey = communityBoardsScrollKey(communityId);
+  const initialScrollStateRef = useRef(feedScrollStore.get(scrollStateKey));
+  const didRestoreScrollRef = useRef(false);
 
   // Refs
   const containerRef = useRef<HTMLDivElement>(null);
@@ -108,11 +117,21 @@ export function useCommunityBoardsFeed(
   const scrollContainerRef = externalContainerRef ?? containerRef;
 
   // Track measured heights for each page (for variable height cards)
-  const pageHeightsRef = useRef<Map<number, number>>(new Map());
+  const pageHeightsRef = useRef<Map<number, number>>(
+    new Map(
+      Object.entries(initialScrollStateRef.current.pageHeights).map(
+        ([pageIndex, height]) => [Number(pageIndex), height],
+      ),
+    ),
+  );
 
   // Window state: index of first RENDERED page
-  const [windowStart, setWindowStart] = useState(0);
-  const [heightsVersion, setHeightsVersion] = useState(0);
+  const [windowStart, setWindowStart] = useState(
+    initialScrollStateRef.current.windowStart,
+  );
+  const [heightsVersion, setHeightsVersion] = useState(
+    Object.keys(initialScrollStateRef.current.pageHeights).length > 0 ? 1 : 0,
+  );
 
   // REACT QUERY - Infinite Query for boards
 
@@ -132,7 +151,7 @@ export function useCommunityBoardsFeed(
     getNextPageParam: (lastPage) =>
       lastPage.hasMore ? lastPage.nextCursor : undefined,
     staleTime: 1000 * 65, // 65s > cron interval (60s) to avoid redundant fetches
-    enabled: enabled && !!communityId,
+    enabled: enabled && isActive && !!communityId,
   });
 
   const pages = useMemo(() => data?.pages ?? [], [data?.pages]);
@@ -174,6 +193,11 @@ export function useCommunityBoardsFeed(
 
   // Number of visual chunks based on deduplicated items
   const totalChunks = Math.ceil(allBoards.length / PAGE_SIZE);
+
+  useEffect(() => {
+    if (totalChunks === 0) return;
+    setWindowStart((current) => Math.min(current, totalChunks - 1));
+  }, [totalChunks]);
 
   // HEIGHT MEASUREMENT (for variable height board cards with responsive grid)
 
@@ -220,6 +244,7 @@ export function useCommunityBoardsFeed(
 
   const measurePage = useCallback(
     (pageIndex: number, element: HTMLElement | null) => {
+      if (!isActive) return;
       if (!element) return;
 
       const height = element.getBoundingClientRect().height;
@@ -230,8 +255,9 @@ export function useCommunityBoardsFeed(
         setHeightsVersion((v) => v + 1);
       }
     },
-    [],
+    [isActive],
   );
+  const getMeasuredPageRef = useMeasuredPageObserver(measurePage);
 
   // LRU eviction: Remove heights far from the current window to prevent memory leak
   // Heights can be re-measured when pages are rendered again (cost: ~0.1ms per getBoundingClientRect)
@@ -273,6 +299,25 @@ export function useCommunityBoardsFeed(
     recalculatePositions();
   }, [heightsVersion, totalChunks, recalculatePositions]);
 
+  const persistScrollState = useCallback((options?: { force?: boolean }) => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    if (!options?.force && !didRestoreScrollRef.current) return;
+
+    const placeholderHeight = pagePositionsRef.current[windowStart]?.start ?? 0;
+    feedScrollStore.set({
+      key: scrollStateKey,
+      windowStart,
+      pageHeights: Object.fromEntries(pageHeightsRef.current.entries()),
+      normalizedScrollTop: Math.max(0, container.scrollTop - placeholderHeight),
+      updatedAt: Date.now(),
+    });
+  }, [scrollContainerRef, scrollStateKey, windowStart]);
+
+  const persistScrollStateNow = useCallback(() => {
+    persistScrollState({ force: true });
+  }, [persistScrollState]);
+
   // BINARY SEARCH - O(log N)
 
   const findPageAtPosition = useCallback((scrollTop: number): number => {
@@ -312,6 +357,20 @@ export function useCommunityBoardsFeed(
       }
     }
   }, [totalChunks, windowStart, maxRenderedPages, evictDistantHeights]);
+
+  useEffect(() => {
+    if (!isActive) return;
+    const stored = feedScrollStore.get(scrollStateKey);
+    pageHeightsRef.current = new Map(
+      Object.entries(stored.pageHeights).map(([pageIndex, height]) => [
+        Number(pageIndex),
+        height,
+      ]),
+    );
+    didRestoreScrollRef.current = false;
+    setWindowStart(stored.windowStart);
+    setHeightsVersion((value) => value + 1);
+  }, [isActive, scrollStateKey]);
 
   // PAGE SLOTS CALCULATION (RE-CHUNKED FROM allBoards)
 
@@ -411,6 +470,7 @@ export function useCommunityBoardsFeed(
   const canFetchRef = useRef(true);
 
   useEffect(() => {
+    if (!isActive) return;
     const bottomSentinel = bottomSentinelRef.current;
     if (!bottomSentinel) return;
 
@@ -440,11 +500,18 @@ export function useCommunityBoardsFeed(
 
     observer.observe(bottomSentinel);
     return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage, scrollContainerRef]);
+  }, [
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+    isActive,
+    scrollContainerRef,
+  ]);
 
   // SCROLL EVENT LISTENER
 
   useEffect(() => {
+    if (!isActive) return;
     const container = scrollContainerRef.current;
     if (!container) return;
 
@@ -453,6 +520,7 @@ export function useCommunityBoardsFeed(
       if (!ticking) {
         requestAnimationFrame(() => {
           handleScroll();
+          persistScrollState();
           ticking = false;
         });
         ticking = true;
@@ -461,7 +529,46 @@ export function useCommunityBoardsFeed(
 
     container.addEventListener("scroll", onScroll, { passive: true });
     return () => container.removeEventListener("scroll", onScroll);
-  }, [handleScroll, scrollContainerRef]);
+  }, [handleScroll, isActive, persistScrollState, scrollContainerRef]);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (
+      !isActive ||
+      !container ||
+      totalChunks === 0 ||
+      didRestoreScrollRef.current
+    ) {
+      return;
+    }
+
+    const stored = feedScrollStore.get(scrollStateKey);
+    const placeholderHeight = pagePositionsRef.current[windowStart]?.start ?? 0;
+    const targetScrollTop = Math.max(
+      0,
+      stored.normalizedScrollTop + placeholderHeight,
+    );
+
+    requestAnimationFrame(() => {
+      const currentContainer = scrollContainerRef.current;
+      if (!currentContainer) return;
+      currentContainer.scrollTop = targetScrollTop;
+      didRestoreScrollRef.current = true;
+    });
+  }, [isActive, scrollContainerRef, scrollStateKey, totalChunks, windowStart]);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!isActive || !container || totalChunks === 0) return;
+    persistScrollState();
+  }, [
+    heightsVersion,
+    isActive,
+    persistScrollState,
+    scrollContainerRef,
+    totalChunks,
+    windowStart,
+  ]);
 
   // ACTIONS
 
@@ -502,7 +609,10 @@ export function useCommunityBoardsFeed(
     // Actions
     loadMore,
     refresh,
+    persistScrollState,
+    persistScrollStateNow,
     measurePage,
+    getMeasuredPageRef,
 
     // Refs
     containerRef: scrollContainerRef as React.RefObject<HTMLDivElement>,

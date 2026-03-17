@@ -23,6 +23,7 @@ import { CommunityBoardsSection } from "./community-boards-section";
 import { CommunityPostsSection } from "./community-posts-section";
 import { CommunityViewShell } from "./community-view-shell";
 import { useBoardNavigationStore } from "@/stores/board-navigation-store";
+import { useEffect } from "react";
 
 interface CommunityViewProps {
   communityId: string;
@@ -43,9 +44,17 @@ function CommunityViewInner({ communityId }: CommunityViewProps) {
   const { onOpen } = useModal();
   const [sectionHeaderAction, setSectionHeaderAction] = useState<ReactNode>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const boardsPersistScrollRef = useRef<(() => void) | null>(null);
+  const postsPersistScrollRef = useRef<(() => void) | null>(null);
 
   const handleSelectSection = useCallback(
     (section: "boards" | "posts") => {
+      if (activeSection === "boards") {
+        boardsPersistScrollRef.current?.();
+      } else {
+        postsPersistScrollRef.current?.();
+      }
+
       if (section === "boards") {
         switchToCommunityBoards(communityId);
         return;
@@ -53,8 +62,29 @@ function CommunityViewInner({ communityId }: CommunityViewProps) {
 
       switchToCommunityPosts(communityId);
     },
-    [communityId, switchToCommunityBoards, switchToCommunityPosts],
+    [activeSection, communityId, switchToCommunityBoards, switchToCommunityPosts],
   );
+
+  const persistActiveDiscoveryScroll = useCallback(() => {
+    if (activeSection === "boards") {
+      boardsPersistScrollRef.current?.();
+      return;
+    }
+
+    postsPersistScrollRef.current?.();
+  }, [activeSection]);
+
+  useEffect(() => {
+    useBoardNavigationStore
+      .getState()
+      .registerActiveDiscoveryScrollPersistence(persistActiveDiscoveryScroll);
+
+    return () => {
+      useBoardNavigationStore
+        .getState()
+        .registerActiveDiscoveryScrollPersistence(null);
+    };
+  }, [persistActiveDiscoveryScroll]);
 
   const handleBackToDiscovery = useCallback(() => {
     startBackTransition(() => {
@@ -88,7 +118,7 @@ function CommunityViewInner({ communityId }: CommunityViewProps) {
         variant="ghost"
         onClick={handleBackToDiscovery}
         disabled={isBackPending}
-        className="h-9 w-9 cursor-pointer rounded-full border border-white/12 bg-white/10 p-0 text-white hover:bg-white/16 hover:text-white"
+        className="h-9 w-9 cursor-pointer rounded-none border-0 bg-[var(--community-header-btn-bg)] p-0 text-[var(--community-header-btn-text)] hover:bg-[var(--community-header-btn-hover)] hover:text-[var(--community-header-btn-text)] focus-visible:ring-2 focus-visible:ring-[var(--community-header-btn-ring)]"
         aria-label="Back to discovery"
       >
         <ChevronLeft className="h-5 w-5" />
@@ -103,24 +133,25 @@ function CommunityViewInner({ communityId }: CommunityViewProps) {
         <button
           type="button"
           onClick={handleCreate}
-          className="inline-flex h-9 cursor-pointer items-center gap-2 border border-white/12 bg-white/8 px-3 text-[13px] font-semibold text-white hover:bg-white/14 focus-visible:ring-2 focus-visible:ring-white/30 focus-visible:outline-none disabled:opacity-50 rounded-none"
+          className="inline-flex h-9 cursor-pointer items-center gap-2 border-0 bg-[var(--community-header-btn-bg)] px-3 text-[13px] font-semibold text-[var(--community-header-btn-text)] hover:bg-[var(--community-header-btn-hover)] focus-visible:ring-2 focus-visible:ring-[var(--community-header-btn-ring)] focus-visible:outline-none disabled:opacity-50 rounded-none"
         >
           <Plus className="h-4 w-4" />
           {activeSection === "boards" ? "Crear board" : "Crear post"}
         </button>
-        <button
-          type="button"
-          disabled
-          className="inline-flex h-9 w-9 items-center justify-center border border-white/12 bg-white/8 text-white/80 hover:bg-white/14 focus-visible:ring-2 focus-visible:ring-white/30 focus-visible:outline-none disabled:opacity-50 rounded-none"
-          title="Ajustes de comunidad (pendiente)"
-          aria-label="Ajustes de comunidad"
-        >
-          <Settings className="h-4 w-4" />
-        </button>
         {sectionHeaderAction}
+        {community?.canDeleteAnyPost && (
+          <button
+            type="button"
+            className="inline-flex h-9 w-9 cursor-pointer items-center justify-center border-0 bg-[var(--community-header-btn-bg)] text-[var(--community-header-btn-text)] hover:bg-[var(--community-header-btn-hover)] hover:text-[var(--community-header-btn-text)] focus-visible:ring-2 focus-visible:ring-[var(--community-header-btn-ring)] focus-visible:outline-none rounded-none"
+            title="Ajustes de comunidad (pendiente)"
+            aria-label="Ajustes de comunidad"
+          >
+            <Settings className="h-4 w-4" />
+          </button>
+        )}
       </div>
     ),
-    [activeSection, handleCreate, sectionHeaderAction],
+    [activeSection, community?.canDeleteAnyPost, handleCreate, sectionHeaderAction],
   );
 
   if (!community && isLoading) {
@@ -161,19 +192,28 @@ function CommunityViewInner({ communityId }: CommunityViewProps) {
       headerAction={headerAction}
       scrollContainerRef={scrollContainerRef}
     >
-      {activeSection === "boards" ? (
+      <div className={activeSection === "boards" ? "block" : "hidden"}>
         <CommunityBoardsSection
           communityId={communityId}
+          isActive={activeSection === "boards"}
           onHeaderActionChange={setSectionHeaderAction}
+          onPersistScrollReady={(persist) => {
+            boardsPersistScrollRef.current = persist;
+          }}
           scrollContainerRef={scrollContainerRef}
         />
-      ) : (
+      </div>
+      <div className={activeSection === "posts" ? "block" : "hidden"}>
         <CommunityPostsSection
           communityId={communityId}
+          isActive={activeSection === "posts"}
           onHeaderActionChange={setSectionHeaderAction}
+          onPersistScrollReady={(persist) => {
+            postsPersistScrollRef.current = persist;
+          }}
           scrollContainerRef={scrollContainerRef}
         />
-      )}
+      </div>
     </CommunityViewShell>
   );
 }

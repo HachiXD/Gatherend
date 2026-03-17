@@ -16,6 +16,7 @@ import { ReportProfileModal } from "@/components/modals/report-profile-modal";
 import { ReportCommunityModal } from "@/components/modals/report-community-modal";
 import { ReportCommunityPostModal } from "@/components/modals/report-community-post-modal";
 import { DeleteCommunityPostModal } from "@/components/modals/delete-community-post-modal";
+import { DeleteCommunityPostCommentModal } from "@/components/modals/delete-community-post-comment-modal";
 
 export const ModalProvider = () => {
   const isMounted = typeof window !== "undefined";
@@ -42,6 +43,7 @@ export const ModalProvider = () => {
       <ReportCommunityModal />
       <ReportCommunityPostModal />
       <DeleteCommunityPostModal />
+      <DeleteCommunityPostCommentModal />
     </>
   );
 };

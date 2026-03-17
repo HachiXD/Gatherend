@@ -53,7 +53,7 @@ export async function GET(
           memberCount: true,
           helpers: {
             where: {
-              id: profile.id,
+              profileId: profile.id,
             },
             select: {
               id: true,

@@ -19,13 +19,17 @@ import type { Languages } from "@prisma/client";
 
 interface CommunityBoardsSectionProps {
   communityId: string;
+  isActive: boolean;
   onHeaderActionChange?: (action: ReactNode | null) => void;
+  onPersistScrollReady?: ((persist: () => void) => void) | undefined;
   scrollContainerRef?: RefObject<HTMLDivElement | null>;
 }
 
 function CommunityBoardsSectionInner({
   communityId,
+  isActive,
   onHeaderActionChange,
+  onPersistScrollReady,
   scrollContainerRef,
 }: CommunityBoardsSectionProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -36,9 +40,11 @@ function CommunityBoardsSectionInner({
     hasNextPage,
     error,
     refresh,
+    persistScrollStateNow,
     bottomSentinelRef,
-    measurePage,
+    getMeasuredPageRef,
   } = useCommunityBoardsFeed(communityId, {
+    isActive,
     externalContainerRef: scrollContainerRef,
   });
 
@@ -61,15 +67,15 @@ function CommunityBoardsSectionInner({
       <button
         onClick={handleRefresh}
         disabled={isRefreshing}
-        className="relative inline-flex h-9 cursor-pointer items-center gap-2 border border-white/12 bg-white/8 px-3 text-[13px] font-semibold text-white hover:bg-white/14 focus-visible:ring-2 focus-visible:ring-white/30 focus-visible:outline-none disabled:opacity-50 rounded-none"
+        className="relative inline-flex h-9 cursor-pointer items-center gap-2 border-0 bg-[var(--community-header-btn-bg)] px-3 text-[13px] font-semibold text-[var(--community-header-btn-text)] hover:bg-[var(--community-header-btn-hover)] focus-visible:ring-2 focus-visible:ring-[var(--community-header-btn-ring)] focus-visible:outline-none disabled:opacity-50 rounded-none"
         title={hasNewBoards ? "Hay nuevos boards" : "Refrescar boards"}
       >
         <RefreshCw
-          className={`h-4 w-4 text-white/70 ${
+          className={`h-4 w-4 text-[var(--community-header-btn-muted)] ${
             isRefreshing ? "animate-spin" : ""
           }`}
         />
-        <span className="text-white/90">Refrescar</span>
+        <span className="text-[var(--community-header-btn-text)]">Refrescar</span>
         {hasNewBoards && !isRefreshing && (
           <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-green-500 animate-pulse" />
         )}
@@ -79,10 +85,15 @@ function CommunityBoardsSectionInner({
   );
 
   useEffect(() => {
+    if (!isActive) return;
     onHeaderActionChange?.(headerAction);
 
     return () => onHeaderActionChange?.(null);
-  }, [headerAction, onHeaderActionChange]);
+  }, [headerAction, isActive, onHeaderActionChange]);
+
+  useEffect(() => {
+    onPersistScrollReady?.(persistScrollStateNow);
+  }, [onPersistScrollReady, persistScrollStateNow]);
 
   return (
     <div className="w-full">
@@ -111,7 +122,7 @@ function CommunityBoardsSectionInner({
               return (
                 <div
                   key={`page-${slot.pageIndex}`}
-                  ref={(el) => measurePage(slot.pageIndex, el)}
+                  ref={getMeasuredPageRef(slot.pageIndex)}
                   className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
                 >
                   {slot.page.items.map((board) => (

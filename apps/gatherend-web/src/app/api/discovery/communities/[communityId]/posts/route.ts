@@ -306,9 +306,6 @@ export async function GET(
           },
         },
         comments: {
-          where: {
-            deleted: false,
-          },
           orderBy: [{ createdAt: "desc" }, { id: "desc" }],
           take: 5,
           select: {

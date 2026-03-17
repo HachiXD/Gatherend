@@ -110,6 +110,7 @@ interface BoardNavigationStore extends NavigationState {
   // Initialization
   isInitialized: boolean;
   isClientNavigationEnabled: boolean;
+  persistActiveDiscoveryScroll: (() => void) | null;
 
   // Actions
   initializeFromUrl: () => void;
@@ -123,6 +124,9 @@ interface BoardNavigationStore extends NavigationState {
   switchToDiscovery: () => void;
   switchToCommunityBoards: (communityId: string) => void;
   switchToCommunityPosts: (communityId: string) => void;
+  registerActiveDiscoveryScrollPersistence: (
+    persist: (() => void) | null,
+  ) => void;
 
   // Internal - for popstate sync
   _syncFromPopstate: (state: NavigationState) => void;
@@ -211,6 +215,7 @@ export const useBoardNavigationStore = create<BoardNavigationStore>()(
     ...initialState,
     isInitialized: typeof window !== "undefined", // Already initialized if on client
     isClientNavigationEnabled: false,
+    persistActiveDiscoveryScroll: null,
 
     initializeFromUrl: () => {
       const state = get();
@@ -279,16 +284,22 @@ export const useBoardNavigationStore = create<BoardNavigationStore>()(
 
     },
 
+    registerActiveDiscoveryScrollPersistence: (persist) => {
+      set({ persistActiveDiscoveryScroll: persist });
+    },
+
     switchBoard: (boardId, channelId, options) => {
       const state = get();
       if (boardId === state.currentBoardId && !channelId) return;
+      if (state.isDiscovery) {
+        state.persistActiveDiscoveryScroll?.();
+      }
 
       set({
         currentBoardId: boardId,
         currentChannelId: channelId || null,
         currentConversationId: null,
         currentCommunityId: null,
-        currentCommunitySection: "boards",
         isDiscovery: false,
       });
 
@@ -332,11 +343,13 @@ export const useBoardNavigationStore = create<BoardNavigationStore>()(
     switchChannel: (channelId) => {
       const state = get();
       if (channelId === state.currentChannelId && !state.isDiscovery) return;
+      if (state.isDiscovery) {
+        state.persistActiveDiscoveryScroll?.();
+      }
 
       set({
         currentChannelId: channelId,
         currentConversationId: null,
-        currentCommunitySection: "boards",
         isDiscovery: false,
       });
 
@@ -353,11 +366,13 @@ export const useBoardNavigationStore = create<BoardNavigationStore>()(
       const state = get();
       if (conversationId === state.currentConversationId && !state.isDiscovery)
         return;
+      if (state.isDiscovery) {
+        state.persistActiveDiscoveryScroll?.();
+      }
 
       set({
         currentConversationId: conversationId,
         currentChannelId: null,
-        currentCommunitySection: "boards",
         isDiscovery: false,
       });
 

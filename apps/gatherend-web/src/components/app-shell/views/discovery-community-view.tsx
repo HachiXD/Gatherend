@@ -88,7 +88,7 @@ export const DiscoveryCommunityView = memo(function DiscoveryCommunityView() {
     bottomSentinelRef,
   } = useCommunitiesFeed();
 
-  const { switchToCommunityBoards } = useBoardSwitchNavigation();
+  const { switchToCommunityPosts } = useBoardSwitchNavigation();
 
   // Hook para búsqueda server-side con debounce
   const {
@@ -116,9 +116,9 @@ export const DiscoveryCommunityView = memo(function DiscoveryCommunityView() {
   // Callback estable para onExplore — evita recrear arrows en cada render
   const handleExplore = useCallback(
     (communityId: string) => {
-      switchToCommunityBoards(communityId);
+      switchToCommunityPosts(communityId);
     },
-    [switchToCommunityBoards],
+    [switchToCommunityPosts],
   );
 
   return (

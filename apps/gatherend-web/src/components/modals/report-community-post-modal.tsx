@@ -70,7 +70,9 @@ export const ReportCommunityPostModal = () => {
     },
   ];
 
-  const isModalOpen = isOpen && type === "reportCommunityPost";
+  const isPostModal = type === "reportCommunityPost";
+  const isCommentModal = type === "reportCommunityPostComment";
+  const isModalOpen = isOpen && (isPostModal || isCommentModal);
   const {
     reportCommunityPostId,
     reportCommunityPostContent,
@@ -78,6 +80,12 @@ export const ReportCommunityPostModal = () => {
     reportCommunityPostAuthorId,
     reportCommunityPostAuthorUsername,
     reportCommunityPostAuthorDiscriminator,
+    reportCommunityPostCommentId,
+    reportCommunityPostCommentContent,
+    reportCommunityPostCommentImageUrl,
+    reportCommunityPostCommentAuthorId,
+    reportCommunityPostCommentAuthorUsername,
+    reportCommunityPostCommentAuthorDiscriminator,
     profileId,
   } = data;
 
@@ -97,7 +105,14 @@ export const ReportCommunityPostModal = () => {
   };
 
   const onSubmit = async () => {
-    if (!selectedCategory || !reportCommunityPostId || !profileId) {
+    const targetId = isCommentModal
+      ? reportCommunityPostCommentId
+      : reportCommunityPostId;
+    const targetOwnerId = isCommentModal
+      ? reportCommunityPostCommentAuthorId
+      : reportCommunityPostAuthorId;
+
+    if (!selectedCategory || !targetId || !profileId) {
       setError(t.modals.report.selectCategory);
       return;
     }
@@ -110,18 +125,30 @@ export const ReportCommunityPostModal = () => {
       await axios.post(
         "/api/reports",
         {
-          targetType: "COMMUNITY_POST",
-          targetId: reportCommunityPostId,
+          targetType: isCommentModal
+            ? "COMMUNITY_POST_COMMENT"
+            : "COMMUNITY_POST",
+          targetId,
           category: selectedCategory,
           description: description.trim() || null,
           snapshot: {
-            content: reportCommunityPostContent,
-            imageUrl: reportCommunityPostImageUrl,
-            authorId: reportCommunityPostAuthorId,
-            authorUsername: reportCommunityPostAuthorUsername,
-            authorDiscriminator: reportCommunityPostAuthorDiscriminator,
+            content: isCommentModal
+              ? reportCommunityPostCommentContent
+              : reportCommunityPostContent,
+            imageUrl: isCommentModal
+              ? reportCommunityPostCommentImageUrl
+              : reportCommunityPostImageUrl,
+            authorId: isCommentModal
+              ? reportCommunityPostCommentAuthorId
+              : reportCommunityPostAuthorId,
+            authorUsername: isCommentModal
+              ? reportCommunityPostCommentAuthorUsername
+              : reportCommunityPostAuthorUsername,
+            authorDiscriminator: isCommentModal
+              ? reportCommunityPostCommentAuthorDiscriminator
+              : reportCommunityPostAuthorDiscriminator,
           },
-          targetOwnerId: reportCommunityPostAuthorId,
+          targetOwnerId,
         },
         {
           headers: getExpressAuthHeaders(profileId, token),
@@ -143,30 +170,39 @@ export const ReportCommunityPostModal = () => {
     }
   };
 
-  const previewContent = reportCommunityPostContent?.trim()
-    ? reportCommunityPostContent.length > 140
-      ? `${reportCommunityPostContent.substring(0, 140)}...`
-      : reportCommunityPostContent
-    : reportCommunityPostImageUrl
-      ? "Image-only post"
+  const previewSourceContent = isCommentModal
+    ? reportCommunityPostCommentContent
+    : reportCommunityPostContent;
+  const previewSourceImageUrl = isCommentModal
+    ? reportCommunityPostCommentImageUrl
+    : reportCommunityPostImageUrl;
+  const previewAuthorUsername = isCommentModal
+    ? reportCommunityPostCommentAuthorUsername
+    : reportCommunityPostAuthorUsername;
+  const previewContent = previewSourceContent?.trim()
+    ? previewSourceContent.length > 140
+      ? `${previewSourceContent.substring(0, 140)}...`
+      : previewSourceContent
+    : previewSourceImageUrl
+      ? `Image-only ${isCommentModal ? "comment" : "post"}`
       : "No content";
 
   return (
     <Dialog open={isModalOpen} onOpenChange={handleClose}>
       <DialogContent className="bg-theme-bg-modal max-w-md text-theme-text-subtle p-0 overflow-hidden">
         <DialogHeader className="pt-6 px-6">
-          <div className="mb-2 flex items-center justify-center gap-2">
-            <FileWarning className="h-6 w-6 text-red-400" />
-            <DialogTitle className="text-xl text-center font-bold">
-              Report Post
-            </DialogTitle>
-          </div>
-          <DialogDescription className="text-center text-sm text-theme-text-tertiary">
-            Report this community post by{" "}
-            <span className="font-semibold text-theme-text-subtle">
-              {reportCommunityPostAuthorUsername || "Unknown"}
-            </span>
-          </DialogDescription>
+            <div className="mb-2 flex items-center justify-center gap-2">
+              <FileWarning className="h-6 w-6 text-red-400" />
+              <DialogTitle className="text-xl text-center font-bold">
+                {isCommentModal ? "Report Comment" : "Report Post"}
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-center text-sm text-theme-text-tertiary">
+              Report this community {isCommentModal ? "comment" : "post"} by{" "}
+              <span className="font-semibold text-theme-text-subtle">
+                {previewAuthorUsername || "Unknown"}
+              </span>
+            </DialogDescription>
         </DialogHeader>
 
         {success ? (
@@ -197,7 +233,7 @@ export const ReportCommunityPostModal = () => {
           <>
             <div className="px-6 py-2">
               <p className="mb-1 text-xs text-theme-text-tertiary">
-                Post preview
+                {isCommentModal ? "Comment preview" : "Post preview"}
               </p>
               <div className="rounded-md bg-theme-bg-overlay-secondary p-2.5">
                 <p className="break-words text-sm text-theme-text-secondary">

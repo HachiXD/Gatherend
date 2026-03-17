@@ -12,6 +12,8 @@ import {
   useState,
   type RefObject,
 } from "react";
+import { feedScrollStore } from "@/stores/feed-scroll-store";
+import { useMeasuredPageObserver } from "@/hooks/use-measured-page-observer";
 
 export interface CommunityPostAuthor
   extends Omit<ClientProfileSummary, "profileTags" | "usernameColor" | "usernameFormat"> {
@@ -80,6 +82,8 @@ const LRU_BUFFER = 6;
 
 export const communityPostsKey = (communityId: string) =>
   ["community-posts-feed", communityId] as const;
+export const communityPostsScrollKey = (communityId: string) =>
+  `community:posts:${communityId}`;
 
 async function fetchCommunityPostsFeed(
   communityId: string,
@@ -100,6 +104,7 @@ interface UseCommunityPostsFeedOptions {
   maxRenderedPages?: number;
   expandThreshold?: number;
   enabled?: boolean;
+  isActive?: boolean;
   externalContainerRef?: RefObject<HTMLDivElement | null>;
 }
 
@@ -109,16 +114,24 @@ export function useCommunityPostsFeed(
     maxRenderedPages = 3,
     expandThreshold = 0.4,
     enabled = true,
+    isActive = true,
     externalContainerRef,
   }: UseCommunityPostsFeedOptions = {},
 ) {
+  const scrollStateKey = communityPostsScrollKey(communityId);
+  const initialScrollStateRef = useRef(feedScrollStore.get(scrollStateKey));
+  const didRestoreScrollRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomSentinelRef = useRef<HTMLDivElement>(null);
   const pagePositionsRef = useRef<{ start: number; end: number }[]>([]);
   const scrollContainerRef = externalContainerRef ?? containerRef;
 
-  const [windowStart, setWindowStart] = useState(0);
-  const [pageHeights, setPageHeights] = useState<Record<number, number>>({});
+  const [windowStart, setWindowStart] = useState(
+    initialScrollStateRef.current.windowStart,
+  );
+  const [pageHeights, setPageHeights] = useState<Record<number, number>>(
+    initialScrollStateRef.current.pageHeights,
+  );
   const [containerElement, setContainerElement] =
     useState<HTMLDivElement | null>(null);
 
@@ -151,11 +164,16 @@ export function useCommunityPostsFeed(
     getNextPageParam: (lastPage) =>
       lastPage.hasMore ? lastPage.nextCursor : undefined,
     staleTime: 1000 * 30,
-    enabled: enabled && !!communityId,
+    enabled: enabled && isActive && !!communityId,
   });
 
   const pages = useMemo(() => data?.pages ?? [], [data?.pages]);
   const totalPages = pages.length;
+
+  useEffect(() => {
+    if (totalPages === 0) return;
+    setWindowStart((current) => Math.min(current, totalPages - 1));
+  }, [totalPages]);
 
   const community = useMemo((): CommunityPostsInfo | null => {
     if (pages.length === 0) return null;
@@ -188,6 +206,7 @@ export function useCommunityPostsFeed(
 
   const measurePage = useCallback(
     (pageIndex: number, element: HTMLElement | null) => {
+      if (!isActive) return;
       if (!element) return;
 
       const height = element.getBoundingClientRect().height;
@@ -204,8 +223,9 @@ export function useCommunityPostsFeed(
         return { ...prev, [pageIndex]: height };
       });
     },
-    [],
+    [isActive],
   );
+  const getMeasuredPageRef = useMeasuredPageObserver(measurePage);
 
   const evictDistantHeights = useCallback(
     (currentWindowStart: number) => {
@@ -255,6 +275,25 @@ export function useCommunityPostsFeed(
     recalculatePositions();
   }, [totalPages, recalculatePositions]);
 
+  const persistScrollState = useCallback((options?: { force?: boolean }) => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    if (!options?.force && !didRestoreScrollRef.current) return;
+
+    const placeholderHeight = pagePositionsRef.current[windowStart]?.start ?? 0;
+    feedScrollStore.set({
+      key: scrollStateKey,
+      windowStart,
+      pageHeights,
+      normalizedScrollTop: Math.max(0, container.scrollTop - placeholderHeight),
+      updatedAt: Date.now(),
+    });
+  }, [pageHeights, scrollContainerRef, scrollStateKey, windowStart]);
+
+  const persistScrollStateNow = useCallback(() => {
+    persistScrollState({ force: true });
+  }, [persistScrollState]);
+
   const findPageAtPosition = useCallback((scrollTop: number): number => {
     const positions = pagePositionsRef.current;
     if (positions.length === 0) return 0;
@@ -290,6 +329,14 @@ export function useCommunityPostsFeed(
       }
     }
   }, [totalPages, windowStart, maxRenderedPages, evictDistantHeights]);
+
+  useEffect(() => {
+    if (!isActive) return;
+    const stored = feedScrollStore.get(scrollStateKey);
+    didRestoreScrollRef.current = false;
+    setWindowStart(stored.windowStart);
+    setPageHeights(stored.pageHeights);
+  }, [isActive, scrollStateKey]);
 
   const pageSlots = useMemo((): CommunityPostPageSlot[] => {
     const slots: CommunityPostPageSlot[] = [];
@@ -359,6 +406,7 @@ export function useCommunityPostsFeed(
   const canFetchRef = useRef(true);
 
   useEffect(() => {
+    if (!isActive) return;
     const bottomSentinel = bottomSentinelRef.current;
     if (!bottomSentinel || !containerElement) return;
 
@@ -385,9 +433,10 @@ export function useCommunityPostsFeed(
 
     observer.observe(bottomSentinel);
     return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage, containerElement]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, containerElement, isActive]);
 
   useEffect(() => {
+    if (!isActive) return;
     if (!containerElement) return;
 
     let ticking = false;
@@ -395,6 +444,7 @@ export function useCommunityPostsFeed(
       if (!ticking) {
         requestAnimationFrame(() => {
           handleScroll();
+          persistScrollState();
           ticking = false;
         });
         ticking = true;
@@ -403,7 +453,43 @@ export function useCommunityPostsFeed(
 
     containerElement.addEventListener("scroll", onScroll, { passive: true });
     return () => containerElement.removeEventListener("scroll", onScroll);
-  }, [handleScroll, containerElement]);
+  }, [handleScroll, containerElement, isActive, persistScrollState]);
+
+  useEffect(() => {
+    if (
+      !isActive ||
+      !containerElement ||
+      totalPages === 0 ||
+      didRestoreScrollRef.current
+    ) {
+      return;
+    }
+
+    const stored = feedScrollStore.get(scrollStateKey);
+    const placeholderHeight = pagePositionsRef.current[windowStart]?.start ?? 0;
+    const targetScrollTop = Math.max(
+      0,
+      stored.normalizedScrollTop + placeholderHeight,
+    );
+
+    requestAnimationFrame(() => {
+      if (!containerElement) return;
+      containerElement.scrollTop = targetScrollTop;
+      didRestoreScrollRef.current = true;
+    });
+  }, [containerElement, isActive, scrollStateKey, totalPages, windowStart]);
+
+  useEffect(() => {
+    if (!isActive || !containerElement || totalPages === 0) return;
+    persistScrollState();
+  }, [
+    containerElement,
+    isActive,
+    pageHeights,
+    persistScrollState,
+    totalPages,
+    windowStart,
+  ]);
 
   const loadMore = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
@@ -429,7 +515,10 @@ export function useCommunityPostsFeed(
     error: error?.message ?? null,
     loadMore,
     refresh,
+    persistScrollState,
+    persistScrollStateNow,
     measurePage,
+    getMeasuredPageRef,
     containerRef: scrollContainerRef as React.RefObject<HTMLDivElement>,
     bottomSentinelRef: bottomSentinelRef as React.RefObject<HTMLDivElement>,
   };

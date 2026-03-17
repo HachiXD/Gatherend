@@ -157,6 +157,7 @@ export async function POST(req: Request) {
         data: {
           name: trimmedName,
           imageAssetId: resolvedImageAssetId,
+          createdById: profile.id,
         },
         select: {
           id: true,

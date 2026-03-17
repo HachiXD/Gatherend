@@ -1,6 +1,12 @@
 "use client";
 
-import { memo, type ReactNode, useMemo, type RefObject } from "react";
+import {
+  memo,
+  type CSSProperties,
+  type ReactNode,
+  useMemo,
+  type RefObject,
+} from "react";
 import { useColorExtraction } from "@/hooks/use-color-extraction";
 import { getNeverAnimatedImageUrl } from "@/lib/media-static";
 import { cn } from "@/lib/utils";
@@ -115,6 +121,15 @@ function darkenLightness(color: string) {
   return `rgb(${darkerRed}, ${darkerGreen}, ${darkerBlue})`;
 }
 
+function isVeryDarkColor(color: string) {
+  const rgb = parseRgbColor(color);
+  if (!rgb) return false;
+
+  const [red, green, blue] = rgb;
+  const { l } = rgbToHsl(red, green, blue);
+  return l <= 0.24;
+}
+
 interface CommunityViewShellProps {
   community: CommunityOverview | null;
   activeSection: "boards" | "posts";
@@ -135,7 +150,11 @@ function CommunityViewShellInner({
   children,
 }: CommunityViewShellProps) {
   const bannerImageUrl = community?.imageAsset?.url
-    ? getNeverAnimatedImageUrl(community.imageAsset.url, { w: 2048, h: 512, q: 82 })
+    ? getNeverAnimatedImageUrl(community.imageAsset.url, {
+        w: 2048,
+        h: 512,
+        q: 82,
+      })
     : undefined;
 
   const { dominantColor, handleImageLoad } = useColorExtraction({
@@ -149,6 +168,29 @@ function CommunityViewShellInner({
   const activeTabBg = dominantColor
     ? darkenLightness(tabsBg)
     : "var(--theme-community-tabs-fallback-active-bg)";
+  const useLightButtonVariant = isVeryDarkColor(headerBg);
+  const headerButtonStyles = useMemo(
+    () =>
+      ({
+        backgroundColor: headerBg,
+        "--community-header-btn-bg": useLightButtonVariant
+          ? `color-mix(in srgb, ${headerBg} 82%, white)`
+          : `color-mix(in srgb, ${headerBg} 72%, black)`,
+        "--community-header-btn-hover": useLightButtonVariant
+          ? `color-mix(in srgb, ${headerBg} 68%, white)`
+          : `color-mix(in srgb, ${headerBg} 58%, black)`,
+        "--community-header-btn-top-border": useLightButtonVariant
+          ? `color-mix(in srgb, ${headerBg} 38%, white)`
+          : `color-mix(in srgb, ${headerBg} 58%, white)`,
+        "--community-header-btn-shadow-border": useLightButtonVariant
+          ? `color-mix(in srgb, ${headerBg} 58%, black)`
+          : `color-mix(in srgb, ${headerBg} 42%, black)`,
+        "--community-header-btn-text": `color-mix(in srgb, white 88%, ${headerBg} 12%)`,
+        "--community-header-btn-muted": `color-mix(in srgb, white 68%, ${headerBg} 32%)`,
+        "--community-header-btn-ring": `color-mix(in srgb, white 28%, ${headerBg} 72%)`,
+      }) as CSSProperties,
+    [headerBg, useLightButtonVariant],
+  );
 
   const statsText = useMemo(() => {
     if (!community) return "";
@@ -188,16 +230,13 @@ function CommunityViewShellInner({
               <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent" />
             </div>
             <div className="sticky top-0 z-20 shrink-0 border-b border-theme-border transition-colors duration-300">
-              <div
-                className="px-0 pt-4 pb-4"
-                style={{ backgroundColor: headerBg }}
-              >
-                <div className="mx-6 flex items-start justify-between gap-4">
+              <div className="px-0 pt-3.5 pb-2.5" style={headerButtonStyles}>
+                <div className="ml-4 mr-6 flex items-start justify-between gap-4">
                   <div className="flex min-w-0 flex-1 items-start gap-3">
                     {headerLeading && (
                       <div className="shrink-0">{headerLeading}</div>
                     )}
-                    <div className="-mt-1 min-w-0 flex-1">
+                    <div className="-mt-2 min-w-0 flex-1">
                       <h1 className="text-[20px] font-bold text-white">
                         {community.name}
                       </h1>

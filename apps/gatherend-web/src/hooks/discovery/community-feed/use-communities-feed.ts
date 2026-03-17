@@ -1,6 +1,7 @@
 import { useInfiniteQuery, QueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
+import { feedScrollStore } from "@/stores/feed-scroll-store";
 
 // TYPES
 
@@ -30,6 +31,7 @@ export type PageSlot =
 // CONSTANTS
 
 export const COMMUNITIES_FEED_KEY = ["communities-feed"] as const;
+export const COMMUNITIES_FEED_SCROLL_KEY = "discovery:communities-feed";
 const PAGE_SIZE = 15; // TODO: cambiar a 20 en producción
 // Card height: imagen h-30 (120px) + contenido inferior (~78px con padding y line-heights) = 198px
 const COMMUNITY_CARD_HEIGHT = 198;
@@ -98,12 +100,18 @@ export function useCommunitiesFeed({
   expandThreshold = 0.4,
   enabled = true,
 }: UseCommunitiesFeedOptions = {}) {
+  const scrollStateKey = COMMUNITIES_FEED_SCROLL_KEY;
+  const initialScrollStateRef = useRef(feedScrollStore.get(scrollStateKey));
+  const didRestoreScrollRef = useRef(false);
+
   // Refs
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomSentinelRef = useRef<HTMLDivElement>(null);
 
   // Window state: index of first RENDERED page
-  const [windowStart, setWindowStart] = useState(0);
+  const [windowStart, setWindowStart] = useState(
+    initialScrollStateRef.current.windowStart,
+  );
 
   // Track when container element changes (e.g., switching between search and feed)
   // This forces IntersectionObserver to re-create with correct root
@@ -148,6 +156,11 @@ export function useCommunitiesFeed({
   const pages = useMemo(() => data?.pages ?? [], [data?.pages]);
   const totalPages = pages.length;
 
+  useEffect(() => {
+    if (totalPages === 0) return;
+    setWindowStart((current) => Math.min(current, totalPages - 1));
+  }, [totalPages]);
+
   // FIXED HEIGHT CALCULATIONS - O(1) since all cards have same height
 
   const getPageHeight = useCallback(
@@ -188,6 +201,20 @@ export function useCommunitiesFeed({
 
     return positions;
   }, [totalPages, getPageHeight]);
+
+  const persistScrollState = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const placeholderHeight = pagePositions[windowStart]?.start ?? 0;
+    feedScrollStore.set({
+      key: scrollStateKey,
+      windowStart,
+      pageHeights: {},
+      normalizedScrollTop: Math.max(0, container.scrollTop - placeholderHeight),
+      updatedAt: Date.now(),
+    });
+  }, [pagePositions, scrollStateKey, windowStart]);
 
   // O(1) position lookup using cached positions
   const getPagePosition = useCallback(
@@ -242,6 +269,12 @@ export function useCommunitiesFeed({
       }
     }
   }, [totalPages, windowStart, maxRenderedPages]);
+
+  useEffect(() => {
+    const stored = feedScrollStore.get(scrollStateKey);
+    didRestoreScrollRef.current = false;
+    setWindowStart(stored.windowStart);
+  }, [scrollStateKey]);
 
   // PAGE SLOTS CALCULATION
 
@@ -354,6 +387,7 @@ export function useCommunitiesFeed({
       if (!ticking) {
         requestAnimationFrame(() => {
           handleScroll();
+          persistScrollState();
           ticking = false;
         });
         ticking = true;
@@ -362,7 +396,37 @@ export function useCommunitiesFeed({
 
     containerElement.addEventListener("scroll", onScroll, { passive: true });
     return () => containerElement.removeEventListener("scroll", onScroll);
-  }, [handleScroll, containerElement]);
+  }, [handleScroll, containerElement, persistScrollState]);
+
+  useEffect(() => {
+    if (!containerElement || totalPages === 0 || didRestoreScrollRef.current) {
+      return;
+    }
+
+    const stored = feedScrollStore.get(scrollStateKey);
+    const placeholderHeight = pagePositions[windowStart]?.start ?? 0;
+    const targetScrollTop = Math.max(
+      0,
+      stored.normalizedScrollTop + placeholderHeight,
+    );
+
+    requestAnimationFrame(() => {
+      if (!containerElement) return;
+      containerElement.scrollTop = targetScrollTop;
+      didRestoreScrollRef.current = true;
+    });
+  }, [containerElement, pagePositions, scrollStateKey, totalPages, windowStart]);
+
+  useEffect(() => {
+    if (!containerElement || totalPages === 0) return;
+    persistScrollState();
+  }, [containerElement, persistScrollState, totalPages, windowStart]);
+
+  useEffect(() => {
+    return () => {
+      persistScrollState();
+    };
+  }, [persistScrollState]);
 
   // ACTIONS
 
