@@ -85,9 +85,17 @@ export const EditChannelModal = () => {
   //  MUTATION con TanStack Query  //
   const editChannelMutation = useMutation({
     mutationFn: async (values: z.infer<typeof formSchema>) => {
+      const payload: Partial<z.infer<typeof formSchema>> = {
+        name: values.name,
+      };
+
+      if (channel?.type !== values.type) {
+        payload.type = values.type;
+      }
+
       const response = await axios.patch(
         `/api/boards/${boardId}/channels/${channel?.id}`,
-        values,
+        payload,
       );
       return response.data as BoardChannel;
     },

@@ -211,8 +211,11 @@ export async function PATCH(
         throw new Error("CHANNEL_NOT_FOUND");
       }
 
-      // Validaciones de tipo si se intenta cambiar
-      if (type !== undefined) {
+      const isTypeChange =
+        type !== undefined && (type as ChannelType) !== channel.type;
+
+      // Validaciones de tipo solo si realmente se intenta cambiar
+      if (isTypeChange) {
         // No permitir cambiar tipo de canal MAIN
         if (channel.type === ChannelType.MAIN) {
           throw new Error("CANNOT_MODIFY_MAIN_CHANNEL");
@@ -240,7 +243,7 @@ export async function PATCH(
         where: { id: channelId },
         data: {
           ...(name !== undefined && { name: (name as string).trim() }),
-          ...(type !== undefined && { type: type as ChannelType }),
+          ...(isTypeChange && { type: type as ChannelType }),
         },
       });
     });
