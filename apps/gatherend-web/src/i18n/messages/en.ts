@@ -488,6 +488,11 @@ export const en: TranslationKeys = {
       description: "Are you sure you want to do this?",
       willBeDeleted: "will be permanently deleted.",
     },
+    deleteCommunityPost: {
+      title: "Delete Post",
+      description: "This will remove the post from the forum.",
+      willBeDeleted: "This post will be permanently deleted.",
+    },
     createCategory: {
       title: "Create category",
       nameLabel: "Category name",

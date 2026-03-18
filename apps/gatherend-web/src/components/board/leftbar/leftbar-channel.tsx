@@ -158,12 +158,12 @@ const LeftbarChannelComponent = ({
   const isVoiceChannel = channel.type === ChannelType.VOICE;
 
   return (
-    <div className="w-full">
+    <div className="w-full min-w-0">
       <button
         onClick={onClick}
         onMouseEnter={enableTooltipsOnce}
         className={cn(
-          "group w-[calc(100%)] flex cursor-pointer items-center rounded-[6px] px-0 transition text-left",
+          "group flex w-full min-w-0 max-w-full cursor-pointer items-center overflow-hidden rounded-[6px] px-0 text-left transition",
 
           // Mayor altura para canal MAIN
           channel.type === ChannelType.MAIN ? "py-2" : "py-2",
@@ -189,11 +189,11 @@ const LeftbarChannelComponent = ({
         {/* CONTENIDO: ICONO + NOMBRE (+ PREVIEW para MAIN) */}
         <div
           className={cn(
-            "flex items-center flex-1 min-w-0",
-            isMainChannel && "flex-col items-start gap-0.5",
+            "flex flex-1 min-w-0 overflow-hidden",
+            isMainChannel ? "flex-col items-stretch gap-0.5" : "items-center",
           )}
         >
-          <div className="flex items-center">
+          <div className="flex w-full min-w-0 items-center">
             {/* ICON (solo para TEXT y VOICE) */}
             {!isMainChannel &&
               (isText ? (
@@ -215,7 +215,7 @@ const LeftbarChannelComponent = ({
             {/* NOMBRE DEL CANAL */}
             <p
               className={cn(
-                "line-clamp-1 font-medium text-theme-text-primary transition overflow-hidden text-ellipsis",
+                "min-w-0 flex-1 truncate font-medium text-theme-text-primary transition",
 
                 // Tamaño de texto: MAIN más grande
                 channel.type === ChannelType.MAIN
@@ -224,7 +224,7 @@ const LeftbarChannelComponent = ({
 
                 // Margin izquierdo: MAIN tiene más espacio, texto tiene menos, voz tiene más
                 channel.type === ChannelType.MAIN
-                  ? "ml-1"
+                  ? "ml-1 mr-1"
                   : isText
                     ? "-ml-0.5"
                     : "ml-0.5",
@@ -242,7 +242,7 @@ const LeftbarChannelComponent = ({
 
           {/* PREVIEW DEL ÚLTIMO MENSAJE (solo para MAIN) */}
           {isMainChannel && (
-            <span className="text-xs text-theme-text-tertiary truncate w-full text-left pl-1">
+            <span className="w-full min-w-0 truncate pl-1 text-left text-xs text-theme-text-tertiary">
               {lastMessagePreview}
             </span>
           )}
@@ -250,14 +250,14 @@ const LeftbarChannelComponent = ({
 
         {/* INDICADOR DE MENCIÓN */}
         {hasMentionInChannel && !isActive && (
-          <div className="min-w-[18px] h-[18px] px-1 bg-[#E57373] rounded-full mr-1 flex items-center justify-center">
+          <div className="mr-1 flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full bg-[#E57373] px-1">
             <AtSign className="w-3 h-3 text-white" strokeWidth={3} />
           </div>
         )}
 
         {/* CONTADOR DE MENSAJES NO LEÍDOS */}
         {hasUnread && !isActive && (
-          <div className="min-w-[18px] h-[18px] px-1 bg-[#D6A86C] rounded-full mr-2 flex items-center justify-center">
+          <div className="mr-2 flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full bg-[#D6A86C] px-1">
             <span className="text-[11px] font-bold text-[#3A3027] leading-none">
               {unreadCount > 99 ? "99+" : unreadCount}
             </span>
@@ -266,7 +266,7 @@ const LeftbarChannelComponent = ({
 
         {/* ACCIONES */}
         {role !== MemberRole.GUEST && (
-          <div className="ml-auto mr-2 items-center gap-2 hidden group-hover:flex transition">
+          <div className="ml-auto mr-2 hidden shrink-0 items-center gap-2 transition group-hover:flex">
             {tooltipsEnabled ? (
               <ActionTooltip label={t.board.editChannel}>
                 <Edit

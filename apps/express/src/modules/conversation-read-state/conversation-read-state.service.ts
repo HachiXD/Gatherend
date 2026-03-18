@@ -19,7 +19,7 @@ export async function markConversationAsRead(
     // Primero obtener la conversación para saber qué campo actualizar
     const conversation = await db.conversation.findUnique({
       where: { id: conversationId },
-      select: { profileOneId: true, profileTwoId: true },
+      select: { profileOneId: true, profileTwoId: true, updatedAt: true },
     });
 
     if (!conversation) {
@@ -35,8 +35,16 @@ export async function markConversationAsRead(
     }
 
     const updateData = isProfileOne
-      ? { lastReadByOneAt: new Date() }
-      : { lastReadByTwoAt: new Date() };
+      ? {
+          lastReadByOneAt: new Date(),
+          // Preserve ordering metadata: opening a DM should not bump it.
+          updatedAt: conversation.updatedAt,
+        }
+      : {
+          lastReadByTwoAt: new Date(),
+          // Preserve ordering metadata: opening a DM should not bump it.
+          updatedAt: conversation.updatedAt,
+        };
 
     await db.conversation.update({
       where: { id: conversationId },

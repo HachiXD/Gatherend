@@ -292,13 +292,13 @@ export const EditChannelModal = () => {
                 variant="ghost"
                 disabled={isLoading}
                 onClick={handleClose}
-                className="h-6 cursor-pointer rounded-none bg-theme-bg-cancel-button px-3 text-[12px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+                className="h-6.5 cursor-pointer rounded-none bg-theme-bg-cancel-button px-3 text-[14px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
               >
                 {t.common.cancel}
               </Button>
               <Button
                 type="submit"
-                className="h-6 cursor-pointer rounded-none bg-theme-tab-button-bg px-3 text-[12px] text-theme-text-light hover:bg-theme-tab-button-hover disabled:cursor-not-allowed disabled:opacity-70"
+                className="h-6.5 cursor-pointer rounded-none bg-theme-tab-button-bg px-3 text-[14px] text-theme-text-light hover:bg-theme-tab-button-hover disabled:cursor-not-allowed disabled:opacity-70"
                 disabled={isLoading}
               >
                 {t.common.save}

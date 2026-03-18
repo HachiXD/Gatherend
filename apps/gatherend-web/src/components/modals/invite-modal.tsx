@@ -4,6 +4,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -15,7 +16,7 @@ import { Check, Copy, RefreshCw } from "lucide-react";
 import { useOrigin } from "@/hooks/use-origin";
 import { useState } from "react";
 import axios from "axios";
-import { Switch } from "../ui/switch";
+import { cn } from "@/lib/utils";
 import { useTranslation } from "@/i18n";
 
 export const InviteModal = () => {
@@ -58,12 +59,14 @@ export const InviteModal = () => {
     }
   };
 
-  // Toggle de enable/disable
-  const onToggleInvite = async () => {
+  // Cambiar entre enable/disable
+  const onSetInviteEnabled = async (nextEnabled: boolean) => {
+    if (board?.inviteEnabled === nextEnabled) return;
+
     try {
       setIsLoading(true);
 
-      const action = board?.inviteEnabled ? "disable" : "enable";
+      const action = nextEnabled ? "enable" : "disable";
 
       const response = await axios.patch(
         `/api/boards/${board?.id}/invite-code`,
@@ -79,82 +82,122 @@ export const InviteModal = () => {
     }
   };
 
+  const handleClose = () => {
+    if (isLoading) return;
+    onClose();
+  };
+
   return (
-    <Dialog open={isModalOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-theme-bg-modal max-w-[400px]! text-theme-text-subtle p-0 overflow-hidden">
-        <DialogHeader className="pt-8 px-6">
+    <Dialog open={isModalOpen} onOpenChange={handleClose}>
+      <DialogContent className="max-w-[440px]! overflow-hidden rounded-none border border-theme-border bg-theme-bg-modal p-0 text-theme-text-subtle">
+        <DialogHeader className="px-6 pt-2">
           <DialogTitle className="text-2xl text-center font-bold">
             {t.modals.invite.title}
           </DialogTitle>
-          <DialogDescription className="sr-only">
-            {t.modals.invite.boardInviteLinkLabel}
+          <DialogDescription className="text-center -mt-2 text-[15px] text-theme-text-subtle">
+            {t.modals.invite.description}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="p-6 space-y-6">
-          {/* Toggle ENABLED */}
-          <div className="flex justify-between items-center">
-            <Label
-              htmlFor="invite-enabled-switch"
-              className="uppercase text-[15px] font-bold text-theme-text-subtle"
-            >
-              {t.modals.invite.inviteEnabledLabel}
-            </Label>
-            <Switch
-              id="invite-enabled-switch"
-              checked={board?.inviteEnabled}
-              disabled={isLoading}
-              onCheckedChange={onToggleInvite}
-              className="data-[state=checked]:bg-theme-tab-button-bg cursor-pointer"
-            />
-          </div>
-
-          {/* Invite URL */}
-          <div>
-            <Label
-              htmlFor="invite-url"
-              className="uppercase text-[15px] font-bold text-theme-text-subtle"
-            >
-              {t.modals.invite.boardInviteLinkLabel}
-            </Label>
-
-            <div className="flex items-center mt-2 gap-x-2">
-              <Input
-                id="invite-url"
-                name="invite-url"
-                disabled={isLoading || !board?.inviteEnabled}
-                className="bg-theme-bg-input-modal border-0 focus-visible:ring-0 text-theme-text-light focus-visible:ring-offset-0 text-[15px]!"
-                value={inviteUrl}
-                readOnly
-              />
-
-              <Button
-                disabled={isLoading || !board?.inviteEnabled}
-                onClick={onCopy}
-                size="icon"
-                className="bg-theme-tab-button-bg cursor-pointer hover:bg-theme-tab-button-hover text-theme-text-light hover:text-theme-text-light"
+        <div className="px-6 pb-4 -mt-2.5">
+          <div className="space-y-3 bg-theme-bg-modal px-3 py-2">
+            <div className="flex h-8 items-center justify-between gap-3 border border-theme-border bg-theme-bg-edit-form/60 px-3">
+              <Label className="uppercase text-[14px] font-bold text-theme-text-subtle">
+                {t.modals.invite.inviteEnabledLabel}
+              </Label>
+              <div
+                className="flex"
+                role="group"
+                aria-label={t.modals.invite.inviteEnabledLabel}
               >
-                {copied ? (
-                  <Check className="w-4 h-4" />
-                ) : (
-                  <Copy className="w-4 h-4" />
-                )}
-              </Button>
+                <button
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => onSetInviteEnabled(true)}
+                  className={cn(
+                    "flex h-6 w-12 cursor-pointer items-center justify-center rounded-none border border-r-0 px-3 text-[12px] transition disabled:cursor-not-allowed disabled:opacity-70",
+                    board?.inviteEnabled
+                      ? "border-theme-channel-type-active-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
+                      : "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border",
+                  )}
+                  aria-pressed={board?.inviteEnabled === true}
+                >
+                  {t.common.yes}
+                </button>
+                <button
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => onSetInviteEnabled(false)}
+                  className={cn(
+                    "flex h-6 w-12 cursor-pointer items-center justify-center rounded-none border px-3 text-[12px] transition disabled:cursor-not-allowed disabled:opacity-70",
+                    board?.inviteEnabled === false
+                      ? "border-theme-channel-type-active-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
+                      : "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border",
+                  )}
+                  aria-pressed={board?.inviteEnabled === false}
+                >
+                  {t.common.no}
+                </button>
+              </div>
             </div>
 
-            {/* Regenerate */}
-            <Button
-              onClick={onRegenerate}
-              disabled={isLoading || !board?.inviteEnabled}
-              variant="link"
-              size="sm"
-              className="text-xs cursor-pointer text-theme-text-tertiary mt-4 hover:text-theme-text-secondary"
-            >
-              {t.modals.invite.generateNewLink}
-              <RefreshCw className="w-4 h-4 ml-2" />
-            </Button>
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="invite-url"
+                className="block uppercase text-[15px] font-bold text-theme-text-subtle -mb-1.5"
+              >
+                {t.modals.invite.boardInviteLinkLabel}
+              </Label>
+
+              <div className="flex items-center gap-2">
+                <Input
+                  id="invite-url"
+                  name="invite-url"
+                  disabled={isLoading || !board?.inviteEnabled}
+                  className="h-8 rounded-none border border-theme-border bg-theme-bg-edit-form/60 px-3 py-2 text-[14px] text-theme-text-primary focus-visible:border-theme-border-accent focus-visible:ring-0 focus-visible:ring-offset-0 disabled:text-theme-text-subtle"
+                  value={inviteUrl}
+                  readOnly
+                />
+
+                <Button
+                  type="button"
+                  disabled={isLoading || !board?.inviteEnabled}
+                  onClick={onCopy}
+                  size="icon"
+                  className="h-8 w-8 cursor-pointer rounded-none border border-theme-border bg-theme-tab-button-bg text-theme-text-light hover:bg-theme-tab-button-hover hover:text-theme-text-light disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {copied ? (
+                    <Check className="h-4 w-4" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+
+              <Button
+                type="button"
+                onClick={onRegenerate}
+                disabled={isLoading || !board?.inviteEnabled}
+                variant="ghost"
+                className="mt-1 h-6 cursor-pointer rounded-none px-0 text-[12px] text-theme-text-tertiary hover:bg-transparent hover:text-theme-text-secondary disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {t.modals.invite.generateNewLink}
+                <RefreshCw className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
+        <DialogFooter className="border-t border-theme-border bg-theme-bg-secondary/40 px-6 py-1.5">
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={isLoading}
+            onClick={handleClose}
+            className="h-6 cursor-pointer rounded-none bg-theme-bg-cancel-button px-3 text-[12px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+          >
+            {t.common.close}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

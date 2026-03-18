@@ -85,8 +85,8 @@ export const DeleteChannelModal = () => {
         </DialogHeader>
 
         <div className="space-y-3 px-6 pb-4 -mt-2.5">
-          <div className="border border-theme-border bg-theme-bg-edit-form/60 px-3 py-2">
-            <p className="text-center text-[14px] leading-6 text-theme-text-tertiary">
+          <div className="flex h-8 items-center justify-center border border-theme-border bg-theme-bg-edit-form/60 px-3">
+            <p className="text-center text-[14px] leading-none text-theme-text-tertiary">
               <span className="font-semibold text-red-400">
                 /{channel?.name}
               </span>{" "}
@@ -101,14 +101,14 @@ export const DeleteChannelModal = () => {
             variant="ghost"
             disabled={isPending}
             onClick={handleClose}
-            className="h-6 cursor-pointer rounded-none bg-theme-bg-cancel-button px-3 text-[12px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+            className="h-6.5 cursor-pointer rounded-none bg-theme-bg-cancel-button px-3 text-[14px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
           >
             {t.common.cancel}
           </Button>
           <Button
             type="button"
             disabled={isPending}
-            className="h-6 cursor-pointer rounded-none border border-red-500/60 bg-red-500/80 px-3 text-[12px] text-theme-text-light hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-70"
+            className="h-6.5 cursor-pointer rounded-none border border-red-500/60 bg-red-500/80 px-3 text-[14px] text-theme-text-light hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-70"
             onClick={onClick}
           >
             {t.common.confirm}

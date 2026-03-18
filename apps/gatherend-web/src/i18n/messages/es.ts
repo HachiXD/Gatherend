@@ -491,6 +491,11 @@ export const es: TranslationKeys = {
       description: "¿Estás seguro de que quieres hacer esto?",
       willBeDeleted: "será eliminada permanentemente.",
     },
+    deleteCommunityPost: {
+      title: "Eliminar Post",
+      description: "Esto eliminará el post del foro.",
+      willBeDeleted: "Este post será eliminado permanentemente.",
+    },
     createCategory: {
       title: "Crear categoría",
       nameLabel: "Nombre de la categoría",
@@ -749,7 +754,8 @@ export const es: TranslationKeys = {
     noPasswordAccountDesc: "Esta cuenta no tiene una contraseña configurada.",
     clickToCreatePassword: "Haz clic aquí para crear una contraseña",
     emailNotVerifiedYet: "Tu correo aún no está verificado.",
-    verificationEmailResent: "Enviamos un nuevo enlace de verificación a tu bandeja. Revisa tu correo y haz clic en el enlace, luego intenta iniciar sesión de nuevo.",
+    verificationEmailResent:
+      "Enviamos un nuevo enlace de verificación a tu bandeja. Revisa tu correo y haz clic en el enlace, luego intenta iniciar sesión de nuevo.",
     // Sign Up
     createYourAccount: "Crea tu cuenta",
     joinGatherend: "¡Únete a Gatherend y socializa en pequeñas comunidades!",

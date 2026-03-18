@@ -30,11 +30,7 @@ import {
 import { chatScrollDimensionsStore } from "@/hooks/chat/chat-scroll-dimensions-store";
 
 import { useChatSocket } from "@/hooks/use-chat-socket";
-import { useUnreadStore } from "@/hooks/use-unread-store";
-import { useMentionStore } from "@/hooks/use-mention-store";
 import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
-import { useTokenGetter } from "@/components/providers/token-manager-provider";
-import { getExpressAuthHeaders } from "@/lib/express-fetch";
 
 // CONSTANTS
 
@@ -108,10 +104,6 @@ function ChatMessagesComponent({
 
   // STORES
 
-  const clearUnread = useUnreadStore((state) => state.clearUnread);
-  const setViewingRoom = useUnreadStore((state) => state.setViewingRoom);
-  const setLastAck = useUnreadStore((state) => state.setLastAck);
-  const clearMention = useMentionStore((state) => state.clearMention);
   const scrollTrigger = useScrollToBottom((state) => state.scrollTrigger);
 
   // VIEWPORT STATE
@@ -151,12 +143,7 @@ function ChatMessagesComponent({
   // not represented in the current window (cache or server).
   const hasMoreRecent = chatWindow.hasMoreAfter;
 
-  // AUTH
-
-  const getToken = useTokenGetter();
-
   const prevCauseRef = useRef<{
-    getToken: unknown;
     status: string;
     messageCount: number;
     isFetchingOlder: boolean;
@@ -170,7 +157,6 @@ function ChatMessagesComponent({
   } | null>(null);
 
   const currentCause = {
-    getToken,
     status: chatWindow.status,
     messageCount: chatWindow.messages.length,
     isFetchingOlder: chatWindow.isFetchingOlder,
@@ -186,8 +172,6 @@ function ChatMessagesComponent({
   const changedCause: string[] = [];
   const prevCause = prevCauseRef.current;
 
-  if (!prevCause || prevCause.getToken !== currentCause.getToken)
-    changedCause.push("getTokenRef");
   if (!prevCause || prevCause.status !== currentCause.status)
     changedCause.push("status");
   if (!prevCause || prevCause.messageCount !== currentCause.messageCount)
@@ -434,45 +418,6 @@ function ChatMessagesComponent({
       setPendingNewerMessages((c) => c + 1);
     },
   });
-
-  // MARK AS READ ON MOUNT
-
-  useEffect(() => {
-    setViewingRoom(paramValue);
-    clearUnread(paramValue);
-    clearMention(paramValue);
-    setLastAck(paramValue);
-
-    const markAsRead = async () => {
-      const socketUrl =
-        process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
-      const endpoint =
-        type === "conversation"
-          ? `${socketUrl}/conversation-read-state/${paramValue}/read`
-          : `${socketUrl}/channel-read-state/${paramValue}/read`;
-
-      const token = await getToken();
-      await fetch(endpoint, {
-        method: "POST",
-        credentials: "include",
-        headers: getExpressAuthHeaders(currentProfile.id, token),
-      }).catch(() => {});
-    };
-
-    markAsRead();
-    return () => {
-      setViewingRoom(null);
-    };
-  }, [
-    paramValue,
-    type,
-    currentProfile.id,
-    clearUnread,
-    clearMention,
-    setViewingRoom,
-    setLastAck,
-    getToken,
-  ]);
 
   // RESET ON ROOM CHANGE
 

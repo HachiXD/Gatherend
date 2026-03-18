@@ -177,7 +177,7 @@ export const CreateCommunityPostModal = () => {
                     <FormControl>
                       <Textarea
                         id="community-post-content"
-                          className="scrollbar-ultra-thin h-[160px] resize-none overflow-y-auto rounded-none border border-theme-border-subtle bg-transparent px-3 py-2 text-[12px] leading-5 text-theme-text-light focus-visible:border-theme-border-accent focus-visible:ring-0 focus-visible:ring-offset-0"
+                        className="scrollbar-ultra-thin h-[160px] resize-none overflow-y-auto rounded-none border border-theme-border-subtle bg-transparent px-3 py-2 text-[12px] leading-5 text-theme-text-light focus-visible:border-theme-border-accent focus-visible:ring-0 focus-visible:ring-offset-0"
                         maxLength={2000}
                         placeholder="Escribe tu post..."
                         {...field}
@@ -201,7 +201,7 @@ export const CreateCommunityPostModal = () => {
               <Button
                 type="button"
                 variant="ghost"
-                className="h-6 cursor-pointer rounded-none bg-theme-bg-cancel-button px-3 text-[12px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+                className="h-6.5 cursor-pointer rounded-none bg-theme-bg-cancel-button px-3 text-[14px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
                 onClick={handleClose}
                 disabled={createPostMutation.isPending}
               >
@@ -210,7 +210,7 @@ export const CreateCommunityPostModal = () => {
               <Button
                 type="submit"
                 disabled={createPostMutation.isPending}
-                className="h-6 cursor-pointer rounded-none bg-theme-tab-button-bg px-3 text-[12px] text-theme-text-light hover:bg-theme-tab-button-hover disabled:cursor-not-allowed disabled:opacity-70"
+                className="h-6.5 cursor-pointer rounded-none bg-theme-tab-button-bg px-3 text-[14px] text-theme-text-light hover:bg-theme-tab-button-hover disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {createPostMutation.isPending ? "Publicando..." : "Publicar"}
               </Button>

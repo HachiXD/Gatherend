@@ -503,6 +503,11 @@ export type TranslationKeys = {
       description: string;
       willBeDeleted: string;
     };
+    deleteCommunityPost: {
+      title: string;
+      description: string;
+      willBeDeleted: string;
+    };
     createCategory: {
       title: string;
       nameLabel: string;
