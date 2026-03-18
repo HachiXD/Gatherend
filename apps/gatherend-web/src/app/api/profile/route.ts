@@ -106,6 +106,28 @@ function serializeProfileResponse(profile: ProfileResponseRecord) {
   };
 }
 
+function buildRealtimeProfilePatch(profile: ProfileResponseRecord) {
+  return {
+    username: profile.username,
+    discriminator: profile.discriminator,
+    avatarAssetId: profile.avatarAssetId,
+    avatarAsset: serializePublicAsset(profile.avatarAsset),
+    bannerAssetId: profile.bannerAssetId,
+    bannerAsset: serializePublicAsset(profile.bannerAsset),
+    usernameColor: profile.usernameColor,
+    usernameFormat: profile.usernameFormat,
+    badge: profile.badge,
+    badgeStickerId: profile.badgeStickerId,
+    badgeSticker: profile.badgeSticker
+      ? {
+          id: profile.badgeSticker.id,
+          asset: serializePublicAsset(profile.badgeSticker.asset),
+        }
+      : null,
+    longDescription: profile.longDescription,
+  };
+}
+
 export async function GET() {
   try {
     const rateLimitResponse = await checkRateLimit(RATE_LIMITS.api);
@@ -544,17 +566,7 @@ export async function PATCH(req: Request) {
       await profileCache.invalidate(cacheKey);
     }
 
-    emitProfileUpdated(profile.id, {
-      username: updatedProfile.username,
-      discriminator: updatedProfile.discriminator,
-      avatarAssetId: updatedProfile.avatarAssetId,
-      bannerAssetId: updatedProfile.bannerAssetId,
-      usernameColor: updatedProfile.usernameColor,
-      usernameFormat: updatedProfile.usernameFormat,
-      badge: updatedProfile.badge,
-      badgeStickerId: updatedProfile.badgeStickerId,
-      longDescription: updatedProfile.longDescription,
-    });
+    emitProfileUpdated(profile.id, buildRealtimeProfilePatch(updatedProfile));
 
     return NextResponse.json(serializeProfileResponse(updatedProfile));
   } catch (error) {
