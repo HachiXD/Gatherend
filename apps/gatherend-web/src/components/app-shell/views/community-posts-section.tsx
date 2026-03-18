@@ -264,7 +264,7 @@ function PostBodyWithImage({
     <>
       <div
         ref={lineRef}
-        className="-mt-0.5 whitespace-pre-wrap break-words text-[13px] leading-5 text-theme-text-secondary [overflow-wrap:anywhere]"
+        className="-mt-0.5 whitespace-pre-wrap break-words text-[14px] leading-5 text-theme-text-secondary [overflow-wrap:anywhere]"
       >
         <span ref={usernameRef} className="whitespace-nowrap">
           {usernameSlot}
@@ -273,7 +273,7 @@ function PostBodyWithImage({
         <span>{split.firstLine}</span>
       </div>
 
-      <div className="whitespace-pre-wrap break-words text-[13px] leading-5 text-theme-text-secondary [overflow-wrap:anywhere]">
+      <div className="whitespace-pre-wrap break-words text-[14px] leading-5 text-theme-text-secondary [overflow-wrap:anywhere]">
         <PostImageAttachment imageUrl={imageUrl} alt={alt} />
         <span>{split.remainder}</span>
       </div>
@@ -1244,7 +1244,7 @@ function CommunityPostsSectionInner({
                                           >
                                             <span
                                               className={cn(
-                                                "cursor-pointer text-[13px] font-semibold text-white hover:underline",
+                                                "cursor-pointer text-[14px] font-semibold text-white hover:underline",
                                                 getUsernameFormatClasses(
                                                   post.author.usernameFormat,
                                                 ),
@@ -1267,7 +1267,7 @@ function CommunityPostsSectionInner({
                                           </UserAvatarMenu>
                                           <span
                                             className={cn(
-                                              "text-[13px] font-semibold",
+                                              "text-[14px] font-semibold",
                                               getGradientAnimationClass(
                                                 post.author.usernameColor,
                                               ),
@@ -1287,7 +1287,7 @@ function CommunityPostsSectionInner({
                                       }
                                     />
                                   ) : (
-                                    <div className="-mt-0.5 whitespace-pre-wrap break-words text-[13px] leading-5 text-theme-text-secondary [overflow-wrap:anywhere]">
+                                    <div className="-mt-0.5 whitespace-pre-wrap break-words text-[14px] leading-5 text-theme-text-secondary [overflow-wrap:anywhere]">
                                       <span className="whitespace-nowrap">
                                         <UserAvatarMenu
                                           profileId={post.author.id}
@@ -1309,7 +1309,7 @@ function CommunityPostsSectionInner({
                                         >
                                           <span
                                             className={cn(
-                                              "cursor-pointer text-[13px] font-semibold text-white hover:underline",
+                                              "cursor-pointer text-[14px] font-semibold text-white hover:underline",
                                               getUsernameFormatClasses(
                                                 post.author.usernameFormat,
                                               ),
@@ -1331,7 +1331,7 @@ function CommunityPostsSectionInner({
                                         </UserAvatarMenu>
                                         <span
                                           className={cn(
-                                            "text-[13px] font-semibold",
+                                            "text-[14px] font-semibold",
                                             getGradientAnimationClass(
                                               post.author.usernameColor,
                                             ),
@@ -1370,7 +1370,7 @@ function CommunityPostsSectionInner({
                                         current === post.id ? null : post.id,
                                       );
                                     }}
-                                    className="cursor-pointer text-[13px] text-theme-text-tertiary transition hover:underline"
+                                    className="cursor-pointer text-[14px] text-theme-text-tertiary transition hover:underline"
                                   >
                                     Reply
                                   </button>
@@ -1382,7 +1382,7 @@ function CommunityPostsSectionInner({
                                           post.id,
                                         )
                                       }
-                                      className="cursor-pointer text-[12px] text-theme-text-tertiary transition hover:underline"
+                                      className="cursor-pointer text-[14px] text-theme-text-tertiary transition hover:underline"
                                     >
                                       {isExpandedCommentsLoading
                                         ? "Loading comments..."

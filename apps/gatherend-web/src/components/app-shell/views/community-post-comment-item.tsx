@@ -139,25 +139,25 @@ function CommunityPostCommentItemInner({
                 />
               )}
               {comment.author.badge && (
-                <span className="pt-2 text-[10px] leading-none text-theme-text-tertiary">
+                <span className="pt-2 text-[11px] leading-none text-theme-text-tertiary">
                   {comment.author.badge}
                 </span>
               )}
             </span>
-            <span className="pt-2 text-[10px] text-theme-text-tertiary">|</span>
+            <span className="pt-2 text-[11px] text-theme-text-tertiary">|</span>
           </>
         )}
-        <span className="text-[10px] text-theme-text-tertiary">
+        <span className="text-[11px] text-theme-text-tertiary">
           <span className="inline-block pt-2">
             {formatCommentDate(comment.createdAt)}
           </span>
         </span>
         {comment.replyToCommentId && comment.replyToComment && (
           <>
-            <span className="inline-block pt-2 text-[10px] text-theme-text-tertiary">
+            <span className="inline-block pt-2 text-[11px] text-theme-text-tertiary">
               |
             </span>
-            <span className="inline-block pt-2 text-[10px] text-theme-text-tertiary">
+            <span className="inline-block pt-2 text-[11px] text-theme-text-tertiary">
               Replying to {getReplyingToLabel(comment)}
             </span>
           </>
@@ -201,9 +201,9 @@ function CommunityPostCommentItemInner({
 
           <div
             className={cn(
-              "whitespace-pre-wrap break-words text-[13px] leading-5 text-theme-text-secondary [overflow-wrap:anywhere]",
+              "whitespace-pre-wrap break-words text-[14px] leading-5 text-theme-text-secondary [overflow-wrap:anywhere]",
               comment.deleted && "mt-1.5",
-              comment.deleted && "text-[11px] text-theme-text-tertiary",
+              comment.deleted && "text-[14px] text-theme-text-tertiary",
             )}
           >
             <span className="whitespace-nowrap">
@@ -220,7 +220,7 @@ function CommunityPostCommentItemInner({
               >
                 <span
                   className={cn(
-                    "cursor-pointer text-[13px] font-semibold text-white hover:underline",
+                    "cursor-pointer text-[14px] font-semibold text-white hover:underline",
                     getUsernameFormatClasses(comment.author.usernameFormat),
                     getGradientAnimationClass(comment.author.usernameColor),
                   )}
@@ -234,7 +234,7 @@ function CommunityPostCommentItemInner({
               </UserAvatarMenu>
               <span
                 className={cn(
-                  "text-[13px] font-semibold",
+                  "text-[14px] font-semibold",
                   getGradientAnimationClass(comment.author.usernameColor),
                 )}
                 style={getUsernameColorStyle(comment.author.usernameColor, {
@@ -256,7 +256,7 @@ function CommunityPostCommentItemInner({
               <button
                 type="button"
                 onClick={() => onReply?.(comment.id)}
-                className="cursor-pointer text-[13px] text-theme-text-tertiary transition hover:underline"
+                className="cursor-pointer text-[14px] text-theme-text-tertiary transition hover:underline"
               >
                 Reply
               </button>
@@ -265,7 +265,7 @@ function CommunityPostCommentItemInner({
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
-                      className="cursor-pointer text-[13px] leading-none text-theme-text-tertiary transition hover:underline"
+                      className="cursor-pointer text-[14px] leading-none text-theme-text-tertiary transition hover:underline"
                       aria-label="Open comment actions"
                     >
                       ...
