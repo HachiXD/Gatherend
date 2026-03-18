@@ -99,7 +99,7 @@ export const InviteModal = () => {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="px-6 pb-4 -mt-2.5">
+        <div className="px-6 pb-4 -mt-4.5 -mb-4">
           <div className="space-y-3 bg-theme-bg-modal px-3 py-2">
             <div className="flex h-8 items-center justify-between gap-3 border border-theme-border bg-theme-bg-edit-form/60 px-3">
               <Label className="uppercase text-[14px] font-bold text-theme-text-subtle">
@@ -144,12 +144,12 @@ export const InviteModal = () => {
             <div className="space-y-1.5">
               <Label
                 htmlFor="invite-url"
-                className="block uppercase text-[15px] font-bold text-theme-text-subtle -mb-1.5"
+                className="block uppercase text-[15px] font-bold text-theme-text-subtle -mt-1 mb-0.5"
               >
                 {t.modals.invite.boardInviteLinkLabel}
               </Label>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mb-0">
                 <Input
                   id="invite-url"
                   name="invite-url"
@@ -179,21 +179,21 @@ export const InviteModal = () => {
                 onClick={onRegenerate}
                 disabled={isLoading || !board?.inviteEnabled}
                 variant="ghost"
-                className="mt-1 h-6 cursor-pointer rounded-none px-0 text-[12px] text-theme-text-tertiary hover:bg-transparent hover:text-theme-text-secondary disabled:cursor-not-allowed disabled:opacity-70"
+                className="-mt-4 -ml-2.5 h-6 cursor-pointer rounded-none px-0 text-[12px] text-theme-text-tertiary hover:bg-transparent hover:text-theme-text-secondary disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {t.modals.invite.generateNewLink}
-                <RefreshCw className="ml-2 h-4 w-4" />
+                <RefreshCw className="-ml-0.5 -mt-0.5 h-4 w-4" />
               </Button>
             </div>
           </div>
         </div>
-        <DialogFooter className="border-t border-theme-border bg-theme-bg-secondary/40 px-6 py-1.5">
+        <DialogFooter className="border-t border-theme-border bg-theme-bg-secondary/40 px-6 py-1.5 -mt-5">
           <Button
             type="button"
             variant="ghost"
             disabled={isLoading}
             onClick={handleClose}
-            className="h-6 cursor-pointer rounded-none bg-theme-bg-cancel-button px-3 text-[12px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+            className="h-6.5 cursor-pointer rounded-none bg-theme-bg-cancel-button px-3 text-[14px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
           >
             {t.common.close}
           </Button>
