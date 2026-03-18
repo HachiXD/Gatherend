@@ -67,18 +67,6 @@ function formatCommentDate(value: string) {
   }).format(new Date(value));
 }
 
-function getReplyPreview(content: string, deleted: boolean) {
-  if (deleted) {
-    return "comentario eliminado";
-  }
-
-  if (content.length <= 72) {
-    return content;
-  }
-
-  return `${content.slice(0, 72)}...`;
-}
-
 function getReplyingToLabel(comment: CommunityPostCommentItemData) {
   if (!comment.replyToCommentId || !comment.replyToComment) {
     return "OP";
@@ -213,7 +201,7 @@ function CommunityPostCommentItemInner({
 
           <div
             className={cn(
-              "whitespace-pre-wrap break-words text-[12px] leading-5 text-theme-text-secondary [overflow-wrap:anywhere]",
+              "whitespace-pre-wrap break-words text-[13px] leading-5 text-theme-text-secondary [overflow-wrap:anywhere]",
               comment.deleted && "mt-1.5",
               comment.deleted && "text-[11px] text-theme-text-tertiary",
             )}
@@ -232,7 +220,7 @@ function CommunityPostCommentItemInner({
               >
                 <span
                   className={cn(
-                    "cursor-pointer text-[12px] font-semibold text-white hover:underline",
+                    "cursor-pointer text-[13px] font-semibold text-white hover:underline",
                     getUsernameFormatClasses(comment.author.usernameFormat),
                     getGradientAnimationClass(comment.author.usernameColor),
                   )}
@@ -246,7 +234,7 @@ function CommunityPostCommentItemInner({
               </UserAvatarMenu>
               <span
                 className={cn(
-                  "text-[12px] font-semibold",
+                  "text-[13px] font-semibold",
                   getGradientAnimationClass(comment.author.usernameColor),
                 )}
                 style={getUsernameColorStyle(comment.author.usernameColor, {
@@ -268,7 +256,7 @@ function CommunityPostCommentItemInner({
               <button
                 type="button"
                 onClick={() => onReply?.(comment.id)}
-                className="cursor-pointer text-[12px] text-theme-text-tertiary transition hover:underline"
+                className="cursor-pointer text-[13px] text-theme-text-tertiary transition hover:underline"
               >
                 Reply
               </button>
@@ -277,7 +265,7 @@ function CommunityPostCommentItemInner({
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
-                      className="cursor-pointer text-[12px] leading-none text-theme-text-tertiary transition hover:underline"
+                      className="cursor-pointer text-[13px] leading-none text-theme-text-tertiary transition hover:underline"
                       aria-label="Open comment actions"
                     >
                       ...
