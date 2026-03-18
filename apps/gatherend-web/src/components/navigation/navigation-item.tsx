@@ -14,6 +14,7 @@ import type { BoardWithData } from "@/components/providers/board-provider";
 import { fetchWithRetry } from "@/lib/fetch-with-retry";
 import { getOptimizedStaticUiImageUrl } from "@/lib/ui-image-optimizer";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
+import { ChannelType } from "@prisma/client";
 
 const STORAGE_DOMAIN = process.env.NEXT_PUBLIC_STORAGE_DOMAIN || "";
 
@@ -173,9 +174,9 @@ const NavigationItemComponent = ({
         ...board.categories.flatMap((cat) => cat.channels),
       ];
       if (allChannels.length === 0) return null;
-      // Prioridad: canal "gathern" (MAIN) > primer canal por posición
-      const gathernChannel = allChannels.find((c) => c.name === "gathern");
-      if (gathernChannel) return gathernChannel.id;
+      // Prioridad: canal MAIN > primer canal por posición
+      const mainChannel = allChannels.find((c) => c.type === ChannelType.MAIN);
+      if (mainChannel) return mainChannel.id;
       const sortedChannels = [...allChannels].sort(
         (a, b) => a.position - b.position,
       );

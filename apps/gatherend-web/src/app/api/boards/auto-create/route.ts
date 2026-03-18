@@ -224,7 +224,7 @@ export async function POST(req: Request) {
             createMany: {
               data: [
                 {
-                  name: "gathern",
+                  name: "Main",
                   type: ChannelType.MAIN,
                   profileId: profile.id,
                 },

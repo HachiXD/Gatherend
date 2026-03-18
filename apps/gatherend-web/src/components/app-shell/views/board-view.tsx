@@ -11,7 +11,7 @@ import { GatherendOutlineSVG } from "@/lib/gatherend-outline";
  *
  * Prioridad de redirección (manejada por el hook):
  * 1. Último channel visitado (desde localStorage) si aún existe
- * 2. Canal "gathern" si existe
+ * 2. Canal MAIN si existe
  * 3. Primer canal por posición
  */
 export function BoardView() {
