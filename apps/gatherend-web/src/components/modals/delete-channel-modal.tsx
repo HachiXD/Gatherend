@@ -67,38 +67,52 @@ export const DeleteChannelModal = () => {
     );
   };
 
+  const handleClose = () => {
+    if (isPending) return;
+    onClose();
+  };
+
   return (
-    <Dialog open={isModalOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-theme-bg-modal !max-w-[400px] text-theme-text-subtle p-0 overflow-hidden">
-        <DialogHeader className="pt-8 px-6">
+    <Dialog open={isModalOpen} onOpenChange={handleClose}>
+      <DialogContent className="max-w-[420px]! overflow-hidden rounded-none border border-theme-border bg-theme-bg-modal p-0 text-theme-text-subtle">
+        <DialogHeader className="px-6 pt-2">
           <DialogTitle className="text-2xl text-center font-bold">
             {t.modals.deleteChannel.title}
           </DialogTitle>
-          <DialogDescription className="text-center text-[15px] text-theme-text-tertiary">
-            {t.modals.deleteChannel.description} <br />
-            <span className="font-semibold text-red-400">
-              /{channel?.name}
-            </span>{" "}
-            {t.modals.deleteChannel.willBeDeleted}
+          <DialogDescription className="text-center text-[15px] -mt-2 text-theme-text-subtle">
+            {t.modals.deleteChannel.description}
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter className="bg-theme-bg-modal px-6 py-4">
-          <div className="flex items-center justify-center gap-20 w-full">
-            <Button
-              disabled={isPending}
-              onClick={onClose}
-              className="bg-theme-bg-cancel-button hover:bg-theme-bg-cancel-button-hover cursor-pointer text-theme-text-subtle hover:text-theme-text-light"
-            >
-              {t.common.cancel}
-            </Button>
-            <Button
-              disabled={isPending}
-              className="bg-red-500 cursor-pointer hover:bg-red-600 text-theme-text-light hover:text-theme-text-light"
-              onClick={onClick}
-            >
-              {t.common.confirm}
-            </Button>
+
+        <div className="space-y-3 px-6 pb-4 -mt-2.5">
+          <div className="border border-theme-border bg-theme-bg-edit-form/60 px-3 py-2">
+            <p className="text-center text-[14px] leading-6 text-theme-text-tertiary">
+              <span className="font-semibold text-red-400">
+                /{channel?.name}
+              </span>{" "}
+              {t.modals.deleteChannel.willBeDeleted}
+            </p>
           </div>
+        </div>
+
+        <DialogFooter className="border-t border-theme-border bg-theme-bg-secondary/40 px-6 py-1.5 -mt-5.5">
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={isPending}
+            onClick={handleClose}
+            className="h-6 cursor-pointer rounded-none bg-theme-bg-cancel-button px-3 text-[12px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+          >
+            {t.common.cancel}
+          </Button>
+          <Button
+            type="button"
+            disabled={isPending}
+            className="h-6 cursor-pointer rounded-none border border-red-500/60 bg-red-500/80 px-3 text-[12px] text-theme-text-light hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-70"
+            onClick={onClick}
+          >
+            {t.common.confirm}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

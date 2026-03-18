@@ -176,6 +176,7 @@ export const EditChannelModal = () => {
   };
 
   const handleClose = () => {
+    if (isLoading) return;
     form.reset();
     onClose();
   };
@@ -183,10 +184,10 @@ export const EditChannelModal = () => {
   return (
     <Dialog open={isModalOpen} onOpenChange={handleClose}>
       <DialogContent
-        className="bg-theme-bg-modal !max-w-[400px] text-theme-text-subtle p-0 overflow-hidden"
+        className="max-w-[440px]! overflow-hidden rounded-none border border-theme-border bg-theme-bg-modal p-0 text-theme-text-subtle"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <DialogHeader className="pt-8 px-6">
+        <DialogHeader className="px-6 pt-2">
           <DialogTitle className="text-2xl text-center font-bold">
             {t.modals.editChannel.title}
           </DialogTitle>
@@ -195,115 +196,113 @@ export const EditChannelModal = () => {
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <div className="space-y-3 px-6">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel
-                      htmlFor="edit-channel-name"
-                      className="uppercase text-[15px] font-bold text-theme-text-subtle"
-                    >
-                      {t.modals.editChannel.nameLabel}
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        id="edit-channel-name"
-                        disabled={isLoading}
-                        className="bg-theme-bg-input-modal border-0
-                          focus-visible:ring-0 text-theme-text-primary 
-                          focus-visible:ring-offset-0 !text-[15px]"
-                        placeholder={t.modals.editChannel.namePlaceholder}
-                        autoComplete="off"
-                        {...field}
-                        ref={(e) => {
-                          field.ref(e);
-                          inputRef.current = e;
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              {/* Solo mostrar selector de tipo si NO es canal MAIN */}
-              {channel?.type !== ChannelType.MAIN && (
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <div className="px-6 pb-4 -mt-2.5">
+              <div className="space-y-3 bg-theme-bg-modal px-3 py-2 -mt-6">
                 <FormField
                   control={form.control}
-                  name="type"
+                  name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <span
-                        id="edit-channel-type-label"
-                        className="uppercase text-[15px] font-bold text-theme-text-subtle"
+                      <FormLabel
+                        htmlFor="edit-channel-name"
+                        className="uppercase text-[15px] font-bold text-theme-text-subtle -mb-1.5"
                       >
-                        {t.modals.editChannel.typeLabel}
-                      </span>
+                        {t.modals.editChannel.nameLabel}
+                      </FormLabel>
                       <FormControl>
-                        <div
-                          className="flex gap-10 justify-center"
-                          role="group"
-                          aria-labelledby="edit-channel-type-label"
-                        >
-                          <button
-                            type="button"
-                            disabled={isLoading}
-                            onClick={() => field.onChange(ChannelType.TEXT)}
-                            className={cn(
-                              "flex items-center justify-center gap-0 py-2 px-3 rounded-md transition cursor-pointer",
-                              "border-2 w-28",
-                              field.value === ChannelType.TEXT
-                                ? "border-theme-channel-type-active-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
-                                : "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border",
-                            )}
-                          >
-                            <SlashSVG className="w-6 h-6 -mr-1" />
-                            <span className="mr-4">
-                              {t.modals.editChannel.text}
-                            </span>
-                          </button>
-                          <button
-                            type="button"
-                            disabled={isLoading}
-                            onClick={() => field.onChange(ChannelType.VOICE)}
-                            className={cn(
-                              "flex items-center justify-center gap-0 py-2 px-3 rounded-md transition cursor-pointer",
-                              "border-2 w-28",
-                              field.value === ChannelType.VOICE
-                                ? "border-theme-channel-type-active-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
-                                : "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border",
-                            )}
-                          >
-                            <Mic className="w-6 h-6" />
-                            <span>{t.modals.editChannel.voice}</span>
-                          </button>
-                        </div>
+                        <Input
+                          id="edit-channel-name"
+                          disabled={isLoading}
+                          className="rounded-none border border-theme-border bg-theme-bg-edit-form/60 h-8 px-3 py-2 text-[14px] text-theme-text-primary focus-visible:border-theme-border-accent focus-visible:ring-0 focus-visible:ring-offset-0"
+                          placeholder={t.modals.editChannel.namePlaceholder}
+                          autoComplete="off"
+                          {...field}
+                          ref={(e) => {
+                            field.ref(e);
+                            inputRef.current = e;
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              )}
-            </div>
-            <DialogFooter className="bg-theme-bg-modal px-6 py-4">
-              <div className="flex items-center justify-center gap-20 w-full -mt-4">
-                <Button
-                  type="button"
-                  disabled={isLoading}
-                  onClick={handleClose}
-                  className="bg-theme-bg-cancel-button hover:bg-theme-bg-cancel-button-hover cursor-pointer text-theme-text-subtle hover:text-theme-text-light"
-                >
-                  {t.common.cancel}
-                </Button>
-                <Button
-                  className="bg-theme-tab-button-bg hover:bg-theme-tab-button-hover text-theme-text-light hover:text-theme-text-light cursor-pointer"
-                  disabled={isLoading}
-                >
-                  {t.common.save}
-                </Button>
+
+                {/* Solo mostrar selector de tipo si NO es canal MAIN */}
+                {channel?.type !== ChannelType.MAIN && (
+                  <FormField
+                    control={form.control}
+                    name="type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <span
+                          id="edit-channel-type-label"
+                          className="block uppercase text-[15px] font-bold text-theme-text-subtle -mt-1"
+                        >
+                          {t.modals.editChannel.typeLabel}
+                        </span>
+                        <FormControl>
+                          <div
+                            className="flex justify-center gap-3 -mt-1.5"
+                            role="group"
+                            aria-labelledby="edit-channel-type-label"
+                          >
+                            <button
+                              type="button"
+                              disabled={isLoading}
+                              onClick={() => field.onChange(ChannelType.TEXT)}
+                              className={cn(
+                                "flex h-8 w-32 cursor-pointer items-center justify-center gap-1.5 rounded-none border px-3 text-[14px] transition",
+                                field.value === ChannelType.TEXT
+                                  ? "border-theme-channel-type-active-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
+                                  : "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border",
+                              )}
+                            >
+                              <SlashSVG className="h-5 w-5 -mr-1.5" />
+                              <span>{t.modals.editChannel.text}</span>
+                            </button>
+                            <button
+                              type="button"
+                              disabled={isLoading}
+                              onClick={() => field.onChange(ChannelType.VOICE)}
+                              className={cn(
+                                "flex h-8 w-32 cursor-pointer items-center justify-center gap-1.5 rounded-none border px-3 text-[14px] transition",
+                                field.value === ChannelType.VOICE
+                                  ? "border-theme-channel-type-active-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
+                                  : "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border",
+                              )}
+                            >
+                              <Mic className="h-5 w-5 -mr-1" />
+                              <span>{t.modals.editChannel.voice}</span>
+                            </button>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
+            </div>
+
+            <DialogFooter className="border-t border-theme-border bg-theme-bg-secondary/40 px-6 py-1.5 -mt-3">
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={isLoading}
+                onClick={handleClose}
+                className="h-6 cursor-pointer rounded-none bg-theme-bg-cancel-button px-3 text-[12px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+              >
+                {t.common.cancel}
+              </Button>
+              <Button
+                type="submit"
+                className="h-6 cursor-pointer rounded-none bg-theme-tab-button-bg px-3 text-[12px] text-theme-text-light hover:bg-theme-tab-button-hover disabled:cursor-not-allowed disabled:opacity-70"
+                disabled={isLoading}
+              >
+                {t.common.save}
+              </Button>
             </DialogFooter>
           </form>
         </Form>
