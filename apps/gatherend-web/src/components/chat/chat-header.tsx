@@ -50,7 +50,7 @@ const ChatHeaderComponent = ({
     (isVoiceConnected || isVoiceConnecting);
 
   return (
-    <div className="hidden h-9 shrink-0 items-center border-b border-theme-border bg-theme-bg-quaternary px-3 md:flex">
+    <div className="hidden h-9 shrink-0 items-center bg-theme-bg-quaternary px-3 md:flex">
       {/* MobileToggle removido - sidebars disponibles en layout SPA */}
       <ChatHeaderClient
         boardId={boardId}
