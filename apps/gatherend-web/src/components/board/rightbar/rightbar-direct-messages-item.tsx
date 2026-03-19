@@ -137,8 +137,11 @@ export const DirectMessageItem = memo(function DirectMessageItemComponent({
           onClick={onClick}
           disabled={isPending || isHiding}
           className={cn(
-            "group flex items-center gap-x-2 w-full hover:bg-theme-border-secondary cursor-pointer transition mb-1 py-1 px-2 rounded-md relative",
-            isActive && "bg-theme-border-primary",
+            "group flex items-center gap-x-2 w-full cursor-pointer transition mb-1 py-1 px-2 rounded-none relative",
+            "border border-transparent hover:border-theme-border hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_-1px_0_rgba(0,0,0,0.38)]",
+            "hover:bg-theme-channel-hover",
+            isActive &&
+              "bg-theme-channel-active border-transparent border-l-4 [border-left-color:var(--theme-border-accent-active-channel)] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_-1px_0_rgba(0,0,0,0.38)]",
             (isPending || isHiding) && "opacity-50",
           )}
           onMouseEnter={() => {
@@ -157,18 +160,18 @@ export const DirectMessageItem = memo(function DirectMessageItemComponent({
             className="h-8 w-8 md:h-8 md:w-8"
             ringColorClass="indicator-ring"
             overlayRingColorClass={cn(
-              "bg-theme-bg-secondary group-hover:bg-theme-border-secondary",
-              isActive && "!bg-theme-border-primary",
+              "bg-theme-bg-secondary group-hover:bg-theme-channel-hover",
+              isActive && "!bg-theme-channel-active",
               (isPending || isHiding) && "opacity-50",
             )}
             animationMode="onHover"
             isHovered={isHovered}
           />
 
-          <div className="flex flex-col items-start gap-y-1 flex-1">
+          <div className="flex flex-col items-start gap-y-0 flex-1">
             <p
               className={cn(
-                "text-sm transition",
+                "text-[14.5px] transition",
                 getUsernameFormatClasses(otherProfile.usernameFormat),
                 getGradientAnimationClass(otherProfile.usernameColor),
                 // Si no tiene color personalizado, usar estilos por defecto
@@ -186,7 +189,7 @@ export const DirectMessageItem = memo(function DirectMessageItemComponent({
               {otherProfile.username}
             </p>
 
-            <span className="text-xs text-theme-text-tertiary truncate w-[140px] text-left">
+            <span className="text-[13px] text-theme-text-tertiary truncate w-[140px] text-left">
               {lastMessagePreview}
             </span>
           </div>

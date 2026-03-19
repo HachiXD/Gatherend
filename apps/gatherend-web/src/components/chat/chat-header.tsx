@@ -40,7 +40,8 @@ const ChatHeaderComponent = ({
     context: voiceContext,
   } = useVoiceStore();
 
-  const isVoiceChannel = type === "channel" && channelType === ChannelType.VOICE;
+  const isVoiceChannel =
+    type === "channel" && channelType === ChannelType.VOICE;
   const canFullscreen =
     isVoiceChannel &&
     Boolean(channelId) &&
@@ -49,13 +50,7 @@ const ChatHeaderComponent = ({
     (isVoiceConnected || isVoiceConnecting);
 
   return (
-    <div
-      className="
-        hidden md:flex items-center px-3 shrink-0
-        h-10                    
-         bg-theme-bg-quaternary backdrop-blur-sm     
-      "
-    >
+    <div className="hidden h-9 shrink-0 items-center border-b border-theme-border bg-theme-bg-quaternary px-3 md:flex">
       {/* MobileToggle removido - sidebars disponibles en layout SPA */}
       <ChatHeaderClient
         boardId={boardId}

@@ -163,25 +163,35 @@ const LeftbarChannelComponent = ({
         onClick={onClick}
         onMouseEnter={enableTooltipsOnce}
         className={cn(
-          "group flex w-full min-w-0 max-w-full cursor-pointer items-center overflow-hidden rounded-[6px] px-0 text-left transition",
+          "group flex w-full min-w-0 max-w-full cursor-pointer items-center overflow-hidden rounded-none px-0 text-left transition",
+          channel.type === ChannelType.MAIN
+            ? "shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]"
+            : " hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_-1px_0_rgba(0,0,0,0.38)]",
 
           // Mayor altura para canal MAIN
-          channel.type === ChannelType.MAIN ? "py-2" : "py-2",
+          channel.type === ChannelType.MAIN
+            ? "bg-theme-bg-edit-form/35 px-1.5 py-1"
+            : "py-1",
 
           // Editorial hover: underline + soft background on hover
-          "hover:bg-theme-channel-hover",
+          channel.type === ChannelType.MAIN
+            ? "hover:bg-theme-channel-hover"
+            : "hover:bg-theme-channel-hover",
 
           // Active = editorial highlight + bold + stronger underline
           isActive &&
-            "bg-theme-channel-active border-l-4 border-theme-border-accent-active-channel",
+            channel.type !== ChannelType.MAIN &&
+            "border-theme-border shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_-1px_0_rgba(0,0,0,0.38)]",
+          isActive && "bg-theme-channel-active",
+          isActive && "border-l-4 border-theme-border-accent-active-channel",
         )}
       >
         {/* ICONO HOME centrado verticalmente (solo para MAIN) */}
         {isMainChannel && (
           <Home
             className={cn(
-              "w-7.5 h-7.5 text-theme-text-tertiary shrink-0 ml-1 self-center",
-              isActive && "text-theme-accent-primary",
+              "ml-1 h-7 w-7 shrink-0 self-center border border-theme-border bg-theme-bg-secondary/40 p-1.5 text-theme-text-tertiary transition shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]",
+              isActive && "bg-theme-channel-active text-theme-accent-primary",
             )}
           />
         )}
@@ -190,7 +200,7 @@ const LeftbarChannelComponent = ({
         <div
           className={cn(
             "flex flex-1 min-w-0 overflow-hidden",
-            isMainChannel ? "flex-col items-stretch gap-0.5" : "items-center",
+            isMainChannel ? "flex-col items-stretch gap-0" : "items-center",
           )}
         >
           <div className="flex w-full min-w-0 items-center">
@@ -219,21 +229,25 @@ const LeftbarChannelComponent = ({
 
                 // Tamaño de texto: MAIN más grande
                 channel.type === ChannelType.MAIN
-                  ? "text-[16px]"
-                  : "text-[14px]",
+                  ? "text-[15.5px]"
+                  : "text-[14.5px]",
 
                 // Margin izquierdo: MAIN tiene más espacio, texto tiene menos, voz tiene más
                 channel.type === ChannelType.MAIN
-                  ? "ml-1 mr-1"
+                  ? "ml-2 mr-1"
                   : isText
                     ? "-ml-0.5"
                     : "ml-0.5",
 
                 // Editorial hover: underline
-                "group-hover:underline underline-offset-4",
+                channel.type === ChannelType.MAIN
+                  ? "tracking-[0.01em]"
+                  : "group-hover:underline underline-offset-4",
 
                 isActive &&
-                  "font-semibold text-theme-accent-primary underline underline-offset-4",
+                  (channel.type === ChannelType.MAIN
+                    ? "font-semibold text-theme-accent-primary"
+                    : "font-semibold text-theme-accent-primary underline underline-offset-4"),
               )}
             >
               {channel.name}
@@ -242,7 +256,12 @@ const LeftbarChannelComponent = ({
 
           {/* PREVIEW DEL ÚLTIMO MENSAJE (solo para MAIN) */}
           {isMainChannel && (
-            <span className="w-full min-w-0 truncate pl-1 text-left text-xs text-theme-text-tertiary">
+            <span
+              className={cn(
+                "w-full min-w-0 truncate pl-2 pr-1 text-left text-[13px] leading-tight text-theme-text-tertiary",
+                isActive && "text-theme-text-subtle",
+              )}
+            >
               {lastMessagePreview}
             </span>
           )}

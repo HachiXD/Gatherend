@@ -111,9 +111,9 @@ const ChatInputComponent = ({
   const shouldRefocusAfterSubmitRef = useRef(false);
   const submitFromSendButtonRef = useRef<() => void>(() => {});
   const sendButtonElRef = useRef<HTMLButtonElement | null>(null);
-  const sendButtonTouchStartHandlerRef = useRef<((ev: TouchEvent) => void) | null>(
-    null,
-  );
+  const sendButtonTouchStartHandlerRef = useRef<
+    ((ev: TouchEvent) => void) | null
+  >(null);
   const typingApiRef = useRef<TypingApi>({
     startTyping: () => {},
     stopTyping: () => {},
@@ -191,7 +191,9 @@ const ChatInputComponent = ({
   const { addOptimisticMessage, confirmOptimisticMessage } =
     useOptimisticMessages();
   const setRetryData = useMessageRetryStore((state) => state.setRetryData);
-  const removeRetryData = useMessageRetryStore((state) => state.removeRetryData);
+  const removeRetryData = useMessageRetryStore(
+    (state) => state.removeRetryData,
+  );
 
   const [typingText, setTypingText] = useState("");
   const handleTypingText = useCallback((next: string) => {
@@ -360,8 +362,7 @@ const ChatInputComponent = ({
     if (replyRoomId && replyRoomId !== roomId) {
       clearReply();
     }
-    return () => {
-    };
+    return () => {};
   }, [roomId, replyRoomId, clearReply]);
 
   // Focus input when reply is triggered
@@ -369,8 +370,7 @@ const ChatInputComponent = ({
     if (focusTrigger > 0 && replyRoomId === roomId) {
       scheduleFocusInput(50);
     }
-    return () => {
-    };
+    return () => {};
   }, [focusTrigger, replyRoomId, roomId, scheduleFocusInput]);
 
   const isReplyingInThisRoom = replyingTo && replyRoomId === roomId;
@@ -504,7 +504,9 @@ const ChatInputComponent = ({
     void submitWithGuard();
   };
 
-  const handleSendButtonPointerDown = (e: ReactPointerEvent<HTMLButtonElement>) => {
+  const handleSendButtonPointerDown = (
+    e: ReactPointerEvent<HTMLButtonElement>,
+  ) => {
     // Prevent the button from stealing focus from the textarea on mobile.
     // Otherwise the keyboard closes briefly (viewport jumps) and then reopens when we re-focus.
     lastSubmitOriginRef.current = "send_button";
@@ -727,9 +729,7 @@ const ChatInputComponent = ({
     setFilePreview(null);
   };
 
-  const handleStickerSubmit = async (
-    sticker: ClientSticker,
-  ) => {
+  const handleStickerSubmit = async (sticker: ClientSticker) => {
     // Reset typing state so the next keystroke can re-trigger typing-start
     stopTyping();
     const isCoarsePointer = window.matchMedia?.("(pointer: coarse)")?.matches;
@@ -743,7 +743,12 @@ const ChatInputComponent = ({
     }
 
     // Optimistic update
-    const tempId = addOptimisticMessage(chatQueryKey, "", currentProfile, sticker);
+    const tempId = addOptimisticMessage(
+      chatQueryKey,
+      "",
+      currentProfile,
+      sticker,
+    );
 
     // Store retry data
     setRetryData(tempId, {
@@ -837,7 +842,7 @@ const ChatInputComponent = ({
       >
         {/* Reply Preview - Outside relative container to affect layout flow */}
         {isReplyingInThisRoom && replyingTo && (
-          <div className="border-t border-theme-border-primary bg-theme-bg-tertiary p-2 px-5 flex items-center justify-between rounded-t-md">
+          <div className="border-t border-theme-border-primary bg-theme-bg-tertiary p-2 px-5 flex items-center justify-between rounded-none">
             <div className="flex-1 text-sm min-w-0">
               <span className="font-semibold text-theme-text-secondary">
                 {t.chat.replyingTo} {replyingTo.sender.username}
@@ -861,289 +866,293 @@ const ChatInputComponent = ({
             </button>
           </div>
         )}
-        <div className="relative px-4 pt-[13px] pb-2" suppressHydrationWarning>
-                  {/* Typing Indicator - Absolute overlay, doesn't affect layout */}
-                  {typingText && (
-                    <div className="absolute -top-2 left-4 right-4 pointer-events-none z-10">
-                      <div className="bg-theme-bg-tertiary/95 backdrop-blur-sm px-2 py-0.5">
-                        <p className="text-[11px] text-theme-text-tertiary italic truncate">
-                          {typingText}
-                        </p>
-                      </div>
-                    </div>
-                  )}
+        <div
+          className="relative px-0 pt-[13px] pb-2 mr-4"
+          suppressHydrationWarning
+        >
+          {/* Typing Indicator - Absolute overlay, doesn't affect layout */}
+          {typingText && (
+            <div className="absolute -top-2 left-4 right-4 pointer-events-none z-10">
+              <div className="bg-theme-bg-tertiary/95 backdrop-blur-sm px-2 py-0.5">
+                <p className="text-[11px] text-theme-text-tertiary italic truncate">
+                  {typingText}
+                </p>
+              </div>
+            </div>
+          )}
 
-                  {/* File Preview */}
-                  {filePreview && (
-                    <div className="absolute -top-26 left-4 right-4 bg-theme-bg-secondary rounded-md p-3 shadow-lg border border-theme-border-primary">
-                      <div className="flex items-start gap-3">
-                        {/* Preview Thumbnail */}
-                        {filePreview.type.startsWith("image/") ? (
-                          <div className="relative h-20 w-20 rounded overflow-hidden flex-shrink-0">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={filePreview.url}
-                              alt={filePreview.name}
-                              className="h-full w-full object-cover"
-                              loading="lazy"
-                              decoding="async"
-                            />
-                          </div>
-                        ) : (
-                          <div className="h-20 w-20 flex items-center justify-center bg-theme-bg-secondary rounded flex-shrink-0">
-                            <FileIcon className="h-10 w-10 text-theme-text-tertiary" />
-                          </div>
-                        )}
-
-                        {/* File Info */}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-theme-text-primary truncate">
-                            {filePreview.name}
-                          </p>
-                          <p className="text-xs text-theme-text-tertiary">
-                            {filePreview.type.startsWith("image/")
-                              ? t.chat.image
-                              : t.chat.pdf}{" "}
-                            • {(filePreview.size / 1024).toFixed(1)} KB
-                          </p>
-                          <p className="text-xs text-theme-text-muted mt-1">
-                            {t.chat.pressEnterToSend}
-                          </p>
-                        </div>
-
-                        {/* Cancel Button */}
-                        <button
-                          type="button"
-                          onClick={handleCancelFile}
-                          className="flex-shrink-0 cursor-pointer text-theme-text-tertiary hover:text-theme-text-secondary transition"
-                        >
-                          <X className="h-5 w-5" />
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Mention Autocomplete - Only for channels */}
-                  {type === "channel" && (
-                    <MentionAutocomplete
-                      inputValue={content}
-                      cursorPosition={cursorPosition}
-                      onSelect={handleMentionSelect}
-                      inputRef={inputRef}
-                      isOpen={mentionOpen}
-                      setIsOpen={setMentionOpen}
+          {/* File Preview */}
+          {filePreview && (
+            <div className="absolute -top-26 left-4 right-4 border border-theme-border-primary bg-theme-bg-secondary p-3 shadow-lg rounded-none">
+              <div className="flex items-start gap-3">
+                {/* Preview Thumbnail */}
+                {filePreview.type.startsWith("image/") ? (
+                  <div className="relative h-20 w-20 overflow-hidden flex-shrink-0 rounded-none">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={filePreview.url}
+                      alt={filePreview.name}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                      decoding="async"
                     />
-                  )}
+                  </div>
+                ) : (
+                  <div className="h-20 w-20 flex items-center justify-center bg-theme-bg-secondary flex-shrink-0 rounded-none">
+                    <FileIcon className="h-10 w-10 text-theme-text-tertiary" />
+                  </div>
+                )}
 
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    className="hidden"
-                    onChange={handleFileUpload}
-                    accept="image/*,.pdf"
-                  />
+                {/* File Info */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-theme-text-primary truncate">
+                    {filePreview.name}
+                  </p>
+                  <p className="text-xs text-theme-text-tertiary">
+                    {filePreview.type.startsWith("image/")
+                      ? t.chat.image
+                      : t.chat.pdf}{" "}
+                    • {(filePreview.size / 1024).toFixed(1)} KB
+                  </p>
+                  <p className="text-xs text-theme-text-muted mt-1">
+                    {t.chat.pressEnterToSend}
+                  </p>
+                </div>
 
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploading}
-                    className="absolute top-1/2 -translate-y-3.5 left-8 h-6 w-6 bg-theme-chat-input-icon
-    hover:bg-theme-chat-input-icon-hover transition rounded-full cursor-pointer
+                {/* Cancel Button */}
+                <button
+                  type="button"
+                  onClick={handleCancelFile}
+                  className="flex-shrink-0 cursor-pointer text-theme-text-tertiary hover:text-theme-text-secondary transition"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Mention Autocomplete - Only for channels */}
+          {type === "channel" && (
+            <MentionAutocomplete
+              inputValue={content}
+              cursorPosition={cursorPosition}
+              onSelect={handleMentionSelect}
+              inputRef={inputRef}
+              isOpen={mentionOpen}
+              setIsOpen={setMentionOpen}
+            />
+          )}
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            onChange={handleFileUpload}
+            accept="image/*,.pdf"
+          />
+          <div className="flex items-stretch gap-2 pl-2.5 pr-2 mx-3 py-3 border border-theme-border-subtle -mt-2 mb-0.5">
+            <div className="flex shrink-0 items-center">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                className="h-6 w-6 bg-theme-chat-input-icon hover:bg-theme-chat-input-icon-hover transition rounded-full cursor-pointer
     p-1 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isUploading ? (
-                      <Loader2 className="h-4 w-4 text-theme-bg-primary animate-spin" />
-                    ) : (
-                      <Plus className="text-theme-bg-input-plus" />
-                    )}
-                  </button>
-                  <textarea
-                    aria-disabled={isLoading}
-                    className="pl-14 pr-28 md:pr-20 pt-3.5 pb-3 bg-theme-bg-quaternary
-                  border-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:outline-none
+              >
+                {isUploading ? (
+                  <Loader2 className="h-4 w-4 text-theme-bg-primary animate-spin" />
+                ) : (
+                  <Plus className="text-theme-bg-input-plus" />
+                )}
+              </button>
+            </div>
+
+            <div className="min-w-0 flex-1 border border-theme-border-subtle bg-theme-bg-quaternary focus-within:border-theme-border-accent">
+              <textarea
+                aria-disabled={isLoading}
+                className="w-full bg-transparent px-3 pt-4 pb-2 -mt-3 -mb-3 border-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:outline-none
                   text-theme-text-secondary text-[14px] placeholder:text-theme-text-muted
-                  w-full resize-none overflow-y-auto min-h-[48px] max-h-[225px] rounded-md"
-                    placeholder={
-                      isNarrowScreen
-                        ? t.chat.messagePlaceholderShort
-                        : `${t.chat.message} ${type === "conversation" ? name : "/" + name}`
+                  resize-none overflow-y-auto min-h-[48px] max-h-[225px] rounded-none"
+                placeholder={
+                  isNarrowScreen
+                    ? t.chat.messagePlaceholderShort
+                    : `${t.chat.message} ${type === "conversation" ? name : "/" + name}`
+                }
+                rows={1}
+                value={content}
+                ref={inputRef}
+                onChange={(e) => {
+                  const textarea = e.target;
+                  const newValue = e.target.value;
+
+                  // Update cursor position for mention autocomplete
+                  setCursorPosition(textarea.selectionStart);
+
+                  // Validate max 2000 characters
+                  if (newValue.length > 2000) {
+                    const truncated = newValue.substring(0, 2000);
+                    e.target.value = truncated;
+                    commitContent(truncated);
+                  } else {
+                    commitContent(newValue);
+                  }
+
+                  // Auto-resize textarea up to max height
+                  textarea.style.height = "auto";
+                  textarea.style.height =
+                    Math.min(textarea.scrollHeight, 225) + "px";
+
+                  if (newValue) {
+                    startTyping();
+                  } else {
+                    stopTyping();
+                  }
+                }}
+                onSelect={(e) => {
+                  // Update cursor position when selection changes (click, arrow keys)
+                  setCursorPosition(e.currentTarget.selectionStart);
+                }}
+                onPaste={(e) => {
+                  // If clipboard contains an image, upload it and do not paste text.
+                  const items = Array.from(e.clipboardData?.items || []);
+                  const imageFiles = items
+                    .filter(
+                      (it) =>
+                        it.kind === "file" && it.type.startsWith("image/"),
+                    )
+                    .map((it) => it.getAsFile())
+                    .filter((f): f is File => Boolean(f));
+
+                  if (imageFiles.length > 0) {
+                    e.preventDefault();
+                    // Current ChatInput only supports a single attachment per message.
+                    handlePastedImageUpload(imageFiles[0]);
+                    if (imageFiles.length > 1) {
+                      toast.message(
+                        t.chat.onlyFirstImageUsed ||
+                          "Only the first pasted image will be attached",
+                      );
                     }
-                    rows={1}
-                    value={content}
-                    ref={inputRef}
-                    onChange={(e) => {
-                      const textarea = e.target;
-                      const newValue = e.target.value;
+                    return;
+                  }
 
-                      // Update cursor position for mention autocomplete
-                      setCursorPosition(textarea.selectionStart);
+                  const textarea = e.currentTarget;
+                  const pastedText = e.clipboardData.getData("text");
+                  const currentValue =
+                    textarea.value || contentRef.current || "";
+                  const selectionStart = textarea.selectionStart;
+                  const selectionEnd = textarea.selectionEnd;
 
-                      // Validate max 2000 characters
-                      if (newValue.length > 2000) {
-                        const truncated = newValue.substring(0, 2000);
-                        e.target.value = truncated;
-                        commitContent(truncated);
-                      } else {
-                        commitContent(newValue);
-                      }
+                  // Calculate what the new value would be
+                  const newValue =
+                    currentValue.substring(0, selectionStart) +
+                    pastedText +
+                    currentValue.substring(selectionEnd);
 
-                      // Auto-resize textarea up to max height
+                  // If it would exceed 2000 characters, truncate
+                  if (newValue.length > 2000) {
+                    e.preventDefault();
+                    const availableChars =
+                      2000 -
+                      (currentValue.length - (selectionEnd - selectionStart));
+                    const truncatedPaste = pastedText.substring(
+                      0,
+                      Math.max(0, availableChars),
+                    );
+
+                    const truncatedValue =
+                      currentValue.substring(0, selectionStart) +
+                      truncatedPaste +
+                      currentValue.substring(selectionEnd);
+
+                    commitContent(truncatedValue);
+
+                    // Update textarea height
+                    setTimeout(() => {
                       textarea.style.height = "auto";
                       textarea.style.height =
                         Math.min(textarea.scrollHeight, 225) + "px";
+                      // Set cursor position after pasted text
+                      const newCursorPos =
+                        selectionStart + truncatedPaste.length;
+                      textarea.setSelectionRange(newCursorPos, newCursorPos);
+                    }, 0);
 
-                      if (newValue) {
-                        startTyping();
-                      } else {
-                        stopTyping();
-                      }
-                    }}
-                    onSelect={(e) => {
-                      // Update cursor position when selection changes (click, arrow keys)
-                      setCursorPosition(e.currentTarget.selectionStart);
-                    }}
-                    onPaste={(e) => {
-                      // If clipboard contains an image, upload it and do not paste text.
-                      const items = Array.from(e.clipboardData?.items || []);
-                      const imageFiles = items
-                        .filter(
-                          (it) =>
-                            it.kind === "file" && it.type.startsWith("image/"),
-                        )
-                        .map((it) => it.getAsFile())
-                        .filter((f): f is File => Boolean(f));
+                    if (truncatedValue) {
+                      startTyping();
+                    }
+                  }
+                }}
+                onBlur={() => {
+                  stopTyping();
+                }}
+                onKeyDown={(e) => {
+                  // Submit on Enter (without Shift)
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    if (isLoading) return;
+                    lastSubmitOriginRef.current = "enter_key";
+                    shouldRefocusAfterSubmitRef.current = true;
+                    void submitWithGuard();
+                  }
+                }}
+              />
+            </div>
 
-                      if (imageFiles.length > 0) {
-                        e.preventDefault();
-                        // Current ChatInput only supports a single attachment per message.
-                        handlePastedImageUpload(imageFiles[0]);
-                        if (imageFiles.length > 1) {
-                          toast.message(
-                            t.chat.onlyFirstImageUsed ||
-                              "Only the first pasted image will be attached",
-                          );
-                        }
-                        return;
-                      }
-
-                      const textarea = e.currentTarget;
-                      const pastedText = e.clipboardData.getData("text");
-                      const currentValue =
-                        textarea.value || (contentRef.current || "");
-                      const selectionStart = textarea.selectionStart;
-                      const selectionEnd = textarea.selectionEnd;
-
-                      // Calculate what the new value would be
-                      const newValue =
-                        currentValue.substring(0, selectionStart) +
-                        pastedText +
-                        currentValue.substring(selectionEnd);
-
-                      // If it would exceed 2000 characters, truncate
-                      if (newValue.length > 2000) {
-                        e.preventDefault();
-                        const availableChars =
-                          2000 -
-                          (currentValue.length -
-                            (selectionEnd - selectionStart));
-                        const truncatedPaste = pastedText.substring(
-                          0,
-                          Math.max(0, availableChars),
-                        );
-
-                        const truncatedValue =
-                          currentValue.substring(0, selectionStart) +
-                          truncatedPaste +
-                          currentValue.substring(selectionEnd);
-
-                        commitContent(truncatedValue);
-
-                        // Update textarea height
-                        setTimeout(() => {
-                          textarea.style.height = "auto";
-                          textarea.style.height =
-                            Math.min(textarea.scrollHeight, 225) + "px";
-                          // Set cursor position after pasted text
-                          const newCursorPos =
-                            selectionStart + truncatedPaste.length;
-                          textarea.setSelectionRange(
-                            newCursorPos,
-                            newCursorPos,
-                          );
-                        }, 0);
-
-                        if (truncatedValue) {
-                          startTyping();
-                        }
-                      }
-                    }}
-                    onBlur={() => {
-                      stopTyping();
-                    }}
-                    onKeyDown={(e) => {
-                      // Submit on Enter (without Shift)
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        if (isLoading) return;
-                        lastSubmitOriginRef.current = "enter_key";
-                        shouldRefocusAfterSubmitRef.current = true;
-                        void submitWithGuard();
-                      }
-                    }}
-                  />
-                  <div className="absolute top-1/2 -translate-y-3.5 right-8">
-                    <div className="flex gap-2">
-                      {filePreview ? (
-                        <button
-                          type="button"
-                          ref={setSendButtonEl}
-                          onPointerDown={handleSendButtonPointerDown}
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={handleSendButtonClick}
-                          disabled={isLoading || isSendingFile}
-                          className="h-6 w-6 bg-theme-button-primary hover:bg-theme-button-send-hover transition rounded-full
+            <div className="flex shrink-0 items-center">
+              <div className="flex gap-2">
+                {filePreview ? (
+                  <button
+                    type="button"
+                    ref={setSendButtonEl}
+                    onPointerDown={handleSendButtonPointerDown}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={handleSendButtonClick}
+                    disabled={isLoading || isSendingFile}
+                    className="h-6 w-6 bg-theme-button-primary hover:bg-theme-button-send-hover transition rounded-full
                             p-1 flex items-center cursor-pointer justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {isSendingFile ? (
-                            <Loader2 className="h-4 w-4 text-white animate-spin" />
-                          ) : (
-                            <Send className="h-4 w-4 text-white translate-x-[-0.5px] translate-y-[1px]" />
-                          )}
-                        </button>
-                      ) : (
-                        <>
-                          <StickerPicker
-                            onChange={(sticker) => handleStickerSubmit(sticker)}
-                            profileId={currentProfile.id}
-                          />
-                          <EmojiPicker
-                            onChange={(emoji: string) => {
-                              const next = `${contentRef.current}${emoji}`;
-                              commitContent(
-                                next.length > 2000 ? next.substring(0, 2000) : next,
-                              );
-                              startTyping();
-                              // Focus back to input after emoji selection
-                              scheduleFocusInput();
-                            }}
-                          />
-                          {/* Mobile send button - Solo visible en móvil */}
-                          <button
-                            type="button"
-                            ref={setSendButtonEl}
-                            onPointerDown={handleSendButtonPointerDown}
-                            onMouseDown={(e) => e.preventDefault()}
-                            onClick={handleSendButtonClick}
-                            disabled={isLoading}
-                            className="md:hidden h-7.5 w-7.5 bg-theme-button-primary hover:bg-theme-button-send-hover transition rounded-full
+                  >
+                    {isSendingFile ? (
+                      <Loader2 className="h-4 w-4 text-white animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4 text-white translate-x-[-0.5px] translate-y-[1px]" />
+                    )}
+                  </button>
+                ) : (
+                  <>
+                    <StickerPicker
+                      onChange={(sticker) => handleStickerSubmit(sticker)}
+                      profileId={currentProfile.id}
+                    />
+                    <EmojiPicker
+                      onChange={(emoji: string) => {
+                        const next = `${contentRef.current}${emoji}`;
+                        commitContent(
+                          next.length > 2000 ? next.substring(0, 2000) : next,
+                        );
+                        startTyping();
+                        // Focus back to input after emoji selection
+                        scheduleFocusInput();
+                      }}
+                    />
+                    {/* Mobile send button - Solo visible en móvil */}
+                    <button
+                      type="button"
+                      ref={setSendButtonEl}
+                      onPointerDown={handleSendButtonPointerDown}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={handleSendButtonClick}
+                      disabled={isLoading}
+                      className="md:hidden h-7.5 w-7.5 bg-theme-button-primary hover:bg-theme-button-send-hover transition rounded-full
                               p-1 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            <Send className="h-5 w-5 text-white translate-x-[-0.5px] translate-y-[1px]" />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
+                    >
+                      <Send className="h-5 w-5 text-white translate-x-[-0.5px] translate-y-[1px]" />
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </form>
     </>

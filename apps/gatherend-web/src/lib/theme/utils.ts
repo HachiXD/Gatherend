@@ -122,7 +122,7 @@ const GRADIENT_LIGHTNESS_RANGES = {
  */
 export function clampGradientColor(
   hex: string,
-  mode: "dark" | "light"
+  mode: "dark" | "light",
 ): string {
   const { h, s, l } = hexToHsl(hex);
   const range = GRADIENT_LIGHTNESS_RANGES[mode];
@@ -148,10 +148,15 @@ export function generatePaletteFromBase(baseColor: string): ThemeColors {
   const clampL = (ratio: number, min: number, max: number) =>
     Math.min(max, Math.max(min, l * ratio));
 
-  const bgSecondary = hslToHex(h + 4, clampS(0.32, 22, 43), clampL(0.47, 19, 22));
+  const bgSecondary = hslToHex(
+    h + 4,
+    clampS(0.32, 22, 43),
+    clampL(0.47, 19, 22),
+  );
   const communityTabsFallbackBg = toCommunityTabsFallbackBg(bgSecondary);
-  const communityTabsFallbackActiveBg =
-    toCommunityTabsFallbackActiveBg(communityTabsFallbackBg);
+  const communityTabsFallbackActiveBg = toCommunityTabsFallbackActiveBg(
+    communityTabsFallbackBg,
+  );
 
   return {
     // Backgrounds - Muy oscuros con el hue del color base
@@ -160,12 +165,12 @@ export function generatePaletteFromBase(baseColor: string): ThemeColors {
     bgOverlayPrimary: hslToHex(
       h + 3,
       clampS(0.35, 24, 45),
-      clampL(0.32, 13, 16)
+      clampL(0.32, 13, 16),
     ), // Mismo que bgPrimary, para overlays
     bgDropdownMenuPrimary: hslToHex(
       h + 3,
       clampS(0.35, 24, 45),
-      clampL(0.32, 13, 16)
+      clampL(0.32, 13, 16),
     ), // Mismo que bgPrimary, para dropdown menus
     bgSecondary,
     bgTertiary: hslToHex(h + 6, clampS(0.25, 17, 37), clampL(0.57, 23, 26)),
@@ -200,8 +205,8 @@ export function generatePaletteFromBase(baseColor: string): ThemeColors {
 
     // Channels - Jerarquía: Bg < Hover < Active
     channelBg: hslToHex(h + 5, clampS(0.29, 20, 36), clampL(0.57, 23, 26)),
-    channelHover: hslToHex(h + 3, clampS(0.26, 22, 34), clampL(0.65, 26, 29)),
-    channelActive: hslToHex(h + 3, clampS(0.26, 20, 34), clampL(0.7, 28, 31)),
+    channelHover: hslToHex(h + 3, clampS(0.29, 22, 34), clampL(0.57, 22, 24)),
+    channelActive: hslToHex(h + 3, clampS(0.29, 20, 34), clampL(0.57, 24, 26)),
 
     // UI Elements
     tooltipBg: hslToHex(h + 1, clampS(0.36, 33, 38), clampL(0.87, 34, 40)),
@@ -235,17 +240,17 @@ export function generatePaletteFromBase(baseColor: string): ThemeColors {
     reactionActiveBg: hslToHex(
       h - 2,
       clampS(0.44, 28, 34),
-      clampL(0.6, 22, 26)
+      clampL(0.6, 22, 26),
     ),
     reactionActiveBorder: hslToHex(
       h - 1,
       clampS(0.6, 38, 45),
-      clampL(1.0, 37, 43)
+      clampL(1.0, 37, 43),
     ),
     reactionActiveText: hslToHex(
       h - 9,
       clampS(0.24, 14, 20),
-      clampL(2.15, 82, 88)
+      clampL(2.15, 82, 88),
     ),
 
     // Reactions - default
@@ -273,7 +278,7 @@ export function generatePaletteFromBase(baseColor: string): ThemeColors {
     bgCancelButtonHover: hslToHex(
       h - 3,
       clampS(0.2, 12, 17),
-      clampL(0.75, 28, 32)
+      clampL(0.75, 28, 32),
     ),
 
     // Chat input icons
@@ -281,44 +286,44 @@ export function generatePaletteFromBase(baseColor: string): ThemeColors {
     chatInputIconHover: hslToHex(
       h - 9,
       clampS(0.43, 27, 33),
-      clampL(1.5, 57, 63)
+      clampL(1.5, 57, 63),
     ),
 
     // Channel type buttons (Text/Voice)
     channelTypeActiveBorder: hslToHex(
       h,
       clampS(0.7, 38, 48),
-      clampL(0.92, 34, 40)
+      clampL(0.92, 34, 40),
     ),
     channelTypeActiveBg: `hsla(${h}, ${clampS(0.7, 38, 48)}%, ${clampL(
       0.92,
       34,
-      40
+      40,
     )}%, 0.4)`,
     channelTypeActiveText: hslToHex(
       h,
       clampS(0.55, 28, 38),
-      clampL(2.4, 92, 96)
+      clampL(2.4, 92, 96),
     ),
     channelTypeInactiveBg: hslToHex(
       h,
       clampS(0.24, 11, 18),
-      clampL(0.67, 24, 30)
+      clampL(0.67, 24, 30),
     ),
     channelTypeInactiveBorder: hslToHex(
       h,
       clampS(0.1, 4, 8),
-      clampL(1.05, 38, 44)
+      clampL(1.05, 38, 44),
     ),
     channelTypeInactiveHoverBorder: hslToHex(
       h,
       clampS(0.1, 4, 8),
-      clampL(1.2, 44, 50)
+      clampL(1.2, 44, 50),
     ),
     channelTypeInactiveText: hslToHex(
       h,
       clampS(0.1, 4, 8),
-      clampL(2.0, 74, 80)
+      clampL(2.0, 74, 80),
     ),
 
     // Scrollbars - Navigation Sidebar
@@ -326,7 +331,7 @@ export function generatePaletteFromBase(baseColor: string): ThemeColors {
     scrollbarNavThumbHover: hslToHex(
       h,
       clampS(0.26, 12, 24),
-      clampL(1.12, 42, 48)
+      clampL(1.12, 42, 48),
     ),
 
     // Scrollbars - Main (Feed + Chat)
@@ -334,21 +339,21 @@ export function generatePaletteFromBase(baseColor: string): ThemeColors {
     scrollbarMainThumbHover: hslToHex(
       h,
       clampS(0.29, 14, 26),
-      clampL(1.25, 47, 53)
+      clampL(1.25, 47, 53),
     ),
 
     // App Settings button - target: hsl(171, 39%, 26%)
     appSettingsHover: hslToHex(
       h + 1,
       clampS(0.81, 35, 45),
-      clampL(0.74, 24, 28)
+      clampL(0.74, 24, 28),
     ),
 
     // Custom User Button - target: hsl(172, 45%, 31%)
     accentCustomUserButton: hslToHex(
       h + 2,
       clampS(0.94, 40, 50),
-      clampL(0.89, 28, 34)
+      clampL(0.89, 28, 34),
     ),
 
     // Tab hover - target: hsl(169, 37%, 31%)
@@ -358,14 +363,14 @@ export function generatePaletteFromBase(baseColor: string): ThemeColors {
     borderAccentItemReplyPreview: hslToHex(
       h,
       clampS(0.9, 50, 80),
-      clampL(0.95, 36, 44)
+      clampL(0.95, 36, 44),
     ),
 
     // Active channel border - mismo color que buttonPrimary adaptado (dark)
     borderAccentActiveChannel: hslToHex(
       h,
       clampS(0.9, 50, 80),
-      clampL(0.95, 36, 44)
+      clampL(0.95, 36, 44),
     ),
 
     // Edit form background - dark mode
@@ -388,10 +393,15 @@ export function generateLightPaletteFromBase(baseColor: string): ThemeColors {
   const clampL = (ratio: number, min: number, max: number) =>
     Math.min(max, Math.max(min, l * ratio));
 
-  const bgSecondary = hslToHex(h + 34, clampS(1.43, 65, 100), clampL(2.17, 83, 91));
+  const bgSecondary = hslToHex(
+    h + 34,
+    clampS(1.43, 65, 100),
+    clampL(2.17, 83, 91),
+  );
   const communityTabsFallbackBg = toCommunityTabsFallbackBg(bgSecondary);
-  const communityTabsFallbackActiveBg =
-    toCommunityTabsFallbackActiveBg(communityTabsFallbackBg);
+  const communityTabsFallbackActiveBg = toCommunityTabsFallbackActiveBg(
+    communityTabsFallbackBg,
+  );
 
   return {
     // Backgrounds - Vibrantes/Candy con alta saturación
@@ -400,12 +410,12 @@ export function generateLightPaletteFromBase(baseColor: string): ThemeColors {
     bgOverlayPrimary: hslToHex(
       h + 30,
       clampS(1.35, 70, 100),
-      clampL(1.9, 72, 80)
+      clampL(1.9, 72, 80),
     ), // Mismo que bgPrimary, para overlays
     bgDropdownMenuPrimary: hslToHex(
       h + 30,
       clampS(1.35, 70, 100),
-      clampL(1.9, 72, 80)
+      clampL(1.9, 72, 80),
     ), // Mismo que bgPrimary, para dropdown menus
     bgSecondary,
     bgTertiary: hslToHex(h + 35, clampS(1.43, 75, 100), clampL(2.25, 86, 94)),
@@ -426,7 +436,7 @@ export function generateLightPaletteFromBase(baseColor: string): ThemeColors {
     borderSecondary: hslToHex(
       h + 30,
       clampS(0.7, 40, 60),
-      clampL(1.75, 66, 74)
+      clampL(1.75, 66, 74),
     ),
 
     // Buttons - Boton del discovery
@@ -454,7 +464,7 @@ export function generateLightPaletteFromBase(baseColor: string): ThemeColors {
     avatarFallbackBg: hslToHex(
       h + 30,
       clampS(1.0, 55, 75),
-      clampL(1.72, 65, 73)
+      clampL(1.72, 65, 73),
     ),
     pickerBg: hslToHex(h + 32, clampS(1.15, 65, 85), clampL(1.87, 71, 79)),
     pickerBorder: hslToHex(h + 32, clampS(0.86, 45, 65), clampL(1.62, 61, 69)),
@@ -466,7 +476,7 @@ export function generateLightPaletteFromBase(baseColor: string): ThemeColors {
     addFriendHover: hslToHex(
       h + 41,
       clampS(0.55, 50, 62),
-      clampL(1.45, 34, 52)
+      clampL(1.45, 34, 52),
     ),
     textMutedAlt: hslToHex(h + 30, clampS(0.35, 18, 30), clampL(0.85, 30, 38)),
     tabActiveBg: hslToHex(h + 30, clampS(1.0, 55, 75), clampL(1.62, 61, 69)),
@@ -474,7 +484,7 @@ export function generateLightPaletteFromBase(baseColor: string): ThemeColors {
     tabButtonHover: hslToHex(
       h + 41,
       clampS(0.55, 50, 62),
-      clampL(1.45, 54, 62)
+      clampL(1.45, 54, 62),
     ),
     communityTabsFallbackBg,
     communityTabsFallbackActiveBg,
@@ -489,7 +499,7 @@ export function generateLightPaletteFromBase(baseColor: string): ThemeColors {
     dropdownBorder: hslToHex(
       h + 30,
       clampS(0.86, 45, 65),
-      clampL(1.72, 65, 73)
+      clampL(1.72, 65, 73),
     ),
     dropdownHover: hslToHex(h + 30, clampS(1.0, 55, 75), clampL(1.77, 67, 75)),
 
@@ -497,17 +507,17 @@ export function generateLightPaletteFromBase(baseColor: string): ThemeColors {
     reactionActiveBg: hslToHex(
       h + 30,
       clampS(0.9, 50, 70),
-      clampL(1.65, 62, 70)
+      clampL(1.65, 62, 70),
     ),
     reactionActiveBorder: hslToHex(
       h + 29,
       clampS(0.75, 42, 58),
-      clampL(0.7, 24, 32)
+      clampL(0.7, 24, 32),
     ),
     reactionActiveText: hslToHex(
       h + 21,
       clampS(0.5, 28, 42),
-      clampL(0.4, 12, 20)
+      clampL(0.4, 12, 20),
     ),
 
     // Reactions - default
@@ -515,7 +525,7 @@ export function generateLightPaletteFromBase(baseColor: string): ThemeColors {
     reactionBorder: hslToHex(
       h + 30,
       clampS(0.86, 45, 65),
-      clampL(1.62, 61, 69)
+      clampL(1.62, 61, 69),
     ),
     reactionText: hslToHex(h + 29, clampS(0.45, 24, 38), clampL(0.5, 16, 24)),
 
@@ -539,7 +549,7 @@ export function generateLightPaletteFromBase(baseColor: string): ThemeColors {
     bgCancelButtonHover: hslToHex(
       h + 30,
       clampS(0.8, 45, 65),
-      clampL(1.72, 65, 73)
+      clampL(1.72, 65, 73),
     ),
 
     // Chat input icons
@@ -547,82 +557,82 @@ export function generateLightPaletteFromBase(baseColor: string): ThemeColors {
     chatInputIconHover: hslToHex(
       h + 41,
       clampS(0.55, 58, 68),
-      clampL(0.75, 55, 65)
+      clampL(0.75, 55, 65),
     ),
 
     // Channel type buttons (Text/Voice)
     channelTypeActiveBorder: hslToHex(
       h + 38,
       clampS(0.7, 55, 68),
-      clampL(1.5, 56, 64)
+      clampL(1.5, 56, 64),
     ),
     channelTypeActiveBg: `hsla(${h + 38}, ${clampS(0.7, 55, 68)}%, ${clampL(
       1.5,
       56,
-      64
+      64,
     )}%, 0.35)`,
     channelTypeActiveText: hslToHex(
       h + 38,
       clampS(0.6, 50, 62),
-      clampL(1.35, 50, 58)
+      clampL(1.35, 50, 58),
     ),
     channelTypeInactiveBg: hslToHex(
       h + 30,
       clampS(0.6, 35, 50),
-      clampL(1.85, 70, 78)
+      clampL(1.85, 70, 78),
     ),
     channelTypeInactiveBorder: hslToHex(
       h + 30,
       clampS(0.4, 22, 35),
-      clampL(1.65, 62, 70)
+      clampL(1.65, 62, 70),
     ),
     channelTypeInactiveHoverBorder: hslToHex(
       h + 30,
       clampS(0.5, 28, 42),
-      clampL(1.5, 56, 64)
+      clampL(1.5, 56, 64),
     ),
     channelTypeInactiveText: hslToHex(
       h + 30,
       clampS(0.35, 18, 30),
-      clampL(0.95, 34, 42)
+      clampL(0.95, 34, 42),
     ),
 
     // Scrollbars - Navigation Sidebar
     scrollbarNavThumb: hslToHex(
       h + 30,
       clampS(1.0, 55, 75),
-      clampL(1.5, 56, 64)
+      clampL(1.5, 56, 64),
     ),
     scrollbarNavThumbHover: hslToHex(
       h + 30,
       clampS(1.07, 60, 80),
-      clampL(1.3, 48, 56)
+      clampL(1.3, 48, 56),
     ),
 
     // Scrollbars - Main (Feed + Chat)
     scrollbarMainThumb: hslToHex(
       h + 30,
       clampS(1.07, 60, 80),
-      clampL(1.45, 54, 62)
+      clampL(1.45, 54, 62),
     ),
     scrollbarMainThumbHover: hslToHex(
       h + 30,
       clampS(1.15, 65, 85),
-      clampL(1.25, 46, 54)
+      clampL(1.25, 46, 54),
     ),
 
     // App Settings button - light mode (más claro)
     appSettingsHover: hslToHex(
       h + 31,
       clampS(1.0, 55, 72),
-      clampL(1.55, 58, 66)
+      clampL(1.55, 58, 66),
     ),
 
     // Custom User Button - light mode
     accentCustomUserButton: hslToHex(
       h + 32,
       clampS(1.1, 60, 78),
-      clampL(1.45, 54, 62)
+      clampL(1.45, 54, 62),
     ),
 
     // Tab hover - light mode
@@ -632,14 +642,14 @@ export function generateLightPaletteFromBase(baseColor: string): ThemeColors {
     borderAccentItemReplyPreview: hslToHex(
       h + 28,
       clampS(1.0, 55, 72),
-      clampL(1.45, 54, 62)
+      clampL(1.45, 54, 62),
     ),
 
     // Active channel border - mismo color que buttonPrimary adaptado (light)
     borderAccentActiveChannel: hslToHex(
       h + 28,
       clampS(1.0, 55, 72),
-      clampL(1.45, 54, 62)
+      clampL(1.45, 54, 62),
     ),
 
     // Edit form background - light mode
@@ -706,7 +716,7 @@ function isValidGradientColorStop(item: unknown): boolean {
  * Valida una configuración de degradado
  */
 export function validateGradientConfig(
-  config: unknown
+  config: unknown,
 ): config is GradientConfig {
   if (!config || typeof config !== "object") return false;
 
@@ -745,7 +755,7 @@ export function applyThemeToDOM(colors: ThemeColors): void {
   root.style.setProperty("--theme-bg-overlay-primary", colors.bgOverlayPrimary);
   root.style.setProperty(
     "--theme-bg-dropdown-menu-primary",
-    colors.bgDropdownMenuPrimary
+    colors.bgDropdownMenuPrimary,
   );
   root.style.setProperty("--theme-bg-secondary", colors.bgSecondary);
   root.style.setProperty("--theme-bg-tertiary", colors.bgTertiary);
@@ -788,11 +798,11 @@ export function applyThemeToDOM(colors: ThemeColors): void {
   root.style.setProperty("--theme-tab-button-hover", colors.tabButtonHover);
   root.style.setProperty(
     "--theme-community-tabs-fallback-bg",
-    colors.communityTabsFallbackBg
+    colors.communityTabsFallbackBg,
   );
   root.style.setProperty(
     "--theme-community-tabs-fallback-active-bg",
-    colors.communityTabsFallbackActiveBg
+    colors.communityTabsFallbackActiveBg,
   );
   root.style.setProperty("--theme-toolbar-bg", colors.toolbarBg);
   root.style.setProperty("--theme-toolbar-icon", colors.toolbarIcon);
@@ -803,23 +813,23 @@ export function applyThemeToDOM(colors: ThemeColors): void {
   root.style.setProperty("--theme-reaction-active-bg", colors.reactionActiveBg);
   root.style.setProperty(
     "--theme-reaction-active-border",
-    colors.reactionActiveBorder
+    colors.reactionActiveBorder,
   );
   root.style.setProperty(
     "--theme-reaction-active-text",
-    colors.reactionActiveText
+    colors.reactionActiveText,
   );
   root.style.setProperty("--theme-reaction-bg", colors.reactionBg);
   root.style.setProperty("--theme-reaction-border", colors.reactionBorder);
   root.style.setProperty("--theme-reaction-text", colors.reactionText);
   root.style.setProperty(
     "--theme-slot-discovery-icon",
-    colors.slotDiscoveryIcon
+    colors.slotDiscoveryIcon,
   );
   root.style.setProperty("--theme-slot-discovery-bg", colors.slotDiscoveryBg);
   root.style.setProperty(
     "--theme-slot-invitation-icon",
-    colors.slotInvitationIcon
+    colors.slotInvitationIcon,
   );
   root.style.setProperty("--theme-slot-invitation-bg", colors.slotInvitationBg);
   root.style.setProperty("--theme-slot-border", colors.slotBorder);
@@ -828,70 +838,70 @@ export function applyThemeToDOM(colors: ThemeColors): void {
   root.style.setProperty("--theme-bg-cancel-button", colors.bgCancelButton);
   root.style.setProperty(
     "--theme-bg-cancel-button-hover",
-    colors.bgCancelButtonHover
+    colors.bgCancelButtonHover,
   );
   root.style.setProperty("--theme-chat-input-icon", colors.chatInputIcon);
   root.style.setProperty(
     "--theme-chat-input-icon-hover",
-    colors.chatInputIconHover
+    colors.chatInputIconHover,
   );
   root.style.setProperty(
     "--theme-channel-type-active-border",
-    colors.channelTypeActiveBorder
+    colors.channelTypeActiveBorder,
   );
   root.style.setProperty(
     "--theme-channel-type-active-bg",
-    colors.channelTypeActiveBg
+    colors.channelTypeActiveBg,
   );
   root.style.setProperty(
     "--theme-channel-type-active-text",
-    colors.channelTypeActiveText
+    colors.channelTypeActiveText,
   );
   root.style.setProperty(
     "--theme-channel-type-inactive-bg",
-    colors.channelTypeInactiveBg
+    colors.channelTypeInactiveBg,
   );
   root.style.setProperty(
     "--theme-channel-type-inactive-border",
-    colors.channelTypeInactiveBorder
+    colors.channelTypeInactiveBorder,
   );
   root.style.setProperty(
     "--theme-channel-type-inactive-hover-border",
-    colors.channelTypeInactiveHoverBorder
+    colors.channelTypeInactiveHoverBorder,
   );
   root.style.setProperty(
     "--theme-channel-type-inactive-text",
-    colors.channelTypeInactiveText
+    colors.channelTypeInactiveText,
   );
   root.style.setProperty(
     "--theme-scrollbar-nav-thumb",
-    colors.scrollbarNavThumb
+    colors.scrollbarNavThumb,
   );
   root.style.setProperty(
     "--theme-scrollbar-nav-thumb-hover",
-    colors.scrollbarNavThumbHover
+    colors.scrollbarNavThumbHover,
   );
   root.style.setProperty(
     "--theme-scrollbar-main-thumb",
-    colors.scrollbarMainThumb
+    colors.scrollbarMainThumb,
   );
   root.style.setProperty(
     "--theme-scrollbar-main-thumb-hover",
-    colors.scrollbarMainThumbHover
+    colors.scrollbarMainThumbHover,
   );
   root.style.setProperty("--theme-app-settings-hover", colors.appSettingsHover);
   root.style.setProperty(
     "--theme-accent-custom-user-button",
-    colors.accentCustomUserButton
+    colors.accentCustomUserButton,
   );
   root.style.setProperty("--theme-bg-tab-hover", colors.bgTabHover);
   root.style.setProperty(
     "--theme-border-accent-item-reply-preview",
-    colors.borderAccentItemReplyPreview
+    colors.borderAccentItemReplyPreview,
   );
   root.style.setProperty(
     "--theme-border-accent-active-channel",
-    colors.borderAccentActiveChannel
+    colors.borderAccentActiveChannel,
   );
   root.style.setProperty("--theme-bg-edit-form", colors.bgEditForm);
 }
@@ -905,7 +915,7 @@ export function applyGradientToDOM(gradient: GradientConfig | null): void {
   if (gradient) {
     root.style.setProperty(
       "--theme-background-gradient",
-      generateGradientCSS(gradient)
+      generateGradientCSS(gradient),
     );
     root.style.setProperty("--theme-has-gradient", "1");
     root.dataset.themeGradient = "true";
@@ -1095,7 +1105,7 @@ const BACKGROUND_ALPHA_MAP: Record<string, number> = {
  * Cada propiedad tiene su propio nivel de alfa definido en BACKGROUND_ALPHA_MAP
  */
 export function applyTransparencyToBackgrounds(
-  colors: ThemeColors
+  colors: ThemeColors,
 ): ThemeColors {
   const transparentColors = { ...colors };
 
@@ -1111,7 +1121,7 @@ export function applyTransparencyToBackgrounds(
           const newAlpha = Math.min(currentAlpha, alphaLevel);
           (transparentColors as Record<string, string>)[prop] = value.replace(
             /,\s*[\d.]+\s*\)$/,
-            `, ${newAlpha})`
+            `, ${newAlpha})`,
           );
         }
       }
@@ -1119,7 +1129,7 @@ export function applyTransparencyToBackgrounds(
       else if (value.startsWith("#")) {
         (transparentColors as Record<string, string>)[prop] = hexToRgba(
           value,
-          alphaLevel
+          alphaLevel,
         );
       }
     }
