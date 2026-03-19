@@ -970,7 +970,7 @@ const ChatInputComponent = ({
             <div className="min-w-0 flex-1 border border-theme-border-subtle bg-theme-bg-quaternary focus-within:border-theme-border-accent">
               <textarea
                 aria-disabled={isLoading}
-                className="w-full bg-transparent px-3 pt-4 pb-2 -mt-2.5 -mb-2.5 border-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:outline-none
+                className="w-full bg-transparent px-3 pt-4 pb-2 -mt-2 -mb-2 border-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:outline-none
                   text-theme-text-secondary text-[14px] placeholder:text-theme-text-muted
                   resize-none overflow-y-auto min-h-[48px] max-h-[225px] rounded-none"
                 placeholder={
