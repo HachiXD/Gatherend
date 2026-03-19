@@ -28,7 +28,7 @@ export const ChatHeaderClient = ({
   const name = type === "channel" && channel ? channel.name : initialName;
 
   return (
-    <div className="flex min-w-[160px] items-center justify-center gap-2 bg-theme-bg-secondary/40 px-3 py-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]">
+    <div className="flex min-w-[160px] items-center justify-start gap-2 bg-transparent px-0 py-0.5">
       {type === "channel" && (
         <SlashSVG className="h-4 w-4 -mr-2 text-theme-text-tertiary" />
       )}
@@ -37,7 +37,7 @@ export const ChatHeaderClient = ({
           src={avatarUrl}
           profileId={profileId}
           className="h-6 w-6 md:h-6 md:w-6"
-          statusOffset="right-2"
+          statusOffset="right-0"
           ringColorClass="indicator-ring"
           overlayRingColorClass="bg-theme-bg-tertiary"
           animationMode="never"
