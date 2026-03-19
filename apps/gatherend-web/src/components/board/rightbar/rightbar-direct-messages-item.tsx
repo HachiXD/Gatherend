@@ -171,7 +171,7 @@ export const DirectMessageItem = memo(function DirectMessageItemComponent({
           <div className="flex flex-col items-start gap-y-0 flex-1">
             <p
               className={cn(
-                "text-[14.5px] transition",
+                "text-[14.5px] transition -mb-0.5",
                 getUsernameFormatClasses(otherProfile.usernameFormat),
                 getGradientAnimationClass(otherProfile.usernameColor),
                 // Si no tiene color personalizado, usar estilos por defecto
