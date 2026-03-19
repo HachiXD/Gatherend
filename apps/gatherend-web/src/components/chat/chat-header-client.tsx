@@ -36,8 +36,8 @@ export const ChatHeaderClient = ({
         <UserAvatar
           src={avatarUrl}
           profileId={profileId}
-          className="h-6 w-6 md:h-6 md:w-6"
-          statusOffset="right-2"
+          className="h-5 w-5 md:h-5 md:w-5"
+          statusOffset="right-0"
           ringColorClass="indicator-ring"
           overlayRingColorClass="bg-theme-bg-tertiary"
           animationMode="never"

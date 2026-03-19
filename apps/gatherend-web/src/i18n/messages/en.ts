@@ -230,7 +230,7 @@ export const en: TranslationKeys = {
     language: "Language",
     category: "Category",
     sortBy: "Sort by",
-    meetNewFriends: "Meet new friends through the communities",
+    meetNewFriends: "Communities, boards and forums",
     // Feed
     searching: "Searching...",
     loadMore: "Load more",
@@ -749,7 +749,8 @@ export const en: TranslationKeys = {
     noPasswordAccountDesc: "This account doesn't have a password set up.",
     clickToCreatePassword: "Click here to create a password",
     emailNotVerifiedYet: "Your email is not verified yet.",
-    verificationEmailResent: "We sent a new verification link to your inbox. Check your email and click the link, then try signing in again.",
+    verificationEmailResent:
+      "We sent a new verification link to your inbox. Check your email and click the link, then try signing in again.",
     // Sign Up
     createYourAccount: "Create your account",
     joinGatherend: "Join Gatherend and socialize in small communities!",

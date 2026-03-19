@@ -230,7 +230,7 @@ export const es: TranslationKeys = {
     language: "Idioma",
     category: "Categoría",
     sortBy: "Ordenar por",
-    meetNewFriends: "Haz amigos a través de las comunidades",
+    meetNewFriends: "Comunidades, boards y foros",
     // Feed
     searching: "Buscando...",
     loadMore: "Cargar más",
