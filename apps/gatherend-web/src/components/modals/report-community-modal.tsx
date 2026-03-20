@@ -72,7 +72,6 @@ export const ReportCommunityModal = () => {
     reportCommunityId,
     reportCommunityName,
     reportCommunityImageUrl,
-    profileId,
   } = data;
 
   const [selectedCategory, setSelectedCategory] =
@@ -91,7 +90,7 @@ export const ReportCommunityModal = () => {
   };
 
   const onSubmit = async () => {
-    if (!selectedCategory || !reportCommunityId || !profileId) {
+    if (!selectedCategory || !reportCommunityId) {
       setError(t.modals.report.selectCategory);
       return;
     }
@@ -111,11 +110,6 @@ export const ReportCommunityModal = () => {
           snapshot: {
             name: reportCommunityName,
             imageUrl: reportCommunityImageUrl,
-          },
-        },
-        {
-          headers: {
-            "x-profile-id": profileId,
           },
         },
       );

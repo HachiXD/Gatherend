@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { AccountTab } from "./tabs/account";
 import { LogoutTab } from "./tabs/logout";
 import { UserDangerZoneTab } from "./tabs/danger-zone";
-import { useCurrentProfile } from "@/hooks/use-current-profile";
+import type { ClientProfile } from "@/hooks/use-current-profile";
 import { useTranslation } from "@/i18n";
 
 // Skeleton for settings overlay loading
@@ -23,22 +23,23 @@ function SettingsOverlaySkeleton() {
 }
 
 interface UserSettingsOverlayProps {
+  user: ClientProfile;
   onClose: () => void;
 }
 
-export const UserSettingsOverlay = ({ onClose }: UserSettingsOverlayProps) => {
+export const UserSettingsOverlay = ({
+  user,
+  onClose,
+}: UserSettingsOverlayProps) => {
   const [tab, setTab] = useState<"account" | "logout" | "danger">("account");
   const [isBlocking, setIsBlocking] = useState(false);
   const { t } = useTranslation();
-
-  // Obtener perfil desde React Query para tener datos siempre actualizados
-  const { data: user, isLoading } = useCurrentProfile();
 
   if (typeof document === "undefined") {
     return null;
   }
 
-  if (isLoading || !user) {
+  if (!user) {
     return createPortal(
       <div className="fixed inset-0 z-[10000] bg-black/40 backdrop-blur-sm flex items-center justify-center">
         <div className="bg-theme-bg-overlay-primary p-8 rounded-lg">

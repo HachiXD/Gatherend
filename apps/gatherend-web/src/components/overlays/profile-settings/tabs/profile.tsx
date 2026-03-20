@@ -9,7 +9,7 @@ import { useState, useRef, useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import { Languages } from "@prisma/client";
 import type { ClientProfile } from "@/hooks/use-current-profile";
-import { useUploadWithProfile } from "@/hooks/use-upload";
+import { useUpload } from "@/hooks/use-upload";
 import { useQueryClient } from "@tanstack/react-query";
 import { useInvalidateProfileCard } from "@/hooks/use-profile-card";
 import { useUpdateCachedProfiles } from "@/hooks/use-update-cached-profiles";
@@ -190,7 +190,7 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { startUpload } = useUploadWithProfile("profile_avatar", user.id, {
+  const { startUpload } = useUpload("profile_avatar", {
     onModerationBlock: (reason) => toast.error(reason),
     onUploadError: (error) => toast.error(`Upload failed: ${error}`),
   });

@@ -5,7 +5,6 @@ import { memo, useMemo, useState } from "react";
 import { Siren } from "lucide-react";
 import { ActionTooltip } from "@/components/action-tooltip";
 import { useModal } from "@/hooks/use-modal-store";
-import { useCurrentProfile } from "@/hooks/use-current-profile";
 import { useTranslation } from "@/i18n";
 import { useColorExtraction } from "@/hooks/use-color-extraction";
 import { getDerivedColors } from "@/lib/color-extraction";
@@ -34,7 +33,6 @@ function CommunityCardInner({
   className,
 }: CommunityCardProps) {
   const { onOpen } = useModal();
-  const { data: currentProfile } = useCurrentProfile();
   const { t } = useTranslation();
   const [imageFailed, setImageFailed] = useState(false);
   const imageUrl = imageAsset?.url || null;
@@ -117,7 +115,6 @@ function CommunityCardInner({
                   reportCommunityId: id,
                   reportCommunityName: name,
                   reportCommunityImageUrl: imageUrl,
-                  profileId: currentProfile?.id,
                 });
               }}
               className="cursor-pointer border bg-black/50 p-1.5 text-white/70 transition-colors hover:bg-red-500/30 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/30 rounded-none border-[color:var(--report-border)]"

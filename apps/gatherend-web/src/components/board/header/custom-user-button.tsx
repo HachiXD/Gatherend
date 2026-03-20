@@ -93,7 +93,7 @@ export function CustomUserButton() {
 
   const handleProfileClick = () => {
     setIsOpen(false);
-    onOpenOverlay("profileSettings");
+    onOpenOverlay("profileSettings", { user: profile });
   };
 
   const handleThemeClick = () => {

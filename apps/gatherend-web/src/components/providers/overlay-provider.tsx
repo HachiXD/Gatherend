@@ -19,11 +19,11 @@ export const OverlayProvider = () => {
       )}
 
       {type === "userSettings" && isOpen && (
-        <UserSettingsOverlay onClose={onClose} />
+        <UserSettingsOverlay user={data.user!} onClose={onClose} />
       )}
 
       {type === "profileSettings" && isOpen && (
-        <ProfileSettingsOverlay onClose={onClose} />
+        <ProfileSettingsOverlay user={data.user!} onClose={onClose} />
       )}
     </>
   );

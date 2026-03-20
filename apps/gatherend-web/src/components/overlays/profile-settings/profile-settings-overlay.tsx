@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 import { ProfileTab } from "@/components/overlays/profile-settings/tabs/profile";
 import { ProfileSettingsSidebar } from "./tabs/sidebar";
-import { useCurrentProfile } from "@/hooks/use-current-profile";
+import type { ClientProfile } from "@/hooks/use-current-profile";
 
 // Skeleton for settings overlay loading
 function SettingsOverlaySkeleton() {
@@ -21,24 +21,23 @@ function SettingsOverlaySkeleton() {
 }
 
 interface ProfileSettingsOverlayProps {
+  user: ClientProfile;
   onClose: () => void;
 }
 
 export const ProfileSettingsOverlay = ({
+  user,
   onClose,
 }: ProfileSettingsOverlayProps) => {
   const [tab, setTab] = useState<"profile">("profile");
   const overlayShellShadow =
     "shadow-[0_18px_40px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.08),inset_1px_0_0_rgba(255,255,255,0.06),inset_-1px_0_0_rgba(0,0,0,0.42),inset_0_-1px_0_rgba(0,0,0,0.42)]";
 
-  // Obtener perfil desde React Query para tener datos siempre actualizados
-  const { data: user, isLoading } = useCurrentProfile();
-
   if (typeof document === "undefined") {
     return null;
   }
 
-  if (isLoading || !user) {
+  if (!user) {
     return createPortal(
       <div className="fixed inset-0 z-[10000] bg-black/40 backdrop-blur-sm flex items-center justify-center p-2 sm:p-6">
         <div

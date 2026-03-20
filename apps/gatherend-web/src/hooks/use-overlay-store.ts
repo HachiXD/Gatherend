@@ -1,8 +1,9 @@
 "use client";
 
-import { Board, Profile, Member } from "@prisma/client";
+import { Board, Member } from "@prisma/client";
 import { create } from "zustand";
 import { useMobileDrawerStore } from "@/stores/mobile-drawer-store";
+import type { ClientProfile } from "@/hooks/use-current-profile";
 import type {
   ClientStickerAssetRef,
   ClientUploadedAsset,
@@ -14,13 +15,13 @@ interface OverlayData {
   // Puedes poner cualquier cosa aquí según tus overlays
   board?: Board & {
     members: (Member & {
-      profile: Pick<Profile, "id" | "username" | "discriminator"> & {
+      profile: Pick<ClientProfile, "id" | "username" | "discriminator"> & {
         avatarAsset: ClientUploadedAsset | null;
         badgeSticker: ClientStickerAssetRef | null;
       };
     })[];
   };
-  user?: Profile;
+  user?: ClientProfile;
   currentProfileId?: string;
 }
 

@@ -19,7 +19,7 @@ import { useMessageRetryStore } from "@/hooks/use-message-retry";
 import { useTypingIndicator } from "@/hooks/use-typing-indicator";
 import { useReplyStore } from "@/hooks/use-reply-store";
 import { X } from "lucide-react";
-import { useUploadWithProfile } from "@/hooks/use-upload";
+import { useUpload } from "@/hooks/use-upload";
 import { toast } from "sonner";
 import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
 import { BoardMember } from "@/components/providers/board-provider";
@@ -31,7 +31,6 @@ import {
 } from "@/hooks/use-conversations";
 import { useTokenGetter } from "@/components/providers/token-manager-provider";
 import { getExpressAxiosConfig } from "@/lib/express-fetch";
-import { logger } from "@/lib/logger";
 import type {
   ClientAttachmentAsset,
   ClientSticker,
@@ -182,9 +181,8 @@ const ChatInputComponent = ({
     }),
     [],
   );
-  const { startUpload, isUploading: uploadInProgress } = useUploadWithProfile(
+  const { startUpload, isUploading: uploadInProgress } = useUpload(
     uploadContext,
-    currentProfile.id,
     uploadOptions,
   );
 

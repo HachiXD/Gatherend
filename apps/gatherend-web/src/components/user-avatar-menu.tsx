@@ -239,7 +239,9 @@ export const UserAvatarMenu = ({
           currentProfile={currentProfile}
           onClose={() => setIsOpen(false)}
           onSendMessage={handleSendMessage}
-          onPersonalizeProfile={() => onOpenOverlay("profileSettings")}
+          onPersonalizeProfile={() =>
+            onOpenOverlay("profileSettings", { user: currentProfile })
+          }
         />
       )}
     </Popover>

@@ -7,11 +7,6 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { useCurrentProfile } from "@/hooks/use-current-profile";
-import { useTokenGetter } from "@/components/providers/token-manager-provider";
-import { getExpressAuthHeaders } from "@/lib/express-fetch";
-
-const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
 // Context types that match the backend
 export type UploadContext =
@@ -56,12 +51,10 @@ export interface UseUploadOptions {
 
 function useUploadInternal(
   context: UploadContext | keyof typeof ENDPOINT_TO_CONTEXT,
-  profileId: string | undefined,
   options: UseUploadOptions = {},
 ) {
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const getToken = useTokenGetter();
 
   // Keep options callbacks stable without forcing startUpload recreation.
   const optionsRef = useRef(options);
@@ -75,12 +68,6 @@ function useUploadInternal(
 
   const startUpload = useCallback(
     async (files: File[]): Promise<UploadedFile[]> => {
-      if (!profileId) {
-        const error = "No profile found. Please log in.";
-        optionsRef.current.onUploadError?.(error);
-        throw new Error(error);
-      }
-
       if (files.length === 0) {
         return [];
       }
@@ -92,9 +79,6 @@ function useUploadInternal(
       const results: UploadedFile[] = [];
 
       try {
-        // Get token once for all uploads (in production)
-        const token = IS_PRODUCTION ? await getToken() : undefined;
-
         for (let i = 0; i < files.length; i++) {
           const file = files[i];
 
@@ -112,7 +96,6 @@ function useUploadInternal(
             {
               method: "POST",
               credentials: "include",
-              headers: getExpressAuthHeaders(profileId, token),
               body: formData,
             },
           );
@@ -161,7 +144,7 @@ function useUploadInternal(
         setProgress(0);
       }
     },
-    [getToken, profileId, resolvedContext],
+    [resolvedContext],
   );
 
   return {
@@ -173,24 +156,11 @@ function useUploadInternal(
 
 /**
  * Hook for uploading files with moderation.
- * Reads profile from `useCurrentProfile` (backward-compatible behavior).
+ * Authentication is resolved server-side by Express via session cookies.
  */
 export function useUpload(
   context: UploadContext | keyof typeof ENDPOINT_TO_CONTEXT,
   options: UseUploadOptions = {},
 ) {
-  const { data: profile } = useCurrentProfile();
-  return useUploadInternal(context, profile?.id, options);
-}
-
-/**
- * Upload hook that receives profileId directly.
- * Use this in hot paths (e.g. ChatInput) to avoid duplicate profile query subscriptions.
- */
-export function useUploadWithProfile(
-  context: UploadContext | keyof typeof ENDPOINT_TO_CONTEXT,
-  profileId: string | undefined,
-  options: UseUploadOptions = {},
-) {
-  return useUploadInternal(context, profileId, options);
+  return useUploadInternal(context, options);
 }

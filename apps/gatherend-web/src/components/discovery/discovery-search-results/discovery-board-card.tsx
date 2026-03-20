@@ -16,7 +16,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { getBoardImageUrl } from "@/lib/avatar-utils";
 import { getDerivedColors } from "@/lib/color-extraction";
 import { useUserBoards } from "@/hooks/use-user-boards";
-import { useCurrentProfile } from "@/hooks/use-current-profile";
 import { useModal } from "@/hooks/use-modal-store";
 import { Siren } from "lucide-react";
 import { ActionTooltip } from "@/components/action-tooltip";
@@ -43,7 +42,6 @@ function DiscoveryBoardCardComponent({ board }: DiscoveryBoardCardProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: userBoards } = useUserBoards();
-  const { data: currentProfile } = useCurrentProfile();
   const { onOpen } = useModal();
   const [isPending, startTransition] = useTransition();
   const [isJoining, setIsJoining] = useState(false);
@@ -214,7 +212,6 @@ function DiscoveryBoardCardComponent({ board }: DiscoveryBoardCardProps) {
                   reportBoardName: board.name,
                   reportBoardDescription: board.description,
                   reportBoardImageUrl: board.imageAsset?.url || null,
-                  profileId: currentProfile?.id,
                 });
               }}
               className="cursor-pointer border bg-black/50 p-1.5 text-white/70 transition-colors hover:bg-red-500/30 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/30 rounded-none border-[color:var(--report-border)]"

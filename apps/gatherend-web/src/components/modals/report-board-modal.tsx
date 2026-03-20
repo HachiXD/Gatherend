@@ -15,8 +15,6 @@ import axios from "axios";
 import { cn } from "@/lib/utils";
 import { Siren, Loader2 } from "lucide-react";
 import { useTranslation } from "@/i18n";
-import { useTokenGetter } from "@/components/providers/token-manager-provider";
-import { getExpressAuthHeaders } from "@/lib/express-fetch";
 
 type ReportCategory =
   | "CSAM"
@@ -30,7 +28,6 @@ type ReportCategory =
 export const ReportBoardModal = () => {
   const { isOpen, onClose, type, data } = useModal();
   const { t } = useTranslation();
-  const getToken = useTokenGetter();
 
   const REPORT_CATEGORIES = [
     {
@@ -76,7 +73,6 @@ export const ReportBoardModal = () => {
     reportBoardName,
     reportBoardDescription,
     reportBoardImageUrl,
-    profileId,
   } = data;
 
   const [selectedCategory, setSelectedCategory] =
@@ -95,7 +91,7 @@ export const ReportBoardModal = () => {
   };
 
   const onSubmit = async () => {
-    if (!selectedCategory || !reportBoardId || !profileId) {
+    if (!selectedCategory || !reportBoardId) {
       setError(t.modals.report.selectCategory);
       return;
     }
@@ -104,7 +100,6 @@ export const ReportBoardModal = () => {
       setIsLoading(true);
       setError(null);
 
-      const token = await getToken();
       await axios.post(
         "/api/reports",
         {
@@ -119,9 +114,6 @@ export const ReportBoardModal = () => {
             imageUrl: reportBoardImageUrl,
           },
         },
-        {
-          headers: getExpressAuthHeaders(profileId, token),
-        }
       );
 
       setSuccess(true);
