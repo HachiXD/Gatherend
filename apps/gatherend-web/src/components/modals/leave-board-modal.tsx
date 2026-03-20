@@ -32,15 +32,19 @@ export const LeaveBoardModal = () => {
     try {
       setIsLoading(true);
 
-      await axios.patch(`/api/boards/${board?.id}/leave`);
+      const response = await axios.post(`/api/boards/${board?.id}/leave`);
+      const redirectUrl =
+        typeof response.data?.redirectUrl === "string"
+          ? response.data.redirectUrl
+          : "/boards";
 
       // Invalidar queries de boards para reflejar que ya no es miembro
-      queryClient.invalidateQueries({ queryKey: ["boards"] });
-      queryClient.invalidateQueries({ queryKey: ["board", board?.id] });
+      await queryClient.invalidateQueries({ queryKey: ["user-boards"] });
+      await queryClient.invalidateQueries({ queryKey: ["board", board?.id] });
 
       onClose();
       startTransition(() => {
-        router.push("/boards");
+        router.push(redirectUrl);
         router.refresh();
       });
     } catch (error) {

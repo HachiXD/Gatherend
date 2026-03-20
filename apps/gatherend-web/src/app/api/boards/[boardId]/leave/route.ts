@@ -40,8 +40,8 @@ async function notifyMemberLeft(boardId: string, profileId: string) {
   }
 }
 
-export async function POST(
-  req: Request,
+async function handleLeaveBoard(
+  _req: Request,
   context: { params: Promise<{ boardId: string }> },
 ) {
   try {
@@ -136,4 +136,18 @@ export async function POST(
     console.error("[LEAVE_BOARD]", error);
     return NextResponse.json({ error: "Internal Error" }, { status: 500 });
   }
+}
+
+export async function POST(
+  req: Request,
+  context: { params: Promise<{ boardId: string }> },
+) {
+  return handleLeaveBoard(req, context);
+}
+
+export async function PATCH(
+  req: Request,
+  context: { params: Promise<{ boardId: string }> },
+) {
+  return handleLeaveBoard(req, context);
 }
