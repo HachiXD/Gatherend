@@ -6,6 +6,17 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { UsernameSectionProps } from "./types";
 
+const fieldInputClass =
+  "h-8 rounded-none border-theme-border-subtle bg-theme-bg-edit-form/50 text-theme-text-light placeholder:text-theme-text-muted focus-visible:border-theme-border-subtle";
+const readonlyFieldInputClass =
+  "h-8 rounded-none border-theme-border-subtle bg-theme-bg-edit-form/35 text-theme-text-muted";
+const panelToggleButtonClass =
+  "flex h-6.5 w-10 cursor-pointer items-center justify-center rounded-none border text-[13px] transition";
+const panelToggleActiveClass =
+  "border-theme-channel-type-active-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text";
+const panelToggleInactiveClass =
+  "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border";
+
 export const UsernameSection = memo(function UsernameSection({
   username,
   discriminator,
@@ -35,7 +46,8 @@ export const UsernameSection = memo(function UsernameSection({
                 name="profile-username"
                 disabled={isSaving}
                 className={cn(
-                  "bg-theme-bg-input border-0 focus-visible:ring-2 focus-visible:ring-theme-accent-primary text-theme-text-light pr-10",
+                  fieldInputClass,
+                  "pr-10",
                   formatState.bold && "font-bold",
                   formatState.italic && "italic",
                   formatState.underline && "underline",
@@ -84,7 +96,10 @@ export const UsernameSection = memo(function UsernameSection({
               id="profile-discriminator"
               name="profile-discriminator"
               disabled
-              className="pl-4.5 bg-theme-bg-input border-0 text-theme-text-muted cursor-not-allowed font-mono"
+              className={cn(
+                readonlyFieldInputClass,
+                "pl-4.5 cursor-not-allowed font-mono",
+              )}
               value={discriminator || "xxx"}
             />
           </div>
@@ -100,7 +115,7 @@ export const UsernameSection = memo(function UsernameSection({
           {t.profile.style}
         </span>
         <div
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 -mt-1.5"
           role="group"
           aria-labelledby="username-style-label"
         >
@@ -109,10 +124,10 @@ export const UsernameSection = memo(function UsernameSection({
             onClick={formatActions.toggleBold}
             disabled={isSaving}
             className={cn(
-              "flex items-center justify-center w-10 h-10 rounded-md transition-colors cursor-pointer",
+              panelToggleButtonClass,
               formatState.bold
-                ? "bg-theme-tab-button-bg text-white"
-                : "bg-theme-bg-input text-theme-text-subtle hover:bg-theme-bg-secondary",
+                ? panelToggleActiveClass
+                : panelToggleInactiveClass,
             )}
             aria-label="Bold"
             aria-pressed={formatState.bold}
@@ -124,10 +139,10 @@ export const UsernameSection = memo(function UsernameSection({
             onClick={formatActions.toggleItalic}
             disabled={isSaving}
             className={cn(
-              "flex items-center justify-center w-10 h-10 rounded-md transition-colors cursor-pointer",
+              panelToggleButtonClass,
               formatState.italic
-                ? "bg-theme-tab-button-bg text-white"
-                : "bg-theme-bg-input text-theme-text-subtle hover:bg-theme-bg-secondary",
+                ? panelToggleActiveClass
+                : panelToggleInactiveClass,
             )}
             aria-label="Italic"
             aria-pressed={formatState.italic}
@@ -139,10 +154,10 @@ export const UsernameSection = memo(function UsernameSection({
             onClick={formatActions.toggleUnderline}
             disabled={isSaving}
             className={cn(
-              "flex items-center justify-center w-10 h-10 rounded-md transition-colors cursor-pointer",
+              panelToggleButtonClass,
               formatState.underline
-                ? "bg-theme-tab-button-bg text-white"
-                : "bg-theme-bg-input text-theme-text-subtle hover:bg-theme-bg-secondary",
+                ? panelToggleActiveClass
+                : panelToggleInactiveClass,
             )}
             aria-label="Underline"
             aria-pressed={formatState.underline}

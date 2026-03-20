@@ -3,44 +3,53 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
-// Re-export from root types for convenience
 export type { GradientColorStop } from "../../../types";
 import type { GradientColorStop } from "../../../types";
 
-interface GradientSliderProps {
-  colors: GradientColorStop[];
-  onChange: (colors: GradientColorStop[]) => void;
+interface GradientSliderProps<
+  T extends GradientColorStop = GradientColorStop,
+> extends Omit<React.HTMLAttributes<HTMLDivElement>, "onChange"> {
+  colors: T[];
+  onChange: (colors: T[]) => void;
   onColorClick?: (index: number) => void;
   selectedIndex?: number | null;
   onSelectedIndexChange?: (index: number | null) => void;
+  selectedColorId?: string | null;
+  onSelectedColorIdChange?: (id: string | null) => void;
+  getColorId?: (color: T, index: number) => string;
+  createColor?: (color: GradientColorStop) => T;
   angle?: number;
   type?: "linear" | "radial";
   className?: string;
   minColors?: number;
   maxColors?: number;
   allowAdd?: boolean;
+  showActualGradient?: boolean;
 }
 
-/**
- * Gradient Slider Component
- * Un slider visual donde los colores son handles arrastrables sobre la barra del gradiente.
- * Similar a los editores de gradiente de Photoshop/Figma.
- */
-export function GradientSlider({
+export function GradientSlider<
+  T extends GradientColorStop = GradientColorStop,
+>({
   colors,
   onChange,
   onColorClick,
   selectedIndex: selectedIndexProp,
   onSelectedIndexChange,
-  angle: _angle = 90,
+  selectedColorId,
+  onSelectedColorIdChange,
+  getColorId,
+  createColor,
+  angle = 90,
   type = "linear",
   className,
   minColors: _minColors = 2,
   maxColors = 4,
   allowAdd = true,
-}: GradientSliderProps) {
+  showActualGradient = false,
+  ...props
+}: GradientSliderProps<T>) {
   const trackRef = useRef<HTMLDivElement>(null);
-  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+  const [draggingColorId, setDraggingColorId] = useState<string | null>(null);
   const [internalSelectedIndex, setInternalSelectedIndex] = useState<
     number | null
   >(null);
@@ -48,56 +57,87 @@ export function GradientSlider({
   const selectedIndex =
     selectedIndexProp === undefined ? internalSelectedIndex : selectedIndexProp;
 
+  const resolveColorId = useCallback(
+    (color: T, index: number) => getColorId?.(color, index) ?? `${index}`,
+    [getColorId],
+  );
+
+  const getIndexByColorId = useCallback(
+    (targetId: string) =>
+      colors.findIndex(
+        (color, index) => resolveColorId(color, index) === targetId,
+      ),
+    [colors, resolveColorId],
+  );
+
   const setSelectedIndex = useCallback(
-    (index: number | null) => {
+    (index: number | null, colorIdOverride?: string | null) => {
       if (selectedIndexProp === undefined) {
         setInternalSelectedIndex(index);
       }
       onSelectedIndexChange?.(index);
+      if (colorIdOverride !== undefined) {
+        onSelectedColorIdChange?.(colorIdOverride);
+        return;
+      }
+
+      onSelectedColorIdChange?.(
+        index === null || colors[index] === undefined
+          ? null
+          : resolveColorId(colors[index], index),
+      );
     },
-    [onSelectedIndexChange, selectedIndexProp],
+    [
+      colors,
+      onSelectedColorIdChange,
+      onSelectedIndexChange,
+      resolveColorId,
+      selectedIndexProp,
+    ],
   );
 
-  // Generar CSS del gradiente para el fondo del track
   const gradientCSS = (() => {
     const sortedColors = [...colors].sort((a, b) => a.position - b.position);
     const stops = sortedColors
       .map((c) => `${c.color} ${c.position}%`)
       .join(", ");
 
-    if (type === "radial") {
-      return `linear-gradient(90deg, ${stops})`; // Para el slider siempre mostramos lineal horizontal
+    if (!showActualGradient) {
+      return `linear-gradient(90deg, ${stops})`;
     }
-    return `linear-gradient(90deg, ${stops})`;
+
+    if (type === "radial") {
+      return `radial-gradient(circle at center, ${stops})`;
+    }
+
+    return `linear-gradient(${angle}deg, ${stops})`;
   })();
 
-  // Calcular posición del mouse relativa al track (0-100)
   const getPositionFromEvent = useCallback((clientX: number): number => {
     if (!trackRef.current) return 0;
 
     const rect = trackRef.current.getBoundingClientRect();
     const x = clientX - rect.left;
     const percentage = (x / rect.width) * 100;
-
-    // Clamp entre 0 y 100
-    return Math.max(0, Math.min(100, Math.round(percentage)));
+    return Math.round(Math.max(0, Math.min(100, percentage)));
   }, []);
 
-  // Manejar inicio de drag
   const handleMouseDown = useCallback(
     (index: number, e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      setDraggingIndex(index);
+      setDraggingColorId(resolveColorId(colors[index], index));
       setSelectedIndex(index);
     },
-    [setSelectedIndex],
+    [colors, resolveColorId, setSelectedIndex],
   );
 
-  // Manejar movimiento durante drag
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
-      if (draggingIndex === null) return;
+      if (draggingColorId === null) return;
+
+      const draggingIndex = getIndexByColorId(draggingColorId);
+      if (draggingIndex === -1) return;
 
       const newPosition = getPositionFromEvent(e.clientX);
       const newColors = [...colors];
@@ -107,17 +147,21 @@ export function GradientSlider({
       };
       onChange(newColors);
     },
-    [draggingIndex, colors, onChange, getPositionFromEvent],
+    [
+      colors,
+      draggingColorId,
+      getIndexByColorId,
+      getPositionFromEvent,
+      onChange,
+    ],
   );
 
-  // Manejar fin de drag
   const handleMouseUp = useCallback(() => {
-    setDraggingIndex(null);
+    setDraggingColorId(null);
   }, []);
 
-  // Event listeners globales para drag
   useEffect(() => {
-    if (draggingIndex !== null) {
+    if (draggingColorId !== null) {
       window.addEventListener("mousemove", handleMouseMove);
       window.addEventListener("mouseup", handleMouseUp);
       return () => {
@@ -125,18 +169,16 @@ export function GradientSlider({
         window.removeEventListener("mouseup", handleMouseUp);
       };
     }
-  }, [draggingIndex, handleMouseMove, handleMouseUp]);
+  }, [draggingColorId, handleMouseMove, handleMouseUp]);
 
-  // Manejar click en el track para añadir un nuevo color
   const handleTrackClick = useCallback(
     (e: React.MouseEvent) => {
       if (!allowAdd) return;
       if (colors.length >= maxColors) return;
-      if (draggingIndex !== null) return; // No añadir si estamos arrastrando
+      if (draggingColorId !== null) return;
 
       const position = getPositionFromEvent(e.clientX);
 
-      // Encontrar los dos colores más cercanos para interpolar
       const sortedColors = [...colors].sort((a, b) => a.position - b.position);
       let leftColor = sortedColors[0];
       let rightColor = sortedColors[sortedColors.length - 1];
@@ -152,7 +194,6 @@ export function GradientSlider({
         }
       }
 
-      // Interpolar color (simple promedio por ahora)
       const newColor = interpolateColor(
         leftColor.color,
         rightColor.color,
@@ -160,22 +201,27 @@ export function GradientSlider({
           (rightColor.position - leftColor.position || 1),
       );
 
-      const newColors = [...colors, { color: newColor, position }];
+      const newStop = createColor
+        ? createColor({ color: newColor, position })
+        : ({ color: newColor, position } as T);
+      const newColors = [...colors, newStop];
+      const newColorId = resolveColorId(newStop, newColors.length - 1);
       onChange(newColors);
-      setSelectedIndex(newColors.length - 1);
+      setSelectedIndex(newColors.length - 1, newColorId);
     },
     [
       allowAdd,
       colors,
-      maxColors,
-      draggingIndex,
-      onChange,
+      createColor,
+      draggingColorId,
       getPositionFromEvent,
+      maxColors,
+      onChange,
+      resolveColorId,
       setSelectedIndex,
     ],
   );
 
-  // Manejar doble click en un handle para abrir el color picker
   const handleDoubleClick = useCallback(
     (index: number, e: React.MouseEvent) => {
       e.preventDefault();
@@ -185,7 +231,6 @@ export function GradientSlider({
     [onColorClick],
   );
 
-  // Manejar click simple en handle
   const handleHandleClick = useCallback(
     (index: number, e: React.MouseEvent) => {
       e.stopPropagation();
@@ -196,70 +241,70 @@ export function GradientSlider({
   );
 
   return (
-    <div className={cn("space-y-2", className)}>
-      {/* Track del gradiente */}
+    <div className={cn("space-y-2", className)} {...props}>
       <div
-        ref={trackRef}
         className={cn(
-          "relative h-6 rounded-md border border-theme-border-secondary select-none",
+          "relative h-10 border border-theme-border-subtle bg-theme-bg-edit-form/35 select-none",
           allowAdd ? "cursor-crosshair" : "cursor-default",
         )}
-        style={{ background: gradientCSS }}
-        onClick={handleTrackClick}
       >
-        {/* Checkerboard pattern for transparency */}
         <div
-          className="absolute inset-0 rounded-md -z-10"
-          style={{
-            backgroundImage: `
-              linear-gradient(45deg, #ccc 25%, transparent 25%),
-              linear-gradient(-45deg, #ccc 25%, transparent 25%),
-              linear-gradient(45deg, transparent 75%, #ccc 75%),
-              linear-gradient(-45deg, transparent 75%, #ccc 75%)
-            `,
-            backgroundSize: "8px 8px",
-            backgroundPosition: "0 0, 0 4px, 4px -4px, -4px 0px",
-          }}
-        />
+          ref={trackRef}
+          className={cn(
+            "absolute inset-x-2 mx-3 top-1/2 h-4 -translate-y-1/2",
+            allowAdd ? "cursor-crosshair" : "cursor-default",
+          )}
+          onClick={handleTrackClick}
+        >
+          <div className="absolute inset-0" style={{ background: gradientCSS }} />
 
-        {/* Handles de colores */}
-        {colors.map((stop, index) => (
-          <div
-            key={index}
-            className={cn(
-              "absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-7 rounded-sm border-2 cursor-grab shadow-md transition-shadow",
-              draggingIndex === index && "cursor-grabbing scale-110",
-              selectedIndex === index
-                ? "border-white ring-2 ring-theme-button-primary z-10"
-                : "border-white/80 hover:border-white z-0",
-            )}
-            style={{
-              left: `${stop.position}%`,
-              backgroundColor: stop.color,
-            }}
-            onMouseDown={(e) => handleMouseDown(index, e)}
-            onClick={(e) => handleHandleClick(index, e)}
-            onDoubleClick={(e) => handleDoubleClick(index, e)}
-            title={`${stop.color} @ ${stop.position}%`}
-          ></div>
-        ))}
+          {colors.map((stop, index) => {
+            const colorId = resolveColorId(stop, index);
+            const isSelected =
+              selectedColorId !== undefined
+                ? selectedColorId === colorId
+                : selectedIndex === index;
+
+            return (
+              <div
+                key={colorId}
+                className={cn(
+                  "absolute top-1/2 h-7 w-4 -translate-x-1/2 -translate-y-1/2 cursor-grab border transition-transform",
+                  draggingColorId === colorId && "cursor-grabbing scale-105",
+                  isSelected
+                    ? "z-10 border-theme-channel-type-active-border"
+                    : "z-0 border-theme-border-subtle hover:border-theme-channel-type-inactive-hover-border",
+                )}
+                style={{
+                  left: `${clampPercent(stop.position)}%`,
+                  top: "50%",
+                  backgroundColor: stop.color,
+                }}
+                onMouseDown={(e) => handleMouseDown(index, e)}
+                onClick={(e) => handleHandleClick(index, e)}
+                onDoubleClick={(e) => handleDoubleClick(index, e)}
+                title={`${stop.color} @ ${stop.position}%`}
+              ></div>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Hint text */}
-      <p className="text-[10px] text-theme-text-muted text-center">
+      <p className="text-[10px] text-theme-text-muted">
         {!allowAdd
           ? "Arrastra los colores para mover"
           : colors.length < maxColors
-            ? "Click en la barra para añadir • Arrastra para mover"
+            ? "Click en la barra para aÃ±adir â€¢ Arrastra para mover"
             : "Arrastra los colores para mover"}
       </p>
     </div>
   );
 }
 
-/**
- * Interpola entre dos colores hex
- */
+function clampPercent(value: number): number {
+  return Math.max(0, Math.min(100, value));
+}
+
 function interpolateColor(
   color1: string,
   color2: string,

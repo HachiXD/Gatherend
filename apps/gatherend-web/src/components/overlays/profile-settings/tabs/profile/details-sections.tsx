@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -23,6 +24,25 @@ import type {
   LanguagesSectionProps,
   AccountInfoSectionProps,
 } from "./types";
+
+const fieldInputClass =
+  "h-8 rounded-none border-theme-border-subtle bg-theme-bg-edit-form/50 text-theme-text-light placeholder:text-theme-text-muted focus-visible:border-theme-border-subtle";
+const fieldTextareaClass =
+  "rounded-none border-theme-border-subtle bg-theme-bg-edit-form/50 text-theme-text-light placeholder:text-theme-text-muted focus-visible:border-theme-border-subtle";
+const readonlyFieldInputClass =
+  "h-8 rounded-none border-theme-border-subtle bg-theme-bg-edit-form/35 text-theme-text-muted";
+const panelButtonBaseClass =
+  "h-8 cursor-pointer rounded-none border px-3 text-[13px] transition";
+const panelButtonActiveClass =
+  "border-theme-channel-type-active-border bg-theme-channel-type-active-bg hover:bg-theme-channel-type-active-bg text-theme-channel-type-active-text";
+const panelButtonInactiveClass =
+  "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border";
+const panelSelectTriggerClass =
+  "h-8 w-full cursor-pointer rounded-none border border-theme-border-subtle bg-theme-bg-edit-form/50 text-theme-text-light hover:bg-theme-bg-edit-form/50 focus:border-theme-border-subtle focus:ring-0";
+const panelSelectContentClass =
+  "w-[var(--radix-select-trigger-width)] min-w-[var(--radix-select-trigger-width)] rounded-none border-theme-border bg-theme-bg-modal p-0 text-theme-text-secondary [&>div]:p-0";
+const panelSelectItemClass =
+  "h-8 w-full cursor-pointer rounded-none border-x-0 border-t-0 border-b border-theme-border-subtle px-2 hover:border-theme-channel-type-active-border hover:bg-theme-channel-type-active-bg hover:text-theme-channel-type-active-text focus:border-theme-channel-type-active-border focus:bg-theme-channel-type-active-bg focus:text-theme-channel-type-active-text";
 
 // About Me Section
 
@@ -45,7 +65,10 @@ export const AboutMeSection = memo(function AboutMeSection({
           id="profile-about-me"
           name="profile-about-me"
           disabled={isSaving}
-          className="w-full bg-theme-bg-input border-0 focus-visible:ring-2 focus-visible:ring-theme-accent-primary text-theme-text-light resize-none min-h-[100px] break-all"
+          className={cn(
+            fieldTextareaClass,
+            "w-full resize-none min-h-[100px] break-all",
+          )}
           placeholder={t.profile.aboutMePlaceholder}
           maxLength={200}
           value={value || ""}
@@ -78,8 +101,6 @@ export const BadgeSection = memo(function BadgeSection({
   );
   const myStickers =
     allStickers?.filter((s) => s.uploaderId === profileId) || [];
-  const selectedSticker =
-    myStickers.find((sticker) => sticker.id === badgeStickerId) || null;
 
   // Enable stickers loading when user focuses on the section
   const handleEnableStickers = () => {
@@ -107,7 +128,7 @@ export const BadgeSection = memo(function BadgeSection({
             id="profile-badge-text"
             name="profile-badge-text"
             disabled={isSaving}
-            className="w-full bg-theme-bg-input border-0 focus-visible:ring-2 focus-visible:ring-theme-accent-primary text-theme-text-light resize-none break-all"
+            className={cn(fieldTextareaClass, "w-full resize-none break-all")}
             placeholder={t.profile.badgePlaceholder}
             maxLength={30}
             rows={2}
@@ -121,7 +142,7 @@ export const BadgeSection = memo(function BadgeSection({
       </div>
 
       {/* Badge Sticker */}
-      <div className="space-y-2">
+      <div className="mt-1.5 space-y-0.5">
         <span
           id="badge-sticker-label"
           className="uppercase text-xs font-bold text-theme-text-subtle block"
@@ -129,52 +150,29 @@ export const BadgeSection = memo(function BadgeSection({
           {t.profile.badgeSticker}
         </span>
         <div
-          className="space-y-3 min-h-[120px]"
+          className="relative w-full"
           role="group"
           aria-labelledby="badge-sticker-label"
         >
-          {/* Current selection preview */}
-          {selectedSticker?.asset?.url && (
-            <div className="flex items-center gap-2 p-2 bg-theme-bg-input rounded-md">
-              <div className="relative h-8 w-8">
-                <AnimatedSticker
-                  src={selectedSticker.asset.url}
-                  alt="Badge sticker"
-                  containerClassName="h-full w-full"
-                  fallbackWidthPx={32}
-                  fallbackHeightPx={32}
-                />
-              </div>
-              <span className="text-sm text-theme-text-subtle flex-1 truncate">
-                {t.profile.selectedSticker}
-              </span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => onBadgeStickerIdChange("")}
-                className="text-theme-text-muted hover:text-theme-text-light h-6 w-6 p-0"
-                aria-label="Remove badge sticker"
-              >
-                <X className="h-4 w-4" aria-hidden="true" />
-              </Button>
-            </div>
-          )}
-
           {/* Sticker selection grid */}
           {stickersEnabled ? (
             myStickers.length > 0 ? (
-              <div className="grid grid-cols-6 gap-2 max-h-[120px] overflow-y-auto p-2 bg-theme-bg-input rounded-md">
+              <div className="grid max-h-[120px] min-h-[64px] grid-cols-6 content-center gap-2 overflow-y-auto rounded-none border border-theme-border-subtle bg-theme-bg-edit-form/50 p-2">
                 {myStickers.map((sticker) => (
                   <button
                     key={sticker.id}
                     type="button"
-                    onClick={() => onBadgeStickerIdChange(sticker.id)}
-                    className={`relative h-10 w-10 rounded-md hover:bg-theme-accent-primary cursor-pointer transition p-1 ${
+                    onClick={() =>
+                      onBadgeStickerIdChange(
+                        badgeStickerId === sticker.id ? "" : sticker.id,
+                      )
+                    }
+                    className={cn(
+                      "relative h-10 w-10 cursor-pointer border p-1 transition",
                       badgeStickerId === sticker.id
-                        ? "ring-2 ring-theme-accent-primary"
-                        : ""
-                    }`}
+                        ? panelButtonActiveClass
+                        : panelButtonInactiveClass,
+                    )}
                     disabled={isSaving}
                     aria-label={`Select ${sticker.name} sticker`}
                     aria-pressed={badgeStickerId === sticker.id}
@@ -188,7 +186,7 @@ export const BadgeSection = memo(function BadgeSection({
                       fallbackHeightPx={40}
                     />
                     {badgeStickerId === sticker.id && (
-                      <div className="absolute -top-1 -right-1 bg-theme-accent-primary rounded-full p-0.5">
+                      <div className="absolute -right-1 -top-1 bg-theme-border-accent-active-channel p-0.5">
                         <Check className="h-2.5 w-2.5 text-white" />
                       </div>
                     )}
@@ -196,16 +194,14 @@ export const BadgeSection = memo(function BadgeSection({
                 ))}
               </div>
             ) : (
-              <div className="p-4 text-center text-sm text-theme-text-muted bg-theme-bg-input rounded-md border border-theme-border-secondary">
+              <div className="flex min-h-[64px] items-center justify-center rounded-none border border-theme-border-subtle bg-theme-bg-edit-form/50 p-3 text-center text-sm text-theme-text-muted">
                 {stickersLoading
                   ? t.profile.loadingStickers
                   : t.profile.noStickers}
               </div>
             )
           ) : (
-            <div className="p-4 text-center text-sm text-theme-text-muted bg-theme-bg-input rounded-md border border-theme-border-secondary cursor-pointer hover:bg-theme-bg-secondary transition">
-              Click to load stickers
-            </div>
+            <div className="min-h-[64px] rounded-none border border-theme-border-subtle bg-theme-bg-edit-form/50 p-3" />
           )}
         </div>
       </div>
@@ -221,14 +217,14 @@ export const ProfileTagsSection = memo(function ProfileTagsSection({
   isSaving,
 }: ProfileTagsSectionProps) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-0.5">
       <label
         htmlFor="profile-tag-input"
-        className="uppercase text-xs font-bold text-theme-text-subtle"
+        className="uppercase text-xs font-bold text-theme-text-subtle "
       >
         Profile Tags
       </label>
-      <p className="text-xs text-theme-text-muted mb-2">
+      <p className="text-xs text-theme-text-muted mb-1.5 ">
         Add up to 10 short tags (max 10 characters each) like
         &quot;Hispano&quot;, &quot;19yo&quot;, &quot;Furry&quot;, etc.
       </p>
@@ -239,7 +235,7 @@ export const ProfileTagsSection = memo(function ProfileTagsSection({
           id="profile-tag-input"
           name="profile-tag-input"
           disabled={isSaving || !tagsState.canAddMore}
-          className="bg-theme-bg-input border-0 focus-visible:ring-2 focus-visible:ring-theme-accent-primary text-theme-text-light"
+          className={fieldInputClass}
           placeholder={
             !tagsState.canAddMore
               ? "Maximum tags reached"
@@ -258,28 +254,32 @@ export const ProfileTagsSection = memo(function ProfileTagsSection({
             isSaving || !tagsState.input.trim() || !tagsState.canAddMore
           }
           onClick={() => tagsActions.addTag(tagsState.input)}
-          className="bg-theme-tab-button-bg hover:bg-theme-tab-button-hover text-white h-10 px-3"
+          className={cn(
+            panelButtonBaseClass,
+            panelButtonActiveClass,
+            "min-w-8 px-3",
+          )}
         >
           <Plus className="w-4 h-4" />
         </Button>
       </div>
 
       {/* Tags Display Box */}
-      <div className="mt-2 p-3 bg-theme-bg-input rounded-md min-h-[60px]">
+      <div className="mt-2 min-h-[40px] border border-theme-border-subtle bg-theme-bg-edit-form/35 p-3">
         {tagsState.tags.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {tagsState.tags.map((tag, index) => (
               <Badge
                 key={index}
                 variant="secondary"
-                className="flex items-center gap-1 bg-theme-accent-primary/20 text-theme-accent-primary border border-theme-accent-primary/30 hover:bg-theme-accent-primary/30"
+                className="flex h-6.5  items-center gap-1 rounded-none border-theme-channel-type-active-border bg-theme-channel-type-active-bg px-2 text-theme-channel-type-active-text"
               >
                 {tag}
                 <button
                   type="button"
                   onClick={() => tagsActions.removeTag(index)}
                   disabled={isSaving}
-                  className="ml-1 hover:bg-white/10 cursor-pointer rounded-full p-0.5"
+                  className="ml-1 cursor-pointer border border-transparent p-0.5 hover:border-white/10 hover:bg-white/10"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -311,8 +311,11 @@ export const LanguagesSection = memo(function LanguagesSection({
   onRemoveSecondaryLanguage,
   t,
 }: LanguagesSectionProps) {
+  const [isSecondaryLanguagesOpen, setIsSecondaryLanguagesOpen] =
+    useState(false);
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-0.5 -mt-1 -mb-5">
       {/* Main Language */}
       <div className="space-y-2">
         <label
@@ -329,13 +332,18 @@ export const LanguagesSection = memo(function LanguagesSection({
         >
           <SelectTrigger
             id="profile-main-language"
-            className="bg-theme-bg-input cursor-pointer border-0 focus:ring-2 focus:ring-theme-accent-primary text-theme-text-light"
+            size="sm"
+            className={panelSelectTriggerClass}
           >
             <SelectValue />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className={panelSelectContentClass}>
             {Object.values(Languages).map((lang) => (
-              <SelectItem key={lang} value={lang}>
+              <SelectItem
+                key={lang}
+                value={lang}
+                className={panelSelectItemClass}
+              >
                 {lang === Languages.EN ? "English" : "Español"}
               </SelectItem>
             ))}
@@ -345,9 +353,8 @@ export const LanguagesSection = memo(function LanguagesSection({
           {t.profile.mainLanguageDescription}
         </p>
       </div>
-
       {/* Secondary Languages */}
-      <div className="space-y-2">
+      <div className="space-y-2 ">
         <label
           htmlFor="profile-secondary-languages"
           className="uppercase text-xs font-bold text-theme-text-subtle"
@@ -358,24 +365,46 @@ export const LanguagesSection = memo(function LanguagesSection({
           <Select
             name="profile-secondary-languages"
             disabled={isSaving}
+            open={secondaryLanguages.length > 0 ? false : isSecondaryLanguagesOpen}
+            onOpenChange={(nextOpen) => {
+              if (secondaryLanguages.length > 0) {
+                setIsSecondaryLanguagesOpen(false);
+                return;
+              }
+
+              setIsSecondaryLanguagesOpen(nextOpen);
+            }}
             onValueChange={(value) =>
               onAddSecondaryLanguage(value as Languages)
             }
           >
             <SelectTrigger
               id="profile-secondary-languages"
-              className="bg-theme-bg-input cursor-pointer border-0 focus:ring-2 focus:ring-theme-accent-primary text-theme-text-light"
+              size="sm"
+              className={panelSelectTriggerClass}
             >
-              <SelectValue placeholder={t.profile.addLanguage} />
+              <span className="truncate">
+                {secondaryLanguages.length > 0
+                  ? secondaryLanguages
+                      .map((lang) =>
+                        lang === Languages.EN ? "English" : "Español",
+                      )
+                      .join(", ")
+                  : t.profile.addLanguage}
+              </span>
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className={panelSelectContentClass}>
               {Object.values(Languages)
                 .filter(
                   (lang) =>
                     lang !== mainLanguage && !secondaryLanguages.includes(lang),
                 )
                 .map((lang) => (
-                  <SelectItem key={lang} value={lang}>
+                  <SelectItem
+                    key={lang}
+                    value={lang}
+                    className={panelSelectItemClass}
+                  >
                     {lang === Languages.EN ? "English" : "Español"}
                   </SelectItem>
                 ))}
@@ -383,19 +412,19 @@ export const LanguagesSection = memo(function LanguagesSection({
           </Select>
 
           {/* Selected Secondary Languages */}
-          {secondaryLanguages.length > 0 && (
+          {false && secondaryLanguages.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {secondaryLanguages.map((lang) => (
                 <Badge
                   key={lang}
                   variant="secondary"
-                  className="flex items-center gap-1 bg-theme-tab-button-bg text-white hover:bg-theme-tab-button-hover"
+                  className="flex h-8 items-center gap-1 rounded-none border-theme-channel-type-active-border bg-theme-channel-type-active-bg px-2 text-theme-channel-type-active-text"
                 >
                   {lang === Languages.EN ? "English" : "Español"}
                   <button
                     type="button"
                     onClick={() => onRemoveSecondaryLanguage(lang)}
-                    className="ml-1 hover:bg-white/10 cursor-pointer rounded-full p-0.5"
+                    className="ml-1 cursor-pointer border border-transparent p-0.5 hover:border-white/10 hover:bg-white/10"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -404,9 +433,6 @@ export const LanguagesSection = memo(function LanguagesSection({
             </div>
           )}
         </div>
-        <p className="text-xs text-theme-text-muted">
-          {t.profile.secondaryLanguagesDescription}
-        </p>
       </div>
     </div>
   );
@@ -420,11 +446,8 @@ export const AccountInfoSection = memo(function AccountInfoSection({
   t,
 }: AccountInfoSectionProps) {
   return (
-    <div className="space-y-6 pt-0 -mt-2">
-      <h3 className="text-lg font-semibold text-theme-text-light border-b border-theme-border-secondary pb-2">
-        {t.profile.accountInfo}
-      </h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 -mt-2">
+    <div className="space-y-6 pt-0 -mt-2 -mb-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 -mt-2.5">
         {/* Email (Read-only) */}
         <div>
           <label
@@ -437,7 +460,7 @@ export const AccountInfoSection = memo(function AccountInfoSection({
             id="profile-email"
             name="profile-email"
             disabled
-            className="bg-theme-bg-input border-0 text-theme-text-muted cursor-not-allowed mt-2"
+            className={cn(readonlyFieldInputClass, " cursor-not-allowed")}
             value={email}
           />
         </div>
@@ -454,7 +477,10 @@ export const AccountInfoSection = memo(function AccountInfoSection({
             id="profile-user-id"
             name="profile-user-id"
             disabled
-            className="bg-theme-bg-input border-0 text-theme-text-muted cursor-not-allowed font-mono text-xs mt-2"
+            className={cn(
+              readonlyFieldInputClass,
+              " cursor-not-allowed font-mono text-xs",
+            )}
             value={visibleId}
           />
         </div>

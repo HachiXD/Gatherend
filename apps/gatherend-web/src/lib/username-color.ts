@@ -1,6 +1,11 @@
 import { DEFAULT_USERNAME_COLOR } from "@/lib/theme/presets";
 import type { UsernameColor, UsernameColorGradient } from "../../types";
 import { JsonValue } from "@prisma/client/runtime/library";
+import {
+  buildUsernameGradientStopsCss,
+  getFirstUsernameGradientStop,
+  normalizeUsernameGradientStops,
+} from "@/lib/username-gradient-stops";
 
 // Color Conversion Utilities (inline to avoid circular dependencies)
 
@@ -156,7 +161,11 @@ export function parseUsernameColor(
       return { type: "solid", color: obj.color };
     }
     if (obj.type === "gradient" && Array.isArray(obj.colors)) {
-      return obj as unknown as UsernameColorGradient;
+      const gradient = obj as unknown as UsernameColorGradient;
+      return {
+        ...gradient,
+        colors: normalizeUsernameGradientStops(gradient.colors),
+      };
     }
   }
 
@@ -178,7 +187,7 @@ export function getDisplayColor(
   }
 
   if (parsed.type === "gradient" && parsed.colors.length > 0) {
-    return parsed.colors[0].color;
+    return getFirstUsernameGradientStop(parsed.colors)?.color ?? DEFAULT_USERNAME_COLOR;
   }
 
   return DEFAULT_USERNAME_COLOR;
@@ -199,7 +208,8 @@ export function getUsernameTintBackgroundStyle(
   const sourceColor =
     parsed.type === "solid"
       ? parsed.color
-      : (parsed.colors[0]?.color ?? DEFAULT_USERNAME_COLOR);
+      : (getFirstUsernameGradientStop(parsed.colors)?.color ??
+          DEFAULT_USERNAME_COLOR);
 
   const { h, s, l } = hexToHsl(sourceColor);
   const mutedS = clamp(Math.round(s * 0.34), 12, 30);
@@ -253,11 +263,9 @@ export function getUsernameColorStyle(
   }
 
   if (parsed.type === "gradient") {
-    const stops = parsed.colors
-      .map((c) => `${c.color} ${c.position}%`)
-      .join(", ");
+    const stops = buildUsernameGradientStopsCss(parsed.colors);
     return {
-      background: `linear-gradient(${parsed.angle}deg, ${stops})`,
+      backgroundImage: `linear-gradient(${parsed.angle}deg, ${stops})`,
       WebkitBackgroundClip: "text",
       WebkitTextFillColor: "transparent",
       backgroundClip: "text",
@@ -327,9 +335,7 @@ export function getRingBackground(
   }
 
   if (parsed.type === "gradient" && parsed.colors.length >= 2) {
-    const stops = parsed.colors
-      .map((c) => `${c.color} ${c.position}%`)
-      .join(", ");
+    const stops = buildUsernameGradientStopsCss(parsed.colors);
     return `linear-gradient(${parsed.angle}deg, ${stops})`;
   }
 

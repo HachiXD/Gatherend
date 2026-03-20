@@ -4,6 +4,8 @@ import { AuthProvider, Prisma } from "@prisma/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
 import { profileCache } from "@/lib/redis";
+import { normalizeThemeGradientColors } from "@/lib/theme/gradient-stops";
+import type { GradientConfig } from "@/lib/theme/types";
 
 async function emitProfileUpdated(profileId: string, patch: Record<string, unknown>) {
   try {
@@ -139,7 +141,11 @@ export async function PATCH(req: Request) {
         // Allow null to remove gradient
         // themeConfig will not have gradient
       } else if (isValidGradientConfig(gradient)) {
-        themeConfig.gradient = gradient;
+        const normalizedGradient = gradient as GradientConfig;
+        themeConfig.gradient = {
+          ...normalizedGradient,
+          colors: normalizeThemeGradientColors(normalizedGradient.colors),
+        };
       } else {
         return NextResponse.json(
           { error: "Invalid gradient configuration" },

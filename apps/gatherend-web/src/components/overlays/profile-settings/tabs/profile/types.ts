@@ -1,7 +1,10 @@
 import { Languages } from "@prisma/client";
 import type { UsernameFormatConfig } from "@/lib/username-format";
 import type { GradientColorStop } from "@/components/ui/gradient-slider";
-import type { UsernameColorState } from "./hooks/use-username-color-reducer";
+import type {
+  EditableGradientColorStop,
+  UsernameColorState,
+} from "./hooks/use-username-color-reducer";
 import type { UsernameFormatState } from "./hooks/use-username-format-reducer";
 import type { ProfileTagsState } from "./hooks/use-profile-tags";
 import type { TranslationKeys } from "@/i18n/types";
@@ -82,11 +85,11 @@ export interface UsernameColorSectionProps
   colorActions: {
     setMode: (mode: "solid" | "gradient") => void;
     setSolidColor: (color: string) => void;
-    setGradientColors: (colors: GradientColorStop[]) => void;
+    setGradientColors: (colors: EditableGradientColorStop[]) => void;
     setGradientAngle: (angle: number) => void;
     setGradientAnimated: (animated: boolean) => void;
     setAnimationType: (type: "shift" | "shimmer" | "pulse") => void;
-    setSelectedIndex: (index: number | null) => void;
+    setSelectedId: (id: string | null) => void;
     updateSelectedColor: (color: string) => void;
     removeSelectedColor: () => void;
   };

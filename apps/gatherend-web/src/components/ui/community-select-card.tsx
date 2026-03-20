@@ -20,14 +20,14 @@ export function CommunitySelectCard({
       type="button"
       onClick={onClick}
       className={cn(
-        "w-full flex items-center gap-2 p-2 rounded-md transition-colors text-left",
-        "hover:bg-theme-bg-tertiary",
+        "flex w-full items-center gap-2 border px-2 py-1.5 text-left transition",
+        "border-theme-border cursor-pointer bg-theme-bg-secondary/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.28),inset_0_-1px_0_rgba(0,0,0,0.28)] hover:bg-theme-bg-tertiary/40",
         isSelected
-          ? "bg-theme-accent-primary/20 border border-theme-accent-primary"
-          : "bg-theme-bg-secondary border border-transparent"
+          ? "border-theme-accent-primary bg-theme-accent-primary/12"
+          : "text-theme-text-subtle",
       )}
     >
-      <div className="relative w-8 h-8 rounded-md overflow-hidden shrink-0 bg-theme-bg-tertiary">
+      <div className="relative h-8 w-8 shrink-0 overflow-hidden border border-theme-border bg-theme-bg-tertiary">
         {community.imageAsset?.url ? (
           <Image
             src={community.imageAsset.url}
@@ -45,7 +45,7 @@ export function CommunitySelectCard({
         <div
           className={cn(
             "text-sm font-medium truncate",
-            isSelected ? "text-theme-text-light" : "text-theme-text-subtle"
+            isSelected ? "text-theme-text-light" : "text-theme-text-subtle",
           )}
         >
           {community.name}

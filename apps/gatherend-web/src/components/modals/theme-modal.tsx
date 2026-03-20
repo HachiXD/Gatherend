@@ -27,6 +27,10 @@ import {
   isValidHexColor,
   clampGradientColor,
 } from "@/lib/theme/utils";
+import {
+  buildThemeGradientStopsCss,
+  normalizeThemeGradientColorStops,
+} from "@/lib/theme/gradient-stops";
 import { DEFAULT_BASE_COLOR, THEME_PRESETS } from "@/lib/theme/presets";
 import type { GradientConfig, ThemeConfig, ThemeMode } from "@/lib/theme/types";
 import { toast } from "sonner";
@@ -39,6 +43,44 @@ interface ThemeModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentThemeConfig: ThemeConfig | null;
+}
+
+interface EditableGradientColorStop extends GradientColorStop {
+  editorId: string;
+}
+
+function createEditableGradientColorStop(
+  stop: GradientColorStop,
+): EditableGradientColorStop {
+  return {
+    color: stop.color,
+    position: stop.position,
+    editorId: crypto.randomUUID(),
+  };
+}
+
+function normalizeEditableGradientColors<T extends EditableGradientColorStop>(
+  colors: readonly T[],
+): T[] {
+  return normalizeThemeGradientColorStops(colors);
+}
+
+function toEditableGradientColors(
+  colors: (string | { color: string; position: number })[] | undefined,
+  defaultColors: GradientColorStop[],
+): EditableGradientColorStop[] {
+  return normalizeEditableGradientColors(
+    normalizeGradientColors(colors, defaultColors).map(createEditableGradientColorStop),
+  );
+}
+
+function stripEditableGradientColors(
+  colors: readonly EditableGradientColorStop[],
+): GradientColorStop[] {
+  return normalizeEditableGradientColors(colors).map(({ color, position }) => ({
+    color,
+    position,
+  }));
 }
 
 // Helper para normalizar colores de gradiente a GradientColorStop[]
@@ -64,8 +106,8 @@ function generateGradientPreviewCSS(
   angle: number,
   type: "linear" | "radial",
 ): string {
-  const sortedColors = [...colors].sort((a, b) => a.position - b.position);
-  const stops = sortedColors.map((c) => `${c.color} ${c.position}%`).join(", ");
+  const stops = buildThemeGradientStopsCss(colors);
+  if (!stops) return "transparent";
 
   if (type === "radial") {
     return `radial-gradient(circle at center, ${stops})`;
@@ -175,8 +217,8 @@ export function ThemeModal({
   const [useGradient, setUseGradient] = useState(
     !!currentThemeConfig?.gradient,
   );
-  const [gradientColors, setGradientColors] = useState<GradientColorStop[]>(
-    normalizeGradientColors(currentThemeConfig?.gradient?.colors, [
+  const [gradientColors, setGradientColors] = useState<EditableGradientColorStop[]>(
+    toEditableGradientColors(currentThemeConfig?.gradient?.colors, [
       { color: DEFAULT_BASE_COLOR, position: 0 },
       { color: "#1a1a2e", position: 100 },
     ]),
@@ -199,11 +241,12 @@ export function ThemeModal({
       setThemeMode(currentThemeConfig?.mode || "dark");
       setUseGradient(!!currentThemeConfig?.gradient);
       setGradientColors(
-        normalizeGradientColors(currentThemeConfig?.gradient?.colors, [
+        toEditableGradientColors(currentThemeConfig?.gradient?.colors, [
           { color: DEFAULT_BASE_COLOR, position: 0 },
           { color: "#1a1a2e", position: 100 },
         ]),
       );
+      setSelectedColorId(null);
       setGradientAngle(currentThemeConfig?.gradient?.angle || 135);
       setGradientType(currentThemeConfig?.gradient?.type || "linear");
     }
@@ -220,7 +263,7 @@ export function ThemeModal({
     if (useGradient && gradientColors.length >= 2) {
       colors = applyTransparencyToBackgrounds(colors);
       const gradient: GradientConfig = {
-        colors: gradientColors, // Ya es GradientColorStop[]
+        colors: stripEditableGradientColors(gradientColors),
         angle: gradientAngle,
         type: gradientType,
       };
@@ -258,7 +301,7 @@ export function ThemeModal({
         (stop, i) => stop.color !== gradientColors[i].color,
       );
       if (hasChanges) {
-        setGradientColors(reclampedColors);
+        setGradientColors(normalizeEditableGradientColors(reclampedColors));
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -303,7 +346,7 @@ export function ThemeModal({
 
       if (useGradient && gradientColors.length >= 2) {
         themeConfig.gradient = {
-          colors: gradientColors, // Ya es GradientColorStop[]
+          colors: stripEditableGradientColors(gradientColors),
           angle: gradientAngle,
           type: gradientType,
         };
@@ -334,7 +377,7 @@ export function ThemeModal({
       if (useGradient && gradientColors.length >= 2) {
         colors = applyTransparencyToBackgrounds(colors);
         applyGradientToDOM({
-          colors: gradientColors, // Ya es GradientColorStop[]
+          colors: stripEditableGradientColors(gradientColors),
           angle: gradientAngle,
           type: gradientType,
         });
@@ -360,67 +403,77 @@ export function ThemeModal({
     setThemeMode("dark");
     setUseGradient(false);
     // Colores por defecto ya son oscuros, pero aplicamos clamp por consistencia
-    setGradientColors([
-      { color: clampGradientColor(DEFAULT_BASE_COLOR, "dark"), position: 0 },
-      { color: clampGradientColor("#1a1a2e", "dark"), position: 100 },
-    ]);
+    setGradientColors(
+      toEditableGradientColors(
+        [
+          { color: clampGradientColor(DEFAULT_BASE_COLOR, "dark"), position: 0 },
+          { color: clampGradientColor("#1a1a2e", "dark"), position: 100 },
+        ],
+        [],
+      ),
+    );
     setGradientAngle(135);
     setGradientType("linear");
-    setSelectedColorIndex(null);
+    setSelectedColorId(null);
   };
 
   // Estado para el color seleccionado en el gradient slider
-  const [selectedColorIndex, setSelectedColorIndex] = useState<number | null>(
-    null,
-  );
+  const [selectedColorId, setSelectedColorId] = useState<string | null>(null);
 
   // Remove gradient color
-  const removeGradientColor = (index: number) => {
+  const removeGradientColor = (editorId: string) => {
     if (gradientColors.length <= 2) return;
 
-    const nextColors = gradientColors.filter((_, i) => i !== index);
+    const nextColors = gradientColors.filter((stop) => stop.editorId !== editorId);
     setGradientColors(nextColors);
-    setSelectedColorIndex((current) => {
-      if (current === null) return null;
-      if (current === index) return Math.min(index, nextColors.length - 1);
-      if (current > index) return current - 1;
-      return current;
-    });
+    setSelectedColorId((current) =>
+      current === editorId ? nextColors[0]?.editorId ?? null : current,
+    );
   };
 
   const addGradientColor = () => {
     if (gradientColors.length >= 4) return;
 
     const nextStop = getNextGradientStop(gradientColors);
-    const nextColors: GradientColorStop[] = [
+    const nextEditableStop = createEditableGradientColorStop({
+      ...nextStop,
+      color: clampGradientColor(nextStop.color, themeMode),
+    });
+    const nextColors = normalizeEditableGradientColors([
       ...gradientColors,
-      {
-        ...nextStop,
-        color: clampGradientColor(nextStop.color, themeMode),
-      },
-    ];
+      nextEditableStop,
+    ]);
 
     setGradientColors(nextColors);
-    setSelectedColorIndex(nextColors.length - 1);
+    setSelectedColorId(nextEditableStop.editorId);
   };
 
   // Update gradient color (clamped to mode lightness range)
-  const updateGradientColor = (index: number, color: string) => {
-    const newColors = [...gradientColors];
+  const updateGradientColor = (editorId: string, color: string) => {
+    const newColors = normalizeEditableGradientColors(
+      gradientColors.map((stop) =>
+        stop.editorId === editorId
+          ? {
+              ...stop,
+              color: clampGradientColor(color, themeMode),
+            }
+          : stop,
+      ),
+    );
     // Aplicar clamp según el modo del tema
-    newColors[index] = {
-      ...newColors[index],
-      color: clampGradientColor(color, themeMode),
-    };
     setGradientColors(newColors);
   };
 
   // Handle gradient colors change from slider (with clamping)
-  const handleGradientColorsChange = (newColors: GradientColorStop[]) => {
-    const clampedColors = newColors.map((stop) => ({
-      ...stop,
-      color: clampGradientColor(stop.color, themeMode),
-    }));
+  const handleGradientColorsChange = (
+    newColors: EditableGradientColorStop[],
+  ) => {
+    const clampedColors = normalizeEditableGradientColors(
+      newColors.map((stop) => ({
+        ...stop,
+        color: clampGradientColor(stop.color, themeMode),
+      })),
+    );
     setGradientColors(clampedColors);
   };
 
@@ -567,10 +620,12 @@ export function ThemeModal({
               // Cuando se activa el degradado, clampear los colores al modo actual
               if (checked) {
                 setGradientColors((prev) =>
-                  prev.map((stop) => ({
-                    ...stop,
-                    color: clampGradientColor(stop.color, themeMode),
-                  })),
+                  normalizeEditableGradientColors(
+                    prev.map((stop) => ({
+                      ...stop,
+                      color: clampGradientColor(stop.color, themeMode),
+                    })),
+                  ),
                 );
               }
             }}
@@ -591,8 +646,9 @@ export function ThemeModal({
               <GradientSlider
                 colors={gradientColors}
                 onChange={handleGradientColorsChange}
-                selectedIndex={selectedColorIndex}
-                onSelectedIndexChange={setSelectedColorIndex}
+                selectedColorId={selectedColorId}
+                onSelectedColorIdChange={setSelectedColorId}
+                getColorId={(stop) => stop.editorId}
                 angle={gradientAngle}
                 type={gradientType}
                 minColors={2}
@@ -606,14 +662,14 @@ export function ThemeModal({
             <div className="space-y-2">
               {gradientColors.map((stop, index) => (
                 <div
-                  key={index}
+                  key={stop.editorId}
                   className={cn(
                     "flex items-center gap-2 p-2 rounded border transition-colors",
-                    selectedColorIndex === index
+                    selectedColorId === stop.editorId
                       ? "border-theme-accent-primary bg-theme-accent-primary/10"
                       : "border-theme-border-secondary bg-theme-bg-tertiary",
                   )}
-                  onMouseDown={() => setSelectedColorIndex(index)}
+                  onMouseDown={() => setSelectedColorId(stop.editorId)}
                 >
                   <Label
                     htmlFor={`theme-gradient-color-${index}`}
@@ -632,9 +688,9 @@ export function ThemeModal({
                       type="color"
                       value={stop.color}
                       onChange={(e) =>
-                        updateGradientColor(index, e.target.value)
+                        updateGradientColor(stop.editorId, e.target.value)
                       }
-                      onFocus={() => setSelectedColorIndex(index)}
+                      onFocus={() => setSelectedColorId(stop.editorId)}
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                       aria-label={`Selector de color ${index + 1}`}
                     />
@@ -648,10 +704,10 @@ export function ThemeModal({
                     onChange={(e) => {
                       const val = e.target.value;
                       if (val.startsWith("#") && val.length <= 7) {
-                        updateGradientColor(index, val);
+                        updateGradientColor(stop.editorId, val);
                       }
                     }}
-                    onFocus={() => setSelectedColorIndex(index)}
+                    onFocus={() => setSelectedColorId(stop.editorId)}
                     className="w-24 min-w-0 px-2 py-1 text-xs bg-theme-bg-input border border-theme-border-secondary rounded text-theme-text-light font-mono uppercase"
                   />
 
@@ -663,7 +719,7 @@ export function ThemeModal({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      removeGradientColor(index);
+                      removeGradientColor(stop.editorId);
                     }}
                     disabled={gradientColors.length <= 2}
                     className={cn(

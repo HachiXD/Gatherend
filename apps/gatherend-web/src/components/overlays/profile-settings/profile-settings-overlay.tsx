@@ -12,10 +12,10 @@ import { useCurrentProfile } from "@/hooks/use-current-profile";
 // Skeleton for settings overlay loading
 function SettingsOverlaySkeleton() {
   return (
-    <div className="w-48 space-y-3">
-      <div className="h-5 bg-white/10 rounded w-3/4 animate-pulse" />
-      <div className="h-4 bg-white/5 rounded w-full animate-pulse" />
-      <div className="h-4 bg-white/5 rounded w-2/3 animate-pulse" />
+    <div className="w-52 space-y-3">
+      <div className="h-5 w-3/4 animate-pulse bg-white/10" />
+      <div className="h-8 w-full animate-pulse border border-white/8 bg-white/5" />
+      <div className="h-8 w-2/3 animate-pulse border border-white/8 bg-white/5" />
     </div>
   );
 }
@@ -28,6 +28,8 @@ export const ProfileSettingsOverlay = ({
   onClose,
 }: ProfileSettingsOverlayProps) => {
   const [tab, setTab] = useState<"profile">("profile");
+  const overlayShellShadow =
+    "shadow-[0_18px_40px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.08),inset_1px_0_0_rgba(255,255,255,0.06),inset_-1px_0_0_rgba(0,0,0,0.42),inset_0_-1px_0_rgba(0,0,0,0.42)]";
 
   // Obtener perfil desde React Query para tener datos siempre actualizados
   const { data: user, isLoading } = useCurrentProfile();
@@ -39,11 +41,16 @@ export const ProfileSettingsOverlay = ({
   if (isLoading || !user) {
     return createPortal(
       <div className="fixed inset-0 z-[10000] bg-black/40 backdrop-blur-sm flex items-center justify-center p-2 sm:p-6">
-        <div className="bg-theme-bg-overlay-primary p-8 rounded-lg">
+        <div
+          className={cn(
+            "border border-theme-border bg-theme-bg-overlay-primary p-8",
+            overlayShellShadow,
+          )}
+        >
           <SettingsOverlaySkeleton />
         </div>
       </div>,
-      document.body
+      document.body,
     );
   }
 
@@ -51,27 +58,28 @@ export const ProfileSettingsOverlay = ({
     <div className="fixed inset-0 z-[10000] bg-black/40 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-6 overflow-y-auto overscroll-contain pointer-events-auto">
       <div
         className={cn(
-          "relative bg-theme-bg-overlay-primary w-full max-w-3xl h-[calc(100dvh-1rem)] sm:h-[calc(100dvh-3rem)]",
-          "rounded-lg shadow-2xl flex flex-col sm:flex-row overflow-hidden animate-in fade-in zoom-in duration-150"
+          "relative flex h-[calc(100dvh-1rem)] w-full max-w-4xl flex-col overflow-hidden border border-theme-border bg-theme-bg-overlay-primary sm:h-[calc(100dvh-3rem)] sm:flex-row",
+          "animate-in fade-in zoom-in duration-150",
+          overlayShellShadow,
         )}
       >
         {/* SIDEBAR */}
         <ProfileSettingsSidebar tab={tab} setTab={setTab} onClose={onClose} />
 
         {/* MAIN PANEL */}
-        <div className="flex-1 p-4 sm:p-6 overflow-y-auto">
+        <div className="scrollbar-navigation flex-1 overflow-y-auto border-t border-theme-border bg-theme-bg-quaternary/35 p-4 sm:border-t-0 sm:border-l sm:p-6">
           {tab === "profile" && <ProfileTab user={user} />}
         </div>
 
         {/* CLOSE BUTTON */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-md hover:bg-white/10 transition"
+          className="absolute right-2 top-2 cursor-pointer text-theme-text-subtle transition hover:text-theme-text-light"
         >
-          <X className="w-5 h-5 text-theme-text-subtle" />
+          <X className="h-5 w-5" />
         </button>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 };

@@ -53,6 +53,12 @@ export const LeftbarBanner = ({
   const isOwner = role === MemberRole.OWNER;
   const isAdmin = isOwner || role === MemberRole.ADMIN;
   const isModerator = isAdmin || role === MemberRole.MODERATOR;
+  const menuPanelShadow =
+    "shadow-[0_10px_24px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.1),inset_1px_0_0_rgba(255,255,255,0.08),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]";
+  const menuRowClass =
+    "h-8 cursor-pointer rounded-none border border-transparent px-3 py-2 text-sm hover:border-theme-border hover:bg-theme-bg-secondary/30 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.28)] focus:border-theme-border focus:bg-theme-bg-secondary/30 focus:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.28)]";
+  const menuDangerRowClass =
+    "h-8 cursor-pointer rounded-none border border-rose-500/20 bg-rose-500/6 px-3 py-2 text-sm text-rose-400 hover:border-rose-500/35 hover:bg-rose-500/10 focus:border-rose-500/35 focus:bg-rose-500/10";
 
   const finalImageUrl = getBoardImageUrl(
     boardImageUrl,
@@ -111,7 +117,7 @@ export const LeftbarBanner = ({
         if (e.key !== "Enter" && e.key !== " ") return;
         openOnFirstInteraction(e);
       }}
-      className="p-1.5 rounded-md bg-theme-bg-primary/50 hover:bg-theme-bg-primary/70 cursor-pointer transition text-theme-text-secondary hover:text-theme-text-secondary"
+      className="h-8 w-8 pl-1 cursor-pointer rounded-none border border-theme-border bg-theme-bg-primary/55 text-theme-text-secondary transition hover:bg-theme-bg-primary/72 hover:text-theme-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]"
     >
       <Settings className="h-5 w-5" />
     </button>
@@ -151,14 +157,17 @@ export const LeftbarBanner = ({
             <DropdownMenuTrigger className="focus:outline-none" asChild>
               {triggerButtonEl}
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56 bg-theme-bg-dropdown-menu-primary border border-theme-bg-secondary text-xs text-theme-text-secondary font-medium space-y-[2px]">
+            <DropdownMenuContent
+              align="end"
+              className={`w-56 rounded-none border-theme-border bg-theme-bg-dropdown-menu-primary px-1 py-0.5  text-xs text-theme-text-secondary font-medium ${menuPanelShadow}`}
+            >
               {isModerator && (
                 <DropdownMenuItem
                   onClick={() => onOpen("invite", { board })}
-                  className="text-theme-menu-accent-text px-3 py-2 text-sm cursor-pointer"
+                  className={`${menuRowClass} text-theme-menu-accent-text`}
                 >
                   {t.board.invitePeople}
-                  <UserPlus className="h-4 text-theme-menu-accent-text w-4 ml-auto" />
+                  <UserPlus className="h-4 w-4 ml-auto text-theme-menu-accent-text" />
                 </DropdownMenuItem>
               )}
               {isAdmin && (
@@ -169,7 +178,7 @@ export const LeftbarBanner = ({
                       currentProfileId,
                     })
                   }
-                  className="px-3 py-2 hover:bg-theme-bg-tertiary text-sm cursor-pointer"
+                  className={menuRowClass}
                 >
                   {t.board.boardSettings}
                   <Settings className="h-4 w-4 ml-auto" />
@@ -178,7 +187,7 @@ export const LeftbarBanner = ({
               {FEATURES.CATEGORIES_ENABLED && isModerator && (
                 <DropdownMenuItem
                   onClick={() => onOpen("createCategory", { board })}
-                  className="px-3 py-2 hover:bg-theme-bg-tertiary text-sm cursor-pointer"
+                  className={menuRowClass}
                 >
                   {t.board.createCategory}
                   <PlusCircle className="h-4 w-4 ml-auto" />
@@ -189,20 +198,22 @@ export const LeftbarBanner = ({
                   onClick={() =>
                     onOpen("createChannel", { board, categoryId: null })
                   }
-                  className="px-3 py-2 hover:bg-theme-bg-tertiary text-sm cursor-pointer"
+                  className={menuRowClass}
                 >
                   {t.board.createRoom}
                   <PlusCircle className="h-4 w-4 ml-auto" />
                 </DropdownMenuItem>
               )}
-              {!isOwner && <DropdownMenuSeparator />}
+              {!isOwner && (
+                <DropdownMenuSeparator className="mx-0 my-1 bg-theme-border" />
+              )}
               {!isOwner && (
                 <DropdownMenuItem
                   onClick={() => onOpen("leaveBoard", { board })}
-                  className="text-rose-500 hover:bg-theme-bg-tertiary px-3 py-2 text-sm cursor-pointer"
+                  className={menuDangerRowClass}
                 >
                   {t.board.leaveBoard}
-                  <LogOut className="text-rose-500 h-4 w-4 ml-auto" />
+                  <LogOut className="text-rose-400 h-4 w-4 ml-auto" />
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>

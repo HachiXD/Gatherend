@@ -11,6 +11,7 @@ import {
   MAX_DISCRIMINATORS,
 } from "@/lib/username";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { normalizeUsernameGradientStops } from "@/lib/username-gradient-stops";
 import {
   UUID_REGEX,
   findOwnedSticker,
@@ -304,10 +305,10 @@ export async function PATCH(req: Request) {
           if (
             typeof colorData.angle !== "number" ||
             colorData.angle < 0 ||
-            colorData.angle > 360
+            colorData.angle > 180
           ) {
             return NextResponse.json(
-              { error: "Gradient angle must be 0-360" },
+              { error: "Gradient angle must be 0-180" },
               { status: 400 },
             );
           }
@@ -323,6 +324,10 @@ export async function PATCH(req: Request) {
               { status: 400 },
             );
           }
+
+          colorData.colors = normalizeUsernameGradientStops(
+            colorData.colors as Array<{ color: string; position: number }>,
+          );
         } else {
           return NextResponse.json(
             { error: "Invalid usernameColor type" },

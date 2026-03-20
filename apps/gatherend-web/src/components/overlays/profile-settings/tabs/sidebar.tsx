@@ -15,24 +15,30 @@ export const ProfileSettingsSidebar = ({
   onClose,
 }: SidebarProps) => {
   const { t } = useTranslation();
+  const tabClass =
+    "w-full whitespace-nowrap border px-3 py-2 text-left text-sm font-medium transition";
 
   return (
-    <div className="w-full sm:w-32 md:w-56 bg-theme-bg-overlay-primary border-b sm:border-b-0 sm:border-r border-theme-border-secondary p-3 sm:p-2 md:p-4 flex flex-col">
-      <h2 className="text-xs uppercase font-bold text-theme-text-muted mb-2 sm:mb-4">
-        {t.overlays.profileSettings.title}
-      </h2>
+    <div className="flex w-full flex-col border-b border-theme-border bg-theme-bg-overlay-primary/85 p-3 sm:w-40 sm:border-b-0 sm:p-3 md:w-60 md:p-4">
+      <div className="border border-theme-border bg-theme-bg-secondary/25 px-2.5 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.24)]">
+        <h2 className="truncate text-[11px] font-semibold uppercase tracking-[0.06em] text-theme-text-muted">
+          {t.overlays.profileSettings.title}
+        </h2>
+      </div>
 
-      <button
-        onClick={() => setTab("profile")}
-        className={cn(
-          "text-left px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap",
-          tab === "profile"
-            ? "bg-theme-tab-active-bg text-white"
-            : "hover:bg-theme-channel-hover text-theme-text-subtle"
-        )}
-      >
-        {t.overlays.profileSettings.tabs.profile}
-      </button>
+      <div className="mt-3 space-y-1.5">
+        <button
+          onClick={() => setTab("profile")}
+          className={cn(
+            tabClass,
+            tab === "profile"
+              ? "border-theme-border-accent-active-channel cursor-pointer bg-theme-bg-secondary/40 text-theme-text-light shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_0_-1px_0_rgba(0,0,0,0.28)]"
+              : "border-transparent cursor-pointer text-theme-text-subtle hover:border-theme-border hover:bg-theme-bg-secondary/30 hover:text-theme-text-light hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.24)]",
+          )}
+        >
+          {t.overlays.profileSettings.tabs.profile}
+        </button>
+      </div>
     </div>
   );
 };

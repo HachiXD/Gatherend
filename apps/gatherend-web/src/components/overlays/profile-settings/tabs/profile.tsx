@@ -75,6 +75,10 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
   const { invalidateProfileCard } = useInvalidateProfileCard();
   const { updateCachedProfiles } = useUpdateCachedProfiles();
   const { locale, setLocale, t } = useTranslation();
+  const panelShellClass =
+    "border border-theme-border bg-theme-bg-overlay-primary/78 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.26)] sm:px-5 sm:py-5";
+  const sectionTitleClass =
+    "border-b border-theme-border -mt-2.5 pb-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-theme-text-muted";
 
   // Form State (react-hook-form for simple fields only)
 
@@ -309,18 +313,20 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
     usernameValidation.status.checking;
 
   return (
-    <div className="space-y-8 max-w-2xl mx-auto pb-10">
+    <div className="mx-auto max-w-2xl space-y-2 pb-10">
       {/* Header */}
-      <div className="border-b border-theme-border-secondary pb-4">
-        <h2 className="text-2xl font-bold text-theme-text-primary">
-          {t.profile.title}
-        </h2>
-        <p className="text-sm text-theme-text-tertiary mt-1">
-          {t.profile.subtitle}
-        </p>
+      <div className={panelShellClass}>
+        <div className="border-b border-theme-border pb-0.5 -mb-3 -mt-3">
+          <h2 className="text-2xl font-bold text-theme-text-primary">
+            {t.profile.title}
+          </h2>
+          <p className="-mt-1 text-sm text-theme-text-tertiary">
+            {t.profile.subtitle}
+          </p>
+        </div>
       </div>
 
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         {/* Hidden file input */}
         <label htmlFor="profile-avatar-upload" className="sr-only">
           Upload profile avatar
@@ -336,93 +342,102 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
         />
 
         {/* SECTION 1: IDENTITY (Avatar & Username) */}
-        <div className="flex flex-col md:flex-row gap-8 items-start">
-          <AvatarSection
-            imagePreview={imagePreview}
-            username={user.username}
-            uploading={uploading}
-            isSaving={isSaving}
-            onUploadClick={handleUploadClick}
-            t={t}
-          />
+        <section className={panelShellClass}>
+          <div className="-mt-3 -mb-2.5 flex flex-col items-start gap-8 md:flex-row">
+            <div className="md:self-center">
+              <AvatarSection
+                imagePreview={imagePreview}
+                username={user.username}
+                uploading={uploading}
+                isSaving={isSaving}
+                onUploadClick={handleUploadClick}
+                t={t}
+              />
+            </div>
+            <div className="-mt-1 w-full flex-1 space-y-2">
+              <UsernameSection
+                username={username}
+                discriminator={user.discriminator}
+                usernameStatus={usernameValidation.status}
+                originalUsername={originalUsername}
+                formatState={usernameFormat.state}
+                formatActions={usernameFormat.actions}
+                isSaving={isSaving}
+                onUsernameChange={handleUsernameChange}
+                t={t}
+              />
 
-          <div className="flex-1 space-y-2 -mt-3.5 w-full">
-            <UsernameSection
-              username={username}
-              discriminator={user.discriminator}
-              usernameStatus={usernameValidation.status}
-              originalUsername={originalUsername}
-              formatState={usernameFormat.state}
-              formatActions={usernameFormat.actions}
+              <UsernameColorSection
+                colorState={usernameColor.state}
+                colorActions={usernameColor.actions}
+                isSaving={isSaving}
+                t={t}
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* SECTION 2: DETAILS */}
+        <section className={panelShellClass}>
+          <h3 className={sectionTitleClass}>{t.profile.profileDetails}</h3>
+          <div className="mt-1 space-y-1.5">
+            <AboutMeSection
+              value={longDescription}
               isSaving={isSaving}
-              onUsernameChange={handleUsernameChange}
+              onChange={(value) => form.setValue("longDescription", value)}
               t={t}
             />
 
-            <UsernameColorSection
-              colorState={usernameColor.state}
-              colorActions={usernameColor.actions}
+            <BadgeSection
+              badgeText={badge}
+              badgeStickerId={badgeStickerId}
+              profileId={user.id}
               isSaving={isSaving}
+              onBadgeTextChange={(value) => form.setValue("badge", value)}
+              onBadgeStickerIdChange={(stickerId) =>
+                form.setValue("badgeStickerId", stickerId)
+              }
+              t={t}
+            />
+
+            <ProfileTagsSection
+              tagsState={profileTags.state}
+              tagsActions={profileTags.actions}
+              isSaving={isSaving}
+            />
+
+            <LanguagesSection
+              mainLanguage={mainLanguage}
+              secondaryLanguages={secondaryLanguages}
+              isSaving={isSaving}
+              onMainLanguageChange={handleMainLanguageChange}
+              onAddSecondaryLanguage={addSecondaryLanguage}
+              onRemoveSecondaryLanguage={removeSecondaryLanguage}
               t={t}
             />
           </div>
-        </div>
-
-        {/* SECTION 2: DETAILS */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-theme-text-light border-b border-theme-border-secondary pb-2">
-            {t.profile.profileDetails}
-          </h3>
-
-          <AboutMeSection
-            value={longDescription}
-            isSaving={isSaving}
-            onChange={(value) => form.setValue("longDescription", value)}
-            t={t}
-          />
-
-          <BadgeSection
-            badgeText={badge}
-            badgeStickerId={badgeStickerId}
-            profileId={user.id}
-            isSaving={isSaving}
-            onBadgeTextChange={(value) => form.setValue("badge", value)}
-            onBadgeStickerIdChange={(stickerId) =>
-              form.setValue("badgeStickerId", stickerId)
-            }
-            t={t}
-          />
-
-          <ProfileTagsSection
-            tagsState={profileTags.state}
-            tagsActions={profileTags.actions}
-            isSaving={isSaving}
-          />
-
-          <LanguagesSection
-            mainLanguage={mainLanguage}
-            secondaryLanguages={secondaryLanguages}
-            isSaving={isSaving}
-            onMainLanguageChange={handleMainLanguageChange}
-            onAddSecondaryLanguage={addSecondaryLanguage}
-            onRemoveSecondaryLanguage={removeSecondaryLanguage}
-            t={t}
-          />
-        </div>
+        </section>
 
         {/* SECTION 3: ACCOUNT INFO (Read Only) */}
-        <AccountInfoSection email={user.email} visibleId={user.id} t={t} />
+        <section className={panelShellClass}>
+          <h3 className={sectionTitleClass}>{t.profile.accountInfo}</h3>
+          <div className="mt-4">
+            <AccountInfoSection email={user.email} visibleId={user.id} t={t} />
+          </div>
+        </section>
 
         {/* Footer Actions */}
-        <div className="flex justify-end pt-6 border-t border-theme-border-secondary">
-          <Button
-            type="submit"
-            disabled={isSubmitDisabled}
-            className="bg-theme-tab-button-bg cursor-pointer hover:bg-theme-tab-button-hover text-white min-w-[120px]"
-          >
-            {isSaving ? t.profile.saving : t.profile.saveChanges}
-          </Button>
-        </div>
+        <section className={panelShellClass}>
+          <div className="flex justify-end">
+            <Button
+              type="submit"
+              disabled={isSubmitDisabled}
+              className="h-6.5 min-w-[120px] -my-3 cursor-pointer rounded-none bg-theme-tab-button-bg px-3 text-[14px] text-theme-text-light hover:bg-theme-tab-button-hover"
+            >
+              {isSaving ? t.profile.saving : t.profile.saveChanges}
+            </Button>
+          </div>
+        </section>
       </form>
     </div>
   );

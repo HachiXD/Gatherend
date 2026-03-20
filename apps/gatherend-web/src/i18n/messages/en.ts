@@ -413,7 +413,7 @@ export const en: TranslationKeys = {
       title: "Create your Board",
       nameLabel: "Board Name",
       namePlaceholder: "Enter your board name",
-      descriptionLabel: "Description",
+      descriptionLabel: "Description (Optional)",
       descriptionPlaceholder: "What's your board about?",
       createButton: "Create Board",
       subtitle:

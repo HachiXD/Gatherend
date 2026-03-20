@@ -1,3 +1,4 @@
+import { buildThemeGradientStopsCss } from "./gradient-stops";
 import type { ThemeColors, GradientConfig } from "./types";
 
 /**
@@ -690,6 +691,24 @@ export function generateGradientCSS(config: GradientConfig): string {
   return `linear-gradient(${angle}deg, ${stops})`;
 }
 
+function generateNormalizedGradientCSS(config: GradientConfig): string {
+  const { colors, angle, type } = config;
+
+  if (colors.length < 2) {
+    const firstColor = colors[0];
+    if (!firstColor) return "transparent";
+    return typeof firstColor === "string" ? firstColor : firstColor.color;
+  }
+
+  const stops = buildThemeGradientStopsCss(colors);
+
+  if (type === "radial") {
+    return `radial-gradient(circle at center, ${stops})`;
+  }
+
+  return `linear-gradient(${angle}deg, ${stops})`;
+}
+
 /**
  * Valida un color stop del degradado
  */
@@ -915,7 +934,7 @@ export function applyGradientToDOM(gradient: GradientConfig | null): void {
   if (gradient) {
     root.style.setProperty(
       "--theme-background-gradient",
-      generateGradientCSS(gradient),
+      generateNormalizedGradientCSS(gradient),
     );
     root.style.setProperty("--theme-has-gradient", "1");
     root.dataset.themeGradient = "true";

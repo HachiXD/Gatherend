@@ -23,10 +23,13 @@ function CommunityListSkeleton() {
       {Array.from({ length: 4 }).map((_, i) => (
         <div
           key={i}
-          className="flex items-center gap-2 p-2 rounded-md bg-theme-bg-secondary animate-pulse"
+          className={cn(
+            "flex items-center gap-2 px-2 py-1.5 animate-pulse",
+            PANEL_SHELL,
+          )}
         >
-          <div className="w-8 h-8 rounded-md bg-white/10" />
-          <div className="h-4 bg-white/10 rounded flex-1" />
+          <div className="h-8 w-8 bg-white/10" />
+          <div className="h-4 flex-1 bg-white/10" />
         </div>
       ))}
     </div>
@@ -63,6 +66,12 @@ import { getStoredUploadAssetId } from "@/lib/upload-values";
 // CONSTANTES CENTRALIZADAS
 // MAX_SEATS = 48 porque el owner cuenta como 1, entonces 48 + 1 = 49 personas totales
 const MAX_SEATS = 48;
+const PANEL_SHELL =
+  "border border-theme-border bg-theme-bg-secondary/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.28),inset_0_-1px_0_rgba(0,0,0,0.28)]";
+const FIELD_SURFACE =
+  "rounded-none border border-theme-border-subtle bg-theme-bg-edit-form/50";
+const SECTION_KICKER =
+  "text-[11px] -my-1 font-bold uppercase tracking-[0.08em] text-theme-text-subtle";
 
 const schema = z
   .object({
@@ -294,28 +303,31 @@ export const CreateBoardModal = () => {
   return (
     <Dialog open={isModalOpen} onOpenChange={handleClose}>
       {/* En mobile: scroll + X visible. En desktop: look original (sin scroll y sin X). */}
-      <DialogContent className="sm:[&>button]:hidden bg-theme-bg-modal text-theme-text-subtle overflow-y-auto overscroll-contain max-h-[calc(100dvh-2rem)] sm:overflow-hidden sm:max-h-none p-4 max-w-5xl!">
-        <DialogHeader className="-mt-1 p-0">
+      <DialogContent className="sm:[&>button]:hidden max-w-5xl! max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain rounded-none border border-theme-border bg-theme-bg-modal p-0 text-theme-text-subtle sm:max-h-none sm:overflow-hidden">
+        <DialogHeader className="border-b border-theme-border bg-theme-bg-secondary/20 px-6 pb-1 pt-2">
           <DialogTitle className="text-2xl text-center font-bold">
             {t.modals.createBoard.title}
           </DialogTitle>
-          <DialogDescription className="text-center text-[15px] text-theme-text-subtle">
+          <DialogDescription className="-mt-1 text-center text-[15px] text-theme-text-subtle">
             {t.modals.createBoard.subtitle}
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <div className="px-3 sm:px-6 flex flex-col md:flex-row gap-6 items-start mb-0 md:overflow-visible">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-0">
+            <div className="grid gap-4 px-4 pb-3 pt-0 -mt-1 sm:px-6 md:grid-cols-[220px_minmax(0,1.42fr)_252px] md:items-start">
               {/* COLUMNA IZQUIERDA: Comunidades */}
               <FormField
                 control={form.control}
                 name="communityId"
                 render={() => (
-                  <FormItem className="w-full md:w-[200px] md:shrink-0 flex flex-col gap-3">
-                    <div className="text-xs font-bold text-theme-text-subtle uppercase">
-                      Comunidad (opcional)
-                    </div>
+                  <FormItem
+                    className={cn(
+                      "flex w-full flex-col gap-3 p-3 md:w-auto md:shrink-0",
+                      PANEL_SHELL,
+                    )}
+                  >
+                    <div className={SECTION_KICKER}>Comunidad (opcional)</div>
 
                     {/* Buscador */}
                     <div className="relative">
@@ -330,7 +342,7 @@ export const CreateBoardModal = () => {
                         value={communitySearch}
                         onChange={(e) => setCommunitySearch(e.target.value)}
                         autoComplete="off"
-                        className="bg-theme-bg-input-modal border-0 pl-8 pr-8 h-9 text-sm focus-visible:ring-0 focus-visible:ring-offset-0"
+                        className="h-8 rounded-none border border-theme-border-subtle bg-transparent pl-8 pr-8 text-sm text-theme-text-light focus-visible:border-theme-border-accent focus-visible:ring-0 focus-visible:ring-offset-0"
                       />
                       {/* Indicador de búsqueda en progreso */}
                       {isFetching && (
@@ -341,7 +353,7 @@ export const CreateBoardModal = () => {
                     </div>
 
                     {/* Lista de communities */}
-                    <div className="flex-1 overflow-y-auto max-h-[200px] sm:max-h-[280px] space-y-1.5 pr-1">
+                    <div className="scrollbar-ultra-thin max-h-[168px] flex-1 space-y-1.5 overflow-y-auto border border-theme-border bg-theme-bg-tertiary/20 p-1.5 sm:max-h-[220px] md:min-h-[265px] md:max-h-[265px]">
                       {isLoadingCommunities ? (
                         <CommunityListSkeleton />
                       ) : communities.length === 0 ? (
@@ -362,11 +374,11 @@ export const CreateBoardModal = () => {
                                 })
                               }
                               className={cn(
-                                "w-full flex items-center gap-2 p-2 rounded-md transition-colors text-left text-sm",
-                                "hover:bg-theme-bg-tertiary",
+                                "w-full border px-2 py-1.5 text-left text-sm transition",
+                                "border-theme-border cursor-pointer bg-theme-bg-secondary/20 hover:bg-theme-bg-tertiary/40 hover:text-theme-text-light shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.28),inset_0_-1px_0_rgba(0,0,0,0.28)]",
                                 !form.watch("communityId")
-                                  ? "bg-theme-accent-primary/20 border border-theme-accent-primary text-theme-text-light"
-                                  : "bg-theme-bg-secondary border border-transparent text-theme-text-subtle",
+                                  ? "border-theme-accent-primary bg-theme-accent-primary/12 text-theme-text-light"
+                                  : "text-theme-text-subtle",
                               )}
                             >
                               Sin comunidad
@@ -375,7 +387,7 @@ export const CreateBoardModal = () => {
 
                           {/* Etiqueta de sección */}
                           {!communitySearch.trim() && (
-                            <div className="text-[10px] uppercase text-theme-text-muted font-semibold pt-1 pb-0.5">
+                            <div className="border-t border-theme-border pt-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-theme-text-muted">
                               Más populares
                             </div>
                           )}
@@ -403,40 +415,46 @@ export const CreateBoardModal = () => {
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="w-full cursor-pointer bg-theme-bg-secondary border-theme-border-primary hover:bg-theme-bg-tertiary text-theme-text-subtle"
+                      className="h-6.5 w-full cursor-pointer rounded-none border-theme-border-subtle bg-theme-bg-cancel-button text-[12px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
                       onClick={() => setIsCreateCommunityOpen(true)}
                     >
                       <Plus className="h-4 w-4 mr-1" />
                       Nueva comunidad
                     </Button>
 
-                    <FormMessage />
+                    <FormMessage className="-my-1 text-[11px] leading-tight" />
                   </FormItem>
                 )}
               />
 
               {/* COLUMNA CENTRAL: Datos del Board */}
               <div className="flex-[1.5] space-y-3">
-                <div className="flex items-center justify-center text-center">
-                  <FormField
-                    control={form.control}
-                    name="imageUpload"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <FileUpload
-                            endpoint="boardImage"
-                            value={field.value || ""}
-                            onChange={field.onChange}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <div className={cn("p-3", PANEL_SHELL)}>
+                  <div className={cn(SECTION_KICKER, "mb-2")}>
+                    Imagen (opcional)
+                  </div>
+                  <div className="flex items-center justify-center text-center">
+                    <FormField
+                      control={form.control}
+                      name="imageUpload"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <FileUpload
+                              endpoint="boardImage"
+                              value={field.value || ""}
+                              onChange={field.onChange}
+                              uploadButtonClassName="rounded-none border-theme-border-subtle bg-theme-bg-cancel-button text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+                            />
+                          </FormControl>
+                          <FormMessage className="-mt-1 text-[11px] leading-tight" />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className={cn("space-y-4 p-3", PANEL_SHELL)}>
                   <FormField
                     control={form.control}
                     name="name"
@@ -444,7 +462,7 @@ export const CreateBoardModal = () => {
                       <FormItem className="col-span-2">
                         <FormLabel
                           htmlFor="create-board-name"
-                          className="uppercase text-xs font-bold text-theme-text-subtle"
+                          className={SECTION_KICKER}
                         >
                           {t.modals.createBoard.nameLabel}
                         </FormLabel>
@@ -452,64 +470,100 @@ export const CreateBoardModal = () => {
                           <Input
                             id="create-board-name"
                             disabled={isLoading}
-                            className="bg-theme-bg-input-modal border-0 focus-visible:ring-0 text-theme-text-light focus-visible:ring-offset-0 !text-[15px]"
+                            className={cn(
+                              FIELD_SURFACE,
+                              "h-8 px-3 text-[15px] text-theme-text-light focus-visible:border-theme-border-accent focus-visible:ring-0 focus-visible:ring-offset-0",
+                            )}
                             placeholder={t.modals.createBoard.namePlaceholder}
                             autoComplete="off"
                             {...field}
                           />
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className="-mt-1 text-[11px] leading-tight" />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel
+                          htmlFor="create-board-description"
+                          className={SECTION_KICKER}
+                        >
+                          {t.modals.createBoard.descriptionLabel}
+                        </FormLabel>
+                        <FormControl>
+                          <Textarea
+                            id="create-board-description"
+                            disabled={isLoading}
+                            className={cn(
+                              FIELD_SURFACE,
+                              "scrollbar-ultra-thin max-h-[120px] resize-none overflow-y-auto px-3 py-2 text-[15px] text-theme-text-light focus-visible:border-theme-border-accent focus-visible:ring-0 focus-visible:ring-offset-0",
+                            )}
+                            placeholder={t.modals.createBoard.tellUsMore}
+                            autoComplete="off"
+                            rows={3}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage className="-mt-1 text-[11px] leading-tight" />
                       </FormItem>
                     )}
                   />
                 </div>
 
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel
-                        htmlFor="create-board-description"
-                        className="uppercase text-xs font-bold text-theme-text-subtle"
-                      >
-                        {t.modals.createBoard.descriptionLabel}
-                      </FormLabel>
-                      <FormControl>
-                        <Textarea
-                          id="create-board-description"
-                          disabled={isLoading}
-                          className="bg-theme-bg-input-modal border-0 focus-visible:ring-0 text-theme-text-light focus-visible:ring-offset-0 resize-none !text-[15px] max-h-[120px] overflow-y-auto"
-                          placeholder={t.modals.createBoard.tellUsMore}
-                          autoComplete="off"
-                          rows={3}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                <DialogFooter
+                  className={cn(
+                    "border-t border-theme-border bg-theme-bg-secondary/20 px-4 py-1.5",
+                    PANEL_SHELL,
                   )}
-                />
+                >
+                  <div className="flex w-full flex-col-reverse items-stretch justify-center gap-3 sm:flex-row sm:items-center sm:gap-20">
+                    <Button
+                      type="button"
+                      onClick={handleClose}
+                      disabled={isLoading}
+                      className="h-6.5 w-full cursor-pointer rounded-none bg-theme-bg-cancel-button text-[14px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light sm:w-auto"
+                    >
+                      {t.common.cancel}
+                    </Button>
+                    <Button
+                      className="h-6.5 w-full cursor-pointer rounded-none bg-theme-tab-button-bg text-[14px] text-theme-text-light hover:bg-theme-tab-button-hover sm:w-auto"
+                      disabled={isLoading}
+                      type="submit"
+                    >
+                      {t.modals.createBoard.createButton}
+                    </Button>
+                  </div>
+                </DialogFooter>
               </div>
 
               {/* COLUMNA DERECHA: Sliders y Grid */}
-              <div className="w-full md:w-[280px] md:flex-shrink-0 flex flex-col gap-2">
-                <div className="flex flex-col gap-6 bg-theme-bg-modal p-4 rounded-lg">
-                  <div className="space-y-2">
+              <div className="flex w-full flex-col gap-2 md:w-[252px] md:flex-shrink-0">
+                <div className={cn("flex flex-col gap-5 p-3", PANEL_SHELL)}>
+                  <div className="space-y-2 md:mx-auto md:w-full md:max-w-[252px]">
                     {/* PUBLIC SLIDER */}
                     <FormField
                       control={form.control}
                       name="publicSeats"
                       render={({ field }) => (
-                        <FormItem>
-                          <div className="flex justify-between items-center -mb-1.5">
+                        <FormItem
+                          className={cn(
+                            "space-y-0 px-2.5 pt-1.5 pb-2.5",
+                            FIELD_SURFACE,
+                          )}
+                        >
+                          <div className="flex justify-between items-center -mb-2.5">
                             <span
                               id="create-board-public-seats-label"
-                              className="text-xs font-bold text-[#5EC8D4] uppercase"
+                              className="text-xs font-bold uppercase text-[#5EC8D4]"
                             >
                               {t.modals.createBoard.publicSeats}
                             </span>
-                            <span className="text-xs font-mono bg-theme-bg-input-modal text-[#5EC8D4] px-2 py-0.5 rounded">
+                            <span className="border border-[#5EC8D4]/25 bg-theme-bg-input-modal px-2 py-0.5 font-mono text-xs text-[#5EC8D4]">
                               {publicSeats}
                             </span>
                           </div>
@@ -526,10 +580,10 @@ export const CreateBoardModal = () => {
                               value={[field.value]}
                               onValueChange={(v) => onPublicChange(v[0])}
                               aria-labelledby="create-board-public-seats-label"
-                              className="cursor-pointer [&>.relative>.absolute]:bg-[#5EC8D4]"
+                              className="cursor-pointer [&_[data-slot=slider-range]]:bg-[#5EC8D4] [&_[data-slot=slider-thumb]]:size-3.5 [&_[data-slot=slider-thumb]]:rounded-none [&_[data-slot=slider-thumb]]:border-theme-border [&_[data-slot=slider-thumb]]:bg-theme-bg-modal [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-track]]:rounded-none [&_[data-slot=slider-track]]:bg-theme-bg-input-modal"
                             />
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="-my-1 text-[11px] leading-tight" />
                         </FormItem>
                       )}
                     />
@@ -539,15 +593,20 @@ export const CreateBoardModal = () => {
                       control={form.control}
                       name="invitationSeats"
                       render={({ field }) => (
-                        <FormItem>
-                          <div className="flex justify-between items-center -mb-1.5">
+                        <FormItem
+                          className={cn(
+                            "space-y-0 px-2.5 pt-1.5 pb-2.5",
+                            FIELD_SURFACE,
+                          )}
+                        >
+                          <div className="flex justify-between items-center -mb-2.5">
                             <span
                               id="create-board-invite-seats-label"
-                              className="text-xs font-bold text-[#E4AE68] uppercase"
+                              className="text-xs font-bold uppercase text-[#E4AE68]"
                             >
                               {t.modals.createBoard.inviteSeats}
                             </span>
-                            <span className="text-xs font-mono bg-theme-bg-input-modal text-[#E4AE68] px-2 py-0.5 rounded">
+                            <span className="border border-[#E4AE68]/25 bg-theme-bg-input-modal px-2 py-0.5 font-mono text-xs text-[#E4AE68]">
                               {invitationSeats}
                             </span>
                           </div>
@@ -564,27 +623,27 @@ export const CreateBoardModal = () => {
                               value={[field.value]}
                               onValueChange={(v) => onInviteChange(v[0])}
                               aria-labelledby="create-board-invite-seats-label"
-                              className="cursor-pointer [&>.relative>.absolute]:bg-[#E4AE68]"
+                              className="cursor-pointer [&_[data-slot=slider-range]]:bg-[#E4AE68] [&_[data-slot=slider-thumb]]:size-3.5 [&_[data-slot=slider-thumb]]:rounded-none [&_[data-slot=slider-thumb]]:border-theme-border [&_[data-slot=slider-thumb]]:bg-theme-bg-modal [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-track]]:rounded-none [&_[data-slot=slider-track]]:bg-theme-bg-input-modal"
                             />
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="-my-1 text-[11px] leading-tight" />
                         </FormItem>
                       )}
                     />
                   </div>
 
                   {/* GRID VISUALIZER */}
-                  <div className="flex-1 min-h-[160px] sm:min-h-[210px] bg-theme-bg-input-modal rounded-md border border-dashed border-theme-border-primary flex items-center justify-center p-3 sm:p-4">
+                  <div className="-mt-2.5 flex min-h-[170px] w-full max-w-[220px] self-center items-center justify-center border border-theme-border bg-theme-bg-edit-form/50 p-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.28),inset_0_-1px_0_rgba(0,0,0,0.28)] sm:min-h-[220px] sm:p-4">
                     <div
-                      className="grid gap-2 place-items-center transition-all duration-300"
+                      className="grid gap-2 place-items-center -my-2.5 -mx-2.5 transition-all duration-300"
                       style={{
                         gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
                       }}
                     >
                       {/* OWNER (fijo, no configurable) */}
                       <div className="relative group">
-                        <div className="rounded-full flex items-center justify-center h-7 w-7 bg-[#FFD7001A] text-[#FFD700] border border-[#FFD700]/30 shadow-sm">
-                          <Crown className="w-4 h-4" />
+                        <div className="rounded-full flex items-center justify-center h-5.5 w-5.5 bg-[#FFD7001A] text-[#FFD700] border border-[#FFD700]/30 shadow-sm">
+                          <Crown className="w-3.5 h-3.5" />
                         </div>
                       </div>
 
@@ -595,16 +654,16 @@ export const CreateBoardModal = () => {
                           <div
                             key={i}
                             className={cn(
-                              "rounded-full flex items-center justify-center h-7 w-7 border shadow-sm transition-colors duration-300",
+                              "rounded-full flex items-center justify-center h-5.5 w-5.5 border shadow-sm transition-colors duration-300",
                               isPublic
                                 ? "bg-[#5EC8D41A] text-[#5EC8D4] border-white/10"
                                 : "bg-[#E4AE681A] text-[#E4AE68] border-white/10",
                             )}
                           >
                             {isPublic ? (
-                              <Globe className="w-4 h-4" />
+                              <Globe className="w-3.5 h-3.5" />
                             ) : (
-                              <Mail className="w-4 h-4" />
+                              <Mail className="w-3.5 h-3.5" />
                             )}
                           </div>
                         );
@@ -614,26 +673,6 @@ export const CreateBoardModal = () => {
                 </div>
               </div>
             </div>
-
-            <DialogFooter className="bg-theme-bg-modal px-3 sm:px-6 py-0 mb-1">
-              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-20 w-full">
-                <Button
-                  type="button"
-                  onClick={handleClose}
-                  disabled={isLoading}
-                  className="w-full sm:w-auto bg-theme-bg-cancel-button hover:bg-theme-bg-cancel-button-hover cursor-pointer text-theme-text-subtle hover:text-theme-text-light"
-                >
-                  {t.common.cancel}
-                </Button>
-                <Button
-                  className="w-full sm:w-auto bg-theme-tab-button-bg cursor-pointer hover:bg-theme-tab-button-hover text-theme-text-light"
-                  disabled={isLoading}
-                  type="submit"
-                >
-                  {t.modals.createBoard.createButton}
-                </Button>
-              </div>
-            </DialogFooter>
           </form>
         </Form>
       </DialogContent>
