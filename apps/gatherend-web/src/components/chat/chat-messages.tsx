@@ -29,7 +29,7 @@ import {
 
 import { chatScrollDimensionsStore } from "@/hooks/chat/chat-scroll-dimensions-store";
 
-import { useChatSocket } from "@/hooks/use-chat-socket";
+import { useMountedChatRoom } from "@/hooks/use-chat-room-lifecycle-store";
 import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
 
 // CONSTANTS
@@ -93,15 +93,6 @@ function ChatMessagesComponent({
     [],
   );
 
-  // KEYS
-
-  const queryKey = useMemo(
-    () => ["chat", type, paramValue],
-    [type, paramValue],
-  );
-  const addKey = `chat:${paramValue}:messages`;
-  const updateKey = `chat:${paramValue}:messages:update`;
-
   // STORES
 
   const scrollTrigger = useScrollToBottom((state) => state.scrollTrigger);
@@ -114,6 +105,10 @@ function ChatMessagesComponent({
     () => `chatWindow:${type}:${paramValue}`,
     [paramValue, type],
   );
+
+  // ROOM LIFECYCLE
+
+  useMountedChatRoom(type, paramValue);
 
   // DATA LAYER
 
@@ -403,22 +398,6 @@ function ChatMessagesComponent({
     scrollManager,
   ]);
 
-  // SOCKET
-
-  useChatSocket({
-    queryKey,
-    addKey,
-    updateKey,
-    roomId: paramValue,
-    roomType: type,
-    currentProfileId: currentProfile.id,
-    currentRoomId: paramValue,
-    isInHistoricalMode: hasMoreRecent,
-    onNewMessageWhileHistorical: () => {
-      setPendingNewerMessages((c) => c + 1);
-    },
-  });
-
   // RESET ON ROOM CHANGE
 
   useEffect(() => {
@@ -555,17 +534,6 @@ function ChatMessagesComponent({
 
   const renderMessage = useCallback(
     (msg: ChatMessage, index: number, messages: ChatMessage[]) => {
-      const getSenderId = (m: ChatMessage | undefined): string | null => {
-        if (!m) return null;
-        const withMember = "member" in m;
-        const senderProfile = withMember ? m.member?.profile : m.sender;
-        return senderProfile?.id ?? null;
-      };
-
-      const isWelcome = (m: ChatMessage | undefined): boolean => {
-        return Boolean(m && "type" in m && m.type === "WELCOME");
-      };
-
       const isMessageWithMember = "member" in msg;
       const isOptimistic = Boolean("isOptimistic" in msg && msg.isOptimistic);
       const isFailed = Boolean("isFailed" in msg && msg.isFailed);
@@ -591,22 +559,6 @@ function ChatMessagesComponent({
         : null;
 
       const stableCompact = chatWindow.compactById[msg.id] ?? false;
-      const prevMessage = index > 0 ? messages[index - 1] : undefined;
-      const currentSenderId = getSenderId(msg);
-      const prevSenderId = getSenderId(prevMessage);
-      const sameSender =
-        currentSenderId != null &&
-        prevSenderId != null &&
-        currentSenderId === prevSenderId;
-      const currentTimeMs = new Date(msg.createdAt).getTime();
-      const prevTimeMs = prevMessage
-        ? new Date(prevMessage.createdAt).getTime()
-        : Number.NaN;
-      const diffMs =
-        Number.isFinite(currentTimeMs) && Number.isFinite(prevTimeMs)
-          ? Math.abs(currentTimeMs - prevTimeMs)
-          : null;
-
       const isLast = index === messages.length - 1;
 
       return (
@@ -647,7 +599,6 @@ function ChatMessagesComponent({
       apiUrl,
       socketQuery,
       chatWindow.compactById,
-      chatWindow.compactRevision,
     ],
   );
 
