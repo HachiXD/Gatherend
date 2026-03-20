@@ -2,13 +2,12 @@ import { useSocketClient } from "@/components/providers/socket-provider";
 import { useEffect, useMemo, useRef } from "react";
 import { useUnreadStore } from "./use-unread-store";
 import { useQueryClient } from "@tanstack/react-query";
-import { useChannelSubscriptionStore } from "./use-channel-subscription-store";
-import { useConversationSubscriptionStore } from "./use-conversation-subscription-store";
 import {
   FormattedConversation,
   conversationsQueryKey,
 } from "./use-conversations";
 import { chatMessageWindowStore } from "@/hooks/chat/chat-message-window-store";
+import { useChatRoomLifecycleStore } from "./use-chat-room-lifecycle-store";
 import type {
   ClientAttachmentAsset,
   ClientProfileSummary,
@@ -125,8 +124,9 @@ export const useGlobalUnreadSocket = ({
 
       const isViewingThisRoom = currentViewingRoom === channelId;
       const isAfterLastAck = msgTime > currentLastAck;
-      const isSubscribedChannel =
-        useChannelSubscriptionStore.getState().isSubscribed(channelId);
+      const isTrackedChannel = useChatRoomLifecycleStore
+        .getState()
+        .isTracked("channel", channelId);
 
 
       // Solo marcar como unread si:
@@ -137,7 +137,7 @@ export const useGlobalUnreadSocket = ({
         // For subscribed/cached channels, unread counting is handled by
         // useGlobalChannelListeners (channel-scoped event). This avoids
         // double increments when both channel and global board events arrive.
-        if (isSubscribedChannel) {
+        if (isTrackedChannel) {
           scheduleChatInvalidate("channel", channelId);
           return;
         }
@@ -150,9 +150,9 @@ export const useGlobalUnreadSocket = ({
 
         // If this channel was previously opened and its message window is still in memory,
         // mark it as needing catch-up when it's not currently subscribed to the heavy stream.
-        const isHeavySubscribed = useChannelSubscriptionStore
+        const isHeavySubscribed = useChatRoomLifecycleStore
           .getState()
-          .isSubscribed(channelId);
+          .isTracked("channel", channelId);
         if (!isHeavySubscribed) {
           chatMessageWindowStore.markNeedsCatchUpIfExists(
             `chatWindow:channel:${channelId}`,
@@ -195,9 +195,9 @@ export const useGlobalUnreadSocket = ({
 
         // If this conversation was previously opened and its message window is still in memory,
         // mark it as needing catch-up. The heavy stream may be unsubscribed while the user is away.
-        const isHeavySubscribed = useConversationSubscriptionStore
+        const isHeavySubscribed = useChatRoomLifecycleStore
           .getState()
-          .isSubscribed(conversationId);
+          .isTracked("conversation", conversationId);
         if (!isHeavySubscribed) {
           chatMessageWindowStore.markNeedsCatchUpIfExists(
             `chatWindow:conversation:${conversationId}`,

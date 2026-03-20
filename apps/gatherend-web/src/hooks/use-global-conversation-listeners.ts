@@ -4,7 +4,6 @@ import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSocketClient } from "@/components/providers/socket-provider";
 import { useUnreadStore } from "./use-unread-store";
-import { useConversationSubscriptionStore } from "./use-conversation-subscription-store";
 import type {
   ChatMessage,
   ChatReaction,
@@ -13,6 +12,10 @@ import type {
 import { chatMessageWindowStore } from "@/hooks/chat/chat-message-window-store";
 import { clearOptimisticTimeout } from "./use-chat-socket";
 import { MESSAGES_PER_PAGE } from "./chat/types";
+import {
+  getTrackedChatRoomIds,
+  useChatRoomLifecycleStore,
+} from "./use-chat-room-lifecycle-store";
 
 const MAX_ITEMS_PER_PAGE = MESSAGES_PER_PAGE;
 
@@ -48,20 +51,20 @@ export function useGlobalConversationListeners({
   const { socket } = useSocketClient();
   const queryClient = useQueryClient();
   const addUnread = useUnreadStore((state) => state.addUnread);
-  const getSubscribedConversations = useConversationSubscriptionStore(
-    (state) => state.getSubscribedConversations,
-  );
 
-  const subscribedConversationsRef = useRef<string[]>([]);
+  const trackedConversationsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    subscribedConversationsRef.current = getSubscribedConversations();
-  }, [getSubscribedConversations]);
+    trackedConversationsRef.current = new Set(
+      getTrackedChatRoomIds(
+        useChatRoomLifecycleStore.getState().rooms,
+        "conversation",
+      ),
+    );
 
-  useEffect(() => {
-    const unsubscribe = useConversationSubscriptionStore.subscribe((state) => {
-      subscribedConversationsRef.current = Array.from(
-        state.subscribedConversations,
+    const unsubscribe = useChatRoomLifecycleStore.subscribe((state) => {
+      trackedConversationsRef.current = new Set(
+        getTrackedChatRoomIds(state.rooms, "conversation"),
       );
     });
     return unsubscribe;
@@ -74,7 +77,7 @@ export function useGlobalConversationListeners({
       conversationId: string,
       message: ConversationMessagePayload,
     ) => {
-      if (!subscribedConversationsRef.current.includes(conversationId)) {
+      if (!trackedConversationsRef.current.has(conversationId)) {
         return;
       }
 
@@ -195,7 +198,7 @@ export function useGlobalConversationListeners({
       conversationId: string,
       message: DirectMessageWithSender,
     ) => {
-      if (!subscribedConversationsRef.current.includes(conversationId)) {
+      if (!trackedConversationsRef.current.has(conversationId)) {
         return;
       }
 
@@ -241,7 +244,7 @@ export function useGlobalConversationListeners({
       conversationId: string,
       data: ReactionPayload,
     ) => {
-      if (!subscribedConversationsRef.current.includes(conversationId)) {
+      if (!trackedConversationsRef.current.has(conversationId)) {
         return;
       }
 
@@ -289,35 +292,31 @@ export function useGlobalConversationListeners({
         },
       );
 
-      chatMessageWindowStore.updateById(
-        windowKey,
-        data.messageId,
-        (prev) => {
-          const current = (prev as DirectMessageWithSender).reactions;
-          const currentReactions = Array.isArray(current) ? current : [];
+      chatMessageWindowStore.updateById(windowKey, data.messageId, (prev) => {
+        const current = (prev as DirectMessageWithSender).reactions;
+        const currentReactions = Array.isArray(current) ? current : [];
 
-          if (data.action === "add") {
-            if (
-              currentReactions.some(
-                (reaction) => reaction.id === data.reaction.id,
-              )
-            ) {
-              return prev;
-            }
-            return {
-              ...(prev as DirectMessageWithSender),
-              reactions: [...currentReactions, data.reaction],
-            };
+        if (data.action === "add") {
+          if (
+            currentReactions.some(
+              (reaction) => reaction.id === data.reaction.id,
+            )
+          ) {
+            return prev;
           }
-
           return {
             ...(prev as DirectMessageWithSender),
-            reactions: currentReactions.filter(
-              (reaction) => reaction.id !== data.reaction.id,
-            ),
+            reactions: [...currentReactions, data.reaction],
           };
-        },
-      );
+        }
+
+        return {
+          ...(prev as DirectMessageWithSender),
+          reactions: currentReactions.filter(
+            (reaction) => reaction.id !== data.reaction.id,
+          ),
+        };
+      });
     };
 
     const setupListenersForConversation = (conversationId: string) => {
@@ -339,10 +338,6 @@ export function useGlobalConversationListeners({
       socket.on(updateKey, onUpdate);
       socket.on(reactionKey, onReaction);
 
-      if (socket.connected) {
-        socket.emit("join-conversation", { conversationId });
-      }
-
       return () => {
         socket.off(addKey, onMessage);
         socket.off(updateKey, onUpdate);
@@ -352,83 +347,55 @@ export function useGlobalConversationListeners({
 
     const conversationCleanups = new Map<string, () => void>();
 
-    const unsubscribeStore = useConversationSubscriptionStore.subscribe(
+    const syncConversationListeners = (
+      currentConversations: Set<string>,
+      prevConversations: Set<string>,
+    ) => {
+      currentConversations.forEach((conversationId) => {
+        if (
+          !prevConversations.has(conversationId) &&
+          !conversationCleanups.has(conversationId)
+        ) {
+          const cleanup = setupListenersForConversation(conversationId);
+          conversationCleanups.set(conversationId, cleanup);
+        }
+      });
+
+      prevConversations.forEach((conversationId) => {
+        if (!currentConversations.has(conversationId)) {
+          const cleanup = conversationCleanups.get(conversationId);
+          if (cleanup) {
+            cleanup();
+            conversationCleanups.delete(conversationId);
+          }
+        }
+      });
+    };
+
+    const initialConversations = new Set(
+      getTrackedChatRoomIds(
+        useChatRoomLifecycleStore.getState().rooms,
+        "conversation",
+      ),
+    );
+    trackedConversationsRef.current = initialConversations;
+    syncConversationListeners(initialConversations, new Set());
+
+    const unsubscribeStore = useChatRoomLifecycleStore.subscribe(
       (state, prevState) => {
-        const current = state.subscribedConversations;
-        const prev = prevState.subscribedConversations;
+        const current = new Set(
+          getTrackedChatRoomIds(state.rooms, "conversation"),
+        );
+        const prev = new Set(
+          getTrackedChatRoomIds(prevState.rooms, "conversation"),
+        );
 
-        current.forEach((conversationId) => {
-          if (
-            !prev.has(conversationId) &&
-            !conversationCleanups.has(conversationId)
-          ) {
-            const cleanup = setupListenersForConversation(conversationId);
-            conversationCleanups.set(conversationId, cleanup);
-          }
-        });
-
-        prev.forEach((conversationId) => {
-          if (!current.has(conversationId)) {
-            const cleanup = conversationCleanups.get(conversationId);
-            if (cleanup) {
-              cleanup();
-              conversationCleanups.delete(conversationId);
-            }
-          }
-        });
+        trackedConversationsRef.current = current;
+        syncConversationListeners(current, prev);
       },
     );
 
-    subscribedConversationsRef.current.forEach((conversationId) => {
-      if (!conversationCleanups.has(conversationId)) {
-        const cleanup = setupListenersForConversation(conversationId);
-        conversationCleanups.set(conversationId, cleanup);
-      }
-    });
-
-    const joinAllSubscribedConversations = () => {
-      subscribedConversationsRef.current.forEach((conversationId) => {
-        socket.emit("join-conversation", { conversationId });
-      });
-    };
-
-    const markAllSubscribedNeedsCatchUp = () => {
-      subscribedConversationsRef.current.forEach((conversationId) => {
-        chatMessageWindowStore.markNeedsCatchUpIfExists(
-          `chatWindow:conversation:${conversationId}`,
-        );
-      });
-    };
-
-    if (socket.connected) {
-      joinAllSubscribedConversations();
-    }
-
-    const handleConnect = () => {
-      joinAllSubscribedConversations();
-      markAllSubscribedNeedsCatchUp();
-    };
-
-    const handleDisconnect = () => {
-      markAllSubscribedNeedsCatchUp();
-    };
-
-    const handleVisibilityOrFocus = () => {
-      if (document.visibilityState !== "visible") return;
-      if (!socket.connected) return;
-      joinAllSubscribedConversations();
-    };
-
-    socket.on("connect", handleConnect);
-    socket.on("disconnect", handleDisconnect);
-    window.addEventListener("focus", handleVisibilityOrFocus);
-    document.addEventListener("visibilitychange", handleVisibilityOrFocus);
-
     return () => {
-      socket.off("connect", handleConnect);
-      socket.off("disconnect", handleDisconnect);
-      window.removeEventListener("focus", handleVisibilityOrFocus);
-      document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
       unsubscribeStore();
       conversationCleanups.forEach((cleanup) => cleanup());
       conversationCleanups.clear();

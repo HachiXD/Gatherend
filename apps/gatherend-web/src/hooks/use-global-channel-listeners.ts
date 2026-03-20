@@ -3,15 +3,15 @@
 import { useEffect, useRef } from "react";
 import { useSocketClient } from "@/components/providers/socket-provider";
 import { useQueryClient } from "@tanstack/react-query";
-import { useChannelSubscriptionStore } from "./use-channel-subscription-store";
 import { MESSAGES_PER_PAGE } from "./chat/types";
 import { useUnreadStore } from "./use-unread-store";
-import type {
-  ChatMessage,
-  MessageWithMember,
-} from "@/hooks/chat/types";
+import type { ChatMessage, MessageWithMember } from "@/hooks/chat/types";
 import { chatMessageWindowStore } from "@/hooks/chat/chat-message-window-store";
 import { clearOptimisticTimeout } from "./use-chat-socket";
+import {
+  getTrackedChatRoomIds,
+  useChatRoomLifecycleStore,
+} from "./use-chat-room-lifecycle-store";
 
 const MAX_ITEMS_PER_PAGE = MESSAGES_PER_PAGE;
 
@@ -41,19 +41,18 @@ export function useGlobalChannelListeners({
 }: UseGlobalChannelListenersProps) {
   const { socket } = useSocketClient();
   const queryClient = useQueryClient();
-  const getSubscribedChannels = useChannelSubscriptionStore(
-    (state) => state.getSubscribedChannels,
-  );
 
-  const subscribedChannelsRef = useRef<string[]>([]);
+  const trackedChannelsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    subscribedChannelsRef.current = getSubscribedChannels();
-  }, [getSubscribedChannels]);
+    trackedChannelsRef.current = new Set(
+      getTrackedChatRoomIds(useChatRoomLifecycleStore.getState().rooms, "channel"),
+    );
 
-  useEffect(() => {
-    const unsubscribe = useChannelSubscriptionStore.subscribe((state) => {
-      subscribedChannelsRef.current = Array.from(state.subscribedChannels);
+    const unsubscribe = useChatRoomLifecycleStore.subscribe((state) => {
+      trackedChannelsRef.current = new Set(
+        getTrackedChatRoomIds(state.rooms, "channel"),
+      );
     });
     return unsubscribe;
   }, []);
@@ -65,7 +64,7 @@ export function useGlobalChannelListeners({
       channelId: string,
       message: ChannelMessagePayload,
     ) => {
-      if (!subscribedChannelsRef.current.includes(channelId)) {
+      if (!trackedChannelsRef.current.has(channelId)) {
         return;
       }
 
@@ -185,7 +184,7 @@ export function useGlobalChannelListeners({
       channelId: string,
       message: MessageWithMember,
     ) => {
-      if (!subscribedChannelsRef.current.includes(channelId)) {
+      if (!trackedChannelsRef.current.has(channelId)) {
         return;
       }
 
@@ -250,70 +249,49 @@ export function useGlobalChannelListeners({
 
     const channelCleanups = new Map<string, () => void>();
 
-    const unsubscribeStore = useChannelSubscriptionStore.subscribe(
+    const syncChannelListeners = (
+      currentChannels: Set<string>,
+      prevChannels: Set<string>,
+    ) => {
+      currentChannels.forEach((channelId) => {
+        if (!prevChannels.has(channelId) && !channelCleanups.has(channelId)) {
+          const cleanup = setupListenersForChannel(channelId);
+          channelCleanups.set(channelId, cleanup);
+        }
+      });
+
+      prevChannels.forEach((channelId) => {
+        if (!currentChannels.has(channelId)) {
+          const cleanup = channelCleanups.get(channelId);
+          if (cleanup) {
+            cleanup();
+            channelCleanups.delete(channelId);
+          }
+        }
+      });
+    };
+
+    const initialChannels = new Set(
+      getTrackedChatRoomIds(useChatRoomLifecycleStore.getState().rooms, "channel"),
+    );
+    trackedChannelsRef.current = initialChannels;
+    syncChannelListeners(initialChannels, new Set());
+
+    const unsubscribeStore = useChatRoomLifecycleStore.subscribe(
       (state, prevState) => {
-        const currentChannels = state.subscribedChannels;
-        const prevChannels = prevState.subscribedChannels;
+        const currentChannels = new Set(
+          getTrackedChatRoomIds(state.rooms, "channel"),
+        );
+        const prevChannels = new Set(
+          getTrackedChatRoomIds(prevState.rooms, "channel"),
+        );
 
-        currentChannels.forEach((channelId) => {
-          if (!prevChannels.has(channelId) && !channelCleanups.has(channelId)) {
-            const cleanup = setupListenersForChannel(channelId);
-            channelCleanups.set(channelId, cleanup);
-          }
-        });
-
-        prevChannels.forEach((channelId) => {
-          if (!currentChannels.has(channelId)) {
-            const cleanup = channelCleanups.get(channelId);
-            if (cleanup) {
-              cleanup();
-              channelCleanups.delete(channelId);
-            }
-          }
-        });
+        trackedChannelsRef.current = currentChannels;
+        syncChannelListeners(currentChannels, prevChannels);
       },
     );
 
-    subscribedChannelsRef.current.forEach((channelId) => {
-      if (!channelCleanups.has(channelId)) {
-        const cleanup = setupListenersForChannel(channelId);
-        channelCleanups.set(channelId, cleanup);
-      }
-    });
-
-    const joinAllSubscribedChannels = () => {
-      subscribedChannelsRef.current.forEach((channelId) => {
-        socket.emit("join-channel", { channelId });
-      });
-    };
-
-    const markAllSubscribedNeedsCatchUp = () => {
-      subscribedChannelsRef.current.forEach((channelId) => {
-        chatMessageWindowStore.markNeedsCatchUpIfExists(
-          `chatWindow:channel:${channelId}`,
-        );
-      });
-    };
-
-    if (socket.connected) {
-      joinAllSubscribedChannels();
-    }
-
-    const handleReconnect = () => {
-      joinAllSubscribedChannels();
-      markAllSubscribedNeedsCatchUp();
-    };
-
-    const handleDisconnect = () => {
-      markAllSubscribedNeedsCatchUp();
-    };
-
-    socket.on("connect", handleReconnect);
-    socket.on("disconnect", handleDisconnect);
-
     return () => {
-      socket.off("connect", handleReconnect);
-      socket.off("disconnect", handleDisconnect);
       unsubscribeStore();
       channelCleanups.forEach((cleanup) => cleanup());
       channelCleanups.clear();
