@@ -4,7 +4,7 @@ import { InviteStatus } from "@/components/invite/invite-status";
 import { currentProfile } from "@/lib/current-profile";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
-import { MemberRole, SlotMode } from "@prisma/client"; // Importar tipos necesarios
+import { ChannelType, MemberRole, SlotMode } from "@prisma/client"; // Importar tipos necesarios
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 interface InviteCodePageProps {
@@ -50,6 +50,32 @@ async function notifyMemberJoined(
   } catch (error) {
     // No bloquear si falla la notificación
     console.error("[NOTIFY_MEMBER_JOINED]", error);
+  }
+}
+
+async function notifyWelcomeMessage(channelId: string, message: object) {
+  try {
+    const socketUrl =
+      process.env.SOCKET_SERVER_URL || process.env.NEXT_PUBLIC_SOCKET_URL;
+    const secret = process.env.INTERNAL_API_SECRET;
+
+    if (!socketUrl || !secret) return;
+
+    await fetch(`${socketUrl}/emit-to-room`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Internal-Secret": secret,
+      },
+      body: JSON.stringify({
+        room: `channel:${channelId}`,
+        event: `chat:${channelId}:messages`,
+        data: message,
+      }),
+      signal: AbortSignal.timeout(3000),
+    });
+  } catch (error) {
+    console.error("[NOTIFY_WELCOME_MESSAGE]", error);
   }
 }
 
@@ -120,7 +146,22 @@ const InviteCodePage = async ({ params }: InviteCodePageProps) => {
   });
 
   if (existingMember) {
-    return redirect(`/boards/${boardId}`);
+    const targetChannel =
+      (await db.channel.findFirst({
+        where: { boardId, type: ChannelType.MAIN },
+        select: { id: true },
+      })) ??
+      (await db.channel.findFirst({
+        where: { boardId },
+        orderBy: { position: "asc" },
+        select: { id: true },
+      }));
+
+    return redirect(
+      targetChannel
+        ? `/boards/${boardId}/rooms/${targetChannel.id}`
+        : `/boards/${boardId}`,
+    );
   }
 
   // --- LÓGICA DE UNIÓN (Movida desde la API) ---
@@ -136,7 +177,8 @@ const InviteCodePage = async ({ params }: InviteCodePageProps) => {
 
   try {
     // 3. Transacción atómica (igual que tenías en la API)
-    await db.$transaction(async (tx) => {
+    const { targetChannelId, welcomeMessage } = await db.$transaction(
+      async (tx) => {
       // Re-verificar slot dentro de la transacción para evitar condiciones de carrera
       const slotCheck = await tx.slot.findUnique({
         where: { id: freeSlot.id },
@@ -166,7 +208,41 @@ const InviteCodePage = async ({ params }: InviteCodePageProps) => {
           memberId: newMember.id,
         },
       });
-    });
+
+        const targetChannel =
+          (await tx.channel.findFirst({
+            where: { boardId, type: ChannelType.MAIN },
+            select: { id: true },
+          })) ??
+          (await tx.channel.findFirst({
+            where: { boardId },
+            orderBy: { position: "asc" },
+            select: { id: true },
+          }));
+
+        let welcomeMessage = null;
+        if (targetChannel) {
+          welcomeMessage = await tx.message.create({
+            data: {
+              channelId: targetChannel.id,
+              type: "WELCOME",
+              content: "",
+              memberId: newMember.id,
+            },
+            include: {
+              member: {
+                include: { profile: true },
+              },
+            },
+          });
+        }
+
+        return {
+          targetChannelId: targetChannel?.id ?? null,
+          welcomeMessage,
+        };
+      },
+    );
 
     // Notificar a los miembros existentes que alguien se unió
     // (fire-and-forget, no bloquea el redirect)
@@ -176,13 +252,21 @@ const InviteCodePage = async ({ params }: InviteCodePageProps) => {
       avatarAsset: profile.avatarAsset,
     });
 
+    if (targetChannelId && welcomeMessage) {
+      notifyWelcomeMessage(targetChannelId, welcomeMessage);
+    }
+
     // ÉXITO: Redirigir directamente al board
+    return redirect(
+      targetChannelId
+        ? `/boards/${boardId}/rooms/${targetChannelId}`
+        : `/boards/${boardId}`,
+    );
   } catch (error) {
     console.error("[INVITE_JOIN_ERROR]", error);
     // Si falló la transacción (ej. alguien tomó el slot milisegundos antes)
     return <InviteStatus status="invalid" />;
   }
-  return redirect(`/boards/${boardId}`);
 };
 
 export default InviteCodePage;

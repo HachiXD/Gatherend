@@ -114,19 +114,34 @@ function DiscoveryBoardCardComponent({ board }: DiscoveryBoardCardProps) {
       const response = await axios.post(
         `/api/boards/${board.id}/join?source=discovery`,
       );
+      const {
+        success,
+        alreadyMember,
+        targetChannelId,
+        redirectUrl,
+      }: {
+        success?: boolean;
+        alreadyMember?: boolean;
+        targetChannelId?: string | null;
+        redirectUrl?: string;
+      } = response.data;
 
       // Si se unió exitosamente, navegar con SPA
-      if (response.data.success || response.data.alreadyMember) {
+      if (success || alreadyMember) {
         // Invalidar queries primero para que el board aparezca en user-boards
         await queryClient.invalidateQueries({ queryKey: ["user-boards"] });
         await queryClient.invalidateQueries({ queryKey: ["board", board.id] });
 
         startTransition(() => {
           if (boardSwitch?.isClientNavigationEnabled) {
-            // Navegar al board, BoardView se encargará de redirigir al primer canal
-            boardSwitch.switchBoard(board.id);
+            boardSwitch.switchBoard(board.id, targetChannelId ?? undefined);
           } else {
-            router.push(`/boards/${board.id}`);
+            router.push(
+              redirectUrl ??
+                (targetChannelId
+                  ? `/boards/${board.id}/rooms/${targetChannelId}`
+                  : `/boards/${board.id}`),
+            );
           }
         });
 

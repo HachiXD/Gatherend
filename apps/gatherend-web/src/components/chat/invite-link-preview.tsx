@@ -86,8 +86,14 @@ export const InviteLinkPreview = ({
 
       const data: { success?: boolean; alreadyMember?: boolean } =
         await response.json();
+      const { success, alreadyMember, targetChannelId, redirectUrl } = data as {
+        success?: boolean;
+        alreadyMember?: boolean;
+        targetChannelId?: string | null;
+        redirectUrl?: string;
+      };
 
-      if (!data.success && !data.alreadyMember) {
+      if (!success && !alreadyMember) {
         router.push(`/invite/${inviteCode}`);
         return;
       }
@@ -97,9 +103,14 @@ export const InviteLinkPreview = ({
 
       startTransition(() => {
         if (boardSwitch?.isClientNavigationEnabled) {
-          boardSwitch.switchBoard(boardData.id);
+          boardSwitch.switchBoard(boardData.id, targetChannelId ?? undefined);
         } else {
-          router.push(`/boards/${boardData.id}`);
+          router.push(
+            redirectUrl ??
+              (targetChannelId
+                ? `/boards/${boardData.id}/rooms/${targetChannelId}`
+                : `/boards/${boardData.id}`),
+          );
         }
       });
     } catch {

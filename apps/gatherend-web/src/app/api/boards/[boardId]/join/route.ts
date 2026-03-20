@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
-import { MemberRole, Prisma, SlotMode } from "@prisma/client";
+import { ChannelType, MemberRole, Prisma, SlotMode } from "@prisma/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
@@ -161,9 +161,23 @@ export async function POST(
     });
 
     if (existingMember) {
+      const targetChannel =
+        (await db.channel.findFirst({
+          where: { boardId, type: ChannelType.MAIN },
+          select: { id: true },
+        })) ??
+        (await db.channel.findFirst({
+          where: { boardId },
+          orderBy: { position: "asc" },
+          select: { id: true },
+        }));
+
       return NextResponse.json({
         alreadyMember: true,
-        redirectUrl: `/boards/${boardId}`,
+        targetChannelId: targetChannel?.id ?? null,
+        redirectUrl: targetChannel
+          ? `/boards/${boardId}/rooms/${targetChannel.id}`
+          : `/boards/${boardId}`,
       });
     }
 
@@ -175,7 +189,7 @@ export async function POST(
     const {
       newMember: member,
       welcomeMessage,
-      firstChannelId,
+      targetChannelId,
     } = await db.$transaction(async (tx) => {
       // Verificar ban dentro de la transacción para evitar TOCTOU
       const banned = await tx.boardBan.findFirst({
@@ -218,16 +232,22 @@ export async function POST(
         },
       });
 
-      const firstChannel = await tx.channel.findFirst({
-        where: { boardId },
-        orderBy: { position: "asc" },
-      });
+      const targetChannel =
+        (await tx.channel.findFirst({
+          where: { boardId, type: ChannelType.MAIN },
+          select: { id: true },
+        })) ??
+        (await tx.channel.findFirst({
+          where: { boardId },
+          orderBy: { position: "asc" },
+          select: { id: true },
+        }));
 
       let welcomeMessage = null;
-      if (firstChannel) {
+      if (targetChannel) {
         welcomeMessage = await tx.message.create({
           data: {
-            channelId: firstChannel.id,
+            channelId: targetChannel.id,
             type: "WELCOME",
             content: "",
             memberId: newMember.id,
@@ -243,7 +263,7 @@ export async function POST(
       return {
         newMember,
         welcomeMessage,
-        firstChannelId: firstChannel?.id ?? null,
+        targetChannelId: targetChannel?.id ?? null,
       };
     });
 
@@ -254,15 +274,18 @@ export async function POST(
       avatarAsset: profile.avatarAsset,
     });
 
-    if (firstChannelId && welcomeMessage) {
-      notifyWelcomeMessage(firstChannelId, welcomeMessage);
+    if (targetChannelId && welcomeMessage) {
+      notifyWelcomeMessage(targetChannelId, welcomeMessage);
     }
 
     // 6. RESPUESTA
     return NextResponse.json({
       success: true,
       memberId: member.id,
-      redirectUrl: `/boards/${boardId}`,
+      targetChannelId,
+      redirectUrl: targetChannelId
+        ? `/boards/${boardId}/rooms/${targetChannelId}`
+        : `/boards/${boardId}`,
     });
   } catch (error) {
     console.error("[BOARD_JOIN] Error:", error);
