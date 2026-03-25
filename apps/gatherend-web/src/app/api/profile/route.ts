@@ -2,7 +2,13 @@ import { requireAuth } from "@/lib/require-auth";
 import { db } from "@/lib/db";
 import { AuthProvider, AssetContext, AssetVisibility, Languages, Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
-import { profileCache } from "@/lib/redis";
+import {
+  expressAuthProfileCache,
+  expressIdentityProfileCache,
+  expressMemberCache,
+  expressProfileCache,
+  profileCache,
+} from "@/lib/redis";
 import { v4 as uuidv4 } from "uuid";
 import {
   changeUsername,
@@ -571,6 +577,18 @@ export async function PATCH(req: Request) {
       await profileCache.invalidate(cacheKey);
     }
 
+    await Promise.all([
+      expressProfileCache.invalidate(profile.id),
+      expressAuthProfileCache.invalidate(profile.userId),
+      expressIdentityProfileCache.invalidateMany(
+        identities.map((identity) => ({
+          provider: identity.provider,
+          providerUserId: identity.providerUserId,
+        })),
+      ),
+      expressMemberCache.invalidateByProfileId(profile.id),
+    ]);
+
     emitProfileUpdated(profile.id, buildRealtimeProfilePatch(updatedProfile));
 
     return NextResponse.json(serializeProfileResponse(updatedProfile));
@@ -643,6 +661,18 @@ export async function DELETE() {
           : identity.providerUserId;
       await profileCache.invalidate(cacheKey);
     }
+
+    await Promise.all([
+      expressProfileCache.invalidate(profile.id),
+      expressAuthProfileCache.invalidate(profile.userId),
+      expressIdentityProfileCache.invalidateMany(
+        identities.map((identity) => ({
+          provider: identity.provider,
+          providerUserId: identity.providerUserId,
+        })),
+      ),
+      expressMemberCache.invalidateByProfileId(profile.id),
+    ]);
 
     const betterAuthIdentity = identities.find(
       (identity) => identity.provider === AuthProvider.BETTER_AUTH,
