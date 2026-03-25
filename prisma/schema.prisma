@@ -94,6 +94,7 @@ model Profile {
   receivedFriendRequests        Friendship[]            @relation("FriendReceiver")
   sentFriendRequests            Friendship[]            @relation("FriendRequester")
   members                       Member[]
+  boardMessagesSent             Message[]               @relation("BoardMessageSender")
   mentions                      Mention[]               @relation("MentionedProfile")
   reactions                     Reaction[]              @relation("ProfileReactions")
   reportsMade                   Report[]                @relation("ReportsMade")
@@ -353,6 +354,7 @@ model Message {
   content           String
   attachmentAssetId String?
   memberId          String?
+  messageSenderId   String?
   channelId         String
   deleted           Boolean        @default(false)
   createdAt         DateTime       @default(now())
@@ -367,6 +369,7 @@ model Message {
   attachmentAsset   UploadedAsset? @relation("MessageAttachmentAsset", fields: [attachmentAssetId], references: [id], onDelete: SetNull)
   channel           Channel        @relation(fields: [channelId], references: [id], onDelete: Cascade)
   member            Member?        @relation(fields: [memberId], references: [id])
+  messageSender     Profile?       @relation("BoardMessageSender", fields: [messageSenderId], references: [id], onDelete: SetNull)
   replyTo           Message?       @relation("MessageReplies", fields: [replyToId], references: [id])
   replies           Message[]      @relation("MessageReplies")
   sticker           Sticker?       @relation("MessageSticker", fields: [stickerId], references: [id])
@@ -374,6 +377,7 @@ model Message {
 
   @@index([channelId])
   @@index([memberId])
+  @@index([messageSenderId])
   @@index([attachmentAssetId])
   @@index([stickerId])
   @@index([replyToId])
