@@ -3,6 +3,8 @@
 import { InviteStatus } from "@/components/invite/invite-status";
 import { currentProfile } from "@/lib/current-profile";
 import { db } from "@/lib/db";
+import { expressMemberCache } from "@/lib/redis";
+import { serializeProfileSummary } from "@/lib/uploaded-assets";
 import { redirect } from "next/navigation";
 import { ChannelType, MemberRole, SlotMode } from "@prisma/client"; // Importar tipos necesarios
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
@@ -77,6 +79,23 @@ async function notifyWelcomeMessage(channelId: string, message: object) {
   } catch (error) {
     console.error("[NOTIFY_WELCOME_MESSAGE]", error);
   }
+}
+
+function serializeWelcomeMessagePayload(message: any) {
+  return {
+    ...message,
+    messageSender: message.messageSender
+      ? serializeProfileSummary(message.messageSender)
+      : null,
+    member: message.member
+      ? {
+          ...message.member,
+          profile: serializeProfileSummary(
+            message.member.profile ?? message.messageSender ?? null,
+          ),
+        }
+      : null,
+  };
 }
 
 const InviteCodePage = async ({ params }: InviteCodePageProps) => {
@@ -175,9 +194,12 @@ const InviteCodePage = async ({ params }: InviteCodePageProps) => {
     return <InviteStatus status="invalid" />; // O manejar status "full"
   }
 
+  let targetChannelId: string | null = null;
+
   try {
     // 3. Transacción atómica (igual que tenías en la API)
-    const { targetChannelId, welcomeMessage } = await db.$transaction(
+    const { targetChannelId: joinedTargetChannelId, welcomeMessage } =
+      await db.$transaction(
       async (tx) => {
       // Re-verificar slot dentro de la transacción para evitar condiciones de carrera
       const slotCheck = await tx.slot.findUnique({
@@ -209,43 +231,68 @@ const InviteCodePage = async ({ params }: InviteCodePageProps) => {
         },
       });
 
-        const targetChannel =
-          (await tx.channel.findFirst({
-            where: { boardId, type: ChannelType.MAIN },
-            select: { id: true },
-          })) ??
-          (await tx.channel.findFirst({
-            where: { boardId },
-            orderBy: { position: "asc" },
-            select: { id: true },
-          }));
+      const targetChannel =
+        (await tx.channel.findFirst({
+          where: { boardId, type: ChannelType.MAIN },
+          select: { id: true },
+        })) ??
+        (await tx.channel.findFirst({
+          where: { boardId },
+          orderBy: { position: "asc" },
+          select: { id: true },
+        }));
 
-        let welcomeMessage = null;
-        if (targetChannel) {
-          welcomeMessage = await tx.message.create({
-            data: {
-              channelId: targetChannel.id,
-              type: "WELCOME",
-              content: "",
-              memberId: newMember.id,
-            },
-            include: {
-              member: {
-                include: { profile: true },
+      let welcomeMessage = null;
+      if (targetChannel) {
+        welcomeMessage = await tx.message.create({
+          data: {
+            channelId: targetChannel.id,
+            type: "WELCOME",
+            content: "",
+            memberId: newMember.id,
+            messageSenderId: profile.id,
+          },
+          include: {
+            member: {
+              include: {
+                profile: {
+                  include: {
+                    avatarAsset: true,
+                    badgeSticker: {
+                      include: {
+                        asset: true,
+                      },
+                    },
+                  },
+                },
               },
             },
-          });
-        }
+            messageSender: {
+              include: {
+                avatarAsset: true,
+                badgeSticker: {
+                  include: {
+                    asset: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+      }
 
-        return {
-          targetChannelId: targetChannel?.id ?? null,
-          welcomeMessage,
-        };
+      return {
+        targetChannelId: targetChannel?.id ?? null,
+        welcomeMessage,
+      };
       },
     );
 
     // Notificar a los miembros existentes que alguien se unió
     // (fire-and-forget, no bloquea el redirect)
+    targetChannelId = joinedTargetChannelId;
+    await expressMemberCache.invalidate(boardId, profile.id);
+
     notifyMemberJoined(boardId, {
       id: profile.id,
       username: profile.username,
@@ -253,20 +300,23 @@ const InviteCodePage = async ({ params }: InviteCodePageProps) => {
     });
 
     if (targetChannelId && welcomeMessage) {
-      notifyWelcomeMessage(targetChannelId, welcomeMessage);
+      notifyWelcomeMessage(
+        targetChannelId,
+        serializeWelcomeMessagePayload(welcomeMessage),
+      );
     }
 
     // ÉXITO: Redirigir directamente al board
-    return redirect(
-      targetChannelId
-        ? `/boards/${boardId}/rooms/${targetChannelId}`
-        : `/boards/${boardId}`,
-    );
   } catch (error) {
     console.error("[INVITE_JOIN_ERROR]", error);
     // Si falló la transacción (ej. alguien tomó el slot milisegundos antes)
     return <InviteStatus status="invalid" />;
   }
+  return redirect(
+    targetChannelId
+      ? `/boards/${boardId}/rooms/${targetChannelId}`
+      : `/boards/${boardId}`,
+  );
 };
 
 export default InviteCodePage;
