@@ -5,6 +5,7 @@ import {
   useTokenGetter,
   useTokenReady,
 } from "@/components/providers/token-manager-provider";
+import { useSocketRecoveryVersion } from "@/components/providers/socket-provider";
 import { getExpressAuthHeaders } from "@/lib/express-fetch";
 
 /**
@@ -17,14 +18,28 @@ export function useChannelReadState(
   profileId: string | undefined,
   boardIds: string[],
 ) {
-  const { initializeFromServer, clearUnread, setViewingRoom, setLastAck } =
+  const {
+    initializeFromServer,
+    replaceFromServer,
+    clearUnread,
+    setViewingRoom,
+    setLastAck,
+  } =
     useUnreadStore();
-  const { initializeFromServer: initializeMentions, clearMention } =
+  const {
+    initializeFromServer: initializeMentions,
+    replaceFromServer: replaceMentionsFromServer,
+    clearMention,
+  } =
     useMentionStore();
   const getToken = useTokenGetter();
   const tokenReady = useTokenReady();
+  const reconnectVersion = useSocketRecoveryVersion();
   const loadedRef = useRef<Set<string>>(new Set());
   const conversationsLoadedRef = useRef(false);
+  const channelUnreadSnapshotRef = useRef<Record<string, number>>({});
+  const conversationUnreadSnapshotRef = useRef<Record<string, number>>({});
+  const mentionsSnapshotRef = useRef<string[]>([]);
 
   // Estabilizar boardIds para evitar renders infinitos
   const stableBoardIds = useMemo(() => boardIds.join(","), [boardIds]);
@@ -34,15 +49,16 @@ export function useChannelReadState(
     if (!profileId || !stableBoardIds || !tokenReady) return;
 
     const boardIdArray = stableBoardIds.split(",").filter(Boolean);
+    const shouldReload = reconnectVersion > 0;
 
     const loadAllBoardStates = async () => {
       const socketUrl =
         process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
 
       // Cargar solo los boards que no hemos cargado aún
-      const boardsToLoad = boardIdArray.filter(
-        (id) => !loadedRef.current.has(id),
-      );
+      const boardsToLoad = shouldReload
+        ? boardIdArray
+        : boardIdArray.filter((id) => !loadedRef.current.has(id));
 
       if (boardsToLoad.length === 0) return;
 
@@ -99,11 +115,28 @@ export function useChannelReadState(
         });
 
         // Actualizar stores incrementalmente para que la UI se actualice más rápido
-        if (Object.keys(allCounts).length > 0) {
-          initializeFromServer(allCounts);
-        }
-        if (allMentions.length > 0) {
-          initializeMentions(allMentions);
+        if (shouldReload) {
+          channelUnreadSnapshotRef.current = allCounts;
+          mentionsSnapshotRef.current = allMentions;
+          replaceFromServer({
+            ...allCounts,
+            ...conversationUnreadSnapshotRef.current,
+          });
+          replaceMentionsFromServer(allMentions);
+        } else {
+          channelUnreadSnapshotRef.current = {
+            ...channelUnreadSnapshotRef.current,
+            ...allCounts,
+          };
+          mentionsSnapshotRef.current = [
+            ...new Set([...mentionsSnapshotRef.current, ...allMentions]),
+          ];
+          if (Object.keys(allCounts).length > 0) {
+            initializeFromServer(allCounts);
+          }
+          if (allMentions.length > 0) {
+            initializeMentions(allMentions);
+          }
         }
 
         // Pequeña pausa entre lotes para no saturar el rate limit
@@ -118,14 +151,18 @@ export function useChannelReadState(
     profileId,
     stableBoardIds,
     tokenReady,
+    reconnectVersion,
     getToken,
     initializeFromServer,
     initializeMentions,
+    replaceFromServer,
+    replaceMentionsFromServer,
   ]);
 
   // Cargar unreads de conversaciones (DMs) solo una vez
   useEffect(() => {
-    if (!profileId || !tokenReady || conversationsLoadedRef.current) return;
+    if (!profileId || !tokenReady) return;
+    if (reconnectVersion === 0 && conversationsLoadedRef.current) return;
 
     const loadConversationUnreads = async () => {
       const socketUrl =
@@ -146,7 +183,17 @@ export function useChannelReadState(
 
         if (res.ok) {
           const unreadCounts = await res.json();
-          if (Object.keys(unreadCounts).length > 0) {
+          if (reconnectVersion > 0) {
+            conversationUnreadSnapshotRef.current = unreadCounts;
+            replaceFromServer({
+              ...channelUnreadSnapshotRef.current,
+              ...unreadCounts,
+            });
+          } else if (Object.keys(unreadCounts).length > 0) {
+            conversationUnreadSnapshotRef.current = {
+              ...conversationUnreadSnapshotRef.current,
+              ...unreadCounts,
+            };
             initializeFromServer(unreadCounts);
           }
           conversationsLoadedRef.current = true;
@@ -160,7 +207,7 @@ export function useChannelReadState(
     };
 
     loadConversationUnreads();
-  }, [profileId, tokenReady, getToken, initializeFromServer]);
+  }, [profileId, tokenReady, reconnectVersion, getToken, initializeFromServer, replaceFromServer]);
 
   // Función para marcar un canal como leído
   const markAsRead = useCallback(

@@ -9,6 +9,7 @@ interface UnreadState {
   hasBoardUnreads: (boardId: string, channelIds: string[]) => boolean;
   getUnreadCount: (roomId: string) => number;
   initializeFromServer: (unreadCounts: Record<string, number>) => void;
+  replaceFromServer: (unreadCounts: Record<string, number>) => void;
   setUnreadCount: (roomId: string, count: number) => void;
   setViewingRoom: (roomId: string | null) => void;
   setLastAck: (roomId: string, timestamp?: number) => void;
@@ -84,6 +85,11 @@ export const useUnreadStore = create<UnreadState>((set, get) => ({
         ...state.unreads,
         ...unreadCounts,
       },
+    })),
+
+  replaceFromServer: (unreadCounts) =>
+    set(() => ({
+      unreads: unreadCounts,
     })),
 
   // Establece el contador de unreads para un canal/conversación específico

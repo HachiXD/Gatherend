@@ -18,6 +18,7 @@ interface MentionState {
 
   // Inicializar desde el servidor
   initializeFromServer: (roomIds: string[]) => void;
+  replaceFromServer: (roomIds: string[]) => void;
 }
 
 export const useMentionStore = create<MentionState>((set, get) => ({
@@ -54,5 +55,14 @@ export const useMentionStore = create<MentionState>((set, get) => ({
         newMentions[roomId] = true;
       });
       return { mentions: newMentions };
+    }),
+
+  replaceFromServer: (roomIds) =>
+    set(() => {
+      const mentions: Record<string, boolean> = {};
+      roomIds.forEach((roomId) => {
+        mentions[roomId] = true;
+      });
+      return { mentions };
     }),
 }));
