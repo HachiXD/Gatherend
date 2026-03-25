@@ -3,7 +3,9 @@ import { NextResponse } from "next/server";
 import { ChannelType, MemberRole, Prisma, SlotMode } from "@prisma/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
+import { expressMemberCache } from "@/lib/redis";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
+import { serializeProfileSummary } from "@/lib/uploaded-assets";
 
 // UUID validation regex
 const UUID_REGEX =
@@ -34,6 +36,23 @@ async function notifyWelcomeMessage(channelId: string, message: object) {
   } catch (error) {
     console.error("[NOTIFY_WELCOME_MESSAGE]", error);
   }
+}
+
+function serializeWelcomeMessagePayload(message: any) {
+  return {
+    ...message,
+    messageSender: message.messageSender
+      ? serializeProfileSummary(message.messageSender)
+      : null,
+    member: message.member
+      ? {
+          ...message.member,
+          profile: serializeProfileSummary(
+            message.member.profile ?? message.messageSender ?? null,
+          ),
+        }
+      : null,
+  };
 }
 
 async function notifyMemberJoined(
@@ -251,10 +270,32 @@ export async function POST(
             type: "WELCOME",
             content: "",
             memberId: newMember.id,
+            messageSenderId: profile.id,
           },
           include: {
             member: {
-              include: { profile: true },
+              include: {
+                profile: {
+                  include: {
+                    avatarAsset: true,
+                    badgeSticker: {
+                      include: {
+                        asset: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            messageSender: {
+              include: {
+                avatarAsset: true,
+                badgeSticker: {
+                  include: {
+                    asset: true,
+                  },
+                },
+              },
             },
           },
         });
@@ -268,6 +309,8 @@ export async function POST(
     });
 
     // Notificar a los miembros existentes que alguien se unió
+    await expressMemberCache.invalidate(boardId, profile.id);
+
     notifyMemberJoined(boardId, {
       id: profile.id,
       username: profile.username,
@@ -275,13 +318,15 @@ export async function POST(
     });
 
     if (targetChannelId && welcomeMessage) {
-      notifyWelcomeMessage(targetChannelId, welcomeMessage);
+      notifyWelcomeMessage(
+        targetChannelId,
+        serializeWelcomeMessagePayload(welcomeMessage),
+      );
     }
 
     // 6. RESPUESTA
     return NextResponse.json({
       success: true,
-      memberId: member.id,
       targetChannelId,
       redirectUrl: targetChannelId
         ? `/boards/${boardId}/rooms/${targetChannelId}`

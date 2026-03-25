@@ -3,12 +3,13 @@ import { NextResponse } from "next/server";
 import { MemberRole } from "@prisma/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
+import { expressMemberCache } from "@/lib/redis";
 
 // UUID validation regex
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Helper para notificar a los miembros que alguien fue baneado
+// Helper para notificar a los miembros restantes y al usuario baneado
 async function notifyMemberBanned(boardId: string, profileId: string) {
   try {
     const socketUrl =
@@ -18,24 +19,62 @@ async function notifyMemberBanned(boardId: string, profileId: string) {
     // Skip if socket URL or secret is not configured
     if (!socketUrl || !secret) return;
 
-    await fetch(`${socketUrl}/emit-to-room`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Internal-Secret": secret,
-      },
-      body: JSON.stringify({
-        room: `board:${boardId}`,
-        event: "board:member-left",
-        data: {
-          boardId,
-          profileId,
-          reason: "banned",
-          timestamp: Date.now(),
+    const timestamp = Date.now();
+
+    await Promise.allSettled([
+      fetch(`${socketUrl}/emit-to-room`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Internal-Secret": secret,
         },
+        body: JSON.stringify({
+          room: `board:${boardId}`,
+          event: "board:member-left",
+          data: {
+            boardId,
+            profileId,
+            reason: "banned",
+            timestamp,
+          },
+        }),
+        signal: AbortSignal.timeout(3000),
       }),
-      signal: AbortSignal.timeout(3000),
-    });
+      fetch(`${socketUrl}/emit-to-room`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Internal-Secret": secret,
+        },
+        body: JSON.stringify({
+          room: `board:${boardId}`,
+          event: "board:member-banned",
+          data: {
+            boardId,
+            profileId,
+            timestamp,
+          },
+        }),
+        signal: AbortSignal.timeout(3000),
+      }),
+      fetch(`${socketUrl}/emit-to-room`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Internal-Secret": secret,
+        },
+        body: JSON.stringify({
+          room: `profile:${profileId}`,
+          event: "board:banned",
+          data: {
+            boardId,
+            bannedProfileId: profileId,
+            timestamp,
+          },
+        }),
+        signal: AbortSignal.timeout(3000),
+      }),
+    ]);
   } catch (error) {
     console.error("[NOTIFY_MEMBER_BANNED]", error);
   }
@@ -153,6 +192,8 @@ export async function POST(
         create: { boardId, profileId: targetProfileId },
       });
     });
+
+    await expressMemberCache.invalidate(boardId, targetProfileId);
 
     // Notificar a los miembros restantes (fire-and-forget)
     notifyMemberBanned(boardId, targetProfileId);

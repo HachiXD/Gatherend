@@ -54,8 +54,6 @@ export async function GET(
                 id: true,
                 username: true,
                 discriminator: true,
-                email: true,
-                userId: true,
                 avatarAsset: {
                   select: uploadedAssetSummarySelect,
                 },

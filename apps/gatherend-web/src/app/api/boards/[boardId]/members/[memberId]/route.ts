@@ -2,11 +2,8 @@ import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
+import { expressMemberCache } from "@/lib/redis";
 import { MemberRole } from "@prisma/client";
-import {
-  serializeProfileSummary,
-  uploadedAssetSummarySelect,
-} from "@/lib/uploaded-assets";
 
 // No cachear PATCH
 export const revalidate = 0;
@@ -33,6 +30,41 @@ const ASSIGNABLE_BY_ROLE: Record<MemberRole, MemberRole[]> = {
   MODERATOR: [], // Cannot change roles
   GUEST: [], // Cannot change roles
 };
+
+async function notifyMemberRoleChanged(
+  boardId: string,
+  profileId: string,
+  role: MemberRole,
+) {
+  try {
+    const socketUrl =
+      process.env.SOCKET_SERVER_URL || process.env.NEXT_PUBLIC_SOCKET_URL;
+    const secret = process.env.INTERNAL_API_SECRET;
+
+    if (!socketUrl || !secret) return;
+
+    await fetch(`${socketUrl}/emit-to-room`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Internal-Secret": secret,
+      },
+      body: JSON.stringify({
+        room: `board:${boardId}`,
+        event: "board:member-role-changed",
+        data: {
+          boardId,
+          profileId,
+          role,
+          timestamp: Date.now(),
+        },
+      }),
+      signal: AbortSignal.timeout(3000),
+    });
+  } catch (error) {
+    console.error("[NOTIFY_MEMBER_ROLE_CHANGED]", error);
+  }
+}
 
 /**
  * PATCH /api/boards/[boardId]/members/[memberId]
@@ -158,55 +190,22 @@ export async function PATCH(
       }
 
       // 8. Update the member's role
-      await tx.member.update({
+      const updatedMember = await tx.member.update({
         where: { id: target.id },
         data: { role: newRole as MemberRole },
+        select: { id: true, profileId: true, role: true },
       });
 
-      // 9. Return updated board with members
-      return await tx.board.findUnique({
-        where: { id: boardId },
-        include: {
-          members: {
-            include: {
-              profile: {
-                select: {
-                  id: true,
-                  username: true,
-                  discriminator: true,
-                  email: true,
-                  userId: true,
-                  usernameColor: true,
-                  profileTags: true,
-                  badge: true,
-                  usernameFormat: true,
-                  longDescription: true,
-                  avatarAsset: {
-                    select: uploadedAssetSummarySelect,
-                  },
-                  badgeSticker: {
-                    select: {
-                      id: true,
-                      asset: {
-                        select: uploadedAssetSummarySelect,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-            orderBy: { role: "asc" },
-          },
-        },
-      });
+      return updatedMember;
     });
 
+    await expressMemberCache.invalidate(boardId, result.profileId);
+    void notifyMemberRoleChanged(boardId, result.profileId, result.role);
+
     return NextResponse.json({
-      ...result,
-      members: result?.members.map((member) => ({
-        ...member,
-        profile: serializeProfileSummary(member.profile),
-      })),
+      success: true,
+      memberId: result.id,
+      role: result.role,
     });
   } catch (error) {
     // Handle known transaction errors

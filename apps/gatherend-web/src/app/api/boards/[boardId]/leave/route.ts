@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { MemberRole } from "@prisma/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
+import { expressMemberCache } from "@/lib/redis";
 
 // UUID validation regex
 const UUID_REGEX =
@@ -111,6 +112,8 @@ async function handleLeaveBoard(
         where: { id: member.id },
       });
     });
+
+    await expressMemberCache.invalidate(boardId, profile.id);
 
     // Notificar a los miembros restantes (fire-and-forget)
     notifyMemberLeft(boardId, profile.id);
