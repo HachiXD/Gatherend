@@ -1,9 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { cn } from "@/lib/utils";
 import { usePresenceStore } from "@/hooks/use-presence-store";
-import { Crown, Shield, ShieldCheck, User } from "lucide-react";
+import { Crown, Ghost, HardHat, User } from "lucide-react";
 import { getProfileAvatarUrl, stringToColor } from "@/lib/avatar-utils";
 import { getNeverAnimatedImageUrl } from "@/lib/media-static";
 import { AnimatedSticker } from "@/components/ui/animated-sticker";
@@ -26,12 +33,12 @@ const roleConfig: Record<
     bgClass: "bg-role-owner-bg",
   },
   ADMIN: {
-    icon: Shield,
+    icon: HardHat,
     colorClass: "text-role-admin-text",
     bgClass: "bg-role-admin-bg",
   },
   MODERATOR: {
-    icon: ShieldCheck,
+    icon: Ghost,
     colorClass: "text-role-mod-text",
     bgClass: "bg-role-mod-bg",
   },
@@ -125,6 +132,10 @@ export const RoleIndicator = ({
   );
 };
 
+export const AvatarGroupHoverContext = createContext<boolean | undefined>(
+  undefined,
+);
+
 // Componente UserAvatar principal
 
 interface UserAvatarProps {
@@ -172,6 +183,7 @@ export const UserAvatar = ({
   animationMode = "inherit",
   isHovered,
 }: UserAvatarProps) => {
+  const groupHovered = useContext(AvatarGroupHoverContext);
   const isOnlineFromStore = usePresenceStore(
     useCallback(
       (state) => (profileId ? state.onlineUsers.has(profileId) : false),
@@ -217,6 +229,7 @@ export const UserAvatar = ({
     !!currentSrc &&
     isAnimatedFormat(currentSrc) &&
     canUseImgproxy(currentSrc);
+  const effectiveHovered = isHovered ?? groupHovered;
 
   const staticSrc = useMemo(() => {
     // Only rewrites for our own CDN animated formats; otherwise returns currentSrc.
@@ -282,7 +295,7 @@ export const UserAvatar = ({
       <AnimatedSticker
         src={currentSrc ?? ""}
         alt="avatar"
-        isHovered={isHovered}
+        isHovered={effectiveHovered}
         containerClassName={avatarBoxClass}
         fallbackWidthPx={32}
         fallbackHeightPx={32}

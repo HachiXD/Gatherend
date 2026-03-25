@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
+import { memo, useCallback, useState, useTransition } from "react";
 import axios from "axios";
 import Image from "next/image";
 import { UserAvatar } from "@/components/user-avatar";
@@ -65,7 +65,7 @@ interface UserAvatarMenuProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-export const UserAvatarMenu = ({
+export const UserAvatarMenu = memo(function UserAvatarMenu({
   profileId,
   profileImageUrl,
   username,
@@ -89,7 +89,7 @@ export const UserAvatarMenu = ({
   open,
   defaultOpen,
   onOpenChange,
-}: UserAvatarMenuProps) => {
+}: UserAvatarMenuProps) {
   // Solo necesitamos boardId para navegar; evitar hooks del App Router / routing completo
   // para no re-renderizar en cada navegación (p.ej. al ir a discovery).
   const currentBoardId = useBoardNavigationStore(
@@ -246,7 +246,7 @@ export const UserAvatarMenu = ({
       )}
     </Popover>
   );
-};
+});
 
 interface UserAvatarMenuContentProps {
   profileId: string;
