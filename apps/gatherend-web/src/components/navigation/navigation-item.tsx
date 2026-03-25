@@ -104,6 +104,11 @@ const NavigationItemComponent = ({
     }
   })();
 
+  const fallbackLabel = useMemo(
+    () => name.trim().charAt(0).toUpperCase() || "?",
+    [name],
+  );
+
   // OPTIMIZACIÓN EXTREMA: visualContent es 100% estático respecto a isActive/hasUnreads/hasMentions
   // Usamos data-attributes + CSS (Tailwind data-*) para estilos condicionales.
   // Esto significa que visualContent mantiene la MISMA referencia cuando cambia isActive,
@@ -116,54 +121,54 @@ const NavigationItemComponent = ({
       <div className="relative">
         <div
           className={cn(
-            "relative h-[48px] w-[48px] rounded-full transition-all overflow-hidden cursor-pointer",
-            // Estilos base + hover (cuando NO activo)
-            "hover:ring-2 hover:ring-[#33bba9]",
-            // Estilos activo via data-attribute (el wrapper padre tiene group/item y data-active)
-            "group-data-[active=true]/item:ring-2 group-data-[active=true]/item:ring-[#33bba9]",
-            "group-data-[active=true]/item:rounded-full",
-            // Override hover cuando está activo (no queremos doble ring)
-            "group-data-[active=true]/item:hover:ring-2",
-            // Estilos navegando via data-attribute
-            "group-data-[navigating=true]/item:opacity-70 group-data-[navigating=true]/item:animate-pulse",
+            "relative flex h-12 w-13 cursor-pointer items-center justify-center border border-theme-border-secondary/70 bg-theme-bg-tertiary/70 p-px shadow-[inset_0_5px_0_rgba(255,255,255,0.22),inset_5px_0_0_rgba(255,255,255,0.14),inset_-5px_0_0_rgba(0,0,0,0.40),inset_0_-5px_0_rgba(0,0,0,0.55)] transition-all",
+            "hover:border-theme-border hover:ring-2 hover:ring-theme-border-accent-active-channel",
+            "group-data-[active=true]/item:border-theme-border group-data-[active=true]/item:ring-2 group-data-[active=true]/item:ring-theme-border-accent-active-channel",
+            "group-data-[navigating=true]/item:animate-pulse group-data-[navigating=true]/item:opacity-70",
           )}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          {displayImageUrl && (
-            <img
-              src={displayImageUrl}
-              alt={name}
-              className="absolute inset-0 h-full w-full object-cover"
-              loading="eager"
-              decoding="async"
-              crossOrigin={isGatherendCdnUrl ? "anonymous" : undefined}
-              onError={() => setForceOriginalImage(true)}
-            />
-          )}
+          <div className="relative h-9.5 w-10.5 overflow-hidden bg-theme-bg-tertiary">
+            {displayImageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={displayImageUrl}
+                alt={name}
+                className="absolute inset-0 h-full w-full object-cover"
+                loading="eager"
+                decoding="async"
+                crossOrigin={isGatherendCdnUrl ? "anonymous" : undefined}
+                onError={() => setForceOriginalImage(true)}
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-theme-bg-tertiary text-[13px] font-semibold uppercase text-theme-text-secondary">
+                {fallbackLabel}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Indicador de mención - siempre renderizado, oculto via CSS */}
         <div
           className={cn(
-            "absolute -top-1 -right-1 w-5 h-5 bg-[#E57373] rounded-full border-2 border-[#334b49] flex items-center justify-center",
+            "absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full border border-[#334b49] bg-[#E57373]",
             // Mostrar solo si: tiene menciones Y NO está activo
-            "hidden group-data-[mentions=true]/item:block group-data-[active=true]/item:hidden",
+            "hidden group-data-[mentions=true]/item:flex group-data-[active=true]/item:hidden",
           )}
         >
-          <AtSign className="w-3 h-3 text-white" strokeWidth={3} />
+          <AtSign className="h-2.5 w-2.5 text-white" strokeWidth={3} />
         </div>
 
         {/* Indicador de unreads - siempre renderizado, oculto via CSS */}
         <div
           className={cn(
-            "absolute -top-0.5 -right-0.5 w-3 h-3 bg-[#D6A86C] rounded-full border-2 border-[#334b49]",
+            "absolute right-0 top-0 h-2.5 w-2.5 rounded-full border border-[#334b49] bg-[#D6A86C]",
             // Mostrar solo si: tiene unreads Y NO tiene menciones Y NO está activo
             "hidden group-data-[unreads=true]/item:block group-data-[mentions=true]/item:hidden group-data-[active=true]/item:hidden",
           )}
         />
       </div>
     ),
-    [displayImageUrl, isGatherendCdnUrl, name], // Solo dependencias que REALMENTE cambian el contenido
+    [displayImageUrl, fallbackLabel, isGatherendCdnUrl, name], // Solo dependencias que REALMENTE cambian el contenido
   );
 
   // Helper para obtener el primer canal de un board

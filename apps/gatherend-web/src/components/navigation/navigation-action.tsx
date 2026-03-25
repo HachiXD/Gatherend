@@ -25,15 +25,11 @@ export const NavigationAction = memo(function NavigationAction() {
   return (
     <ActionTooltip side="right" align="center" label={t.navigation.createBoard}>
       <button
+        type="button"
         onClick={handleClick}
-        className="group flex items-center mx-3 h-[48px] w-[48px] rounded-[24px]
-      transition-all overflow-hidden justify-center bg-theme-nav-action-bg
-      hover:rounded-[16px] hover:bg-theme-nav-action-hover cursor-pointer"
+        className="flex h-12 w-12 rounded-2xl cursor-pointer items-center justify-center border-2 border-theme-border bg-theme-tab-button-bg px-1 py-0.5 text-theme-text-light transition hover:bg-theme-tab-button-hover hover:text-theme-text-light"
       >
-        <Plus
-          className="transition text-theme-text-subtle group-hover:text-theme-text-secondary"
-          size={25}
-        />
+        <Plus className="h-6 w-6" />
       </button>
     </ActionTooltip>
   );
