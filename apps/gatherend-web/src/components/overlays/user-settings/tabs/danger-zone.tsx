@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import type { ClientProfile } from "@/hooks/use-current-profile";
 import axios from "axios";
 import { usePathname, useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +19,13 @@ import {
 import { useSocketClient } from "@/components/providers/socket-provider";
 import { signOut } from "@/lib/better-auth-client";
 import { useTranslation } from "@/i18n";
+
+const HEADER_PANEL_SHELL =
+  "border border-theme-border mr-1.5 bg-theme-bg-overlay-primary/78 px-4 pt-4 pb-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.26)] sm:px-5 sm:py-5";
+const DANGER_PANEL_SHELL =
+  "border border-rose-500/35 bg-rose-950/18 px-4 py-4 -mt-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.26)] sm:px-5 sm:py-5";
+const DANGER_ACTION_BUTTON_CLASS =
+  "flex h-8 w-full -mt-1.5 cursor-pointer items-center justify-center gap-1.5 rounded-none border border-rose-500/45 bg-rose-900/55 px-3 text-[14px] text-rose-100 transition hover:border-rose-400/65 hover:bg-rose-800/65 hover:text-white";
 
 interface UserDangerZoneTabProps {
   user: ClientProfile;
@@ -75,41 +83,45 @@ export const UserDangerZoneTab = ({
 
   return (
     <>
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-xl font-bold text-red-500">
-            {t.overlays.userSettings.dangerZone.title}
-          </h2>
-          <p className="text-sm text-theme-text-tertiary mt-1">
-            {t.overlays.userSettings.dangerZone.subtitle}
-          </p>
+      <div className="space-y-6 -mt-2.5">
+        <div className={HEADER_PANEL_SHELL}>
+          <div className="-mb-3 -mt-3 border-b border-theme-border pb-0.5">
+            <h2 className="text-2xl font-bold text-red-500">
+              {t.overlays.userSettings.dangerZone.title}
+            </h2>
+            <p className="-mt-1 text-sm text-theme-text-tertiary">
+              {t.overlays.userSettings.dangerZone.subtitle}
+            </p>
+          </div>
         </div>
 
-        <div className="p-6 border-1 border-red-400/50 bg-red-950/20 rounded-lg">
-          <div className="flex items-start gap-3 mb-4">
-            <div>
-              <h3 className="text-base font-semibold text-red-400 mb-1">
-                {t.overlays.userSettings.dangerZone.deleteSectionTitle}
-              </h3>
-              <p className="text-sm text-red-300">
+        <div className={cn(DANGER_PANEL_SHELL, "w-full max-w-[640px]")}>
+          <div className="-mb-2.5 -mt-3 space-y-4">
+            <div className="space-y-2">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="-mb-1 mt-1 -mr-1 h-4.5 w-4.5 text-red-500" />
+                <h3 className="text-base font-semibold text-red-400 underline">
+                  {t.overlays.userSettings.dangerZone.deleteSectionTitle}
+                </h3>
+              </div>
+              <p className="-mt-1.5 text-sm text-red-300">
                 {t.overlays.userSettings.dangerZone.deleteSectionDescription}
               </p>
             </div>
-          </div>
 
-          <Button
-            onClick={() => setShowConfirmDialog(true)}
-            variant="destructive"
-            className="bg-red-600 hover:bg-red-700 text-white"
-            disabled={isDeletingAccount}
-          >
-            {isDeletingAccount ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : null}
-            {isDeletingAccount
-              ? t.overlays.userSettings.dangerZone.deletingAccount
-              : t.overlays.userSettings.dangerZone.deleteAccount}
-          </Button>
+            <Button
+              onClick={() => setShowConfirmDialog(true)}
+              className={DANGER_ACTION_BUTTON_CLASS}
+              disabled={isDeletingAccount}
+            >
+              {isDeletingAccount ? (
+                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+              ) : null}
+              {isDeletingAccount
+                ? t.overlays.userSettings.dangerZone.deletingAccount
+                : t.overlays.userSettings.dangerZone.deleteAccount}
+            </Button>
+          </div>
         </div>
       </div>
 

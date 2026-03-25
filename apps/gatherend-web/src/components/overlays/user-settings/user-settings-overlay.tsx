@@ -8,8 +8,8 @@ import { cn } from "@/lib/utils";
 import { AccountTab } from "./tabs/account";
 import { LogoutTab } from "./tabs/logout";
 import { UserDangerZoneTab } from "./tabs/danger-zone";
+import { UserSettingsSidebar } from "./sidebar";
 import type { ClientProfile } from "@/hooks/use-current-profile";
-import { useTranslation } from "@/i18n";
 
 // Skeleton for settings overlay loading
 function SettingsOverlaySkeleton() {
@@ -33,7 +33,8 @@ export const UserSettingsOverlay = ({
 }: UserSettingsOverlayProps) => {
   const [tab, setTab] = useState<"account" | "logout" | "danger">("account");
   const [isBlocking, setIsBlocking] = useState(false);
-  const { t } = useTranslation();
+  const overlayShellShadow =
+    "shadow-[0_18px_40px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.08),inset_1px_0_0_rgba(255,255,255,0.06),inset_-1px_0_0_rgba(0,0,0,0.42),inset_0_-1px_0_rgba(0,0,0,0.42)]";
 
   if (typeof document === "undefined") {
     return null;
@@ -46,7 +47,7 @@ export const UserSettingsOverlay = ({
           <SettingsOverlaySkeleton />
         </div>
       </div>,
-      document.body
+      document.body,
     );
   }
 
@@ -54,62 +55,15 @@ export const UserSettingsOverlay = ({
     <div className="fixed inset-0 z-[10000] bg-black/40 backdrop-blur-sm flex pointer-events-auto">
       <div
         className={cn(
-          "relative bg-theme-bg-overlay-primary h-full w-full",
-          "flex flex-col overflow-hidden animate-in fade-in zoom-in duration-150"
+          "relative h-full w-full border border-theme-border bg-theme-bg-overlay-primary",
+          "flex flex-col overflow-hidden py-0 animate-in fade-in zoom-in duration-150",
+          overlayShellShadow,
         )}
       >
-        {/* HORIZONTAL TABS */}
-        <div className="border-b border-theme-border-secondary px-16 pt-16 pb-4">
-          <h2 className="text-xs uppercase font-bold text-theme-text-muted mb-4">
-            {t.overlays.userSettings.title}
-          </h2>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setTab("account")}
-              disabled={isBlocking}
-              className={cn(
-                "px-4 py-2 cursor-pointer rounded-md text-sm font-medium transition",
-                "disabled:opacity-50 disabled:cursor-not-allowed",
-                tab === "account"
-                  ? "bg-theme-tab-active-bg text-white"
-                  : "hover:bg-theme-bg-tab-hover text-theme-text-subtle"
-              )}
-            >
-              {t.overlays.userSettings.tabs.account}
-            </button>
-
-            <button
-              onClick={() => setTab("logout")}
-              disabled={isBlocking}
-              className={cn(
-                "px-4 py-2 cursor-pointer rounded-md text-sm font-medium transition",
-                "disabled:opacity-50 disabled:cursor-not-allowed",
-                tab === "logout"
-                  ? "bg-theme-tab-active-bg text-white"
-                  : "hover:bg-theme-bg-tab-hover text-theme-text-subtle"
-              )}
-            >
-              {t.overlays.userSettings.tabs.logout}
-            </button>
-
-            <button
-              onClick={() => setTab("danger")}
-              disabled={isBlocking}
-              className={cn(
-                "px-4 py-2 cursor-pointer rounded-md text-sm font-medium transition text-red-400",
-                "disabled:opacity-50 disabled:cursor-not-allowed",
-                tab === "danger"
-                  ? "bg-red-600 text-white"
-                  : "hover:bg-red-600/20"
-              )}
-            >
-              {t.overlays.userSettings.tabs.dangerZone}
-            </button>
-          </div>
-        </div>
+        <UserSettingsSidebar tab={tab} setTab={setTab} />
 
         {/* MAIN PANEL */}
-        <div className="flex-1 px-16 py-8 overflow-y-auto">
+        <div className="scrollbar-navigation flex-1 overflow-y-auto bg-theme-bg-quaternary/35 p-4 sm:p-6">
           {tab === "account" && (
             <AccountTab
               user={user}
@@ -138,11 +92,11 @@ export const UserSettingsOverlay = ({
           onClick={onClose}
           disabled={isBlocking}
           className={cn(
-            "absolute top-4 right-4 p-2 rounded-md transition",
-            isBlocking ? "opacity-50 cursor-not-allowed" : "hover:bg-white/10"
+            "absolute right-4 top-3 cursor-pointer p-1 text-theme-text-subtle transition hover:text-theme-text-light",
+            isBlocking ? "cursor-not-allowed opacity-50" : "",
           )}
         >
-          <X className="w-5 h-5 text-theme-text-subtle" />
+          <X className="h-6 w-6" />
         </button>
 
         {isBlocking ? (
@@ -153,6 +107,6 @@ export const UserSettingsOverlay = ({
         ) : null}
       </div>
     </div>,
-    document.body
+    document.body,
   );
 };
