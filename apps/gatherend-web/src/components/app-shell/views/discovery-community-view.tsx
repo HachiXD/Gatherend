@@ -11,6 +11,36 @@ import { Search, X } from "lucide-react";
 import { useBoardSwitchNavigation } from "@/contexts/board-switch-context";
 import { memo, useCallback } from "react";
 
+// Search bar — isolated so feed scroll re-renders never touch it
+const SearchBar = memo(function SearchBar({
+  query,
+  setQuery,
+}: {
+  query: string;
+  setQuery: (q: string) => void;
+}) {
+  return (
+    <div className="relative mb-6 shrink-0">
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-theme-text-muted" />
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Buscar comunidades..."
+        className="w-full pl-10 pr-10 py-2.5 bg-theme-bg-tertiary border border-theme-border rounded-lg text-theme-text-light placeholder:text-theme-text-muted focus:outline-none focus:ring-2 focus:ring-theme-border-accent-active-channel focus:border-theme-border-accent-active-channel transition-colors"
+      />
+      {query && (
+        <button
+          onClick={() => setQuery("")}
+          className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-theme-bg-secondary transition-colors"
+        >
+          <X className="h-4 w-4 text-theme-text-muted" />
+        </button>
+      )}
+    </div>
+  );
+});
+
 // Skeleton for initial loading — memoized
 const CommunitiesSkeleton = memo(function CommunitiesSkeleton() {
   return (
@@ -127,24 +157,7 @@ export const DiscoveryCommunityView = memo(function DiscoveryCommunityView() {
       className="h-full w-full flex flex-col px-6 py-4 overflow-y-auto scrollbar-chat"
     >
       {/* Search bar */}
-      <div className="relative mb-6 shrink-0">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-theme-text-muted" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Buscar comunidades..."
-          className="w-full pl-10 pr-10 py-2.5 bg-theme-bg-tertiary border border-theme-border rounded-lg text-theme-text-light placeholder:text-theme-text-muted focus:outline-none focus:ring-2 focus:ring-theme-border-accent-active-channel focus:border-theme-border-accent-active-channel transition-colors"
-        />
-        {searchQuery && (
-          <button
-            onClick={() => setSearchQuery("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-theme-bg-secondary transition-colors"
-          >
-            <X className="h-4 w-4 text-theme-text-muted" />
-          </button>
-        )}
-      </div>
+      <SearchBar query={searchQuery} setQuery={setSearchQuery} />
 
       {/* Content */}
       {isLoading && !isSearching ? (
@@ -170,7 +183,7 @@ export const DiscoveryCommunityView = memo(function DiscoveryCommunityView() {
                 memberCount={community.memberCount || 0}
                 boardCount={community.boardCount || 0}
                 recentPostCount7d={community.recentPostCount7d || 0}
-                onExplore={() => handleExplore(community.id)}
+                onExplore={handleExplore}
               />
             ))}
             {/* Loading more indicator */}
@@ -219,7 +232,7 @@ export const DiscoveryCommunityView = memo(function DiscoveryCommunityView() {
                     memberCount={community.memberCount || 0}
                     boardCount={community.boardCount || 0}
                     recentPostCount7d={community.recentPostCount7d || 0}
-                    onExplore={() => handleExplore(community.id)}
+                    onExplore={handleExplore}
                   />
                 ))}
               </div>

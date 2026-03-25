@@ -1,15 +1,78 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { memo, useMemo, useState } from "react";
+import { lazy, memo, Suspense, useCallback, useMemo, useState } from "react";
 import { Siren } from "lucide-react";
-import { ActionTooltip } from "@/components/action-tooltip";
 import { useModal } from "@/hooks/use-modal-store";
 import { useTranslation } from "@/i18n";
+
+const ActionTooltip = lazy(() =>
+  import("@/components/action-tooltip").then((m) => ({
+    default: m.ActionTooltip,
+  })),
+);
 import { useColorExtraction } from "@/hooks/use-color-extraction";
 import { getDerivedColors } from "@/lib/color-extraction";
 import { getNeverAnimatedImageUrl } from "@/lib/media-static";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
+
+// Self-contained report button — owns its own hover state
+// so CommunityCardInner never re-renders on mouse enter/leave
+const ReportButton = memo(function ReportButton({
+  communityId,
+  communityName,
+  imageUrl,
+  borderColor,
+}: {
+  communityId: string;
+  communityName: string;
+  imageUrl: string | null;
+  borderColor: string;
+}) {
+  const { onOpen } = useModal();
+  const { t } = useTranslation();
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onOpen("reportCommunity", {
+        reportCommunityId: communityId,
+        reportCommunityName: communityName,
+        reportCommunityImageUrl: imageUrl,
+      });
+    },
+    [onOpen, communityId, communityName, imageUrl],
+  );
+
+  const buttonElement = (
+    <button
+      onClick={handleClick}
+      className="cursor-pointer border bg-black/50 p-1.5 text-white/70 transition-colors hover:bg-red-500/30 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/30 rounded-none border-[color:var(--report-border)]"
+      style={{ "--report-border": borderColor } as React.CSSProperties}
+    >
+      <Siren className="h-4 w-4" />
+    </button>
+  );
+
+  return (
+    <div
+      className="absolute top-2 right-2 z-10"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {isHovered ? (
+        <Suspense fallback={buttonElement}>
+          <ActionTooltip label={t.discovery.reportCommunity} side="left">
+            {buttonElement}
+          </ActionTooltip>
+        </Suspense>
+      ) : (
+        buttonElement
+      )}
+    </div>
+  );
+});
 
 export interface CommunityCardProps {
   id: string;
@@ -18,7 +81,7 @@ export interface CommunityCardProps {
   memberCount: number;
   boardCount: number;
   recentPostCount7d: number;
-  onExplore: () => void;
+  onExplore: (id: string) => void;
   className?: string;
 }
 
@@ -32,8 +95,6 @@ function CommunityCardInner({
   onExplore,
   className,
 }: CommunityCardProps) {
-  const { onOpen } = useModal();
-  const { t } = useTranslation();
   const [imageFailed, setImageFailed] = useState(false);
   const imageUrl = imageAsset?.url || null;
 
@@ -67,11 +128,11 @@ function CommunityCardInner({
       }}
       role="button"
       tabIndex={0}
-      onClick={onExplore}
+      onClick={() => onExplore(id)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          onExplore();
+          onExplore(id);
         }
       }}
       aria-label={`Explorar ${name}`}
@@ -105,29 +166,13 @@ function CommunityCardInner({
           </div>
         )}
 
-        {/* REPORT BUTTON - esquina superior derecha */}
-        <div className="absolute top-2 right-2 z-10">
-          <ActionTooltip label={t.discovery.reportCommunity} side="left">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpen("reportCommunity", {
-                  reportCommunityId: id,
-                  reportCommunityName: name,
-                  reportCommunityImageUrl: imageUrl,
-                });
-              }}
-              className="cursor-pointer border bg-black/50 p-1.5 text-white/70 transition-colors hover:bg-red-500/30 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/30 rounded-none border-[color:var(--report-border)]"
-              style={
-                {
-                  "--report-border": derivedColors.reliefBorderLight,
-                } as React.CSSProperties
-              }
-            >
-              <Siren className="h-4 w-4" />
-            </button>
-          </ActionTooltip>
-        </div>
+        {/* REPORT BUTTON - isolated component with its own hover state */}
+        <ReportButton
+          communityId={id}
+          communityName={name}
+          imageUrl={imageUrl}
+          borderColor={derivedColors.reliefBorderLight}
+        />
       </div>
 
       {/* INFO */}
@@ -145,6 +190,5 @@ function CommunityCardInner({
   );
 }
 
-// Memoizado para que inline arrows en onExplore no causen re-renders
-// si las demás props son iguales (name, id, etc.)
+// Memoizado — onExplore ahora es (id: string) => void, referencia estable
 export const CommunityCard = memo(CommunityCardInner);

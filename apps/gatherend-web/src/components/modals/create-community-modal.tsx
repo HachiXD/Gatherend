@@ -196,7 +196,7 @@ export function CreateCommunityDialog({
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <div className="px-4 -mb-0.5 space-y-0">
               {/* Image Upload Panel */}
-              <div className={cn("p-3 -mb-1 -mt-3.5", PANEL_SHELL)}>
+              <div className={cn("p-3 -mb-1 mx-3 -mt-3.5", PANEL_SHELL)}>
                 <div className="uppercase text-[15px] font-bold text-theme-text-subtle mb-2">
                   Imagen (opcional)
                 </div>
@@ -211,6 +211,7 @@ export function CreateCommunityDialog({
                             endpoint="communityImage"
                             value={field.value || ""}
                             onChange={field.onChange}
+                            label="Sube una imagen para tu comunidad"
                             uploadButtonClassName="rounded-none border-theme-border-subtle bg-theme-bg-cancel-button text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
                           />
                         </FormControl>

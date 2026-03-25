@@ -28,6 +28,7 @@ interface FileUploadProps {
   imagePreviewWrapperClassName?: string;
   imagePreviewClassName?: string;
   removeButtonClassName?: string;
+  label?: string;
 }
 
 function looksLikeImageUrl(url: string) {
@@ -44,6 +45,7 @@ export const FileUpload = ({
   imagePreviewWrapperClassName,
   imagePreviewClassName,
   removeButtonClassName,
+  label,
 }: FileUploadProps) => {
   const [uploading, setUploading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -258,7 +260,7 @@ export const FileUpload = ({
               isCircular && "text-[9px] text-center leading-tight px-1",
             )}
           >
-            {isCircular ? t.common.uploadBoardImage : t.common.uploadFile}
+            {isCircular ? (label ?? t.common.uploadBoardImage) : t.common.uploadFile}
           </span>
         )}
       </button>

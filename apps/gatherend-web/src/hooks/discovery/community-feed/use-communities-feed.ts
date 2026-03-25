@@ -114,6 +114,11 @@ export function useCommunitiesFeed({
     initialScrollStateRef.current.windowStart,
   );
 
+  // Ref mirror of windowStart — used inside scroll/persist callbacks
+  // to avoid re-creating them on every windowStart change
+  const windowStartRef = useRef(windowStart);
+  windowStartRef.current = windowStart;
+
   // Track when container element changes (e.g., switching between search and feed)
   // This forces IntersectionObserver to re-create with correct root
   const [containerElement, setContainerElement] =
@@ -132,7 +137,7 @@ export function useCommunitiesFeed({
     const frameId = requestAnimationFrame(checkContainer);
 
     return () => cancelAnimationFrame(frameId);
-  });
+  }, [containerElement]);
 
   // REACT QUERY - Infinite Query for data fetching
 
@@ -207,15 +212,16 @@ export function useCommunitiesFeed({
     const container = containerRef.current;
     if (!container) return;
 
-    const placeholderHeight = pagePositions[windowStart]?.start ?? 0;
+    const ws = windowStartRef.current;
+    const placeholderHeight = pagePositions[ws]?.start ?? 0;
     feedScrollStore.set({
       key: scrollStateKey,
-      windowStart,
+      windowStart: ws,
       pageHeights: {},
       normalizedScrollTop: Math.max(0, container.scrollTop - placeholderHeight),
       updatedAt: Date.now(),
     });
-  }, [pagePositions, scrollStateKey, windowStart]);
+  }, [pagePositions, scrollStateKey]);
 
   // O(1) position lookup using cached positions
   const getPagePosition = useCallback(
@@ -313,13 +319,14 @@ export function useCommunitiesFeed({
     if (!container || totalPages === 0) return;
 
     const scrollTop = container.scrollTop;
+    const ws = windowStartRef.current;
 
     const pageAtViewportTop = findPageAtPosition(scrollTop);
-    const firstRenderedPage = windowStart;
-    const renderedCount = totalPages - windowStart;
+    const firstRenderedPage = ws;
+    const renderedCount = totalPages - ws;
 
     // --- EXPAND WINDOW (scroll up) ---
-    if (windowStart > 0 && pageAtViewportTop <= firstRenderedPage) {
+    if (ws > 0 && pageAtViewportTop <= firstRenderedPage) {
       const firstPagePos = getPagePosition(firstRenderedPage);
       const scrollIntoFirstPage = scrollTop - firstPagePos.start;
       const firstPageHeight = firstPagePos.end - firstPagePos.start;
@@ -337,7 +344,7 @@ export function useCommunitiesFeed({
     // 2. The user has scrolled at least 2 pages past windowStart (hysteresis to prevent expand/contract loop)
     if (
       renderedCount > maxRenderedPages &&
-      pageAtViewportTop >= windowStart + 2
+      pageAtViewportTop >= ws + 2
     ) {
       setWindowStart((prev) =>
         Math.min(prev + 1, totalPages - maxRenderedPages),
@@ -345,7 +352,6 @@ export function useCommunitiesFeed({
     }
   }, [
     totalPages,
-    windowStart,
     maxRenderedPages,
     findPageAtPosition,
     getPagePosition,

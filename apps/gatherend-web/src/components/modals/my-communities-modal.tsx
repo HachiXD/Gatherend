@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { X, Search, Users } from "lucide-react";
+import { X, Search, Users, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { useMyCommunities, type MyCommunity } from "@/hooks/use-my-communities";
 import { useTranslation } from "@/i18n";
+import { CreateCommunityDialog } from "@/components/modals/create-community-modal";
 
 interface MyCommunitiesModalProps {
   isOpen: boolean;
@@ -83,6 +85,7 @@ export function MyCommunitiesModal({
   const { t } = useTranslation();
   const { communities, isLoading } = useMyCommunities();
   const [search, setSearch] = useState("");
+  const [isCreateCommunityOpen, setIsCreateCommunityOpen] = useState(false);
 
   // Filtrar communities por búsqueda
   const filteredCommunities = useMemo(() => {
@@ -118,6 +121,18 @@ export function MyCommunitiesModal({
 
       {/* Search */}
       <div className="scrollbar-ultra-thin max-h-[70vh] space-y-3 overflow-y-auto px-4 py-3">
+        {/* Nueva comunidad */}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-6.5 w-full cursor-pointer rounded-none border-theme-border-subtle bg-theme-bg-cancel-button text-[12px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+          onClick={() => setIsCreateCommunityOpen(true)}
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          Nueva comunidad
+        </Button>
+
         <div className={panelSectionClass}>
           <label htmlFor="my-communities-search" className={sectionLabelClass}>
             {t.modals.myCommunities.searchPlaceholder}
@@ -175,6 +190,12 @@ export function MyCommunitiesModal({
           </p>
         </div>
       )}
+
+      <CreateCommunityDialog
+        isOpen={isCreateCommunityOpen}
+        onClose={() => setIsCreateCommunityOpen(false)}
+        stackAbove
+      />
     </div>
   );
 }
