@@ -1082,148 +1082,215 @@ function CommunityPostsSectionInner({
                       return (
                         <article
                           key={post.id}
-                          className="-mx-6 group relative border-b border-theme-border px-6 pt-3 pb-1 transition-colors hover:bg-theme-bg-secondary/35"
+                          className="-mx-6 group border-b border-theme-border px-3 py-2 transition-colors hover:bg-theme-bg-secondary/35"
                         >
-                          {!isEditing && (
-                            <div className="absolute right-5 top-0.5 z-10 hidden items-center gap-x-2 rounded-sm border border-theme-toolbar-border bg-theme-toolbar-bg p-1 group-hover:flex hover:flex">
-                              {isOwnPost && (
-                                <ActionTooltip label="Edit post">
-                                  <button
-                                    type="button"
-                                    onClick={() => setEditingPostId(post.id)}
-                                    className="cursor-pointer"
-                                    aria-label="Edit post"
-                                  >
-                                    <Edit className="h-5 w-5 text-theme-toolbar-icon transition hover:text-theme-text-light" />
-                                  </button>
-                                </ActionTooltip>
-                              )}
-                              {canDeletePost && (
-                                <ActionTooltip label="Delete post">
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      onOpen("deleteCommunityPost", {
-                                        deleteCommunityPostId: post.id,
-                                        deleteCommunityPostCommunityId:
-                                          communityId,
-                                      })
-                                    }
-                                    className="cursor-pointer"
-                                    aria-label="Delete post"
-                                  >
-                                    <Trash className="h-5 w-5 text-theme-toolbar-icon transition hover:text-theme-text-light" />
-                                  </button>
-                                </ActionTooltip>
-                              )}
-                              {!isOwnPost && (
-                                <ActionTooltip label="Report post">
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      onOpen("reportCommunityPost", {
-                                        profileId: profile.id,
-                                        reportCommunityPostId: post.id,
-                                        reportCommunityPostContent:
-                                          post.content,
-                                        reportCommunityPostImageUrl:
-                                          postImageUrl,
-                                        reportCommunityPostAuthorId:
-                                          post.author.id,
-                                        reportCommunityPostAuthorUsername:
-                                          post.author.username,
-                                        reportCommunityPostAuthorDiscriminator:
-                                          post.author.discriminator,
-                                      })
-                                    }
-                                    className="cursor-pointer"
-                                    aria-label="Report post"
-                                  >
-                                    <Siren className="h-5 w-5 text-theme-toolbar-icon transition hover:text-theme-text-light" />
-                                  </button>
-                                </ActionTooltip>
-                              )}
-                            </div>
-                          )}
-                          <div className="flex items-start gap-3">
-                            <div className="shrink-0">
-                              <UserAvatarMenu
-                                profileId={post.author.id}
-                                profileImageUrl={authorAvatarUrl}
-                                username={post.author.username}
-                                discriminator={post.author.discriminator}
-                                currentProfileId={profile.id}
-                                className="h-10 w-10"
-                                showStatus={false}
-                                disableHoverShadow
-                                avatarAnimationMode="never"
-                              />
-                            </div>
-
-                            <div className="-mt-1.5 min-w-0 flex-1">
-                              {isEditing ? (
-                                <CommunityPostEditForm
-                                  postId={post.id}
-                                  communityId={communityId}
-                                  content={post.content}
-                                  hasImage={Boolean(post.imageAsset)}
-                                  onCancel={() => setEditingPostId(null)}
-                                />
-                              ) : (
-                                <>
-                                  <div className="mb-0 flex flex-wrap items-center gap-1">
-                                    {(post.author.badge ||
-                                      authorBadgeStickerUrl) && (
-                                      <>
-                                        <span className="inline-flex items-center gap-0.5">
-                                          {authorBadgeStickerUrl && (
-                                            <AnimatedSticker
-                                              src={authorBadgeStickerUrl}
-                                              alt="badge"
-                                              containerClassName="h-5 w-5"
-                                              fallbackWidthPx={20}
-                                              fallbackHeightPx={20}
-                                              className="object-contain"
-                                              isHovered={false}
-                                            />
-                                          )}
-                                          {post.author.badge && (
-                                            <span className="pt-2.5 text-[11px] leading-none text-theme-text-tertiary">
-                                              {post.author.badge}
-                                            </span>
-                                          )}
-                                        </span>
-                                        <span className="pt-2.5 text-[11px] text-theme-text-tertiary">
-                                          |
-                                        </span>
-                                      </>
-                                    )}
-                                    <span className="pt-2.5 text-[11px] text-theme-text-tertiary">
-                                      {formatPostDate(post.createdAt)}
-                                    </span>
-                                    {post.pinnedAt && (
-                                      <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[11px] font-medium leading-none text-theme-text-subtle">
-                                        <Pin className="h-3 w-3" />
-                                        Fijado
-                                      </span>
-                                    )}
-                                    {post.lockedAt && (
-                                      <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[11px] font-medium leading-none text-theme-text-subtle">
-                                        <Lock className="h-3 w-3" />
-                                        Cerrado
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  {postImageUrl ? (
-                                    <PostBodyWithImage
-                                      imageUrl={postImageUrl}
-                                      alt={
-                                        post.content || "community post image"
+                          <div className="relative bg-theme-bg-edit-form/95 px-4 pt-3 pb-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.16),inset_-1px_-1px_0_rgba(0,0,0,0.38)]">
+                            {!isEditing && (
+                              <div className="absolute right-4 top-0.5 z-10 hidden items-center gap-x-2 rounded-sm border border-theme-toolbar-border bg-theme-toolbar-bg p-1 group-hover:flex hover:flex">
+                                {isOwnPost && (
+                                  <ActionTooltip label="Edit post">
+                                    <button
+                                      type="button"
+                                      onClick={() => setEditingPostId(post.id)}
+                                      className="cursor-pointer"
+                                      aria-label="Edit post"
+                                    >
+                                      <Edit className="h-5 w-5 text-theme-toolbar-icon transition hover:text-theme-text-light" />
+                                    </button>
+                                  </ActionTooltip>
+                                )}
+                                {canDeletePost && (
+                                  <ActionTooltip label="Delete post">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        onOpen("deleteCommunityPost", {
+                                          deleteCommunityPostId: post.id,
+                                          deleteCommunityPostCommunityId:
+                                            communityId,
+                                        })
                                       }
-                                      content={post.content}
-                                      usernameSlot={
+                                      className="cursor-pointer"
+                                      aria-label="Delete post"
+                                    >
+                                      <Trash className="h-5 w-5 text-theme-toolbar-icon transition hover:text-theme-text-light" />
+                                    </button>
+                                  </ActionTooltip>
+                                )}
+                                {!isOwnPost && (
+                                  <ActionTooltip label="Report post">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        onOpen("reportCommunityPost", {
+                                          profileId: profile.id,
+                                          reportCommunityPostId: post.id,
+                                          reportCommunityPostContent:
+                                            post.content,
+                                          reportCommunityPostImageUrl:
+                                            postImageUrl,
+                                          reportCommunityPostAuthorId:
+                                            post.author.id,
+                                          reportCommunityPostAuthorUsername:
+                                            post.author.username,
+                                          reportCommunityPostAuthorDiscriminator:
+                                            post.author.discriminator,
+                                        })
+                                      }
+                                      className="cursor-pointer"
+                                      aria-label="Report post"
+                                    >
+                                      <Siren className="h-5 w-5 text-theme-toolbar-icon transition hover:text-theme-text-light" />
+                                    </button>
+                                  </ActionTooltip>
+                                )}
+                              </div>
+                            )}
+                            <div className="flex items-start gap-3">
+                              <div className="shrink-0">
+                                <UserAvatarMenu
+                                  profileId={post.author.id}
+                                  profileImageUrl={authorAvatarUrl}
+                                  username={post.author.username}
+                                  discriminator={post.author.discriminator}
+                                  currentProfileId={profile.id}
+                                  className="h-10 w-10"
+                                  showStatus={false}
+                                  disableHoverShadow
+                                  avatarAnimationMode="never"
+                                />
+                              </div>
+
+                              <div className="-mt-1.5 min-w-0 flex-1">
+                                {isEditing ? (
+                                  <CommunityPostEditForm
+                                    postId={post.id}
+                                    communityId={communityId}
+                                    content={post.content}
+                                    hasImage={Boolean(post.imageAsset)}
+                                    onCancel={() => setEditingPostId(null)}
+                                  />
+                                ) : (
+                                  <>
+                                    <div className="mb-0 flex flex-wrap items-center gap-1">
+                                      {(post.author.badge ||
+                                        authorBadgeStickerUrl) && (
                                         <>
+                                          <span className="inline-flex items-center gap-0.5">
+                                            {authorBadgeStickerUrl && (
+                                              <AnimatedSticker
+                                                src={authorBadgeStickerUrl}
+                                                alt="badge"
+                                                containerClassName="h-5 w-5"
+                                                fallbackWidthPx={20}
+                                                fallbackHeightPx={20}
+                                                className="object-contain"
+                                                isHovered={false}
+                                              />
+                                            )}
+                                            {post.author.badge && (
+                                              <span className="pt-2.5 text-[11px] leading-none text-theme-text-tertiary">
+                                                {post.author.badge}
+                                              </span>
+                                            )}
+                                          </span>
+                                          <span className="pt-2.5 text-[11px] text-theme-text-tertiary">
+                                            |
+                                          </span>
+                                        </>
+                                      )}
+                                      <span className="pt-2.5 text-[11px] text-theme-text-tertiary">
+                                        {formatPostDate(post.createdAt)}
+                                      </span>
+                                      {post.pinnedAt && (
+                                        <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[11px] font-medium leading-none text-theme-text-subtle">
+                                          <Pin className="h-3 w-3" />
+                                          Fijado
+                                        </span>
+                                      )}
+                                      {post.lockedAt && (
+                                        <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[11px] font-medium leading-none text-theme-text-subtle">
+                                          <Lock className="h-3 w-3" />
+                                          Cerrado
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {postImageUrl ? (
+                                      <PostBodyWithImage
+                                        imageUrl={postImageUrl}
+                                        alt={
+                                          post.content || "community post image"
+                                        }
+                                        content={post.content}
+                                        usernameSlot={
+                                          <>
+                                            <UserAvatarMenu
+                                              profileId={post.author.id}
+                                              profileImageUrl={authorAvatarUrl}
+                                              username={post.author.username}
+                                              discriminator={
+                                                post.author.discriminator
+                                              }
+                                              currentProfileId={profile.id}
+                                              currentProfile={profile}
+                                              showStatus={false}
+                                              usernameColor={
+                                                post.author.usernameColor
+                                              }
+                                              usernameFormat={
+                                                post.author.usernameFormat
+                                              }
+                                              hideAvatar
+                                            >
+                                              <span
+                                                className={cn(
+                                                  "cursor-pointer text-[14px] font-semibold text-white hover:underline",
+                                                  getUsernameFormatClasses(
+                                                    post.author.usernameFormat,
+                                                  ),
+                                                  getGradientAnimationClass(
+                                                    post.author.usernameColor,
+                                                  ),
+                                                )}
+                                                style={getUsernameColorStyle(
+                                                  post.author.usernameColor,
+                                                  {
+                                                    isOwnProfile:
+                                                      post.author.id ===
+                                                      profile.id,
+                                                    themeMode,
+                                                  },
+                                                )}
+                                              >
+                                                {post.author.username}
+                                              </span>
+                                            </UserAvatarMenu>
+                                            <span
+                                              className={cn(
+                                                "text-[14px] font-semibold",
+                                                getGradientAnimationClass(
+                                                  post.author.usernameColor,
+                                                ),
+                                              )}
+                                              style={getUsernameColorStyle(
+                                                post.author.usernameColor,
+                                                {
+                                                  isOwnProfile:
+                                                    post.author.id ===
+                                                    profile.id,
+                                                  themeMode,
+                                                },
+                                              )}
+                                            >
+                                              :
+                                            </span>
+                                          </>
+                                        }
+                                      />
+                                    ) : (
+                                      <div className="-mt-0.5 whitespace-pre-wrap break-words text-[14px] leading-5 text-theme-text-secondary [overflow-wrap:anywhere]">
+                                        <span className="whitespace-nowrap">
                                           <UserAvatarMenu
                                             profileId={post.author.id}
                                             profileImageUrl={authorAvatarUrl}
@@ -1283,242 +1350,185 @@ function CommunityPostsSectionInner({
                                           >
                                             :
                                           </span>
-                                        </>
-                                      }
-                                    />
-                                  ) : (
-                                    <div className="-mt-0.5 whitespace-pre-wrap break-words text-[14px] leading-5 text-theme-text-secondary [overflow-wrap:anywhere]">
-                                      <span className="whitespace-nowrap">
-                                        <UserAvatarMenu
-                                          profileId={post.author.id}
-                                          profileImageUrl={authorAvatarUrl}
-                                          username={post.author.username}
-                                          discriminator={
-                                            post.author.discriminator
-                                          }
-                                          currentProfileId={profile.id}
-                                          currentProfile={profile}
-                                          showStatus={false}
-                                          usernameColor={
-                                            post.author.usernameColor
-                                          }
-                                          usernameFormat={
-                                            post.author.usernameFormat
-                                          }
-                                          hideAvatar
-                                        >
-                                          <span
-                                            className={cn(
-                                              "cursor-pointer text-[14px] font-semibold text-white hover:underline",
-                                              getUsernameFormatClasses(
-                                                post.author.usernameFormat,
-                                              ),
-                                              getGradientAnimationClass(
-                                                post.author.usernameColor,
-                                              ),
-                                            )}
-                                            style={getUsernameColorStyle(
-                                              post.author.usernameColor,
-                                              {
-                                                isOwnProfile:
-                                                  post.author.id === profile.id,
-                                                themeMode,
-                                              },
-                                            )}
-                                          >
-                                            {post.author.username}
-                                          </span>
-                                        </UserAvatarMenu>
-                                        <span
-                                          className={cn(
-                                            "text-[14px] font-semibold",
-                                            getGradientAnimationClass(
-                                              post.author.usernameColor,
-                                            ),
-                                          )}
-                                          style={getUsernameColorStyle(
-                                            post.author.usernameColor,
-                                            {
-                                              isOwnProfile:
-                                                post.author.id === profile.id,
-                                              themeMode,
-                                            },
-                                          )}
-                                        >
-                                          :
                                         </span>
-                                      </span>
-                                      {"\u00A0"}
-                                      <span>{post.content}</span>
-                                    </div>
-                                  )}
-                                </>
-                              )}
+                                        {"\u00A0"}
+                                        <span>{post.content}</span>
+                                      </div>
+                                    )}
+                                  </>
+                                )}
 
-                              {!isEditing && (
-                                <div
-                                  className={cn(
-                                    "clear-left flex items-center gap-x-3",
-                                    postImageUrl ? "pt-2" : "mt-1",
-                                  )}
-                                >
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setReplyingToComment(null);
-                                      setReplyingToPostId((current) =>
-                                        current === post.id ? null : post.id,
-                                      );
-                                    }}
-                                    className="cursor-pointer text-[14px] text-theme-text-tertiary transition hover:underline"
+                                {!isEditing && (
+                                  <div
+                                    className={cn(
+                                      "clear-left flex items-center gap-x-3 -mb-1",
+                                      postImageUrl ? "pt-1" : "pt-0",
+                                    )}
                                   >
-                                    Reply
-                                  </button>
-                                  {omittedCount > 0 && (
                                     <button
                                       type="button"
-                                      onClick={() =>
-                                        void handleToggleOmittedComments(
-                                          post.id,
-                                        )
-                                      }
+                                      onClick={() => {
+                                        setReplyingToComment(null);
+                                        setReplyingToPostId((current) =>
+                                          current === post.id ? null : post.id,
+                                        );
+                                      }}
                                       className="cursor-pointer text-[14px] text-theme-text-tertiary transition hover:underline"
                                     >
-                                      {isExpandedCommentsLoading
-                                        ? "Loading comments..."
-                                        : isOmittedExpanded
-                                          ? "Hide omitted comments"
-                                          : `Expand ${omittedCount} omitted comments`}
+                                      Reply
                                     </button>
-                                  )}
-                                </div>
-                              )}
+                                    {omittedCount > 0 && (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          void handleToggleOmittedComments(
+                                            post.id,
+                                          )
+                                        }
+                                        className="cursor-pointer text-[14px] text-theme-text-tertiary transition hover:underline"
+                                      >
+                                        {isExpandedCommentsLoading
+                                          ? "Loading comments..."
+                                          : isOmittedExpanded
+                                            ? "Hide omitted comments"
+                                            : `Expand ${omittedCount} omitted comments`}
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
 
-                              {isReplying && !isEditing && (
-                                <div className="clear-left">
-                                  <CommunityPostCommentComposer
-                                    postId={post.id}
-                                    communityId={communityId}
-                                    onCancel={() => setReplyingToPostId(null)}
-                                  />
-                                </div>
-                              )}
+                                {isReplying && !isEditing && (
+                                  <div className="clear-left">
+                                    <CommunityPostCommentComposer
+                                      postId={post.id}
+                                      communityId={communityId}
+                                      onCancel={() => setReplyingToPostId(null)}
+                                    />
+                                  </div>
+                                )}
 
-                              {!isEditing && commentsToRender.length > 0 && (
-                                <div className="clear-left mt-3 space-y-2">
-                                  {commentsToRender.map((comment) => (
-                                    <div key={comment.id} className="space-y-2">
-                                      {editingComment?.postId === post.id &&
-                                      editingComment.commentId ===
-                                        comment.id ? (
-                                        <CommunityPostCommentEditForm
-                                          postId={post.id}
-                                          comment={comment}
-                                          onCancel={() =>
-                                            setEditingComment(null)
-                                          }
-                                          onSaved={(updatedComment) =>
-                                            handleCommentSaved(
-                                              post.id,
-                                              updatedComment,
-                                            )
-                                          }
-                                        />
-                                      ) : (
-                                        <CommunityPostCommentItem
-                                          comment={comment}
-                                          currentProfileId={profile.id}
-                                          onReply={(commentId) => {
-                                            setEditingComment(null);
-                                            setReplyingToPostId(null);
-                                            setReplyingToComment((current) =>
-                                              current?.postId === post.id &&
-                                              current.commentId === commentId
-                                                ? null
-                                                : {
-                                                    postId: post.id,
-                                                    commentId,
-                                                  },
-                                            );
-                                          }}
-                                          onReport={
-                                            comment.author.id === profile.id
-                                              ? undefined
-                                              : () =>
-                                                  onOpen(
-                                                    "reportCommunityPostComment",
-                                                    {
-                                                      profileId: profile.id,
-                                                      reportCommunityPostCommentId:
-                                                        comment.id,
-                                                      reportCommunityPostCommentContent:
-                                                        comment.content,
-                                                      reportCommunityPostCommentImageUrl:
-                                                        comment.imageAsset
-                                                          ?.url || null,
-                                                      reportCommunityPostCommentAuthorId:
-                                                        comment.author.id,
-                                                      reportCommunityPostCommentAuthorUsername:
-                                                        comment.author.username,
-                                                      reportCommunityPostCommentAuthorDiscriminator:
-                                                        comment.author
-                                                          .discriminator,
-                                                    },
-                                                  )
-                                          }
-                                          onEdit={
-                                            comment.author.id === profile.id &&
-                                            !comment.deleted
-                                              ? (commentId) => {
-                                                  setReplyingToComment(null);
-                                                  setReplyingToPostId(null);
-                                                  setEditingComment({
-                                                    postId: post.id,
-                                                    commentId,
-                                                  });
-                                                }
-                                              : undefined
-                                          }
-                                          onDelete={
-                                            (comment.author.id === profile.id ||
-                                              Boolean(
-                                                community?.canDeleteAnyPost,
-                                              )) &&
-                                            !comment.deleted
-                                              ? (commentId) =>
-                                                  onOpen(
-                                                    "deleteCommunityPostComment",
-                                                    {
-                                                      deleteCommunityPostCommentId:
-                                                        commentId,
-                                                      onDeleteCommunityPostCommentConfirm:
-                                                        () =>
-                                                          handleDeleteComment(
-                                                            post.id,
-                                                            commentId,
-                                                          ),
-                                                    },
-                                                  )
-                                              : undefined
-                                          }
-                                        />
-                                      )}
-                                      {replyingToComment?.postId === post.id &&
-                                        replyingToComment.commentId ===
-                                          comment.id && (
-                                          <CommunityPostCommentComposer
+                                {!isEditing && commentsToRender.length > 0 && (
+                                  <div className="clear-left mt-3 space-y-2">
+                                    {commentsToRender.map((comment) => (
+                                      <div
+                                        key={comment.id}
+                                        className="space-y-2"
+                                      >
+                                        {editingComment?.postId === post.id &&
+                                        editingComment.commentId ===
+                                          comment.id ? (
+                                          <CommunityPostCommentEditForm
                                             postId={post.id}
-                                            communityId={communityId}
-                                            replyToCommentId={comment.id}
+                                            comment={comment}
                                             onCancel={() =>
-                                              setReplyingToComment(null)
+                                              setEditingComment(null)
+                                            }
+                                            onSaved={(updatedComment) =>
+                                              handleCommentSaved(
+                                                post.id,
+                                                updatedComment,
+                                              )
+                                            }
+                                          />
+                                        ) : (
+                                          <CommunityPostCommentItem
+                                            comment={comment}
+                                            currentProfileId={profile.id}
+                                            onReply={(commentId) => {
+                                              setEditingComment(null);
+                                              setReplyingToPostId(null);
+                                              setReplyingToComment((current) =>
+                                                current?.postId === post.id &&
+                                                current.commentId === commentId
+                                                  ? null
+                                                  : {
+                                                      postId: post.id,
+                                                      commentId,
+                                                    },
+                                              );
+                                            }}
+                                            onReport={
+                                              comment.author.id === profile.id
+                                                ? undefined
+                                                : () =>
+                                                    onOpen(
+                                                      "reportCommunityPostComment",
+                                                      {
+                                                        profileId: profile.id,
+                                                        reportCommunityPostCommentId:
+                                                          comment.id,
+                                                        reportCommunityPostCommentContent:
+                                                          comment.content,
+                                                        reportCommunityPostCommentImageUrl:
+                                                          comment.imageAsset
+                                                            ?.url || null,
+                                                        reportCommunityPostCommentAuthorId:
+                                                          comment.author.id,
+                                                        reportCommunityPostCommentAuthorUsername:
+                                                          comment.author
+                                                            .username,
+                                                        reportCommunityPostCommentAuthorDiscriminator:
+                                                          comment.author
+                                                            .discriminator,
+                                                      },
+                                                    )
+                                            }
+                                            onEdit={
+                                              comment.author.id ===
+                                                profile.id && !comment.deleted
+                                                ? (commentId) => {
+                                                    setReplyingToComment(null);
+                                                    setReplyingToPostId(null);
+                                                    setEditingComment({
+                                                      postId: post.id,
+                                                      commentId,
+                                                    });
+                                                  }
+                                                : undefined
+                                            }
+                                            onDelete={
+                                              (comment.author.id ===
+                                                profile.id ||
+                                                Boolean(
+                                                  community?.canDeleteAnyPost,
+                                                )) &&
+                                              !comment.deleted
+                                                ? (commentId) =>
+                                                    onOpen(
+                                                      "deleteCommunityPostComment",
+                                                      {
+                                                        deleteCommunityPostCommentId:
+                                                          commentId,
+                                                        onDeleteCommunityPostCommentConfirm:
+                                                          () =>
+                                                            handleDeleteComment(
+                                                              post.id,
+                                                              commentId,
+                                                            ),
+                                                      },
+                                                    )
+                                                : undefined
                                             }
                                           />
                                         )}
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
+                                        {replyingToComment?.postId ===
+                                          post.id &&
+                                          replyingToComment.commentId ===
+                                            comment.id && (
+                                            <CommunityPostCommentComposer
+                                              postId={post.id}
+                                              communityId={communityId}
+                                              replyToCommentId={comment.id}
+                                              onCancel={() =>
+                                                setReplyingToComment(null)
+                                              }
+                                            />
+                                          )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </article>
