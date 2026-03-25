@@ -6,7 +6,7 @@
  * This updates:
  * - memberCount: Total unique members across all boards
  * - feedBoardCount: Boards currently in discovery feed (within 48h window + has vacant slots)
- * - rankingScore: LOG(memberCount + 1) + feedBoardCount * 0.5
+ * - rankingScore: LN(memberCount + 1) + feedBoardCount * 0.5 + recentPostCount7d * 0.2
  * - recentPostCount7d: Non-deleted posts created in the last 7 days
  * - rankedAt: Timestamp of last update
  *
@@ -108,7 +108,7 @@ export async function POST(req: Request) {
         "memberCount" = cs.member_count,
         "feedBoardCount" = cs.feed_board_count,
         "recentPostCount7d" = cs.recent_post_count_7d,
-        "rankingScore" = LN(cs.member_count + 1) + cs.feed_board_count * 0.5,
+        "rankingScore" = LN(cs.member_count + 1) + cs.feed_board_count * 0.5 + cs.recent_post_count_7d * 0.2,
         "rankedAt" = CURRENT_TIMESTAMP
       FROM community_stats cs
       WHERE c.id = cs.id
