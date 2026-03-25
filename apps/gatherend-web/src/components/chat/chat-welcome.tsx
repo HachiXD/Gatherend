@@ -1,8 +1,8 @@
 "use client";
 
+import { memo } from "react";
 import { SlashSVG } from "@/lib/slash";
 import { GatherendOutlineSVG } from "@/lib/gatherend-outline";
-import { useChannelData } from "@/hooks/use-board-data";
 import { useTranslation } from "@/i18n";
 
 interface ChatWelcomeProps {
@@ -12,20 +12,14 @@ interface ChatWelcomeProps {
   channelId?: string;
 }
 
-export const ChatWelcome = ({
-  name: initialName,
+export const ChatWelcome = memo(function ChatWelcome({
+  name,
   type,
-  boardId,
-  channelId,
-}: ChatWelcomeProps) => {
+  boardId: _boardId,
+  channelId: _channelId,
+}: ChatWelcomeProps) {
   const isChannel = type === "channel";
   const { t } = useTranslation();
-
-  // Para canales, usar datos reactivos desde el cache de React Query
-  const { channel } = useChannelData(boardId || "", channelId || "");
-
-  // Usar el nombre del cache si está disponible, sino usar el prop inicial
-  const name = isChannel && channel ? channel.name : initialName;
 
   return (
     <div className="space-y-4 px-4 mb-4 flex flex-col items-center text-center">
@@ -54,4 +48,4 @@ export const ChatWelcome = ({
       </p>
     </div>
   );
-};
+});

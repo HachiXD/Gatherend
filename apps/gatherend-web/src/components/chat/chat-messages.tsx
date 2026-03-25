@@ -20,8 +20,11 @@ import { ChatSkeleton } from "./chat-skeleton";
 import { GoToRecentButton } from "./go-to-recent-button";
 
 import {
+  getMessageAuthor,
+  getReplyAuthor,
   useChatMessageWindow,
   useScrollManager,
+  ChannelMessage,
   ChatMessage,
   ChatMessagesProps,
   generateChatPlaceholderSpecs,
@@ -29,8 +32,10 @@ import {
 
 import { chatScrollDimensionsStore } from "@/hooks/chat/chat-scroll-dimensions-store";
 
+import { useTranslation } from "@/i18n";
 import { useMountedChatRoom } from "@/hooks/use-chat-room-lifecycle-store";
 import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
+import { useChannelData } from "@/hooks/use-board-data";
 
 // CONSTANTS
 
@@ -60,6 +65,8 @@ function ChatMessagesComponent({
   paramValue,
   type,
 }: ChatMessagesProps) {
+  const { t } = useTranslation();
+
   // REFS
 
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -531,28 +538,42 @@ function ChatMessagesComponent({
   // MESSAGE RENDERING HELPERS
 
   const isChannel = type === "channel";
+  const { channel: welcomeChannel } = useChannelData(
+    board?.id || "",
+    isChannel ? paramValue : "",
+  );
+  const resolvedWelcomeName =
+    isChannel && welcomeChannel ? welcomeChannel.name : name;
 
   const renderMessage = useCallback(
     (msg: ChatMessage, index: number, messages: ChatMessage[]) => {
-      const isMessageWithMember = "member" in msg;
       const isOptimistic = Boolean("isOptimistic" in msg && msg.isOptimistic);
       const isFailed = Boolean("isFailed" in msg && msg.isFailed);
       const tempId = "tempId" in msg ? (msg.tempId as string) : undefined;
 
       if ("type" in msg && msg.type === "WELCOME") {
         if (!board) return null;
-        const welcomeUsername =
-          "member" in msg ? msg.member?.profile?.username : undefined;
-        return <WelcomeMessageCard board={board} username={welcomeUsername} />;
+        const welcomeUsername = getMessageAuthor(msg, {
+          fallbackLabel: t.chat.deletedMember,
+        })?.username;
+        return (
+          <WelcomeMessageCard
+            boardName={board.name}
+            username={welcomeUsername}
+          />
+        );
       }
 
-      const sender = isMessageWithMember ? msg.member?.profile : msg.sender;
-      if (!sender) return null;
+      const author = getMessageAuthor(msg, {
+        fallbackLabel: t.chat.deletedMember,
+      });
+      const channelMessage = isChannel ? (msg as ChannelMessage) : null;
       const replyTo = msg.replyTo
         ? {
             ...msg.replyTo,
-            sender:
-              msg.replyTo.sender || msg.replyTo.member?.profile || sender,
+            sender: getReplyAuthor(msg.replyTo, {
+              fallbackLabel: t.chat.deletedMember,
+            }),
             fileUrl: msg.replyTo.attachmentAsset?.url || null,
             fileName: msg.replyTo.attachmentAsset?.originalName || null,
           }
@@ -564,10 +585,12 @@ function ChatMessagesComponent({
       return (
         <ChatItemOptimized
           id={msg.id}
+          isChannel={isChannel}
           currentProfile={currentProfile}
           currentMember={isChannel ? (currentMember ?? null) : null}
-          member={isMessageWithMember ? msg.member : undefined}
-          sender={sender}
+          member={channelMessage?.member}
+          messageSenderId={channelMessage?.messageSenderId ?? null}
+          author={author!}
           content={msg.content}
           attachmentAsset={msg.attachmentAsset}
           filePreviewUrl={"filePreviewUrl" in msg ? msg.filePreviewUrl : null}
@@ -675,7 +698,7 @@ function ChatMessagesComponent({
             <div className="pt-4 pb-4">
               <ChatWelcome
                 type={type}
-                name={name}
+                name={resolvedWelcomeName}
                 boardId={socketQuery.boardId}
                 channelId={type === "channel" ? paramValue : undefined}
               />

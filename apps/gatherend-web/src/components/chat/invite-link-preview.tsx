@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { useBoardSwitchSafe } from "@/contexts/board-switch-context";
+import { upsertUserBoardFromJoin } from "@/hooks/use-user-boards";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 interface BoardPreviewData {
@@ -36,6 +37,7 @@ export const InviteLinkPreview = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isJoining, setIsJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isBanned, setIsBanned] = useState(false);
 
   useEffect(() => {
     const fetchBoardData = async () => {
@@ -71,18 +73,24 @@ export const InviteLinkPreview = ({
       return;
     }
 
-    try {
-      setIsJoining(true);
+      try {
+        setIsJoining(true);
+        setIsBanned(false);
 
-      const response = await fetch(
-        `/api/boards/${boardData.id}/join?source=invitation&inviteCode=${encodeURIComponent(inviteCode)}`,
-        { method: "POST" },
-      );
+        const response = await fetch(
+          `/api/boards/${boardData.id}/join?source=invitation&inviteCode=${encodeURIComponent(inviteCode)}`,
+          { method: "POST" },
+        );
 
-      if (!response.ok) {
-        router.push(`/invite/${inviteCode}`);
-        return;
-      }
+        if (!response.ok) {
+          const data = await response.json().catch(() => null);
+          if (response.status === 403 && data?.error === "Banned from this board") {
+            setIsBanned(true);
+            return;
+          }
+          router.push(`/invite/${inviteCode}`);
+          return;
+        }
 
       const data: { success?: boolean; alreadyMember?: boolean } =
         await response.json();
@@ -98,7 +106,12 @@ export const InviteLinkPreview = ({
         return;
       }
 
-      await queryClient.invalidateQueries({ queryKey: ["user-boards"] });
+      upsertUserBoardFromJoin(queryClient, {
+        id: boardData.id,
+        name: boardData.name,
+        imageAsset: boardData.imageAsset,
+        targetChannelId: targetChannelId ?? null,
+      });
       await queryClient.invalidateQueries({ queryKey: ["board", boardData.id] });
 
       startTransition(() => {
@@ -199,10 +212,10 @@ export const InviteLinkPreview = ({
       <Button
         onClick={handleJoin}
         size="sm"
-        disabled={isJoining || isPending}
+        disabled={isJoining || isPending || isBanned}
         className="bg-theme-button-primary cursor-pointer hover:bg-theme-button-hover text-white shrink-0"
       >
-        {isJoining ? "Joining..." : "Join"}
+        {isBanned ? "Banned" : isJoining ? "Joining..." : "Join"}
       </Button>
     </div>
   );

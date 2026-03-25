@@ -533,39 +533,9 @@ const ChatInputComponent = ({
     submitFromSendButtonRef.current();
   };
 
-  const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+  const uploadFileToPreview = async (file: File) => {
+    if (!file) return;
 
-    setIsUploading(true);
-
-    try {
-      const res = await startUpload(Array.from(files));
-      const file = res?.[0];
-
-      if (file) {
-        // Set file preview instead of sending immediately
-        setFilePreview({
-          assetId: file.assetId,
-          url: file.url,
-          type: file.type,
-          name: file.name,
-          size: file.size,
-          width: file.width,
-          height: file.height,
-        });
-      }
-    } catch (error) {
-      console.error("File upload failed:", error);
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    }
-  };
-
-  const handlePastedImageUpload = async (file: File) => {
     if (isUploading || uploadInProgress || isSendingFile) {
       toast.message(
         t.chat.uploadInProgress || "Upload already in progress. Please wait.",
@@ -598,8 +568,7 @@ const ChatInputComponent = ({
       const res = await startUpload([file]);
       const uploaded = res?.[0];
       if (uploaded) {
-        // Pasted images should be uploaded + sent immediately (no preview).
-        const fileToSend = {
+        setFilePreview({
           assetId: uploaded.assetId,
           url: uploaded.url,
           type: uploaded.type,
@@ -607,55 +576,24 @@ const ChatInputComponent = ({
           size: uploaded.size,
           width: uploaded.width,
           height: uploaded.height,
-        };
-
-        // Keep typing indicator consistent with "message sent" behavior,
-        // but do not clear the current draft content.
-        stopTyping();
-
-        setIsSendingFile(true);
-        triggerScroll();
-        try {
-          const url = qs.stringifyUrl({
-            url: apiUrl,
-            query,
-          });
-
-          const token = await getToken();
-          await axios.post(
-            url,
-            {
-              attachmentAssetId: fileToSend.assetId,
-              content: fileToSend.name,
-            },
-            getExpressAxiosConfig(currentProfile.id, token),
-          );
-
-          // Update conversation lastMessage cache for SPA preview
-          updateConversationLastMessage(fileToSend.name, {
-            id: fileToSend.assetId,
-            mimeType: fileToSend.type,
-            sizeBytes: fileToSend.size,
-            width: fileToSend.width ?? null,
-            height: fileToSend.height ?? null,
-            originalName: fileToSend.name,
-            url: fileToSend.url,
-          });
-        } catch (error) {
-          console.error("Pasted image send failed:", error);
-          // Fall back to preview so the user can retry sending manually.
-          setFilePreview(fileToSend);
-          toast.error(t.chat.sendFailed || "Send failed");
-        } finally {
-          setIsSendingFile(false);
-        }
+        });
       }
     } catch (error) {
-      console.error("Pasted image upload failed:", error);
+      console.error("File upload failed:", error);
       toast.error(t.chat.uploadFailed || "Upload failed");
     } finally {
       setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
+  };
+
+  const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const file = files[0];
+    if (!file) return;
+    await uploadFileToPreview(file);
   };
 
   const handleSendFile = async () => {
@@ -1024,7 +962,7 @@ const ChatInputComponent = ({
                   if (imageFiles.length > 0) {
                     e.preventDefault();
                     // Current ChatInput only supports a single attachment per message.
-                    handlePastedImageUpload(imageFiles[0]);
+                    void uploadFileToPreview(imageFiles[0]);
                     if (imageFiles.length > 1) {
                       toast.message(
                         t.chat.onlyFirstImageUsed ||

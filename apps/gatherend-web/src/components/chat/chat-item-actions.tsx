@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useState, useRef } from "react";
+import { memo, useCallback, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Member, MemberRole } from "@prisma/client";
 import type { ClientProfile } from "@/hooks/use-current-profile";
@@ -34,6 +34,8 @@ import type {
 
 interface ChatItemActionsProps {
   id: string;
+  isChannel: boolean;
+  messageSenderId?: string | null;
   content: string;
   attachmentAsset: ClientAttachmentAsset | null;
   sticker?: ClientSticker | null;
@@ -53,8 +55,8 @@ interface ChatItemActionsProps {
     id: string;
     role: MemberRole;
     profile: ClientProfileSummary;
-  };
-  sender: ClientProfileSummary;
+  } | null;
+  authorProfile: ClientProfileSummary | null;
   apiUrl: string;
   socketQuery: Record<string, string>;
   pinned: boolean;
@@ -62,8 +64,26 @@ interface ChatItemActionsProps {
   onStartEdit: () => void;
 }
 
+interface MaybeActionTooltipProps {
+  enabled: boolean;
+  label: string;
+  children: React.ReactNode;
+}
+
+const MaybeActionTooltip = memo(function MaybeActionTooltip({
+  enabled,
+  label,
+  children,
+}: MaybeActionTooltipProps) {
+  if (!enabled) return <>{children}</>;
+
+  return <ActionTooltip label={label}>{children}</ActionTooltip>;
+});
+
 export const ChatItemActions = memo(function ChatItemActions({
   id,
+  isChannel,
+  messageSenderId,
   content,
   attachmentAsset,
   sticker,
@@ -72,7 +92,7 @@ export const ChatItemActions = memo(function ChatItemActions({
   currentProfile,
   currentMember,
   member,
-  sender,
+  authorProfile,
   apiUrl,
   socketQuery,
   pinned,
@@ -81,6 +101,7 @@ export const ChatItemActions = memo(function ChatItemActions({
 }: ChatItemActionsProps) {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [tooltipsEnabled, setTooltipsEnabled] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const [emojiPickerPosition, setEmojiPickerPosition] = useState({
     top: 0,
@@ -103,17 +124,23 @@ export const ChatItemActions = memo(function ChatItemActions({
   const { mutate: addReaction } = useAddReaction();
   const { mutate: removeReaction } = useRemoveReaction();
   const getToken = useTokenGetter();
+  const canHover = useMemo(() => {
+    const mq = window.matchMedia?.("(hover: hover) and (pointer: fine)");
+    return mq?.matches ?? false;
+  }, []);
+  const enableTooltipsOnce = useCallback(() => {
+    if (!canHover) return;
+    setTooltipsEnabled(true);
+  }, [canHover]);
 
-  const isChannel = !!member;
   const channelId = socketQuery.channelId as string | undefined;
   const conversationId = socketQuery.conversationId as string | undefined;
-  const authorProfile = isChannel ? member!.profile : sender;
   const fileUrl = attachmentAsset?.url || null;
   const fileName = attachmentAsset?.originalName || null;
 
   const isOwnMessage = isChannel
-    ? currentMember?.id === member?.id
-    : currentProfile.id === sender.id;
+    ? messageSenderId === currentProfile.id
+    : authorProfile?.id === currentProfile.id;
 
   // Permissions
   let canDeleteMessage = false;
@@ -143,7 +170,7 @@ export const ChatItemActions = memo(function ChatItemActions({
       {
         id,
         content,
-        sender: authorProfile,
+        sender: authorProfile ?? currentProfile,
         attachmentAsset,
         fileName,
         sticker,
@@ -184,6 +211,7 @@ export const ChatItemActions = memo(function ChatItemActions({
 
   return (
     <div
+      onMouseEnter={enableTooltipsOnce}
       className={cn(
         "items-center gap-x-2 absolute p-1 -top-2 right-5 bg-theme-toolbar-bg border border-theme-toolbar-border rounded-sm z-10",
         showMoreMenu || showEmojiPicker
@@ -192,15 +220,15 @@ export const ChatItemActions = memo(function ChatItemActions({
       )}
     >
       {!deleted && (
-        <ActionTooltip label={t.chat.reply}>
+        <MaybeActionTooltip enabled={tooltipsEnabled} label={t.chat.reply}>
           <IterationCw
             onClick={handleReply}
             className="cursor-pointer ml-auto w-5 h-5 text-theme-toolbar-icon hover:text-theme-text-light transition"
           />
-        </ActionTooltip>
+        </MaybeActionTooltip>
       )}
       {canEditMessage && (
-        <ActionTooltip label={t.chat.edit}>
+        <MaybeActionTooltip enabled={tooltipsEnabled} label={t.chat.edit}>
           <Edit
             onClick={() => {
               onStartEdit();
@@ -210,10 +238,13 @@ export const ChatItemActions = memo(function ChatItemActions({
             }}
             className="cursor-pointer ml-auto w-5 h-5 text-theme-toolbar-icon hover:text-theme-text-light transition"
           />
-        </ActionTooltip>
+        </MaybeActionTooltip>
       )}
       {sticker && !deleted && (
-        <ActionTooltip label={t.chat.addToCollection}>
+        <MaybeActionTooltip
+          enabled={tooltipsEnabled}
+          label={t.chat.addToCollection}
+        >
           <Download
             onClick={() => {
               cloneSticker({
@@ -226,10 +257,10 @@ export const ChatItemActions = memo(function ChatItemActions({
               isCloningSticker && "opacity-50 cursor-not-allowed"
             )}
           />
-        </ActionTooltip>
+        </MaybeActionTooltip>
       )}
       {canDeleteMessage && (
-        <ActionTooltip label={t.chat.delete}>
+        <MaybeActionTooltip enabled={tooltipsEnabled} label={t.chat.delete}>
           <Trash
             onClick={() =>
               onOpen("deleteMessage", {
@@ -240,11 +271,14 @@ export const ChatItemActions = memo(function ChatItemActions({
             }
             className="cursor-pointer ml-auto w-5 h-5 text-theme-toolbar-icon hover:text-theme-text-light transition"
           />
-        </ActionTooltip>
+        </MaybeActionTooltip>
       )}
       {!deleted && (
         <div className="relative" ref={emojiPickerRef}>
-          <ActionTooltip label={t.chat.addReaction}>
+          <MaybeActionTooltip
+            enabled={tooltipsEnabled}
+            label={t.chat.addReaction}
+          >
             <Smile
               onClick={(e) => {
                 const rect = e.currentTarget.getBoundingClientRect();
@@ -256,7 +290,7 @@ export const ChatItemActions = memo(function ChatItemActions({
               }}
               className="cursor-pointer w-5 h-5 text-theme-toolbar-icon hover:text-theme-text-light transition"
             />
-          </ActionTooltip>
+          </MaybeActionTooltip>
           {showEmojiPicker &&
             createPortal(
               <div
@@ -308,7 +342,7 @@ export const ChatItemActions = memo(function ChatItemActions({
       )}
       {/* More menu */}
       <div className="relative" ref={moreMenuRef}>
-        <ActionTooltip label={t.chat.more}>
+        <MaybeActionTooltip enabled={tooltipsEnabled} label={t.chat.more}>
           <ChevronDown
             onClick={(e) => {
               const rect = e.currentTarget.getBoundingClientRect();
@@ -317,7 +351,7 @@ export const ChatItemActions = memo(function ChatItemActions({
             }}
             className="cursor-pointer ml-auto w-5 h-5 text-theme-text-subtle hover:text-theme-text-light transition"
           />
-        </ActionTooltip>
+        </MaybeActionTooltip>
         {showMoreMenu && (
           <div
             className="fixed z-50 w-48 py-1 bg-theme-dropdown-bg border border-theme-dropdown-border rounded-md shadow-lg"
@@ -342,7 +376,7 @@ export const ChatItemActions = memo(function ChatItemActions({
                     messageId: id,
                     messageContent: content,
                     messageType: isChannel ? "MESSAGE" : "DIRECT_MESSAGE",
-                    authorProfile,
+                    authorProfile: authorProfile || undefined,
                     channelId,
                     conversationId,
                     attachmentAsset,

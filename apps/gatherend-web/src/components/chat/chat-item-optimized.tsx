@@ -9,9 +9,12 @@ import {
   useRef,
   lazy,
   Suspense,
+  type PointerEvent as ReactPointerEvent,
+  type RefObject,
 } from "react";
 import { Member, MemberRole } from "@prisma/client";
 import { UserAvatarMenu } from "../user-avatar-menu";
+import { AvatarGroupHoverContext, UserAvatar } from "../user-avatar";
 import { FileIcon } from "lucide-react";
 import { AnimatedSticker } from "@/components/ui/animated-sticker";
 import { cn } from "@/lib/utils";
@@ -40,6 +43,7 @@ import type {
   ClientProfileSummary,
   ClientSticker,
 } from "@/types/uploaded-assets";
+import { isMissingMessageAuthor } from "@/hooks/chat/message-author";
 
 // Lazy load heavy components - only loaded when needed
 const ChatItemActions = lazy(() =>
@@ -54,12 +58,14 @@ const ChatItemEditForm = lazy(() =>
 interface ChatItemOptimizedProps {
   id: string;
   content: string;
+  isChannel: boolean;
+  messageSenderId?: string | null;
   member?: {
     id: string;
     role: MemberRole;
     profile: ClientProfileSummary;
-  };
-  sender: ClientProfileSummary;
+  } | null;
+  author: ClientProfileSummary;
   timestamp: string;
   attachmentAsset: ClientAttachmentAsset | null;
   filePreviewUrl?: string | null;
@@ -83,8 +89,7 @@ interface ChatItemOptimizedProps {
   replyTo?: {
     id: string;
     content: string;
-    sender: ClientProfileSummary;
-    member?: { id: string; profile: ClientProfileSummary };
+    sender: ClientProfileSummary | null;
     attachmentAsset?: ClientAttachmentAsset | null;
     fileUrl?: string | null;
     fileName?: string | null;
@@ -95,9 +100,12 @@ interface ChatItemOptimizedProps {
   isLastMessage?: boolean;
 }
 
-const MAX_CHAT_IMAGE_PREVIEW_WIDTH = 250;
-const MAX_CHAT_IMAGE_PREVIEW_HEIGHT = 295;
 const FALLBACK_CHAT_IMAGE_PREVIEW_SIZE = { width: 224, height: 168 };
+const CHAT_IMAGE_LANDSCAPE_MIN_RATIO = 1.6;
+const CHAT_IMAGE_PORTRAIT_MAX_RATIO = 0.625;
+const CHAT_IMAGE_BUCKET_LANDSCAPE = { width: 540, height: 330 };
+const CHAT_IMAGE_BUCKET_PORTRAIT = { width: 300, height: 370 };
+const CHAT_IMAGE_BUCKET_SQUAREISH = { width: 320, height: 320 };
 
 function getUrlPathname(url: string): string {
   try {
@@ -125,22 +133,41 @@ function isExpressMediaAttachmentUrl(
   return url.startsWith(`${apiUrl}/media/attachment?`);
 }
 
-function getConstrainedImageSize(
-  originalWidth: number,
-  originalHeight: number,
-  options?: { allowUpscale?: boolean },
-) {
+function getChatAttachmentPreviewBucket(ratio: number): {
+  width: number;
+  height: number;
+} {
+  if (ratio >= CHAT_IMAGE_LANDSCAPE_MIN_RATIO) {
+    return CHAT_IMAGE_BUCKET_LANDSCAPE;
+  }
+
+  if (ratio <= CHAT_IMAGE_PORTRAIT_MAX_RATIO) {
+    return CHAT_IMAGE_BUCKET_PORTRAIT;
+  }
+
+  return CHAT_IMAGE_BUCKET_SQUAREISH;
+}
+
+function getChatAttachmentPreviewSize({
+  originalWidth,
+  originalHeight,
+  allowUpscale,
+}: {
+  originalWidth: number;
+  originalHeight: number;
+  allowUpscale?: boolean;
+}) {
   if (!originalWidth || !originalHeight) {
     return FALLBACK_CHAT_IMAGE_PREVIEW_SIZE;
   }
 
+  const ratio = originalWidth / originalHeight;
+  const bucket = getChatAttachmentPreviewBucket(ratio);
   const scaleDownOrUp = Math.min(
-    MAX_CHAT_IMAGE_PREVIEW_WIDTH / originalWidth,
-    MAX_CHAT_IMAGE_PREVIEW_HEIGHT / originalHeight,
+    bucket.width / originalWidth,
+    bucket.height / originalHeight,
   );
-  const scale = options?.allowUpscale
-    ? scaleDownOrUp
-    : Math.min(scaleDownOrUp, 1);
+  const scale = allowUpscale ? scaleDownOrUp : Math.min(scaleDownOrUp, 1);
 
   return {
     width: Math.max(1, Math.round(originalWidth * scale)),
@@ -151,13 +178,13 @@ function getConstrainedImageSize(
 // Reply preview - extracted for clarity
 const ReplyPreview = memo(function ReplyPreview({
   replyTo,
-  isChannel,
   t,
 }: {
   replyTo: NonNullable<ChatItemOptimizedProps["replyTo"]>;
-  isChannel: boolean;
   t: ReturnType<typeof useTranslation>["t"];
 }) {
+  const replyAuthor = replyTo.sender;
+
   const getReplyPreview = () => {
     if (replyTo.sticker) return `🎨 ${t.chat.sticker}`;
     if (replyTo.fileUrl) return `📎 ${replyTo.fileName || t.chat.file}`;
@@ -173,9 +200,7 @@ const ReplyPreview = memo(function ReplyPreview({
     >
       <div className="text-xs text-theme-text-tertiary break-words">
         <span className="font-semibold">
-          {isChannel
-            ? replyTo.member?.profile.username
-            : replyTo.sender.username}
+          {replyAuthor?.username || t.chat.deletedMember}
         </span>
         <span>: </span>
         <span>{getReplyPreview()}</span>
@@ -226,11 +251,172 @@ const MessageContent = memo(function MessageContent({
   );
 });
 
+const ProfileNameTrigger = memo(function ProfileNameTrigger({
+  canOpenAuthorProfile,
+  authorProfile,
+  currentProfile,
+  memberId,
+  isOptimistic,
+  isFailed,
+  isOwnMessage,
+  resolvedTheme,
+}: {
+  canOpenAuthorProfile: boolean;
+  authorProfile: {
+    id?: string;
+    imageUrl?: string;
+    username?: string;
+    discriminator?: string | null;
+    usernameColor?: unknown;
+    usernameFormat?: unknown;
+  };
+  currentProfile: ClientProfile;
+  memberId?: string;
+  isOptimistic: boolean;
+  isFailed: boolean;
+  isOwnMessage: boolean;
+  resolvedTheme: string | undefined;
+}) {
+  const usernameClasses = cn(
+    canOpenAuthorProfile
+      ? "text-sm font-semibold text-white cursor-pointer hover:underline"
+      : "text-sm font-semibold text-theme-text-tertiary",
+    getUsernameFormatClasses(authorProfile?.usernameFormat),
+    isOptimistic && !isFailed && "text-theme-text-muted",
+    isFailed && "text-red-400",
+    canOpenAuthorProfile &&
+      getGradientAnimationClass(authorProfile?.usernameColor),
+  );
+
+  const usernameStyles = getUsernameColorStyle(authorProfile?.usernameColor, {
+    isOwnProfile: isOwnMessage,
+    themeMode: (resolvedTheme as "dark" | "light") || "dark",
+  });
+
+  const usernameNode = (
+    <span className={usernameClasses} style={usernameStyles}>
+      {authorProfile?.username}
+    </span>
+  );
+
+  return (
+    <>
+      {canOpenAuthorProfile ? (
+        <UserAvatarMenu
+          profileId={authorProfile?.id || ""}
+          profileImageUrl={authorProfile?.imageUrl || ""}
+          username={authorProfile?.username || ""}
+          discriminator={authorProfile?.discriminator}
+          currentProfileId={currentProfile.id}
+          currentProfile={currentProfile}
+          memberId={memberId}
+          showStatus={false}
+          usernameColor={authorProfile?.usernameColor}
+          usernameFormat={authorProfile?.usernameFormat}
+          hideAvatar
+        >
+          {usernameNode}
+        </UserAvatarMenu>
+      ) : (
+        usernameNode
+      )}
+      <span
+        className={cn(
+          "text-sm font-semibold",
+          getGradientAnimationClass(authorProfile?.usernameColor),
+        )}
+        style={usernameStyles}
+      >
+        :
+      </span>
+    </>
+  );
+});
+
+const ImageViewerDialog = memo(function ImageViewerDialog({
+  open,
+  onOpenChange,
+  fileUrl,
+  fileName,
+  content,
+  imageViewerContainerRef,
+  imageViewerImgRef,
+  imageViewerScale,
+  imageViewerTranslate,
+  isImageViewerPanning,
+  handleImageViewerPointerDown,
+  handleImageViewerPointerMove,
+  handleImageViewerPointerUp,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  fileUrl: string;
+  fileName: string | null;
+  content: string;
+  imageViewerContainerRef: RefObject<HTMLDivElement | null>;
+  imageViewerImgRef: RefObject<HTMLImageElement | null>;
+  imageViewerScale: number;
+  imageViewerTranslate: { x: number; y: number };
+  isImageViewerPanning: boolean;
+  handleImageViewerPointerDown: (e: ReactPointerEvent) => void;
+  handleImageViewerPointerMove: (e: ReactPointerEvent) => void;
+  handleImageViewerPointerUp: (e: ReactPointerEvent) => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        showCloseButton={false}
+        className="max-w-none sm:max-w-none gap-0 border-0 bg-transparent p-0 shadow-none rounded-none"
+        overlayClassName="bg-black/70"
+      >
+        <DialogTitle className="sr-only">Image preview</DialogTitle>
+        <div
+          ref={imageViewerContainerRef}
+          className="fixed inset-0 flex items-center justify-center select-none"
+          style={{
+            cursor:
+              imageViewerScale > 1
+                ? isImageViewerPanning
+                  ? "grabbing"
+                  : "zoom-out"
+                : "zoom-in",
+            touchAction: "none",
+          }}
+          onPointerDown={handleImageViewerPointerDown}
+          onPointerMove={handleImageViewerPointerMove}
+          onPointerUp={handleImageViewerPointerUp}
+          onPointerCancel={handleImageViewerPointerUp}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            ref={imageViewerImgRef}
+            src={fileUrl}
+            alt={fileName || content || "attachment"}
+            className="block max-w-[92vw] max-h-[92vh] h-auto w-auto"
+            style={{
+              transformOrigin: "center center",
+              transform: `translate(${imageViewerTranslate.x}px, ${imageViewerTranslate.y}px) scale(${imageViewerScale})`,
+              transition: isImageViewerPanning ? "none" : "transform 160ms ease-out",
+              willChange: "transform",
+            }}
+            loading="eager"
+            decoding="async"
+            draggable={false}
+            onDragStart={(ev) => ev.preventDefault()}
+          />
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+});
+
 const ChatItemOptimizedComponent = ({
   id,
   content,
+  isChannel,
+  messageSenderId,
   member,
-  sender,
+  author,
   timestamp,
   attachmentAsset,
   filePreviewUrl = null,
@@ -305,11 +491,6 @@ const ChatItemOptimizedComponent = ({
       fileUrl: string;
       url: string;
     } | null>(null);
-  const [imagePreviewSize, setImagePreviewSize] = useState<{
-    url: string;
-    width: number;
-    height: number;
-  } | null>(null);
 
   const { t } = useTranslation();
   const { resolvedTheme } = useTheme();
@@ -325,10 +506,10 @@ const ChatItemOptimizedComponent = ({
     confirmOptimisticMessage,
   } = useOptimisticMessages();
 
-  const isChannel = !!member;
   const channelId = socketQuery.channelId as string | undefined;
   const conversationId = socketQuery.conversationId as string | undefined;
-  const authorProfileBase = isChannel ? member!.profile : sender;
+  const authorProfileBase = author;
+  const canOpenAuthorProfile = !isMissingMessageAuthor(authorProfileBase);
   const authorProfile = useMemo(
     () => ({
       ...authorProfileBase,
@@ -345,8 +526,8 @@ const ChatItemOptimizedComponent = ({
   const fileHeight = attachmentAsset?.height ?? null;
 
   const isOwnMessage = isChannel
-    ? currentMember?.id === member?.id
-    : currentProfile.id === sender.id;
+    ? messageSenderId === currentProfile.id
+    : authorProfile.id === currentProfile.id;
 
   const isImage = fileType?.startsWith("image/");
   const isPDF = fileType === "application/pdf";
@@ -366,12 +547,12 @@ const ChatItemOptimizedComponent = ({
     const effectiveQueryKey = retryData?.queryKey ?? fallbackQueryKey;
     if (effectiveQueryKey.length === 0) return;
 
-      const effectiveData = retryData ?? {
-        content,
-        attachmentAsset: attachmentAsset || null,
-        sticker: sticker || undefined,
-        apiUrl,
-        query: socketQuery,
+    const effectiveData = retryData ?? {
+      content,
+      attachmentAsset: attachmentAsset || null,
+      sticker: sticker || undefined,
+      apiUrl,
+      query: socketQuery,
       profileId: currentProfile.id,
       queryKey: effectiveQueryKey,
       replyToId: replyTo?.id,
@@ -391,12 +572,12 @@ const ChatItemOptimizedComponent = ({
       effectiveData.sticker,
     );
 
-      setRetryData(newTempId, {
-        tempId: newTempId,
-        content: effectiveData.content,
-        attachmentAsset: effectiveData.attachmentAsset,
-        sticker: effectiveData.sticker,
-        apiUrl: effectiveData.apiUrl,
+    setRetryData(newTempId, {
+      tempId: newTempId,
+      content: effectiveData.content,
+      attachmentAsset: effectiveData.attachmentAsset,
+      sticker: effectiveData.sticker,
+      apiUrl: effectiveData.apiUrl,
       query: effectiveData.query,
       profileId: effectiveData.profileId,
       queryKey: effectiveQueryKey,
@@ -604,7 +785,7 @@ const ChatItemOptimizedComponent = ({
         moved: false,
       };
     },
-    [imageViewerScale, imageViewerTranslate.x, imageViewerTranslate.y],
+    [imageViewerTranslate.x, imageViewerTranslate.y],
   );
 
   const handleImageViewerPointerMove = useCallback(
@@ -666,49 +847,6 @@ const ChatItemOptimizedComponent = ({
     [toggleImageViewerZoomAt],
   );
 
-  const handleImageLoad = useCallback(
-    (event: React.SyntheticEvent<HTMLImageElement>) => {
-      if (!fileUrl) return;
-      if (
-        typeof fileWidth === "number" &&
-        fileWidth > 0 &&
-        typeof fileHeight === "number" &&
-        fileHeight > 0
-      ) {
-        // Dimensions provided by backend: keep layout stable and avoid client-side re-measurement.
-        return;
-      }
-
-      // For animatable attachments we may load a small static preview (imgproxy) first and then
-      // swap to the original animated asset. Allowing upscale keeps the rendered box stable.
-      const allowUpscale =
-        fileType === "image/webp" ||
-        fileType === "image/gif" ||
-        fileType === "image/apng" ||
-        looksLikeAnimatableImage(fileUrl);
-
-      const nextSize = getConstrainedImageSize(
-        event.currentTarget.naturalWidth,
-        event.currentTarget.naturalHeight,
-        { allowUpscale },
-      );
-
-      setImagePreviewSize((prev) => {
-        if (
-          prev &&
-          prev.url === fileUrl &&
-          prev.width === nextSize.width &&
-          prev.height === nextSize.height
-        ) {
-          return prev;
-        }
-
-        return { url: fileUrl, ...nextSize };
-      });
-    },
-    [fileHeight, fileType, fileUrl, fileWidth, id],
-  );
-
   const serverProvidedImageSize = useMemo(() => {
     if (!fileUrl) return null;
     if (
@@ -728,14 +866,31 @@ const ChatItemOptimizedComponent = ({
       fileType === "image/apng" ||
       looksLikeAnimatableImage(fileUrl);
 
-    return getConstrainedImageSize(fileWidth, fileHeight, { allowUpscale });
+    return getChatAttachmentPreviewSize({
+      originalWidth: fileWidth,
+      originalHeight: fileHeight,
+      allowUpscale,
+    });
   }, [fileHeight, fileType, fileUrl, fileWidth]);
 
-  const resolvedImageSize =
-    serverProvidedImageSize ||
-    (imagePreviewSize && fileUrl && imagePreviewSize.url === fileUrl
-      ? imagePreviewSize
-      : FALLBACK_CHAT_IMAGE_PREVIEW_SIZE);
+  const fallbackImageSize = useMemo(
+    () =>
+      getChatAttachmentPreviewSize({
+        originalWidth: FALLBACK_CHAT_IMAGE_PREVIEW_SIZE.width,
+        originalHeight: FALLBACK_CHAT_IMAGE_PREVIEW_SIZE.height,
+      }),
+    [],
+  );
+
+  const resolvedImageSize = serverProvidedImageSize || fallbackImageSize;
+  const imageFrameStyle = useMemo(
+    () => ({
+      width: "100%",
+      maxWidth: `${resolvedImageSize.width}px`,
+      aspectRatio: `${resolvedImageSize.width} / ${resolvedImageSize.height}`,
+    }),
+    [resolvedImageSize.height, resolvedImageSize.width],
+  );
 
   const isAnimatableAttachment =
     fileType === "image/webp" ||
@@ -787,35 +942,6 @@ const ChatItemOptimizedComponent = ({
     return `${apiUrl}/media/attachment?src=${encodeURIComponent(
       fileUrl,
     )}&w=${width}&h=${height}&q=82&fmt=webp`;
-  }, [
-    fileUrl,
-    isAnimatableAttachment,
-    shouldDisableExpressAttachmentPreviews,
-    resolvedImageSize.height,
-    resolvedImageSize.width,
-  ]);
-
-  const attachmentAnimatedPreviewUrl = useMemo(() => {
-    if (!fileUrl || !isAnimatableAttachment) return null;
-    if (shouldDisableExpressAttachmentPreviews) return null;
-
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-    if (!apiUrl) return null;
-
-    const dpr =
-      typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
-    const width = Math.min(
-      1024,
-      Math.max(1, Math.round(resolvedImageSize.width * dpr)),
-    );
-    const height = Math.min(
-      1024,
-      Math.max(1, Math.round(resolvedImageSize.height * dpr)),
-    );
-
-    return `${apiUrl}/media/attachment?src=${encodeURIComponent(
-      fileUrl,
-    )}&w=${width}&h=${height}&q=85&fmt=webp&animated=true`;
   }, [
     fileUrl,
     isAnimatableAttachment,
@@ -934,14 +1060,6 @@ const ChatItemOptimizedComponent = ({
         if (!entry) return;
         const inBand = entry.isIntersecting;
         setIsAttachmentInCenterBand(inBand);
-
-        const rect = entry.boundingClientRect;
-        const centerY = rect.top + rect.height / 2;
-        const vh = typeof window !== "undefined" ? window.innerHeight || 0 : 0;
-        const bandTop = vh * 0.35;
-        const bandBottom = vh * 0.65;
-
-        // eslint-disable-next-line no-console
       },
       {
         root: null,
@@ -976,55 +1094,116 @@ const ChatItemOptimizedComponent = ({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <div
-        data-chat-item-block="row"
-        className={cn("group flex gap-x-2 w-full", "items-start")}
-      >
-        {/* Avatar - only show if not compact */}
-        {!isCompact ? (
-          <div data-chat-item-block="avatar" className="shrink-0 pt-3">
-            <UserAvatarMenu
-              profileId={authorProfile?.id || ""}
-              profileImageUrl={authorProfile?.imageUrl || ""}
-              username={authorProfile?.username || ""}
-              discriminator={authorProfile?.discriminator}
-              currentProfileId={currentProfile.id}
-              currentProfile={currentProfile}
-              memberId={member?.id}
-              showStatus={false}
-              usernameColor={authorProfile?.usernameColor}
-              usernameFormat={authorProfile?.usernameFormat}
-              avatarAnimationMode="onHover"
-              avatarIsHovered={isHovered}
-            />
-          </div>
-        ) : (
-          <div
-            data-chat-item-block="avatar-placeholder"
-            className="w-10 shrink-0"
-          />
-        )}
-
+      <AvatarGroupHoverContext.Provider value={isHovered}>
         <div
-          data-chat-item-block="col"
-          className={cn(
-            "flex flex-col w-full min-w-0 overflow-hidden",
-            !isCompact && "pt-0.5",
-          )}
+          data-chat-item-block="row"
+          className={cn("group flex gap-x-2 w-full", "items-start")}
         >
-          {/* Reply Preview */}
-          {replyTo && (
-            <ReplyPreview replyTo={replyTo} isChannel={isChannel} t={t} />
+          {/* Avatar - only show if not compact */}
+          {!isCompact ? (
+            <div data-chat-item-block="avatar" className="shrink-0 pt-3">
+              {canOpenAuthorProfile ? (
+                <UserAvatarMenu
+                  profileId={authorProfile?.id || ""}
+                  profileImageUrl={authorProfile?.imageUrl || ""}
+                  username={authorProfile?.username || ""}
+                  discriminator={authorProfile?.discriminator}
+                  currentProfileId={currentProfile.id}
+                  currentProfile={currentProfile}
+                  memberId={member?.id || undefined}
+                  showStatus={false}
+                  usernameColor={authorProfile?.usernameColor}
+                  usernameFormat={authorProfile?.usernameFormat}
+                  avatarAnimationMode="onHover"
+                />
+              ) : (
+                <UserAvatar
+                  src={authorProfile?.imageUrl || undefined}
+                  showStatus={false}
+                  className="h-10 w-10"
+                />
+              )}
+            </div>
+          ) : (
+            <div
+              data-chat-item-block="avatar-placeholder"
+              className="w-10 shrink-0"
+            />
           )}
+
+          <div
+            data-chat-item-block="col"
+            className={cn(
+              "flex flex-col w-full min-w-0 overflow-hidden",
+              !isCompact && "pt-0.5",
+            )}
+          >
+          {/* Reply Preview */}
+          {replyTo && <ReplyPreview replyTo={replyTo} t={t} />}
 
           {/* Image */}
           {isImage && fileUrl && (
             <>
+              {!isCompact && (
+                <div
+                  data-chat-item-block="image-header"
+                  className="flex items-center gap-1 mb-0"
+                >
+                  {(authorProfile?.badge || authorProfile?.badgeStickerUrl) && (
+                    <>
+                      <span className="inline-flex items-center gap-0.5">
+                        {authorProfile?.badgeStickerUrl && (
+                          <AnimatedSticker
+                            src={authorProfile.badgeStickerUrl}
+                            alt="badge"
+                            containerClassName="h-5 w-5"
+                            fallbackWidthPx={20}
+                            fallbackHeightPx={20}
+                            className="object-contain"
+                            isHovered={isHovered}
+                          />
+                        )}
+                        {authorProfile?.badge && (
+                          <span className="text-[11px] leading-none text-theme-text-tertiary pt-2.5">
+                            {authorProfile.badge}
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-[11px] text-theme-text-tertiary pt-2.5">
+                        |
+                      </span>
+                    </>
+                  )}
+                  <span className="text-[11px] text-theme-text-tertiary pt-2.5">
+                    {timestamp}
+                  </span>
+                </div>
+              )}
+
+              {!isCompact && (
+                <div
+                  data-chat-item-block="image-username"
+                  className="flex items-center -mt-0.5"
+                >
+                  <ProfileNameTrigger
+                    canOpenAuthorProfile={canOpenAuthorProfile}
+                    authorProfile={authorProfile}
+                    currentProfile={currentProfile}
+                    memberId={member?.id || undefined}
+                    isOptimistic={isOptimistic}
+                    isFailed={isFailed}
+                    isOwnMessage={isOwnMessage}
+                    resolvedTheme={resolvedTheme}
+                  />
+                </div>
+              )}
+
               <button
                 ref={attachmentButtonRef}
                 type="button"
                 onClick={() => setIsImageViewerOpen(true)}
-                className="mt-2 self-start inline-flex max-w-full overflow-hidden rounded-md border bg-secondary cursor-pointer"
+                className="mt-1 self-start block w-full max-w-full overflow-hidden rounded-md border bg-black/[0.03] cursor-pointer"
+                style={imageFrameStyle}
                 data-attachment-animatable={isAnimatableAttachment ? "1" : "0"}
                 data-attachment-in-band={isAttachmentInCenterBand ? "1" : "0"}
                 data-chat-item-block="image"
@@ -1032,10 +1211,7 @@ const ChatItemOptimizedComponent = ({
                 {isAnimatableAttachment ? (
                   <div
                     className="relative"
-                    style={{
-                      width: resolvedImageSize.width,
-                      height: resolvedImageSize.height,
-                    }}
+                    style={imageFrameStyle}
                   >
                     <span
                       ref={attachmentCenterSentinelRef}
@@ -1046,7 +1222,6 @@ const ChatItemOptimizedComponent = ({
                     <img
                       src={effectiveAttachmentUrl || fileUrl}
                       alt={fileName || content || "attachment"}
-                      onLoad={handleImageLoad}
                       onError={() => {
                         if (!fileUrl) return;
                         // If Express media previews fail (404/500/etc), fall back to the backend-provided
@@ -1067,16 +1242,12 @@ const ChatItemOptimizedComponent = ({
                 ) : (
                   <div
                     className="relative"
-                    style={{
-                      width: resolvedImageSize.width,
-                      height: resolvedImageSize.height,
-                    }}
+                    style={imageFrameStyle}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={imagePreviewSrc || fileUrl}
                       alt={fileName || content || "attachment"}
-                      onLoad={handleImageLoad}
                       onError={() => {
                         if (!fileUrl) return;
                         setForceOriginalImage({ url: fileUrl, value: true });
@@ -1089,56 +1260,21 @@ const ChatItemOptimizedComponent = ({
                 )}
               </button>
 
-              <Dialog
+              <ImageViewerDialog
                 open={isImageViewerOpen}
                 onOpenChange={setIsImageViewerOpen}
-              >
-                <DialogContent
-                  showCloseButton={false}
-                  // Keep DialogContent itself minimal; the actual viewer "stage" is fixed to the viewport.
-                  className="max-w-none sm:max-w-none gap-0 border-0 bg-transparent p-0 shadow-none rounded-none"
-                  overlayClassName="bg-black/70"
-                >
-                  <DialogTitle className="sr-only">Image preview</DialogTitle>
-                  <div
-                    ref={imageViewerContainerRef}
-                    className="fixed inset-0 flex items-center justify-center select-none"
-                    style={{
-                      cursor:
-                        imageViewerScale > 1
-                          ? isImageViewerPanning
-                            ? "grabbing"
-                            : "zoom-out"
-                          : "zoom-in",
-                      touchAction: "none",
-                    }}
-                    onPointerDown={handleImageViewerPointerDown}
-                    onPointerMove={handleImageViewerPointerMove}
-                    onPointerUp={handleImageViewerPointerUp}
-                    onPointerCancel={handleImageViewerPointerUp}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      ref={imageViewerImgRef}
-                      src={fileUrl}
-                      alt={fileName || content || "attachment"}
-                      className="block max-w-[92vw] max-h-[92vh] h-auto w-auto"
-                      style={{
-                        transformOrigin: "center center",
-                        transform: `translate(${imageViewerTranslate.x}px, ${imageViewerTranslate.y}px) scale(${imageViewerScale})`,
-                        transition: isImageViewerPanning
-                          ? "none"
-                          : "transform 160ms ease-out",
-                        willChange: "transform",
-                      }}
-                      loading="eager"
-                      decoding="async"
-                      draggable={false}
-                      onDragStart={(ev) => ev.preventDefault()}
-                    />
-                  </div>
-                </DialogContent>
-              </Dialog>
+                fileUrl={fileUrl}
+                fileName={fileName}
+                content={content}
+                imageViewerContainerRef={imageViewerContainerRef}
+                imageViewerImgRef={imageViewerImgRef}
+                imageViewerScale={imageViewerScale}
+                imageViewerTranslate={imageViewerTranslate}
+                isImageViewerPanning={isImageViewerPanning}
+                handleImageViewerPointerDown={handleImageViewerPointerDown}
+                handleImageViewerPointerMove={handleImageViewerPointerMove}
+                handleImageViewerPointerUp={handleImageViewerPointerUp}
+              />
             </>
           )}
 
@@ -1187,51 +1323,16 @@ const ChatItemOptimizedComponent = ({
                   data-chat-item-block="sticker-username"
                   className="flex items-center -mt-0.5"
                 >
-                  <UserAvatarMenu
-                    profileId={authorProfile?.id || ""}
-                    profileImageUrl={authorProfile?.imageUrl || ""}
-                    username={authorProfile?.username || ""}
-                    discriminator={authorProfile?.discriminator}
-                    currentProfileId={currentProfile.id}
+                  <ProfileNameTrigger
+                    canOpenAuthorProfile={canOpenAuthorProfile}
+                    authorProfile={authorProfile}
                     currentProfile={currentProfile}
-                    memberId={member?.id}
-                    showStatus={false}
-                    usernameColor={authorProfile?.usernameColor}
-                    usernameFormat={authorProfile?.usernameFormat}
-                    hideAvatar
-                  >
-                    <span
-                      className={cn(
-                        "text-sm font-semibold text-white cursor-pointer hover:underline",
-                        getUsernameFormatClasses(authorProfile?.usernameFormat),
-                        isOptimistic && !isFailed && "text-theme-text-muted",
-                        isFailed && "text-red-400",
-                        getGradientAnimationClass(authorProfile?.usernameColor),
-                      )}
-                      style={getUsernameColorStyle(
-                        authorProfile?.usernameColor,
-                        {
-                          isOwnProfile: isOwnMessage,
-                          themeMode:
-                            (resolvedTheme as "dark" | "light") || "dark",
-                        },
-                      )}
-                    >
-                      {authorProfile?.username}
-                    </span>
-                  </UserAvatarMenu>
-                  <span
-                    className={cn(
-                      "text-sm font-semibold",
-                      getGradientAnimationClass(authorProfile?.usernameColor),
-                    )}
-                    style={getUsernameColorStyle(authorProfile?.usernameColor, {
-                      isOwnProfile: isOwnMessage,
-                      themeMode: (resolvedTheme as "dark" | "light") || "dark",
-                    })}
-                  >
-                    :
-                  </span>
+                    memberId={member?.id || undefined}
+                    isOptimistic={isOptimistic}
+                    isFailed={isFailed}
+                    isOwnMessage={isOwnMessage}
+                    resolvedTheme={resolvedTheme}
+                  />
                 </div>
               )}
               <div className="mt-1" data-chat-item-block="sticker">
@@ -1348,64 +1449,16 @@ const ChatItemOptimizedComponent = ({
                   !isCompact ? (
                     <>
                       <span className="whitespace-nowrap">
-                        <UserAvatarMenu
-                          profileId={authorProfile?.id || ""}
-                          profileImageUrl={authorProfile?.imageUrl || ""}
-                          username={authorProfile?.username || ""}
-                          discriminator={authorProfile?.discriminator}
-                          currentProfileId={currentProfile.id}
+                        <ProfileNameTrigger
+                          canOpenAuthorProfile={canOpenAuthorProfile}
+                          authorProfile={authorProfile}
                           currentProfile={currentProfile}
-                          memberId={member?.id}
-                          showStatus={false}
-                          usernameColor={authorProfile?.usernameColor}
-                          usernameFormat={authorProfile?.usernameFormat}
-                          hideAvatar
-                        >
-                          <span
-                            data-chat-item-block="text-username"
-                            className={cn(
-                              "text-sm font-semibold text-white cursor-pointer hover:underline",
-                              getUsernameFormatClasses(
-                                authorProfile?.usernameFormat,
-                              ),
-                              isOptimistic &&
-                                !isFailed &&
-                                "text-theme-text-muted",
-                              isFailed && "text-red-400",
-                              getGradientAnimationClass(
-                                authorProfile?.usernameColor,
-                              ),
-                            )}
-                            style={getUsernameColorStyle(
-                              authorProfile?.usernameColor,
-                              {
-                                isOwnProfile: isOwnMessage,
-                                themeMode:
-                                  (resolvedTheme as "dark" | "light") || "dark",
-                              },
-                            )}
-                          >
-                            {authorProfile?.username}
-                          </span>
-                        </UserAvatarMenu>
-                        <span
-                          className={cn(
-                            "text-sm font-semibold",
-                            getGradientAnimationClass(
-                              authorProfile?.usernameColor,
-                            ),
-                          )}
-                          style={getUsernameColorStyle(
-                            authorProfile?.usernameColor,
-                            {
-                              isOwnProfile: isOwnMessage,
-                              themeMode:
-                                (resolvedTheme as "dark" | "light") || "dark",
-                            },
-                          )}
-                        >
-                          :
-                        </span>
+                          memberId={member?.id || undefined}
+                          isOptimistic={isOptimistic}
+                          isFailed={isFailed}
+                          isOwnMessage={isOwnMessage}
+                          resolvedTheme={resolvedTheme}
+                        />
                       </span>
                       {"\u00A0"}
                     </>
@@ -1444,14 +1497,17 @@ const ChatItemOptimizedComponent = ({
               </Suspense>
             </div>
           )}
+          </div>
         </div>
-      </div>
+      </AvatarGroupHoverContext.Provider>
 
       {/* Actions toolbar - lazy loaded only when hovered or menu is open */}
       {showActions && isHovered && (
         <Suspense fallback={null}>
           <ChatItemActions
             id={id}
+            isChannel={isChannel}
+            messageSenderId={messageSenderId}
             content={content}
             attachmentAsset={attachmentAsset}
             sticker={sticker}
@@ -1460,7 +1516,7 @@ const ChatItemOptimizedComponent = ({
             currentProfile={currentProfile}
             currentMember={currentMember}
             member={member}
-            sender={sender}
+            authorProfile={canOpenAuthorProfile ? authorProfile : null}
             apiUrl={apiUrl}
             socketQuery={socketQuery}
             pinned={pinned}
@@ -1498,9 +1554,8 @@ export const ChatItemOptimized = memo(
       prev.replyTo?.attachmentAsset?.id === next.replyTo?.attachmentAsset?.id &&
       prev.replyTo?.sticker?.id === next.replyTo?.sticker?.id;
 
-    // Compare sender/member profile fields that affect rendering
-    const prevProfile = prev.member?.profile ?? prev.sender;
-    const nextProfile = next.member?.profile ?? next.sender;
+    const prevProfile = prev.author;
+    const nextProfile = next.author;
 
     const profileEqual =
       prevProfile?.id === nextProfile?.id &&
@@ -1517,6 +1572,8 @@ export const ChatItemOptimized = memo(
     // Only re-render if these specific props change
     return (
       prev.id === next.id &&
+      prev.isChannel === next.isChannel &&
+      prev.messageSenderId === next.messageSenderId &&
       prev.content === next.content &&
       prev.deleted === next.deleted &&
       prev.isUpdated === next.isUpdated &&
