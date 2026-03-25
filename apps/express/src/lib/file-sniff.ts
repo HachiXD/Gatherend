@@ -98,6 +98,12 @@ export type SafeImageMeta = {
   format: "jpeg" | "png" | "webp" | "gif" | "avif";
 };
 
+function shouldSwapDimensionsForOrientation(
+  orientation: number | undefined,
+): boolean {
+  return orientation === 5 || orientation === 6 || orientation === 7 || orientation === 8;
+}
+
 export async function getSafeImageMetadata(input: {
   buffer: Buffer;
   maxPixels: number;
@@ -111,13 +117,16 @@ export async function getSafeImageMetadata(input: {
     limitInputPixels: maxPixels,
   }).metadata();
 
-  const width = typeof meta.width === "number" ? meta.width : null;
-  const height =
+  const rawWidth = typeof meta.width === "number" ? meta.width : null;
+  const rawHeight =
     typeof meta.pageHeight === "number"
       ? meta.pageHeight
       : typeof meta.height === "number"
         ? meta.height
         : null;
+  const swapDimensions = shouldSwapDimensionsForOrientation(meta.orientation);
+  const width = swapDimensions ? rawHeight : rawWidth;
+  const height = swapDimensions ? rawWidth : rawHeight;
 
   const format = meta.format as SafeImageMeta["format"] | undefined;
 
@@ -130,4 +139,3 @@ export async function getSafeImageMetadata(input: {
 
   return { width, height, format };
 }
-
