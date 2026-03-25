@@ -213,6 +213,27 @@ export async function POST(req: Request) {
       );
     }
 
+    if (publicSeats === 0 && communityId) {
+      return NextResponse.json(
+        { error: "Private boards cannot be assigned to a community" },
+        { status: 400 },
+      );
+    }
+
+    if (typeof communityId === "string" && communityId.trim().length > 0) {
+      const communityExists = await db.community.findUnique({
+        where: { id: communityId },
+        select: { id: true },
+      });
+
+      if (!communityExists) {
+        return NextResponse.json(
+          { error: "Community not found" },
+          { status: 400 },
+        );
+      }
+    }
+
     if (description && description.trim().length > 0) {
       const moderationResult = moderateDescription(description);
       if (!moderationResult.allowed) {
