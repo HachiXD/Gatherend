@@ -81,6 +81,7 @@ interface ReportDetail extends ReportItem {
     id: string;
     content: string;
     createdAt: string;
+    messageSender?: ModerationProfile | null;
     member: {
       profile: ModerationProfile | null;
     } | null;
@@ -634,34 +635,43 @@ const MessageReportContent = ({ report }: { report: ReportDetail }) => {
                   "p-3 rounded",
                   msg.isReported
                     ? "bg-red-500/10 border border-red-500/20"
-                    : "bg-theme-bg-tertiary"
+                    : "bg-theme-bg-tertiary",
                 )}
               >
-                <div className="flex items-center gap-2 mb-1">
-                  {msg.member?.profile && (
+                {(() => {
+                  const messageAuthor =
+                    msg.messageSender ?? msg.member?.profile ?? null;
+
+                  return (
                     <>
-                      <img
-                        src={msg.member.profile?.avatarAsset?.url || undefined}
-                        alt=""
-                        className="w-5 h-5 rounded-full"
-                      />
-                      <span className="text-xs font-medium text-theme-text-primary">
-                        @{msg.member.profile?.username}
-                      </span>
+                      <div className="flex items-center gap-2 mb-1">
+                        {messageAuthor && (
+                          <>
+                            <img
+                              src={messageAuthor.avatarAsset?.url || undefined}
+                              alt=""
+                              className="w-5 h-5 rounded-full"
+                            />
+                            <span className="text-xs font-medium text-theme-text-primary">
+                              @{messageAuthor.username}
+                            </span>
+                          </>
+                        )}
+                        <span className="text-xs text-theme-text-tertiary">
+                          {new Date(msg.createdAt).toLocaleString()}
+                        </span>
+                        {msg.isReported && (
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">
+                            REPORTED
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-theme-text-primary whitespace-pre-wrap">
+                        {msg.content}
+                      </p>
                     </>
-                  )}
-                  <span className="text-xs text-theme-text-tertiary">
-                    {new Date(msg.createdAt).toLocaleString()}
-                  </span>
-                  {msg.isReported && (
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">
-                      REPORTED
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm text-theme-text-primary whitespace-pre-wrap">
-                  {msg.content}
-                </p>
+                  );
+                })()}
               </div>
             ))}
           </div>
