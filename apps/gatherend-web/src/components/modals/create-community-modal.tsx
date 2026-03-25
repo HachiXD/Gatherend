@@ -36,6 +36,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/file-upload";
+import { cn } from "@/lib/utils";
+
+const PANEL_SHELL = "border border-theme-border bg-theme-bg-secondary/20";
 
 const schema = z.object({
   name: z
@@ -172,73 +175,101 @@ export function CreateCommunityDialog({
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent
-        className={`bg-theme-bg-modal text-theme-text-subtle overflow-hidden p-0 max-w-md! ${stackAbove ? "z-[10001]" : ""}`}
+        className={cn(
+          "max-w-[440px]! overflow-hidden rounded-none border border-theme-border bg-theme-bg-modal p-0 text-theme-text-subtle",
+          stackAbove && "z-10001",
+        )}
         overlayClassName={stackAbove ? "z-[10001]" : undefined}
+        closeButtonClassName="cursor-pointer rounded-none p-1 text-theme-text-subtle opacity-100 transition hover:text-theme-text-light data-[state=open]:bg-transparent data-[state=open]:text-theme-text-subtle focus:ring-0 focus:ring-offset-0 focus:outline-none"
+        onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <DialogHeader className="pt-8 px-6">
-          <DialogTitle className="text-2xl text-center font-bold text-theme-text-light">
+        <DialogHeader className=" bg-theme-bg-secondary/20 px-6 pb-1 pt-2">
+          <DialogTitle className="text-2xl text-center font-bold">
             Crear Comunidad
           </DialogTitle>
-          <DialogDescription className="text-center text-theme-text-subtle">
-            Las comunidades agrupan boards relacionados
+          <DialogDescription className="-mt-1 text-center text-[15px] text-theme-text-subtle">
+            Las comunidades agrupan personas alrededor de un tema
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <div className="space-y-6 px-6">
-              {/* Image Upload */}
-              <div className="flex items-center justify-center">
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <div className="px-4 -mb-0.5 space-y-0">
+              {/* Image Upload Panel */}
+              <div className={cn("p-3 -mb-1 -mt-3.5", PANEL_SHELL)}>
+                <div className="uppercase text-[15px] font-bold text-theme-text-subtle mb-2">
+                  Imagen (opcional)
+                </div>
+                <div className="flex items-center justify-center text-center">
+                  <FormField
+                    control={form.control}
+                    name="imageUpload"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <FileUpload
+                            endpoint="communityImage"
+                            value={field.value || ""}
+                            onChange={field.onChange}
+                            uploadButtonClassName="rounded-none border-theme-border-subtle bg-theme-bg-cancel-button text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+                          />
+                        </FormControl>
+                        <FormMessage className="-mt-1 text-[11px] leading-tight" />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* Name Panel */}
+              <div className="space-y-3 p-3">
                 <FormField
                   control={form.control}
-                  name="imageUpload"
+                  name="name"
                   render={({ field }) => (
                     <FormItem>
+                      <FormLabel
+                        htmlFor="create-community-name"
+                        className="uppercase text-[15px] font-bold text-theme-text-subtle -mb-1.5"
+                      >
+                        Nombre de la comunidad
+                      </FormLabel>
                       <FormControl>
-                        <FileUpload
-                          endpoint="communityImage"
-                          value={field.value || ""}
-                          onChange={field.onChange}
+                        <Input
+                          id="create-community-name"
+                          disabled={isLoading}
+                          className="rounded-none border border-theme-border bg-theme-bg-edit-form/60 h-8 px-3 py-2 text-[14px] text-theme-text-light focus-visible:border-theme-border-accent focus-visible:ring-0 focus-visible:ring-offset-0"
+                          placeholder="Mi comunidad"
+                          autoComplete="off"
+                          {...field}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="-mt-1 text-[11px] leading-tight" />
                     </FormItem>
                   )}
                 />
               </div>
-
-              {/* Name */}
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="uppercase text-xs font-bold text-theme-text-subtle">
-                      Nombre de la comunidad
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        disabled={isLoading}
-                        className="bg-theme-bg-input-modal border-0 focus-visible:ring-0 text-theme-text-light focus-visible:ring-offset-0 text-[15px]!"
-                        placeholder="Mi comunidad"
-                        autoComplete="off"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
 
-            <DialogFooter className="bg-theme-bg-secondary px-6 py-4">
-              <Button
-                disabled={isLoading}
-                className="w-full cursor-pointer bg-theme-button-primary hover:bg-theme-button-hover text-white"
-                type="submit"
-              >
-                {isLoading ? "Creando..." : "Crear comunidad"}
-              </Button>
+            <DialogFooter className="border-t border-theme-border bg-theme-bg-secondary/40 px-6 py-1.5">
+              <div className="flex items-center justify-end gap-2 w-full">
+                <Button
+                  type="button"
+                  disabled={isLoading}
+                  onClick={handleClose}
+                  variant="ghost"
+                  className="h-6.5 cursor-pointer rounded-none bg-theme-bg-cancel-button px-3 text-[14px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  className="h-6.5 cursor-pointer rounded-none bg-theme-tab-button-bg px-3 text-[14px] text-theme-text-light hover:bg-theme-tab-button-hover disabled:cursor-not-allowed disabled:opacity-70"
+                  disabled={isLoading}
+                  type="submit"
+                >
+                  {isLoading ? "Creando..." : "Crear comunidad"}
+                </Button>
+              </div>
             </DialogFooter>
           </form>
         </Form>
