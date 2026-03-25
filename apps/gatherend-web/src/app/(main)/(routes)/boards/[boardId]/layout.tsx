@@ -20,8 +20,8 @@ import { UserThemeApplier } from "@/components/app-shell/providers/user-theme-ap
 import { useUserBoards } from "@/hooks/use-user-boards";
 import { CenterContentRouter } from "@/components/app-shell/center-content-router";
 
-import { useBoardMembersSocket } from "@/hooks/use-board-members-socket";
 import { useBoardSlotProfileIds } from "@/hooks/use-board-data";
+import { useBoardKickedSocket } from "@/hooks/use-board-kicked-socket";
 import { useProfileRoomSubscriptions } from "@/hooks/use-profile-room-subscriptions";
 
 // BoardId Layout - Client Component (SPA)
@@ -64,9 +64,7 @@ function BoardIdLayoutContent() {
 function BoardLayoutInner() {
   // Solo depende del boardId; evita re-renders al navegar entre channel/conversation/discovery.
   const currentBoardId = useCurrentBoardId();
-
-  // Escuchar cambios en miembros del board via WebSocket
-  useBoardMembersSocket(currentBoardId);
+  useBoardKickedSocket();
 
   // Realtime profile updates for member grid (occupied slots; N<=49)
   const slotProfileIds = useBoardSlotProfileIds();
