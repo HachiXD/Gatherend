@@ -210,3 +210,169 @@ export const profileCache = {
     }
   },
 };
+
+/**
+ * Cache helpers for Express membership snapshots.
+ * Next invalidates these keys after membership mutations because both apps
+ * share the same Redis instance in production.
+ */
+export const expressMemberCache = {
+  getKey(boardId: string, profileId: string): string {
+    return `member:${boardId}:${profileId}`;
+  },
+
+  async invalidate(boardId: string, profileId: string): Promise<void> {
+    try {
+      const client = await getRedis();
+      if (!client) return;
+
+      await client.del(this.getKey(boardId, profileId));
+    } catch (error) {
+      console.error("[REDIS] Error invalidating express member cache:", error);
+    }
+  },
+
+  async invalidateMany(boardId: string, profileIds: string[]): Promise<void> {
+    try {
+      const client = await getRedis();
+      if (!client || profileIds.length === 0) return;
+
+      await client.del(
+        profileIds.map((profileId) => this.getKey(boardId, profileId)),
+      );
+    } catch (error) {
+      console.error("[REDIS] Error invalidating express member caches:", error);
+    }
+  },
+
+  async invalidateByProfileId(profileId: string): Promise<void> {
+    try {
+      const client = await getRedis();
+      if (!client) return;
+
+      const keys = await client.keys(`member:*:${profileId}`);
+      if (keys.length === 0) return;
+
+      await client.del(keys);
+    } catch (error) {
+      console.error(
+        "[REDIS] Error invalidating express member caches by profile:",
+        error,
+      );
+    }
+  },
+};
+
+export const expressProfileCache = {
+  getKey(profileId: string): string {
+    return `profile:${profileId}`;
+  },
+
+  async invalidate(profileId: string): Promise<void> {
+    try {
+      const client = await getRedis();
+      if (!client) return;
+
+      await client.del(this.getKey(profileId));
+    } catch (error) {
+      console.error("[REDIS] Error invalidating express profile cache:", error);
+    }
+  },
+};
+
+export const expressAuthProfileCache = {
+  getKey(userId: string): string {
+    return `auth:profile:${userId}`;
+  },
+
+  async invalidate(userId: string): Promise<void> {
+    try {
+      const client = await getRedis();
+      if (!client) return;
+
+      await client.del(this.getKey(userId));
+    } catch (error) {
+      console.error(
+        "[REDIS] Error invalidating express auth profile cache:",
+        error,
+      );
+    }
+  },
+};
+
+export const expressIdentityProfileCache = {
+  getKey(provider: string, providerUserId: string): string {
+    return `auth:identity:${provider}:${providerUserId}`;
+  },
+
+  async invalidate(provider: string, providerUserId: string): Promise<void> {
+    try {
+      const client = await getRedis();
+      if (!client) return;
+
+      await client.del(this.getKey(provider, providerUserId));
+    } catch (error) {
+      console.error(
+        "[REDIS] Error invalidating express identity profile cache:",
+        error,
+      );
+    }
+  },
+
+  async invalidateMany(
+    identities: Array<{ provider: string; providerUserId: string }>,
+  ): Promise<void> {
+    try {
+      const client = await getRedis();
+      if (!client || identities.length === 0) return;
+
+      await client.del(
+        identities.map((identity) =>
+          this.getKey(identity.provider, identity.providerUserId),
+        ),
+      );
+    } catch (error) {
+      console.error(
+        "[REDIS] Error invalidating express identity profile caches:",
+        error,
+      );
+    }
+  },
+};
+
+export const expressChannelCache = {
+  getKey(channelId: string): string {
+    return `channel:${channelId}`;
+  },
+
+  async invalidateMany(channelIds: string[]): Promise<void> {
+    try {
+      const client = await getRedis();
+      if (!client || channelIds.length === 0) return;
+
+      await client.del(channelIds.map((channelId) => this.getKey(channelId)));
+    } catch (error) {
+      console.error("[REDIS] Error invalidating express channel caches:", error);
+    }
+  },
+};
+
+export const expressVoiceChannelsCache = {
+  getKey(boardId: string): string {
+    return `voice:channels:${boardId}`;
+  },
+
+  async invalidate(boardId: string): Promise<void> {
+    try {
+      const client = await getRedis();
+      if (!client) return;
+
+      await client.del(this.getKey(boardId));
+    } catch (error) {
+      console.error(
+        "[REDIS] Error invalidating express voice channels cache:",
+        error,
+      );
+    }
+  },
+};
