@@ -23,6 +23,7 @@ interface LastMessage {
   content: string;
   attachmentAsset?: ClientAttachmentAsset | null;
   hasAttachment?: boolean;
+  stickerName?: string | null;
   deleted: boolean;
   senderId: string;
 }

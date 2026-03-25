@@ -76,7 +76,9 @@ export const DirectMessageItem = memo(function DirectMessageItemComponent({
 
     let preview = "";
 
-    if (lastMessage.hasAttachment || lastMessage.attachmentAsset) {
+    if (lastMessage.stickerName) {
+      preview = `[Sticker: ${lastMessage.stickerName}]`;
+    } else if (lastMessage.hasAttachment || lastMessage.attachmentAsset) {
       preview = `📎 ${t.dm.sentAFile}`;
     } else {
       // Truncar contenido si es muy largo

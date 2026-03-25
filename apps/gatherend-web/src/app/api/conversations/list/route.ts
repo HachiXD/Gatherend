@@ -91,6 +91,11 @@ export async function GET() {
             deleted: true,
             senderId: true,
             attachmentAssetId: true,
+            sticker: {
+              select: {
+                name: true,
+              },
+            },
           },
         },
       },
@@ -115,6 +120,7 @@ export async function GET() {
             hasAttachment: Boolean(
               conversation.directMessages[0].attachmentAssetId,
             ),
+            stickerName: conversation.directMessages[0].sticker?.name ?? null,
           }
         : null;
 

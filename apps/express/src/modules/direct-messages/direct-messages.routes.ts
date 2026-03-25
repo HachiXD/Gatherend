@@ -107,6 +107,7 @@ router.post("/", async (req, res) => {
         lastMessage: {
           content: savedMessage.content,
           attachmentAsset: (messageWithTempId as any).attachmentAsset ?? null,
+          stickerName: savedMessage.sticker?.name ?? null,
           deleted: false,
           senderId: profileId,
         },

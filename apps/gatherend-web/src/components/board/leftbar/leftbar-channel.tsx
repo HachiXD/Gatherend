@@ -100,7 +100,9 @@ const LeftbarChannelComponent = ({
       })?.username || "";
     let preview = "";
 
-    if (lastMessage.hasAttachment || lastMessage.attachmentAsset) {
+    if (lastMessage.sticker) {
+      preview = `[Sticker: ${lastMessage.sticker.name}]`;
+    } else if (lastMessage.hasAttachment || lastMessage.attachmentAsset) {
       preview = `📎 ${t.dm.sentAFile}`;
     } else {
       const maxLength = 30;
