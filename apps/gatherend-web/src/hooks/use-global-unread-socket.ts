@@ -1,4 +1,5 @@
 import { useSocketClient } from "@/components/providers/socket-provider";
+import { acquireBoardRoom, releaseBoardRoom, rejoinBoardRooms } from "@/hooks/board-room-subscriptions";
 import { useEffect, useMemo, useRef } from "react";
 import { useUnreadStore } from "./use-unread-store";
 import { useQueryClient } from "@tanstack/react-query";
@@ -24,6 +25,7 @@ type ProfileInfo = ClientProfileSummary;
 interface ChannelMessagePayload {
   channelId: string;
   messageTimestamp?: number; // timestamp del mensaje para comparar con lastAck
+  messageSender?: ProfileInfo | null;
   member?: {
     profile?: ProfileInfo;
   };
@@ -114,7 +116,7 @@ export const useGlobalUnreadSocket = ({
     // Handler para mensajes de canales
     const handleChannelMessage = (payload: ChannelMessagePayload) => {
       const { channelId, member, messageTimestamp } = payload;
-      const messageSender = member?.profile;
+      const messageSender = payload.messageSender ?? member?.profile ?? null;
       const isOwnMessage = messageSender?.id === currentProfileId;
 
       // Usar ref para obtener el valor más actualizado (evita stale closure)
@@ -251,7 +253,7 @@ export const useGlobalUnreadSocket = ({
     // Rejoin all board rooms on every connect/reconnect.
     const joinAllBoards = () => {
       boardIdList.forEach((boardId) => {
-        socket.emit("join-board", { boardId });
+        acquireBoardRoom(socket, boardId);
       });
     };
 
@@ -260,7 +262,7 @@ export const useGlobalUnreadSocket = ({
     }
 
     const handleConnect = () => {
-      joinAllBoards();
+      rejoinBoardRooms(socket);
     };
 
     // Escuchar eventos de nuevos mensajes en todos los boards
@@ -281,7 +283,7 @@ export const useGlobalUnreadSocket = ({
 
       // Salir de los boards
       boardIdList.forEach((boardId) => {
-        socket.emit("leave-board", { boardId });
+        releaseBoardRoom(socket, boardId);
       });
     };
   }, [socket, currentProfileId, boardIdList, addUnread, queryClient]);

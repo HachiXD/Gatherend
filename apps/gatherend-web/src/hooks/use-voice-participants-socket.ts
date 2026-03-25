@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useSocket } from "@/components/providers/socket-provider";
+import { acquireBoardRoom, releaseBoardRoom, rejoinBoardRooms } from "@/hooks/board-room-subscriptions";
 import {
   useVoiceParticipantsStore,
   type VoiceParticipant,
@@ -67,10 +68,12 @@ export function useVoiceParticipantsSocket(boardId: string) {
     socket.on(participantsEvent, handleVoiceParticipants);
 
     const syncBoardParticipants = () => {
-      // Idempotent on the server. Calling on each connect keeps rooms + state consistent.
-      socket.emit("join-board", { boardId });
+      // Keep board room membership after reconnects, then refresh participants.
+      rejoinBoardRooms(socket);
       socket.emit("voice-get-board-participants", { boardId });
     };
+
+    acquireBoardRoom(socket, boardId);
 
     // If already connected, sync immediately; also re-sync on reconnect (Socket.IO fires "connect").
     if (socket.connected) {
@@ -84,6 +87,7 @@ export function useVoiceParticipantsSocket(boardId: string) {
       socket.off(leaveEvent, handleVoiceLeave);
       socket.off(participantsEvent, handleVoiceParticipants);
       socket.off("connect", syncBoardParticipants);
+      releaseBoardRoom(socket, boardId);
     };
   }, [socket, boardId]);
 }
