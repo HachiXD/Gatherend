@@ -21,11 +21,11 @@ export const metadata: Metadata = {
   title: "Gatherend — Small communities",
   description: "Meet new friends through small groups of 3–49 people.",
   icons: {
-    icon: "/GATHERN_RELLENO.svg",
+    icon: "/GATHEREND_SQUARE_RELLENADO.svg",
   },
   openGraph: {
     title: "Gatherend — Small communities",
-    description: "Meet new friends through small groups of 3–49 people.",
+    description: "Meet new friends through small groups and big communities.",
     images: [
       {
         url: "/portadaFINAL.png",
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Gatherend — Small communities",
-    description: "Meet new friends through small groups of 3–49 people.",
+    description: "Meet new friends through small groups and big communities.",
     images: ["/portadaFINAL.png"],
   },
 };
@@ -55,11 +55,7 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} suppressHydrationWarning>
-      <body
-        className={cn(
-          "bg-theme-bg-quaternary",
-        )}
-      >
+      <body className={cn("bg-theme-bg-quaternary")}>
         <ThemeProvider
           nonce={nonce}
           attribute="class"

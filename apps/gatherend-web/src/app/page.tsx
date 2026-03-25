@@ -27,7 +27,7 @@ export default async function LandingPage() {
         />
         <div className="absolute top-2 left-0 flex items-center gap-2 w-full px-6 z-10">
           <Image
-            src="/GATHERN_RELLENO.svg"
+            src="/GATHEREND_OUTLINE_RELLENADO_V1_BOTAS.svg"
             alt="Gatherend Logo"
             width={42}
             height={42}
@@ -56,7 +56,7 @@ export default async function LandingPage() {
           {/* Left side - Text content */}
           <div className="flex flex-col items-center md:items-start text-center md:text-left max-w-xl">
             <Image
-              src="/GATHERN_RELLENO.svg"
+              src="/GATHEREND_OUTLINE_RELLENADO_V1_BOTAS.svg"
               alt="Gatherend Logo"
               width={120}
               height={120}
@@ -120,7 +120,7 @@ export default async function LandingPage() {
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Image
-              src="/GATHERN_RELLENO.svg"
+              src="/GATHEREND_OUTLINE_RELLENADO_V1_BOTAS.svg"
               alt="Gatherend Logo"
               width={24}
               height={24}
