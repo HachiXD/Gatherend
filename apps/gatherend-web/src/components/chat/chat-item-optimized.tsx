@@ -262,13 +262,11 @@ const ProfileNameTrigger = memo(function ProfileNameTrigger({
   resolvedTheme,
 }: {
   canOpenAuthorProfile: boolean;
-  authorProfile: {
-    id?: string;
+  authorProfile: Pick<
+    ClientProfileSummary,
+    "id" | "username" | "discriminator" | "usernameColor" | "usernameFormat"
+  > & {
     imageUrl?: string;
-    username?: string;
-    discriminator?: string | null;
-    usernameColor?: unknown;
-    usernameFormat?: unknown;
   };
   currentProfile: ClientProfile;
   memberId?: string;
