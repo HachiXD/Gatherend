@@ -41,6 +41,7 @@ const SocketClientContext = createContext<SocketClientContextType>({
 });
 
 const SocketConnectionContext = createContext<boolean>(false);
+const SocketRecoveryContext = createContext<number>(0);
 
 export const useSocketClient = () => {
   return useContext(SocketClientContext);
@@ -48,6 +49,10 @@ export const useSocketClient = () => {
 
 export const useSocketConnection = () => {
   return useContext(SocketConnectionContext);
+};
+
+export const useSocketRecoveryVersion = () => {
+  return useContext(SocketRecoveryContext);
 };
 
 // Backward-compatible hook for existing callers.
@@ -66,8 +71,11 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [reconnectVersion, setReconnectVersion] = useState(0);
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const socketRef = useRef<Socket | null>(null); // Para acceder al socket en beforeunload
+  const hasConnectedBeforeRef = useRef(false);
+  const wasDisconnectedRef = useRef(false);
 
   // Stop heartbeat interval
   const stopHeartbeat = useCallback(() => {
@@ -253,6 +261,12 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         newSocket.on("connect", () => {
           setIsConnected(true);
           setSocket(socketRef.current);
+          if (hasConnectedBeforeRef.current && wasDisconnectedRef.current) {
+            setReconnectVersion((current) => current + 1);
+            wasDisconnectedRef.current = false;
+          } else {
+            hasConnectedBeforeRef.current = true;
+          }
           // Start heartbeat when connected (defensive: stops any existing first)
           startHeartbeat();
         });
@@ -262,6 +276,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
             console.trace(`[Socket] disconnect trace - reason: ${reason}`);
           }
           setIsConnected(false);
+          wasDisconnectedRef.current = true;
           // Stop heartbeat on disconnect
           stopHeartbeat();
           if (reason === "io server disconnect") {
@@ -373,8 +388,10 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   return (
     <SocketClientContext.Provider value={socketClientValue}>
       <SocketConnectionContext.Provider value={isConnected}>
-        <ProfileUpdatesListener />
-        {children}
+        <SocketRecoveryContext.Provider value={reconnectVersion}>
+          <ProfileUpdatesListener />
+          {children}
+        </SocketRecoveryContext.Provider>
       </SocketConnectionContext.Provider>
     </SocketClientContext.Provider>
   );
