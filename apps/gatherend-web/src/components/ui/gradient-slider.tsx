@@ -182,24 +182,36 @@ export function GradientSlider<
       const sortedColors = [...colors].sort((a, b) => a.position - b.position);
       let leftColor = sortedColors[0];
       let rightColor = sortedColors[sortedColors.length - 1];
+      let newColor = leftColor.color;
 
-      for (let i = 0; i < sortedColors.length - 1; i++) {
-        if (
-          sortedColors[i].position <= position &&
-          sortedColors[i + 1].position >= position
-        ) {
-          leftColor = sortedColors[i];
-          rightColor = sortedColors[i + 1];
-          break;
+      if (position <= sortedColors[0].position) {
+        newColor = sortedColors[0].color;
+      } else if (
+        position >= sortedColors[sortedColors.length - 1].position
+      ) {
+        newColor = sortedColors[sortedColors.length - 1].color;
+      } else {
+        for (let i = 0; i < sortedColors.length - 1; i++) {
+          if (
+            sortedColors[i].position <= position &&
+            sortedColors[i + 1].position >= position
+          ) {
+            leftColor = sortedColors[i];
+            rightColor = sortedColors[i + 1];
+            break;
+          }
         }
-      }
 
-      const newColor = interpolateColor(
-        leftColor.color,
-        rightColor.color,
-        (position - leftColor.position) /
-          (rightColor.position - leftColor.position || 1),
-      );
+        const factor =
+          (position - leftColor.position) /
+          (rightColor.position - leftColor.position || 1);
+        const clampedFactor = Math.max(0, Math.min(1, factor));
+        newColor = interpolateColor(
+          leftColor.color,
+          rightColor.color,
+          clampedFactor,
+        );
+      }
 
       const newStop = createColor
         ? createColor({ color: newColor, position })

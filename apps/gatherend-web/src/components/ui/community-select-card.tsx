@@ -23,7 +23,7 @@ export function CommunitySelectCard({
         "flex w-full items-center gap-2 border px-2 py-1.5 text-left transition",
         "border-theme-border cursor-pointer bg-theme-bg-secondary/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.28),inset_0_-1px_0_rgba(0,0,0,0.28)] hover:bg-theme-bg-tertiary/40",
         isSelected
-          ? "border-theme-accent-primary bg-theme-accent-primary/12"
+          ? "border-theme-border-accent-active-channel bg-theme-bg-secondary/40 text-theme-text-light"
           : "text-theme-text-subtle",
       )}
     >
