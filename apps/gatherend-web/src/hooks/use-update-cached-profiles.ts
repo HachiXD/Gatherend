@@ -18,6 +18,8 @@ interface ChatPage {
 
 interface ChatMessage {
   id: string;
+  messageSenderId?: string | null;
+  messageSender?: CachedProfile | null;
   sender?: CachedProfile;
   member?: {
     id: string;
@@ -26,6 +28,8 @@ interface ChatMessage {
   };
   replyTo?: {
     id: string;
+    messageSenderId?: string | null;
+    messageSender?: CachedProfile | null;
     sender?: CachedProfile;
     member?: {
       id: string;
@@ -78,17 +82,27 @@ function updateMessageProfiles(
     updated = true;
   }
 
-  // Update member.profile (for channel messages)
-  if (newMessage.member?.profile?.id === profileId) {
-    newMessage.member = {
-      ...newMessage.member,
-      profile: { ...newMessage.member.profile, ...updates },
+  // Update messageSender (for channel messages)
+  if (newMessage.messageSender?.id === profileId) {
+    newMessage.messageSender = {
+      ...newMessage.messageSender,
+      ...updates,
     };
     updated = true;
   }
 
-  // Update replyTo.sender or replyTo.member.profile
+  // Update replyTo.messageSender / replyTo.sender / legacy replyTo.member.profile
   if (newMessage.replyTo) {
+    if (newMessage.replyTo.messageSender?.id === profileId) {
+      newMessage.replyTo = {
+        ...newMessage.replyTo,
+        messageSender: {
+          ...newMessage.replyTo.messageSender,
+          ...updates,
+        },
+      };
+      updated = true;
+    }
     if (newMessage.replyTo.sender?.id === profileId) {
       newMessage.replyTo = {
         ...newMessage.replyTo,
@@ -96,7 +110,10 @@ function updateMessageProfiles(
       };
       updated = true;
     }
-    if (newMessage.replyTo.member?.profile?.id === profileId) {
+    if (
+      !newMessage.replyTo.messageSender &&
+      newMessage.replyTo.member?.profile?.id === profileId
+    ) {
       newMessage.replyTo = {
         ...newMessage.replyTo,
         member: {

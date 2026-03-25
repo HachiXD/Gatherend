@@ -5,21 +5,14 @@ import { useTokenGetter } from "@/components/providers/token-manager-provider";
 import { getExpressAuthHeaders } from "@/lib/express-fetch";
 import type {
   ClientAttachmentAsset,
-  ClientProfileSummary,
 } from "@/types/uploaded-assets";
+import type { ChannelMessage } from "@/hooks/chat/types";
 
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
-interface LastMessageData {
-  id: string;
-  content: string;
-  attachmentAsset: ClientAttachmentAsset | null;
+interface LastMessageData extends ChannelMessage {
   hasAttachment?: boolean;
-  deleted: boolean;
-  member: {
-    profile: ClientProfileSummary;
-  };
-  createdAt: string;
+  attachmentAsset: ClientAttachmentAsset | null;
 }
 
 interface UseMainChannelLastMessageProps {

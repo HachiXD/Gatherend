@@ -2,7 +2,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { v4 as uuidv4 } from "uuid";
 import type { ClientProfile } from "@/hooks/use-current-profile";
 import { useCallback, useRef } from "react";
-import type { ChatMessage } from "@/hooks/chat/types";
+import type {
+  ChannelMessage,
+  ChatMessage,
+  DirectMessageWithSender,
+} from "@/hooks/chat/types";
 import { chatMessageWindowStore } from "@/hooks/chat/chat-message-window-store";
 import {
   setOptimisticTimeout,
@@ -11,48 +15,88 @@ import {
 import { logger } from "@/lib/logger";
 import type {
   ClientAttachmentAsset,
-  ClientProfileSummary,
   ClientSticker,
 } from "@/types/uploaded-assets";
 
-// Type for server message response (can be channel message or direct message)
-export interface ServerMessage {
-  id: string;
-  content: string;
-  createdAt: string | Date;
-  updatedAt: string | Date;
-  deleted: boolean;
-  attachmentAssetId?: string | null;
-  attachmentAsset?: ClientAttachmentAsset | null;
-  sticker?: ClientSticker | null;
-  // For channel messages
-  member?: {
-    id: string;
-    role: string;
-    profile: ClientProfileSummary;
-  };
-  // For direct messages
-  sender?: ClientProfileSummary;
+export type ServerMessage = (ChannelMessage | DirectMessageWithSender) & {
   tempId?: string;
-}
+};
 
 // Timeout before marking message as failed (10 seconds)
 const OPTIMISTIC_MESSAGE_TIMEOUT = 10000;
 
-export interface OptimisticMessage {
+type OptimisticMessage =
+  | (ChannelMessage & {
+      createdAt: Date;
+      updatedAt: Date;
+      attachmentAssetId: string | null;
+      attachmentAsset: ClientAttachmentAsset | null;
+      sticker?: ClientSticker | null;
+      isOptimistic: true;
+      tempId: string;
+      isFailed?: boolean;
+    })
+  | (DirectMessageWithSender & {
+      createdAt: Date;
+      updatedAt: Date;
+      attachmentAssetId: string | null;
+      attachmentAsset: ClientAttachmentAsset | null;
+      sticker?: ClientSticker | null;
+      isOptimistic: true;
+      tempId: string;
+      isFailed?: boolean;
+    });
+
+interface OptimisticMessageBase {
   id: string;
   content: string;
   createdAt: Date;
   updatedAt: Date;
   deleted: boolean;
   attachmentAssetId: null;
-  attachmentAsset: null;
+  attachmentAsset: ClientAttachmentAsset | null;
   sticker?: ClientSticker | null;
-  sender: ClientProfile;
   isOptimistic: true;
   tempId: string;
-  isFailed?: boolean; // New: marks message as failed after timeout
+  isFailed?: boolean;
 }
+
+const buildOptimisticMessage = (
+  queryKey: string[],
+  tempId: string,
+  content: string,
+  now: Date,
+  currentProfile: ClientProfile,
+  sticker?: ClientSticker,
+): OptimisticMessage => {
+  const base: OptimisticMessageBase = {
+    id: tempId,
+    content,
+    createdAt: now,
+    updatedAt: now,
+    deleted: false,
+    attachmentAssetId: null,
+    attachmentAsset: null,
+    sticker,
+    isOptimistic: true,
+    tempId,
+    isFailed: false,
+  };
+
+  if (queryKey[1] === "channel") {
+    return {
+      ...base,
+      messageSenderId: currentProfile.id,
+      messageSender: currentProfile,
+      member: null,
+    };
+  }
+
+  return {
+    ...base,
+    sender: currentProfile,
+  };
+};
 
 interface QueryPage {
   items: unknown[];
@@ -208,20 +252,14 @@ export const useOptimisticMessages = () => {
       const tempId = `optimistic-${uuidv4()}`;
       const now = getNormalizedOptimisticNow(queryKey);
 
-      const optimisticMessage: OptimisticMessage = {
-        id: tempId,
-        content,
-        createdAt: now,
-        updatedAt: now,
-        deleted: false,
-        attachmentAssetId: null,
-        attachmentAsset: null,
-        sticker,
-        sender: currentProfile,
-        isOptimistic: true,
+      const optimisticMessage = buildOptimisticMessage(
+        queryKey,
         tempId,
-        isFailed: false,
-      };
+        content,
+        now,
+        currentProfile,
+        sticker,
+      );
 
       // Agregar el mensaje optimista al cache de React Query
       queryClient.setQueryData<InfiniteQueryData>(queryKey, (oldData) => {

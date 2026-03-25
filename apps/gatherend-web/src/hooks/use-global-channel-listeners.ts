@@ -5,24 +5,35 @@ import { useSocketClient } from "@/components/providers/socket-provider";
 import { useQueryClient } from "@tanstack/react-query";
 import { MESSAGES_PER_PAGE } from "./chat/types";
 import { useUnreadStore } from "./use-unread-store";
-import type { ChatMessage, MessageWithMember } from "@/hooks/chat/types";
+import type {
+  ChannelMessage,
+  ChatMessage,
+  ChatReaction,
+} from "@/hooks/chat/types";
 import { chatMessageWindowStore } from "@/hooks/chat/chat-message-window-store";
 import { clearOptimisticTimeout } from "./use-chat-socket";
 import {
   getTrackedChatRoomIds,
   useChatRoomLifecycleStore,
 } from "./use-chat-room-lifecycle-store";
+import { getMessageOwnerProfileId } from "@/hooks/chat";
 
 const MAX_ITEMS_PER_PAGE = MESSAGES_PER_PAGE;
 
-type ChannelMessagePayload = MessageWithMember & {
+type ChannelMessagePayload = ChannelMessage & {
   tempId?: string;
   isOptimistic?: boolean;
   channelId?: string;
 };
 
+interface ReactionPayload {
+  messageId: string;
+  reaction: ChatReaction;
+  action: "add" | "remove";
+}
+
 interface PaginatedMessagePage {
-  items: MessageWithMember[];
+  items: ChannelMessage[];
   nextCursor?: string | null;
   previousCursor?: string | null;
 }
@@ -86,7 +97,7 @@ export function useGlobalChannelListeners({
             return {
               pages: [
                 {
-                  items: [cleanMessage as MessageWithMember],
+                  items: [cleanMessage as ChannelMessage],
                   nextCursor: null,
                   previousCursor: null,
                 },
@@ -102,7 +113,7 @@ export function useGlobalChannelListeners({
 
               const optimisticIndex = page.items.findIndex(
                 (
-                  item: MessageWithMember & {
+                  item: ChannelMessage & {
                     isOptimistic?: boolean;
                     tempId?: string;
                   },
@@ -111,7 +122,7 @@ export function useGlobalChannelListeners({
 
               if (optimisticIndex !== -1) {
                 const updatedItems = [...page.items];
-                updatedItems[optimisticIndex] = cleanMessage as MessageWithMember;
+                updatedItems[optimisticIndex] = cleanMessage as ChannelMessage;
                 pages[pageIndex] = { ...page, items: updatedItems };
                 return { ...oldData, pages };
               }
@@ -129,7 +140,7 @@ export function useGlobalChannelListeners({
           }
 
           const newItems = [
-            cleanMessage as MessageWithMember,
+            cleanMessage as ChannelMessage,
             ...firstPage.items,
           ];
 
@@ -171,8 +182,8 @@ export function useGlobalChannelListeners({
       );
 
       const unreadState = useUnreadStore.getState();
-      const messageSender = message.member?.profile || null;
-      const isOwnMessage = messageSender?.id === currentProfileId;
+      const isOwnMessage =
+        getMessageOwnerProfileId(message as ChannelMessage) === currentProfileId;
       const isViewingThisRoom = unreadState.viewingRoom === channelId;
 
       if (!isOwnMessage && !isViewingThisRoom) {
@@ -182,7 +193,7 @@ export function useGlobalChannelListeners({
 
     const handleChannelUpdate = (
       channelId: string,
-      message: MessageWithMember,
+      message: ChannelMessage,
     ) => {
       if (!trackedChannelsRef.current.has(channelId)) {
         return;
@@ -226,24 +237,108 @@ export function useGlobalChannelListeners({
       );
     };
 
+    const handleChannelReaction = (
+      channelId: string,
+      data: ReactionPayload,
+    ) => {
+      if (!trackedChannelsRef.current.has(channelId)) {
+        return;
+      }
+
+      const key = ["chat", "channel", channelId];
+      const windowKey = `chatWindow:channel:${channelId}`;
+
+      queryClient.setQueryData(
+        key,
+        (oldData: PaginatedMessageData | undefined) => {
+          if (!oldData || !oldData.pages) return oldData;
+
+          const pages = oldData.pages.map((page) => {
+            if (!page || !Array.isArray(page.items)) return page;
+            return {
+              ...page,
+              items: page.items.map((message) => {
+                if (message.id !== data.messageId) return message;
+                const currentReactions = message.reactions || [];
+
+                if (data.action === "add") {
+                  if (
+                    currentReactions.some(
+                      (reaction) => reaction.id === data.reaction.id,
+                    )
+                  ) {
+                    return message;
+                  }
+                  return {
+                    ...message,
+                    reactions: [...currentReactions, data.reaction],
+                  };
+                }
+
+                return {
+                  ...message,
+                  reactions: currentReactions.filter(
+                    (reaction) => reaction.id !== data.reaction.id,
+                  ),
+                };
+              }),
+            };
+          });
+
+          return { ...oldData, pages };
+        },
+      );
+
+      chatMessageWindowStore.updateById(windowKey, data.messageId, (prev) => {
+        const current = (prev as ChannelMessage).reactions;
+        const currentReactions = Array.isArray(current) ? current : [];
+
+        if (data.action === "add") {
+          if (
+            currentReactions.some((reaction) => reaction.id === data.reaction.id)
+          ) {
+            return prev;
+          }
+          return {
+            ...(prev as ChannelMessage),
+            reactions: [...currentReactions, data.reaction],
+          };
+        }
+
+        return {
+          ...(prev as ChannelMessage),
+          reactions: currentReactions.filter(
+            (reaction) => reaction.id !== data.reaction.id,
+          ),
+        };
+      });
+    };
+
     const setupListenersForChannel = (channelId: string) => {
       const addKey = `chat:${channelId}:messages`;
       const updateKey = `chat:${channelId}:messages:update`;
+      const reactionKey = `chat:${channelId}:reactions`;
 
       const onMessage = (message: ChannelMessagePayload) => {
         handleChannelMessage(channelId, message);
       };
 
-      const onUpdate = (message: MessageWithMember) => {
+      const onUpdate = (message: ChannelMessage) => {
         handleChannelUpdate(channelId, message);
+      };
+
+      const onReaction = (data: ReactionPayload) => {
+        handleChannelReaction(channelId, data);
       };
 
       socket.on(addKey, onMessage);
       socket.on(updateKey, onUpdate);
+      socket.on(reactionKey, onReaction);
 
       return () => {
         socket.off(addKey, onMessage);
         socket.off(updateKey, onUpdate);
+        socket.off(reactionKey, onReaction);
       };
     };
 
