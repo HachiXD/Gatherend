@@ -180,6 +180,7 @@ export const es: TranslationKeys = {
     uploadFailed: "Error al subir el archivo",
     sendFailed: "Error al enviar",
     onlyFirstImageUsed: "Solo se usará la primera imagen",
+    deletedMember: "Miembro eliminado",
   },
 
   emojiPicker: {
@@ -282,7 +283,7 @@ export const es: TranslationKeys = {
         general: "General",
         members: "Miembros",
         bans: "Baneos",
-        dangerZone: "Área de peligro",
+        dangerZone: "Zona de Eliminación",
       },
       general: {
         title: "General",
@@ -321,7 +322,9 @@ export const es: TranslationKeys = {
       members: {
         title: "Miembros",
         roleLabel: "Rol",
+        actions: "Acciones",
         kick: "Expulsar",
+        ban: "Banear",
         roles: {
           guest: "Invitado",
           moderator: "Moderador",
@@ -344,11 +347,11 @@ export const es: TranslationKeys = {
       },
 
       dangerZone: {
-        title: "Área de peligro",
+        title: "Zona de Eliminación",
         subtitle: "Acciones irreversibles y destructivas",
         deleteSectionTitle: "Eliminar este board",
         deleteSectionDescription:
-          "Una vez que eliminas un board, no hay vuelta atrás. Esto eliminará permanentemente el board, todos los canales, mensajes y removerá a todos los miembros.",
+          "Una vez que eliminas un board, no hay vuelta atrás. Esto eliminará permanentemente el board, todos los canales, mensajes y quitará a todos los miembros.",
         deleteBoardButton: "Eliminar Board",
         confirmTitle: "Eliminar board",
         confirmQuestion: "¿Estás seguro de que quieres hacer esto?",
@@ -369,7 +372,7 @@ export const es: TranslationKeys = {
       tabs: {
         account: "Cuenta",
         logout: "Cerrar sesión",
-        dangerZone: "Área de Peligro",
+        dangerZone: "Zona de Eliminación",
       },
       account: {
         title: "Cuenta y Seguridad",
@@ -391,7 +394,7 @@ export const es: TranslationKeys = {
           "Cerrar sesión solo te desconectará de este dispositivo. Tu cuenta y datos permanecerán seguros.",
       },
       dangerZone: {
-        title: "Área de Peligro",
+        title: "Zona de Eliminación",
         subtitle: "Acciones irreversibles y destructivas",
         warning: "Las acciones aquí no se pueden deshacer.",
         deleteSectionTitle: "Eliminar tu cuenta",

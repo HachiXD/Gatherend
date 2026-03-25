@@ -194,6 +194,7 @@ export type TranslationKeys = {
     uploadFailed: string;
     sendFailed: string;
     onlyFirstImageUsed: string;
+    deletedMember: string;
   };
 
   // Emoji Picker
@@ -339,7 +340,9 @@ export type TranslationKeys = {
       members: {
         title: string;
         roleLabel: string;
+        actions: string;
         kick: string;
+        ban: string;
         roles: {
           guest: string;
           moderator: string;

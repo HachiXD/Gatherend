@@ -180,6 +180,7 @@ export const en: TranslationKeys = {
     uploadFailed: "Upload failed",
     sendFailed: "Send failed",
     onlyFirstImageUsed: "Only the first image will be used",
+    deletedMember: "Deleted member",
   },
 
   emojiPicker: {
@@ -282,7 +283,7 @@ export const en: TranslationKeys = {
         general: "General",
         members: "Members",
         bans: "Bans",
-        dangerZone: "Danger Zone",
+        dangerZone: "Deletion Zone",
       },
       general: {
         title: "General",
@@ -321,7 +322,9 @@ export const en: TranslationKeys = {
       members: {
         title: "Members",
         roleLabel: "Role",
+        actions: "Actions",
         kick: "Kick",
+        ban: "Ban",
         roles: {
           guest: "Guest",
           moderator: "Moderator",
@@ -344,7 +347,7 @@ export const en: TranslationKeys = {
       },
 
       dangerZone: {
-        title: "Danger Zone",
+        title: "Deletion Zone",
         subtitle: "Irreversible and destructive actions",
         deleteSectionTitle: "Delete this board",
         deleteSectionDescription:
@@ -369,7 +372,7 @@ export const en: TranslationKeys = {
       tabs: {
         account: "Account",
         logout: "Log out",
-        dangerZone: "Danger Zone",
+        dangerZone: "Deletion Zone",
       },
       account: {
         title: "Account & Security",
@@ -390,7 +393,7 @@ export const en: TranslationKeys = {
           "Logging out will sign you out from this device only. Your account and data will remain safe.",
       },
       dangerZone: {
-        title: "Danger Zone",
+        title: "Deletion Zone",
         subtitle: "Irreversible and destructive actions",
         warning: "Actions here cannot be undone.",
         deleteSectionTitle: "Delete your account",
