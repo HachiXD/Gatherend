@@ -24,12 +24,14 @@ export interface ChatReplyTarget {
   content: string;
   attachmentAssetId?: string | null;
   attachmentAsset?: ClientAttachmentAsset | null;
+  messageSenderId?: string | null;
+  messageSender?: ClientProfileSummary | null;
   sender?: ClientProfileSummary;
-  member?: ChatMember;
+  member?: ChatMember | null;
   sticker?: ClientSticker | null;
 }
 
-export interface MessageWithMember {
+export interface ChannelMessage {
   id: string;
   content: string;
   type?: string;
@@ -39,12 +41,15 @@ export interface MessageWithMember {
   pinned?: boolean;
   createdAt: string | Date;
   updatedAt: string | Date;
-  member: ChatMember;
+  messageSenderId: string | null;
+  messageSender: ClientProfileSummary | null;
+  member?: ChatMember | null;
   sticker?: ClientSticker | null;
   reactions?: ChatReaction[];
   replyTo?: ChatReplyTarget | null;
   filePreviewUrl?: string | null;
   fileStaticPreviewUrl?: string | null;
+  channelId?: string;
 }
 
 export interface DirectMessageWithSender {
@@ -64,7 +69,7 @@ export interface DirectMessageWithSender {
   fileStaticPreviewUrl?: string | null;
 }
 
-export type ChatMessage = MessageWithMember | DirectMessageWithSender;
+export type ChatMessage = ChannelMessage | DirectMessageWithSender;
 
 export interface ChatPage {
   id: string;

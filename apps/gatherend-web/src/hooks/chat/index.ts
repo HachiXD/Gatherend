@@ -5,3 +5,4 @@ export * from "./chat-scroll-dimensions-store";
 export * from "./chat-placeholder-specs";
 export * from "./use-scroll-manager";
 export * from "./use-scroll-stability";
+export * from "./message-author";

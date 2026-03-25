@@ -1,5 +1,6 @@
 import { useRef, useSyncExternalStore } from "react";
 import type { ChatMessage } from "./types";
+import { getMessageOwnerProfileId, isChannelMessage } from "./message-author";
 
 export interface ChatMessageWindowState {
   key: string;
@@ -94,9 +95,7 @@ function isWelcomeMessage(m: ChatMessage): boolean {
 }
 
 function getSenderId(m: ChatMessage): string | null {
-  const isMessageWithMember = "member" in m;
-  const sender = isMessageWithMember ? m.member?.profile : m.sender;
-  return sender?.id ?? null;
+  return getMessageOwnerProfileId(m);
 }
 
 function patchProfileOnMessage(
@@ -119,18 +118,17 @@ function patchProfileOnMessage(
     return (localChanged ? (next as T) : obj) as T;
   };
 
-  const isMessageWithMember = "member" in message;
-  const nextMember =
-    isMessageWithMember && message.member?.profile?.id === profileId
-      ? { ...message.member, profile: apply(message.member.profile as any) }
-      : isMessageWithMember
-        ? message.member
+  const nextMessageSender =
+    isChannelMessage(message) && message.messageSender?.id === profileId
+      ? apply(message.messageSender as any)
+      : isChannelMessage(message)
+        ? message.messageSender
         : undefined;
 
   const nextSender =
-    !isMessageWithMember && (message as any).sender?.id === profileId
+    !isChannelMessage(message) && (message as any).sender?.id === profileId
       ? apply((message as any).sender)
-      : !isMessageWithMember
+      : !isChannelMessage(message)
         ? (message as any).sender
         : undefined;
 
@@ -140,6 +138,14 @@ function patchProfileOnMessage(
         let replyChanged = false;
         let next = replyTo;
 
+        if (replyTo.messageSender?.id === profileId) {
+          const patchedMessageSender = apply(replyTo.messageSender);
+          if (patchedMessageSender !== replyTo.messageSender) {
+            replyChanged = true;
+            next = { ...next, messageSender: patchedMessageSender };
+          }
+        }
+
         if (replyTo.sender?.id === profileId) {
           const patchedSender = apply(replyTo.sender);
           if (patchedSender !== replyTo.sender) {
@@ -148,7 +154,7 @@ function patchProfileOnMessage(
           }
         }
 
-        if (replyTo.member?.profile?.id === profileId) {
+        if (!replyTo.messageSender && replyTo.member?.profile?.id === profileId) {
           const patchedProfile = apply(replyTo.member.profile);
           if (patchedProfile !== replyTo.member.profile) {
             replyChanged = true;
@@ -177,10 +183,10 @@ function patchProfileOnMessage(
 
   if (!changed) return message;
 
-  if (isMessageWithMember) {
+  if (isChannelMessage(message)) {
     return {
       ...(message as any),
-      ...(nextMember ? { member: nextMember } : null),
+      ...(nextMessageSender ? { messageSender: nextMessageSender } : null),
       ...(nextReplyTo ? { replyTo: nextReplyTo } : null),
       ...(nextReactions ? { reactions: nextReactions } : null),
     } as ChatMessage;
@@ -515,6 +521,27 @@ export const chatMessageWindowStore = {
     });
   },
 
+  invalidateBeforeCacheForCatchUpIfExists(key: string) {
+    if (!store.has(key)) return;
+    chatMessageWindowStore.patch(key, (prev) => {
+      if (prev.before.length === 0) return prev;
+
+      const firstServerBackedVisible = prev.messages.find(
+        (message) => !isOptimisticMessage(message),
+      );
+      const nextCursor = firstServerBackedVisible
+        ? getId(firstServerBackedVisible)
+        : prev.nextCursor;
+
+      return {
+        ...prev,
+        before: [],
+        nextCursor,
+        updatedAt: Date.now(),
+      };
+    });
+  },
+
   get(key: string): ChatMessageWindowState {
     const existing = store.get(key);
     if (existing) return existing;
@@ -779,6 +806,57 @@ export const chatMessageWindowStore = {
       }
       return {
         ...truncateAfterDirectionalLoad(merged, "down"),
+        updatedAt: Date.now(),
+      };
+    });
+  },
+
+  reconcileHistoricalCatchUpByIds(
+    key: string,
+    items: ChatMessage[],
+    missingIds: string[],
+  ) {
+    chatMessageWindowStore.patch(key, (prev) => {
+      const fetchedById = new Map(items.map((item) => [getId(item), item]));
+      const missingIdSet = new Set(missingIds);
+      const hadHistoricLike = prev.hasMoreAfter || prev.after.length > 0;
+      const hadBeforeCache = prev.before.length > 0;
+
+      const nextMessages = prev.messages.flatMap((message) => {
+        if (isOptimisticMessage(message)) {
+          return [message];
+        }
+
+        const id = getId(message);
+        if (missingIdSet.has(id)) {
+          return [];
+        }
+
+        const updated = fetchedById.get(id);
+        return updated ? [updated] : [message];
+      });
+
+      const firstServerBackedVisible = nextMessages.find(
+        (message) => !isOptimisticMessage(message),
+      );
+      const nextCursor =
+        hadBeforeCache && firstServerBackedVisible
+          ? getId(firstServerBackedVisible)
+          : prev.nextCursor;
+
+      return {
+        ...prev,
+        ready: true,
+        hasFetchedInitial: true,
+        needsCatchUp: false,
+        messages: nextMessages,
+        before: [],
+        after: [],
+        nextCursor,
+        previousCursor: hadHistoricLike ? prev.previousCursor : null,
+        hasMoreAfter: hadHistoricLike,
+        afterWasAtEdge: false,
+        isFetchingNewer: false,
         updatedAt: Date.now(),
       };
     });

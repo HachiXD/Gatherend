@@ -10,6 +10,9 @@ import {
 
 export type FetchDirection = "before" | "after";
 
+const PERSISTED_MESSAGE_ID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export interface UseChatMessageWindowProps {
   windowKey: string;
   apiUrl: string;
@@ -23,6 +26,11 @@ interface PageData {
   items: ChatMessage[];
   nextCursor: string | null;
   previousCursor: string | null;
+}
+
+interface BatchMessageData {
+  items: ChatMessage[];
+  missingIds: string[];
 }
 
 export interface ChatMessageWindowApi {
@@ -122,6 +130,26 @@ export function useChatMessageWindow({
   const hasMoreBefore = state.beforeCount > 0 || Boolean(state.nextCursor);
   const hasMoreAfter = state.hasMoreAfter || state.afterCount > 0;
 
+  const getNewestPersistedMessageId = useCallback((messages: ChatMessage[]) => {
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      const candidate = messages[index];
+      const id = candidate?.id;
+      if (typeof id === "string" && PERSISTED_MESSAGE_ID_REGEX.test(id)) {
+        return id;
+      }
+    }
+    return null;
+  }, []);
+
+  const getVisiblePersistedMessageIds = useCallback((messages: ChatMessage[]) => {
+    return messages
+      .map((message) => message.id)
+      .filter(
+        (id): id is string =>
+          typeof id === "string" && PERSISTED_MESSAGE_ID_REGEX.test(id),
+      );
+  }, []);
+
   const fetchPage = useCallback(
     async (
       cursor?: string,
@@ -146,6 +174,34 @@ export function useChatMessageWindow({
       });
       if (!res.ok) {
         throw new Error(`Failed to fetch: ${res.status}`);
+      }
+      return res.json();
+    },
+    [apiUrl, boardId, getToken, paramKey, paramValue, profileId],
+  );
+
+  const fetchVisibleMessagesByIds = useCallback(
+    async (ids: string[]): Promise<BatchMessageData> => {
+      const url = qs.stringifyUrl({
+        url: `${apiUrl}/by-ids`,
+        query: {
+          [paramKey]: paramValue,
+          ...(boardId && { boardId }),
+        },
+      });
+
+      const token = await getToken();
+      const res = await fetch(url, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          ...getExpressAuthHeaders(profileId, token),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ids }),
+      });
+      if (!res.ok) {
+        throw new Error(`Failed to fetch visible messages: ${res.status}`);
       }
       return res.json();
     },
@@ -178,7 +234,7 @@ export function useChatMessageWindow({
     ensureInitial();
   }, [ensureInitial]);
 
-  const catchUpIfNeeded = useCallback(() => {
+  const recentCatchUpIfNeeded = useCallback(() => {
     const live = chatMessageWindowStore.get(windowKey);
     if (!live.needsCatchUp) return;
     if (
@@ -189,23 +245,12 @@ export function useChatMessageWindow({
       return;
     }
 
-    // Historic mode: don't mutate the mounted `messages` window (it would fight
-    // the scroll model). Instead, drop the after-cache so "Go to recent" will
-    // do a real present fetch (page 1) and re-anchor correctly.
-    if (live.hasMoreAfter) {
-      chatMessageWindowStore.invalidateAfterCacheForCatchUpIfExists(windowKey);
-      return;
-    }
-
     if (!live.hasFetchedInitial || live.messages.length === 0) {
       ensureInitial();
       return;
     }
 
-    const last = live.messages[live.messages.length - 1] as unknown as
-      | { id?: string }
-      | undefined;
-    const cursor = last?.id;
+    const cursor = getNewestPersistedMessageId(live.messages);
     if (!cursor) {
       ensureInitial();
       return;
@@ -234,7 +279,63 @@ export function useChatMessageWindow({
         const msg = e instanceof Error ? e.message : String(e);
         chatMessageWindowStore.setError(windowKey, msg);
       });
-  }, [ensureInitial, fetchPage, windowKey]);
+  }, [ensureInitial, fetchPage, getNewestPersistedMessageId, windowKey]);
+
+  const historicalCatchUpIfNeeded = useCallback(() => {
+    const live = chatMessageWindowStore.get(windowKey);
+    if (!live.needsCatchUp) return;
+    if (
+      live.isFetchingInitial ||
+      live.isFetchingOlder ||
+      live.isFetchingNewer
+    ) {
+      return;
+    }
+
+    if (!live.hasFetchedInitial || live.messages.length === 0) {
+      ensureInitial();
+      return;
+    }
+
+    const ids = getVisiblePersistedMessageIds(live.messages);
+    if (ids.length === 0) {
+      ensureInitial();
+      return;
+    }
+
+    chatMessageWindowStore.setFetching(windowKey, { isFetchingNewer: true });
+
+    void fetchVisibleMessagesByIds(ids)
+      .then((data) => {
+        chatMessageWindowStore.reconcileHistoricalCatchUpByIds(
+          windowKey,
+          data.items ?? [],
+          data.missingIds ?? [],
+        );
+      })
+      .catch((e) => {
+        const msg = e instanceof Error ? e.message : String(e);
+        chatMessageWindowStore.setError(windowKey, msg);
+      });
+  }, [
+    ensureInitial,
+    fetchVisibleMessagesByIds,
+    getVisiblePersistedMessageIds,
+    windowKey,
+  ]);
+
+  const catchUpIfNeeded = useCallback(() => {
+    const live = chatMessageWindowStore.get(windowKey);
+    if (!live.needsCatchUp) return;
+
+    const isHistorical = live.hasMoreAfter || live.after.length > 0;
+    if (isHistorical) {
+      historicalCatchUpIfNeeded();
+      return;
+    }
+
+    recentCatchUpIfNeeded();
+  }, [historicalCatchUpIfNeeded, recentCatchUpIfNeeded, windowKey]);
 
   useEffect(() => {
     if (!state.needsCatchUp) return;
@@ -292,10 +393,7 @@ export function useChatMessageWindow({
         return { ok: false, kind: "noop" as const };
       }
 
-      const last = startState.messages[
-        startState.messages.length - 1
-      ] as unknown as { id?: string } | undefined;
-      const cursor = last?.id;
+      const cursor = getNewestPersistedMessageId(startState.messages);
       if (!cursor) {
         return { ok: false, kind: "noop" as const };
       }
@@ -320,7 +418,7 @@ export function useChatMessageWindow({
         return { ok: false, kind: "network" as const };
       }
     },
-    [fetchPage, windowKey],
+    [fetchPage, getNewestPersistedMessageId, windowKey],
   );
 
   const manageWindow = useCallback(
