@@ -1,6 +1,8 @@
 "use client";
 
 import { useGlobalUnreadSocket } from "@/hooks/use-global-unread-socket";
+import { useCachedBoardBansSync } from "@/hooks/use-cached-board-bans-sync";
+import { useCachedBoardSync } from "@/hooks/use-cached-board-sync";
 import { useChannelReadState } from "@/hooks/use-channel-read-state";
 import { useFriendRequestSocket } from "@/hooks/use-friend-request-socket";
 import { useNewConversationSocket } from "@/hooks/use-new-conversation-socket";
@@ -31,6 +33,9 @@ export const GlobalUnreadProvider = ({
   boardIds,
   children,
 }: GlobalUnreadProviderProps) => {
+  useCachedBoardSync();
+  useCachedBoardBansSync();
+
   // Escuchar mensajes nuevos en todos los boards
   useGlobalUnreadSocket({
     currentProfileId,
