@@ -12,6 +12,7 @@ import type {
   BoardCategory,
 } from "@/components/providers/board-provider";
 import { useBoardNavigationStore } from "@/stores/board-navigation-store";
+import { syncUserBoardFromBoardData } from "@/hooks/use-user-boards";
 
 /**
  * Hook para obtener datos del board desde React Query cache
@@ -26,6 +27,7 @@ export function useBoardData(
   options?: { enableFetch?: boolean },
 ) {
   const { enableFetch = false } = options || {};
+  const queryClient = useQueryClient();
 
   return useQuery<BoardWithData>({
     queryKey: ["board", boardId],
@@ -39,7 +41,9 @@ export function useBoardData(
         throw new Error("Failed to fetch board");
       }
 
-      return response.json();
+      const board = (await response.json()) as BoardWithData;
+      syncUserBoardFromBoardData(queryClient, board);
+      return board;
     },
     // Habilitar query solo si enableFetch es true
     enabled: enableFetch,
@@ -60,6 +64,7 @@ export function useBoardData(
 export function useCurrentBoardData() {
   // Solo suscribirse al boardId; evita re-renders cuando cambian channel/conversation/discovery.
   const boardId = useBoardNavigationStore((state) => state.currentBoardId);
+  const queryClient = useQueryClient();
 
   return useQuery<BoardWithData>({
     queryKey: ["board", boardId],
@@ -72,7 +77,9 @@ export function useCurrentBoardData() {
         throw new Error("Failed to fetch board");
       }
 
-      return response.json();
+      const board = (await response.json()) as BoardWithData;
+      syncUserBoardFromBoardData(queryClient, board);
+      return board;
     },
     // Solo habilitar si tenemos un boardId válido
     enabled: !!boardId,
