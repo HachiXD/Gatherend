@@ -39,9 +39,26 @@ async function tryBetterAuth(req: Request): Promise<{
   profile: NonNullable<Request["profile"]>;
 } | null> {
   try {
+    logger.error("[AUTH_DEBUG_HEADERS]", {
+      host: req.headers.host ?? null,
+      origin: req.headers.origin ?? null,
+      hasCookie: Boolean(req.headers.cookie),
+      cookieLength: req.headers.cookie?.length ?? 0,
+      hasAuthorization: Boolean(req.headers.authorization),
+      xForwardedProto: req.headers["x-forwarded-proto"] ?? null,
+      xForwardedHost: req.headers["x-forwarded-host"] ?? null,
+      userAgent: req.headers["user-agent"] ?? null,
+    });
+
     const auth = await getBetterAuth();
     const session = await auth.api.getSession({
       headers: toHeaders(req.headers as Record<string, any>),
+    });
+
+    logger.error("[AUTH_DEBUG_SESSION]", {
+      hasSession: Boolean(session),
+      userId: session?.user?.id ?? null,
+      sessionId: session?.session?.id ?? null,
     });
 
     const providerUserId = session?.user?.id as string | undefined;
@@ -65,6 +82,13 @@ async function tryBetterAuth(req: Request): Promise<{
         },
       }));
 
+    logger.error("[AUTH_DEBUG_PROFILE_LOOKUP]", {
+      providerUserId,
+      profileFound: Boolean(profile),
+      profileId: profile?.id ?? null,
+      profileUserId: profile?.userId ?? null,
+    });
+
     if (!profile) return null;
 
     return {
@@ -72,7 +96,8 @@ async function tryBetterAuth(req: Request): Promise<{
       sessionId: String(session?.session?.id || ""),
       profile,
     };
-  } catch {
+  } catch (error) {
+    logger.error("[AUTH_TRY_BETTER_AUTH]", error);
     return null;
   }
 }
