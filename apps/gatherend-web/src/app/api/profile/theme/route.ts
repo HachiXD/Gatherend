@@ -39,6 +39,14 @@ function isValidHexColor(color: string): boolean {
   return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(color);
 }
 
+function normalizeGradientAngle(angle: number): number {
+  return Math.max(0, Math.min(180, Math.round(angle)));
+}
+
+function isValidGradientAngle(angle: unknown): angle is number {
+  return typeof angle === "number" && Number.isFinite(angle) && angle >= 0 && angle <= 180;
+}
+
 // Validate a gradient color item (string or GradientColorStop object)
 function isValidGradientColorItem(item: unknown): boolean {
   // String format (legacy)
@@ -75,7 +83,7 @@ function isValidGradientConfig(gradient: unknown): boolean {
   }
 
   // Validate angle
-  if (typeof g.angle !== "number" || g.angle < 0 || g.angle > 360) return false;
+  if (!isValidGradientAngle(g.angle)) return false;
 
   // Validate type
   if (g.type !== "linear" && g.type !== "radial") return false;
@@ -144,6 +152,7 @@ export async function PATCH(req: Request) {
         const normalizedGradient = gradient as GradientConfig;
         themeConfig.gradient = {
           ...normalizedGradient,
+          angle: normalizeGradientAngle(normalizedGradient.angle),
           colors: normalizeThemeGradientColors(normalizedGradient.colors),
         };
       } else {
