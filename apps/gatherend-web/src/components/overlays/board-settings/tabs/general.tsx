@@ -7,10 +7,12 @@ import { useForm } from "react-hook-form";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useBoardMutations } from "@/hooks/use-board-data";
+import { useCommunitiesList } from "@/hooks/use-communities-list";
 import { toast } from "sonner";
 import { Board, SlotMode } from "@prisma/client";
-import { Crown, Globe, Mail } from "lucide-react";
+import { Crown, Globe, Loader2, Mail, Search } from "lucide-react";
 import { useTranslation } from "@/i18n";
+import { CommunitySelectCard } from "@/components/ui/community-select-card";
 
 import {
   Form,
@@ -27,7 +29,7 @@ import { FileUpload } from "@/components/file-upload";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { getBoardImageUrl } from "@/lib/avatar-utils";
-import { getStoredUploadAssetId, parseStoredUploadValue } from "@/lib/upload-values";
+import { parseStoredUploadValue } from "@/lib/upload-values";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 interface GeneralTabProps {
@@ -43,6 +45,20 @@ interface GeneralTabProps {
 
 // MAX_SEATS = 48 porque el owner cuenta como 1, entonces 48 + 1 = 49 personas totales
 const MAX_SEATS = 48;
+const PANEL_SHELL =
+  "border border-theme-border bg-theme-bg-overlay-primary/78 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.26)] sm:px-5 sm:py-5";
+const SECTION_TITLE_CLASS =
+  "border-b border-theme-border -mt-2.5 pb-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-theme-text-muted";
+const FIELD_KICKER =
+  "text-[11px] font-bold uppercase tracking-[0.06em] text-theme-text-subtle";
+const FIELD_INPUT_CLASS =
+  "h-8 -mt-1.5 rounded-none border-theme-border-subtle bg-theme-bg-edit-form/50 text-theme-text-light placeholder:text-theme-text-muted focus-visible:border-theme-border-subtle focus-visible:ring-0 focus-visible:ring-offset-0";
+const FIELD_TEXTAREA_CLASS =
+  "rounded-none -mt-1.5 border-theme-border-subtle bg-theme-bg-edit-form/50 text-theme-text-light placeholder:text-theme-text-muted focus-visible:border-theme-border-subtle focus-visible:ring-0 focus-visible:ring-offset-0";
+const HEADER_PANEL_SHELL =
+  "border border-theme-border bg-theme-bg-overlay-primary/78 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.26)] sm:px-5 sm:py-5";
+const HOVER_ACTION_BUTTON_CLASS =
+  "flex h-8 w-full cursor-pointer items-center justify-center gap-1.5 rounded-none border px-3 text-[14px] transition border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-active-border hover:bg-theme-channel-type-active-bg hover:text-theme-channel-type-active-text";
 
 const schema = z
   .object({
@@ -57,6 +73,7 @@ const schema = z
     imageUpload: z.string().optional(),
     publicSeats: z.number().min(0).max(MAX_SEATS),
     invitationSeats: z.number().min(0).max(MAX_SEATS),
+    communityId: z.string().optional(),
   })
   .refine(
     (data) => {
@@ -71,6 +88,30 @@ const schema = z
       message: "Public groups must have at least 4 public slots",
       path: ["publicSeats"],
     },
+  )
+  .refine(
+    (data) => {
+      if (data.publicSeats > 0 && !data.communityId) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: "Public boards must be assigned to a community",
+      path: ["communityId"],
+    },
+  )
+  .refine(
+    (data) => {
+      if (data.publicSeats === 0 && data.communityId) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: "Private boards cannot be assigned to a community",
+      path: ["communityId"],
+    },
   );
 
 type FormSchema = z.infer<typeof schema>;
@@ -84,7 +125,13 @@ export const GeneralTab = ({ board }: GeneralTabProps) => {
   const { updateBoard, invalidateBoard } = useBoardMutations(board.id);
   const [isSaving, setIsSaving] = useState(false);
   const [isBumping, setIsBumping] = useState(false);
+  const [communitySearch, setCommunitySearch] = useState("");
   const { t } = useTranslation();
+  const {
+    communities,
+    isLoading: isLoadingCommunities,
+    isFetching,
+  } = useCommunitiesList(communitySearch);
 
   // Calcular slots TOTALES del board desde el prop (ocupados + vacíos)
   // El owner siempre tiene 1 slot BY_INVITATION, lo excluimos del conteo del slider
@@ -115,12 +162,14 @@ export const GeneralTab = ({ board }: GeneralTabProps) => {
       imageUpload: "",
       publicSeats: currentPublicSeats,
       invitationSeats: currentInvitationSeats,
+      communityId: board.communityId || undefined,
     },
   });
 
   const watchedBoardName = form.watch("name");
   const publicSeats = form.watch("publicSeats");
   const invitationSeats = form.watch("invitationSeats");
+  const selectedCommunityId = form.watch("communityId");
   const totalSeats = publicSeats + invitationSeats;
 
   const cols = Math.max(2, Math.ceil(Math.sqrt(totalSeats + 1)));
@@ -232,24 +281,11 @@ export const GeneralTab = ({ board }: GeneralTabProps) => {
         name: values.name,
         imageAssetId,
         description: values.description,
+        publicSeats: values.publicSeats,
+        invitationSeats: values.invitationSeats,
+        communityId: values.communityId ?? null,
       });
 
-      // Si cambiaron los slots, hacer resize
-      // Nota: invitationSeats en UI NO incluye el owner, pero el backend SÍ lo espera
-      const newTotalSeats = values.publicSeats + values.invitationSeats;
-      const currentTotalSeats = currentPublicSeats + currentInvitationSeats;
-
-      if (
-        newTotalSeats !== currentTotalSeats ||
-        values.publicSeats !== currentPublicSeats
-      ) {
-        await axios.patch(`/api/boards/${board.id}/resize`, {
-          discoveryCount: values.publicSeats,
-          invitationCount: values.invitationSeats + 1, // +1 para incluir slot del owner
-        });
-      }
-
-      // SPA: Actualizar cache local de React Query
       updateBoard({
         name: values.name,
         imageAssetId,
@@ -262,15 +298,10 @@ export const GeneralTab = ({ board }: GeneralTabProps) => {
             }
           : null,
         description: values.description || null,
+        communityId: values.communityId ?? null,
       });
 
-      // Invalidar para sincronizar slots si cambiaron
-      if (
-        newTotalSeats !== currentTotalSeats ||
-        values.publicSeats !== currentPublicSeats
-      ) {
-        invalidateBoard();
-      }
+      invalidateBoard();
 
       toast.success(t.overlays.boardSettings.general.updateSuccess);
     } catch (error: unknown) {
@@ -297,61 +328,65 @@ export const GeneralTab = ({ board }: GeneralTabProps) => {
   };
 
   return (
-    <div className="space-y-6 text-theme-text-subtle">
-      <div>
-        <h2 className="text-xl font-bold text-theme-text-light">
-          {t.overlays.boardSettings.general.title}
-        </h2>
-        <p className="text-sm text-theme-text-muted">
-          {t.overlays.boardSettings.general.subtitle}
-        </p>
+    <div className="mx-auto max-w-3xl space-y-2 pb-10 text-theme-text-subtle">
+      <div className={HEADER_PANEL_SHELL}>
+        <div className="border-b border-theme-border pb-0.5 -mb-3 -mt-3">
+          <h2 className="text-2xl font-bold text-theme-text-primary">
+            {t.overlays.boardSettings.general.title}
+          </h2>
+          <p className="-mt-1 text-sm text-theme-text-tertiary">
+            {t.overlays.boardSettings.general.subtitle}
+          </p>
+        </div>
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="flex flex-col md:flex-row gap-8 items-start">
-            {/* COLUMNA IZQUIERDA: Datos */}
-            <div className="flex-1 space-y-3">
-              <div className="flex items-center justify-center text-center">
-                <FormField
-                  control={form.control}
-                  name="imageUpload"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <FileUpload
-                          endpoint="boardImage"
-                          value={field.value || ""}
-                          previewUrl={boardImagePreviewUrl}
-                          onChange={field.onChange}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <section className={PANEL_SHELL}>
+            <div className="-mt-3 -mb-2.5 flex flex-col items-start gap-8 md:flex-row">
+              <div className="w-full space-y-3 md:w-[200px] md:self-center">
+                <div className="flex items-center justify-center text-center">
+                  <FormField
+                    control={form.control}
+                    name="imageUpload"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <FileUpload
+                            endpoint="boardImage"
+                            value={field.value || ""}
+                            previewUrl={boardImagePreviewUrl}
+                            onChange={field.onChange}
+                            uploadButtonClassName="rounded-none border-theme-border-subtle bg-theme-bg-cancel-button text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+                          />
+                        </FormControl>
+                        <FormMessage className="-mt-1 text-[11px] leading-tight" />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <Button
+                  type="button"
+                  onClick={handleBump}
+                  disabled={isBumping}
+                  className={HOVER_ACTION_BUTTON_CLASS}
+                >
+                  {isBumping
+                    ? t.overlays.boardSettings.general.bumping
+                    : t.overlays.boardSettings.general.bumpButton}
+                </Button>
               </div>
 
-              <Button
-                type="button"
-                onClick={handleBump}
-                disabled={isBumping}
-                className="w-full bg-theme-button-primary hover:bg-theme-button-primary-hover text-theme-text-light cursor-pointer"
-              >
-                {isBumping
-                  ? t.overlays.boardSettings.general.bumping
-                  : t.overlays.boardSettings.general.bumpButton}
-              </Button>
-
-              <div className="grid grid-cols-2 gap-3">
+              <div className=" w-full flex-1 space-y-2">
                 <FormField
                   control={form.control}
                   name="name"
                   render={({ field }) => (
-                    <FormItem className="col-span-2">
+                    <FormItem>
                       <FormLabel
                         htmlFor="board-general-name"
-                        className="uppercase text-xs font-bold text-theme-text-subtle"
+                        className={FIELD_KICKER}
                       >
                         {t.overlays.boardSettings.general.boardNameLabel}
                       </FormLabel>
@@ -359,7 +394,7 @@ export const GeneralTab = ({ board }: GeneralTabProps) => {
                         <Input
                           id="board-general-name"
                           disabled={isSaving}
-                          className="bg-theme-bg-input border-0 focus-visible:ring-0 text-theme-text-light focus-visible:ring-offset-0 text-[15px]!"
+                          className={cn(FIELD_INPUT_CLASS, "text-[14px]")}
                           placeholder={
                             t.overlays.boardSettings.general
                               .boardNamePlaceholder
@@ -372,182 +407,294 @@ export const GeneralTab = ({ board }: GeneralTabProps) => {
                     </FormItem>
                   )}
                 />
+
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel
+                        htmlFor="board-general-description"
+                        className={FIELD_KICKER}
+                      >
+                        {t.overlays.boardSettings.general.descriptionLabel}
+                      </FormLabel>
+                      <FormControl>
+                        <Textarea
+                          id="board-general-description"
+                          disabled={isSaving}
+                          className={cn(
+                            FIELD_TEXTAREA_CLASS,
+                            "scrollbar-ultra-thin max-h-[120px] resize-none overflow-y-auto px-3 py-2 text-[14px]",
+                          )}
+                          placeholder={
+                            t.overlays.boardSettings.general
+                              .descriptionPlaceholder
+                          }
+                          autoComplete="off"
+                          rows={4}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+          </section>
+
+          <section className={PANEL_SHELL}>
+            <div className="mx-auto grid -mb-2 w-full max-w-[860px] items-start gap-5 lg:grid-cols-[minmax(0,1fr)_252px]">
+              <div className="space-y-3">
+                <h3 className={SECTION_TITLE_CLASS}>
+                  {t.modals.myCommunities.community}
+                </h3>
+
+                <FormField
+                  control={form.control}
+                  name="communityId"
+                  render={() => (
+                    <FormItem className="space-y-3">
+                      <div className="relative">
+                        <label
+                          htmlFor="board-general-community-search"
+                          className="sr-only"
+                        >
+                          {t.modals.myCommunities.searchPlaceholder}
+                        </label>
+                        <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-theme-text-muted" />
+                        <Input
+                          id="board-general-community-search"
+                          name="board-general-community-search"
+                          value={communitySearch}
+                          onChange={(e) => setCommunitySearch(e.target.value)}
+                          placeholder={t.modals.myCommunities.searchPlaceholder}
+                          autoComplete="off"
+                          className={cn(
+                            FIELD_INPUT_CLASS,
+                            "bg-theme-bg-edit-form/35 pl-8 pr-8 text-sm",
+                          )}
+                        />
+                        {isFetching && (
+                          <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                            <Loader2 className="h-4 w-4 animate-spin text-theme-accent-primary" />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="px-4 -mt-2.5 -mb-3">
+                        <div className="w-full border-b border-theme-border" />
+                      </div>
+
+                      <div className="scrollbar-ultra-thin max-h-[220px] -mt-1.5 mb-0 space-y-1.5 overflow-y-auto border border-theme-border-subtle bg-theme-bg-edit-form/35 p-1.5">
+                        {!communitySearch.trim() && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              form.setValue("communityId", undefined, {
+                                shouldValidate: true,
+                              })
+                            }
+                            className={cn(
+                              "w-full border px-2 py-1.5 text-left text-sm transition",
+                              "border-theme-border cursor-pointer bg-theme-bg-secondary/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.28),inset_0_-1px_0_rgba(0,0,0,0.28)]",
+                              !selectedCommunityId
+                                ? "border-theme-border-accent-active-channel bg-theme-bg-secondary/40 text-theme-text-light"
+                                : "text-theme-text-subtle hover:bg-theme-bg-secondary/30 hover:text-theme-text-light",
+                            )}
+                          >
+                            Sin comunidad
+                          </button>
+                        )}
+
+                        {isLoadingCommunities ? (
+                          <div className="space-y-1.5">
+                            {Array.from({ length: 4 }).map((_, i) => (
+                              <div
+                                key={i}
+                                className="flex items-center gap-2 border border-theme-border-subtle bg-theme-bg-edit-form/50 px-2 py-1.5 animate-pulse"
+                              >
+                                <div className="h-8 w-8 bg-white/10" />
+                                <div className="h-4 flex-1 bg-white/10" />
+                              </div>
+                            ))}
+                          </div>
+                        ) : communities.length === 0 ? (
+                          <div className="py-4 text-center text-sm text-theme-text-muted">
+                            {communitySearch
+                              ? t.modals.myCommunities.noResults
+                              : t.modals.myCommunities.noCommunities}
+                          </div>
+                        ) : (
+                          <div className="space-y-1.5">
+                            {communities.map((community) => (
+                              <CommunitySelectCard
+                                key={community.id}
+                                community={community}
+                                isSelected={
+                                  selectedCommunityId === community.id
+                                }
+                                onClick={() =>
+                                  form.setValue("communityId", community.id, {
+                                    shouldValidate: true,
+                                  })
+                                }
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <FormMessage className="-mt-1 text-[11px] leading-tight" />
+                    </FormItem>
+                  )}
+                />
               </div>
 
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel
-                      htmlFor="board-general-description"
-                      className="uppercase text-xs font-bold text-theme-text-subtle"
-                    >
-                      {t.overlays.boardSettings.general.descriptionLabel}
-                    </FormLabel>
-                    <FormControl>
-                      <Textarea
-                        id="board-general-description"
-                        disabled={isSaving}
-                        className="bg-theme-bg-input border-0 focus-visible:ring-0 text-theme-text-light focus-visible:ring-offset-0 resize-none text-[15px]! max-h-[120px] overflow-y-auto"
-                        placeholder={
-                          t.overlays.boardSettings.general
-                            .descriptionPlaceholder
-                        }
-                        autoComplete="off"
-                        rows={3}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* COLUMNA DERECHA: Sliders y Grid */}
-            <div className="flex-1 flex flex-col gap-2">
-              <div className="flex flex-col gap-6 p-4 rounded-lg">
-                <div className="space-y-2">
-                  {/* PUBLIC SLIDER */}
-                  <FormField
-                    control={form.control}
-                    name="publicSeats"
-                    render={({ field }) => (
-                      <FormItem>
-                        <div className="flex justify-between items-center -mb-1.5">
-                          <span
-                            id="board-general-public-seats-label"
-                            className="text-xs font-bold text-[#5EC8D4] uppercase"
-                          >
+              <div className="flex w-full flex-col gap-2 lg:w-[252px] lg:flex-shrink-0">
+                <div className="border border-theme-border bg-theme-bg-secondary/20 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.28),inset_0_-1px_0_rgba(0,0,0,0.28)]">
+                  <div className="space-y-2 lg:mx-auto lg:w-full lg:max-w-[252px]">
+                    <FormField
+                      control={form.control}
+                      name="publicSeats"
+                      render={({ field }) => (
+                        <FormItem className="space-y-0 rounded-none border border-theme-border-subtle bg-theme-bg-edit-form/50 px-2.5 pt-1.5 pb-2.5">
+                          <div className="flex justify-between items-center -mb-2.5">
+                            <span
+                              id="board-general-public-seats-label"
+                              className="text-xs font-bold uppercase text-[#5EC8D4]"
+                            >
+                              {
+                                t.overlays.boardSettings.general
+                                  .discoverySeatsLabel
+                              }
+                            </span>
+                            <span className="border border-[#5EC8D4]/25 bg-theme-bg-overlay-primary px-2 py-0.5 font-mono text-xs text-[#5EC8D4]">
+                              {publicSeats}
+                            </span>
+                          </div>
+                          <p className="text-theme-text-subtle text-[10px]">
                             {
                               t.overlays.boardSettings.general
-                                .discoverySeatsLabel
+                                .discoverySeatsDescription
                             }
-                          </span>
-                          <span className="text-xs font-mono bg-theme-bg-quaternary text-[#5EC8D4] px-2 py-0.5 rounded">
-                            {publicSeats}
-                          </span>
-                        </div>
-                        <p className="text-theme-text-subtle text-[10px]">
-                          {
-                            t.overlays.boardSettings.general
-                              .discoverySeatsDescription
-                          }{" "}
-                        </p>
-                        <FormControl>
-                          <Slider
-                            name="publicSeats"
-                            disabled={isSaving}
-                            min={occupiedPublicSeats}
-                            max={MAX_SEATS}
-                            step={1}
-                            value={[field.value]}
-                            onValueChange={(v) => onPublicChange(v[0])}
-                            aria-labelledby="board-general-public-seats-label"
-                            className="[&>.relative>.absolute]:bg-[#5EC8D4]"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                          </p>
+                          <FormControl>
+                            <Slider
+                              name="publicSeats"
+                              disabled={isSaving}
+                              min={occupiedPublicSeats}
+                              max={MAX_SEATS}
+                              step={1}
+                              value={[field.value]}
+                              onValueChange={(v) => onPublicChange(v[0])}
+                              aria-labelledby="board-general-public-seats-label"
+                              className="cursor-pointer [&_[data-slot=slider-range]]:bg-[#5EC8D4] [&_[data-slot=slider-thumb]]:size-3.5 [&_[data-slot=slider-thumb]]:rounded-none [&_[data-slot=slider-thumb]]:border-theme-border [&_[data-slot=slider-thumb]]:bg-theme-bg-overlay-primary [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-track]]:rounded-none [&_[data-slot=slider-track]]:bg-theme-bg-input-modal"
+                            />
+                          </FormControl>
+                          <FormMessage className="-my-1 text-[11px] leading-tight" />
+                        </FormItem>
+                      )}
+                    />
 
-                  {/* INVITE SLIDER */}
-                  <FormField
-                    control={form.control}
-                    name="invitationSeats"
-                    render={({ field }) => (
-                      <FormItem>
-                        <div className="flex justify-between items-center -mb-1.5">
-                          <span
-                            id="board-general-invite-seats-label"
-                            className="text-xs font-bold text-[#E4AE68] uppercase"
-                          >
-                            {t.overlays.boardSettings.general.inviteSeatsLabel}
-                          </span>
-                          <span className="text-xs font-mono bg-theme-bg-quaternary text-[#E4AE68] px-2 py-0.5 rounded">
-                            {invitationSeats}
-                          </span>
-                        </div>
-                        <p className="text-theme-text-subtle text-[10px]">
-                          {
-                            t.overlays.boardSettings.general
-                              .inviteSeatsDescription
-                          }{" "}
-                        </p>
-                        <FormControl>
-                          <Slider
-                            name="invitationSeats"
-                            disabled={isSaving}
-                            min={occupiedInvitationSeats}
-                            max={MAX_SEATS}
-                            step={1}
-                            value={[field.value]}
-                            onValueChange={(v) => onInviteChange(v[0])}
-                            aria-labelledby="board-general-invite-seats-label"
-                            className="[&>.relative>.absolute]:bg-[#E4AE68]"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                    <FormField
+                      control={form.control}
+                      name="invitationSeats"
+                      render={({ field }) => (
+                        <FormItem className="space-y-0 rounded-none border border-theme-border-subtle bg-theme-bg-edit-form/50 px-2.5 pt-1.5 pb-2.5">
+                          <div className="flex justify-between items-center -mb-2.5">
+                            <span
+                              id="board-general-invite-seats-label"
+                              className="text-xs font-bold uppercase text-[#E4AE68]"
+                            >
+                              {
+                                t.overlays.boardSettings.general
+                                  .inviteSeatsLabel
+                              }
+                            </span>
+                            <span className="border border-[#E4AE68]/25 bg-theme-bg-overlay-primary px-2 py-0.5 font-mono text-xs text-[#E4AE68]">
+                              {invitationSeats}
+                            </span>
+                          </div>
+                          <p className="text-theme-text-subtle text-[10px]">
+                            {
+                              t.overlays.boardSettings.general
+                                .inviteSeatsDescription
+                            }
+                          </p>
+                          <FormControl>
+                            <Slider
+                              name="invitationSeats"
+                              disabled={isSaving}
+                              min={occupiedInvitationSeats}
+                              max={MAX_SEATS}
+                              step={1}
+                              value={[field.value]}
+                              onValueChange={(v) => onInviteChange(v[0])}
+                              aria-labelledby="board-general-invite-seats-label"
+                              className="cursor-pointer [&_[data-slot=slider-range]]:bg-[#E4AE68] [&_[data-slot=slider-thumb]]:size-3.5 [&_[data-slot=slider-thumb]]:rounded-none [&_[data-slot=slider-thumb]]:border-theme-border [&_[data-slot=slider-thumb]]:bg-theme-bg-overlay-primary [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-track]]:rounded-none [&_[data-slot=slider-track]]:bg-theme-bg-input-modal"
+                            />
+                          </FormControl>
+                          <FormMessage className="-my-1 text-[11px] leading-tight" />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
-                {/* GRID VISUALIZER */}
-                <div className="flex-1 min-h-[210px] bg-theme-bg-input rounded-md border border-dashed border-theme-border-primary flex items-center justify-center p-4">
-                  <div
-                    className="grid gap-2 place-items-center transition-all duration-300"
-                    style={{
-                      gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
-                    }}
-                  >
-                    {/* OWNER (fijo, no configurable) */}
-                    <div className="relative group">
-                      <div className="rounded-full flex items-center justify-center h-7 w-7 bg-[#FFD7001A] text-[#FFD700] border border-[#FFD700]/30 shadow-sm">
-                        <Crown className="w-4 h-4" />
+                  <div className="mt-2.5 mx-auto flex min-h-[170px] w-full max-w-[220px] self-center items-center justify-center border border-theme-border bg-theme-bg-edit-form/50 p-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.28),inset_0_-1px_0_rgba(0,0,0,0.28)] sm:min-h-[220px] sm:p-4">
+                    <div
+                      className="grid gap-2 place-items-center -my-2.5 -mx-2.5 transition-all duration-300"
+                      style={{
+                        gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+                      }}
+                    >
+                      <div className="relative group">
+                        <div className="rounded-full flex items-center justify-center h-5.5 w-5.5 bg-[#FFD7001A] text-[#FFD700] border border-[#FFD700]/30 shadow-sm">
+                          <Crown className="w-3.5 h-3.5" />
+                        </div>
                       </div>
-                    </div>
 
-                    {/* OTHER SEATS */}
-                    {Array.from({ length: totalSeats }).map((_, i) => {
-                      const isPublic = i < publicSeats;
-                      return (
-                        <div
-                          key={i}
-                          className={cn(
-                            "rounded-full flex items-center justify-center h-7 w-7 border shadow-sm transition-colors duration-300",
-                            isPublic
-                              ? "bg-[#5EC8D41A] text-[#5EC8D4] border-white/10"
-                              : "bg-[#E4AE681A] text-[#E4AE68] border-white/10",
-                          )}
-                        >
-                          {isPublic ? (
-                            <Globe className="w-4 h-4" />
-                          ) : (
-                            <Mail className="w-4 h-4" />
-                          )}
-                        </div>
-                      );
-                    })}
+                      {Array.from({ length: totalSeats }).map((_, i) => {
+                        const isPublic = i < publicSeats;
+                        return (
+                          <div
+                            key={i}
+                            className={cn(
+                              "rounded-full flex items-center justify-center h-5.5 w-5.5 border shadow-sm transition-colors duration-300",
+                              isPublic
+                                ? "bg-[#5EC8D41A] text-[#5EC8D4] border-white/10"
+                                : "bg-[#E4AE681A] text-[#E4AE68] border-white/10",
+                            )}
+                          >
+                            {isPublic ? (
+                              <Globe className="w-3.5 h-3.5" />
+                            ) : (
+                              <Mail className="w-3.5 h-3.5" />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
+          </section>
 
-          <div className="flex justify-end">
-            <Button
-              type="submit"
-              disabled={isSaving}
-              className="bg-theme-tab-button-bg hover:bg-theme-tab-button-hover text-theme-text-light cursor-pointer"
-            >
-              {isSaving
-                ? t.overlays.boardSettings.general.saving
-                : t.overlays.boardSettings.general.saveChanges}
-            </Button>
-          </div>
+          <section className={PANEL_SHELL}>
+            <div className="flex justify-end">
+              <Button
+                type="submit"
+                disabled={isSaving}
+                className="h-6.5 min-w-[120px] -my-3 cursor-pointer rounded-none bg-theme-tab-button-bg px-3 text-[14px] text-theme-text-light hover:bg-theme-tab-button-hover"
+              >
+                {isSaving
+                  ? t.overlays.boardSettings.general.saving
+                  : t.overlays.boardSettings.general.saveChanges}
+              </Button>
+            </div>
+          </section>
         </form>
       </Form>
     </div>

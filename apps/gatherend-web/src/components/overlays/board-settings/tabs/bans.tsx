@@ -2,7 +2,7 @@
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { UserAvatar } from "@/components/user-avatar";
-import { Loader2, ShieldOff } from "lucide-react";
+import { Loader2, Gavel } from "lucide-react";
 import { Profile } from "@prisma/client";
 import axios from "axios";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -11,11 +11,18 @@ import { toast } from "sonner";
 import { useTranslation } from "@/i18n";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
+const HEADER_PANEL_SHELL =
+  "border border-theme-border bg-theme-bg-overlay-primary/78 mr-1.5 pt-4 pb-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.26)] sm:px-5 sm:py-5";
+const BAN_ROW_CLASS =
+  "flex min-h-10 items-center gap-3 rounded-none border border-theme-border-subtle bg-theme-bg-edit-form/50 px-3 py-1";
+const actionButtonClass =
+  "h-6.5 min-w-[120px] cursor-pointer rounded-none bg-theme-tab-button-bg px-3 text-[14px] text-theme-text-light transition hover:bg-theme-tab-button-hover";
+
 interface BannedUser {
   id: string;
   profileId: string;
   createdAt: string;
-  profile: Pick<Profile, "id" | "username" | "email" | "userId"> & {
+  profile: Pick<Profile, "id" | "username" | "discriminator"> & {
     avatarAsset: ClientUploadedAsset | null;
   };
 }
@@ -33,7 +40,7 @@ export const BansTab = ({ boardId }: BansTabProps) => {
     queryKey: ["boardBans", boardId],
     queryFn: async () => {
       const response = await axios.get<BannedUser[]>(
-        `/api/boards/${boardId}/bans`
+        `/api/boards/${boardId}/bans`,
       );
       return response.data;
     },
@@ -52,11 +59,8 @@ export const BansTab = ({ boardId }: BansTabProps) => {
       // Actualizar cache optimistamente
       queryClient.setQueryData<BannedUser[]>(
         ["boardBans", boardId],
-        (old) => old?.filter((ban) => ban.profileId !== profileId) ?? []
+        (old) => old?.filter((ban) => ban.profileId !== profileId) ?? [],
       );
-      // Invalidar queries relacionadas
-      queryClient.invalidateQueries({ queryKey: ["boards"] });
-      queryClient.invalidateQueries({ queryKey: ["board", boardId] });
       toast.success(t.overlays.boardSettings.bans.unbanSuccess);
     },
     onError: () => {
@@ -67,13 +71,15 @@ export const BansTab = ({ boardId }: BansTabProps) => {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div>
-          <h2 className="text-xl font-bold text-theme-text-primary">
-            {t.overlays.boardSettings.bans.title}
-          </h2>
-          <p className="text-sm text-theme-text-tertiary">
-            {t.overlays.boardSettings.bans.loading}
-          </p>
+        <div className={HEADER_PANEL_SHELL}>
+          <div className="border-b border-theme-border pb-0.5 -mb-3 -mt-3">
+            <h2 className="text-2xl font-bold text-theme-text-primary">
+              {t.overlays.boardSettings.bans.title}
+            </h2>
+            <p className="-mt-1 text-sm text-theme-text-tertiary">
+              {t.overlays.boardSettings.bans.loading}
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -81,59 +87,59 @@ export const BansTab = ({ boardId }: BansTabProps) => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-theme-text-primary">
-          {t.overlays.boardSettings.bans.title}
-        </h2>
-        <p className="text-sm text-theme-text-tertiary">
-          {bannedUsers.length}{" "}
-          {bannedUsers.length === 1
-            ? t.overlays.boardSettings.bans.user
-            : t.overlays.boardSettings.bans.users}{" "}
-          {t.overlays.boardSettings.bans.bannedFromThisBoard}
-        </p>
+      <div className={HEADER_PANEL_SHELL}>
+        <div className="border-b border-theme-border pb-0.5 -mb-3 -mt-3">
+          <h2 className="text-2xl font-bold text-theme-text-primary">
+            {t.overlays.boardSettings.bans.title}
+          </h2>
+          <p className="-mt-1 text-sm text-theme-text-tertiary">
+            {bannedUsers.length}{" "}
+            {bannedUsers.length === 1
+              ? t.overlays.boardSettings.bans.user
+              : t.overlays.boardSettings.bans.users}{" "}
+            {t.overlays.boardSettings.bans.bannedFromThisBoard}
+          </p>
+        </div>
       </div>
 
       {bannedUsers.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <ShieldOff className="h-12 w-12 text-theme-text-muted mb-4" />
-          <p className="text-sm font-medium text-theme-text-tertiary">
+        <div className="flex flex-col items-center justify-center py-1 text-center">
+          <Gavel className="h-12 w-12 text-theme-text-muted mb-3" />
+          <p className="text-md font-medium text-theme-text-tertiary">
             {t.overlays.boardSettings.bans.emptyTitle}
           </p>
-          <p className="text-xs text-theme-text-muted mt-1">
+          <p className="text-sm text-theme-text-muted mt-1">
             {t.overlays.boardSettings.bans.emptyDescription}
           </p>
         </div>
       ) : (
-        <ScrollArea className="max-h-[500px] pr-6">
+        <ScrollArea className="max-h-[500px] pr-6 -mt-4">
           <div className="space-y-4">
             {bannedUsers.map((ban) => (
-              <div key={ban.id} className="flex items-center gap-x-2">
+              <div key={ban.id} className={BAN_ROW_CLASS}>
                 <UserAvatar
                   src={ban.profile.avatarAsset?.url || ""}
                   showStatus={false}
                 />
-                <div className="flex flex-col gap-y-1 flex-1">
-                  <div className="text-sm font-semibold text-theme-text-primary">
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-semibold text-theme-text-primary">
                     {ban.profile.username}
                   </div>
-                  <p className="text-xs text-theme-text-tertiary">
-                    {ban.profile.email}
+                  <p className="truncate text-[11px] text-theme-text-tertiary">
+                    /{ban.profile.discriminator}
                   </p>
-                  <p className="text-xs text-theme-text-muted">
+                  <p className="text-[11px] text-theme-text-muted">
                     {t.overlays.boardSettings.bans.bannedOn}{" "}
                     {new Date(ban.createdAt).toLocaleDateString()}
                   </p>
                 </div>
                 {unbanMutation.isPending &&
                 unbanMutation.variables === ban.profileId ? (
-                  <Loader2 className="animate-spin text-theme-text-tertiary w-4 h-4" />
+                  <Loader2 className="ml-auto h-4 w-4 animate-spin text-theme-text-tertiary" />
                 ) : (
                   <Button
                     onClick={() => unbanMutation.mutate(ban.profileId)}
-                    variant="outline"
-                    size="sm"
-                    className="ml-auto"
+                    className={actionButtonClass}
                     disabled={unbanMutation.isPending}
                   >
                     {t.overlays.boardSettings.bans.unban}
