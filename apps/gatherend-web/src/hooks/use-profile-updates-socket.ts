@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useSocketClient } from "@/components/providers/socket-provider";
+import { useSocketClient, useSocketRecoveryVersion } from "@/components/providers/socket-provider";
 import {
   applyProfilePatchToAllCaches,
   type ProfilePatch,
@@ -32,8 +32,8 @@ async function syncProfilesOnReconnect(
 
 export function useProfileUpdatesSocket() {
   const { socket } = useSocketClient();
+  const reconnectVersion = useSocketRecoveryVersion();
   const queryClient = useQueryClient();
-  const hasConnectedBefore = useRef(false);
 
   useEffect(() => {
     if (!socket) return;
@@ -47,26 +47,15 @@ export function useProfileUpdatesSocket() {
       applyProfilePatchToAllCaches(queryClient, profileId, patch);
     };
 
-    const handleConnect = () => {
-      // Skip initial connection, only sync on reconnections
-      if (!hasConnectedBefore.current) {
-        hasConnectedBefore.current = true;
-        return;
-      }
-      syncProfilesOnReconnect(queryClient);
-    };
-
     socket.on("profile:updated", handleProfileUpdated);
-    socket.on("connect", handleConnect);
-
-    // If already connected on mount, mark as first connection
-    if (socket.connected) {
-      hasConnectedBefore.current = true;
-    }
 
     return () => {
       socket.off("profile:updated", handleProfileUpdated);
-      socket.off("connect", handleConnect);
     };
   }, [socket, queryClient]);
+
+  useEffect(() => {
+    if (reconnectVersion === 0) return;
+    void syncProfilesOnReconnect(queryClient);
+  }, [queryClient, reconnectVersion]);
 }

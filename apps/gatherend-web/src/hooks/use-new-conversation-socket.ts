@@ -1,4 +1,4 @@
-import { useSocketClient } from "@/components/providers/socket-provider";
+import { useSocketClient, useSocketRecoveryVersion } from "@/components/providers/socket-provider";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ClientProfileSummary } from "@/types/uploaded-assets";
@@ -32,6 +32,7 @@ export const useNewConversationSocket = ({
   onNewConversation,
 }: UseNewConversationSocketProps) => {
   const { socket } = useSocketClient();
+  const reconnectVersion = useSocketRecoveryVersion();
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -57,5 +58,25 @@ export const useNewConversationSocket = ({
       socket.off(eventKey, handleNewConversation);
     };
   }, [socket, profileId, queryClient, onNewConversation]);
+
+  useEffect(() => {
+    if (reconnectVersion === 0) return;
+
+    if (queryClient.getQueryState(["conversations"])) {
+      void queryClient.refetchQueries({
+        queryKey: ["conversations"],
+        exact: true,
+        type: "all",
+      });
+    }
+
+    if (queryClient.getQueryState(["friends"])) {
+      void queryClient.refetchQueries({
+        queryKey: ["friends"],
+        exact: true,
+        type: "all",
+      });
+    }
+  }, [queryClient, reconnectVersion]);
 };
 
