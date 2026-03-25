@@ -171,6 +171,7 @@ export const MemberAvatar = memo(MemberAvatarComponent, (prev, next) => {
 
   return (
     prev.member.id === next.member.id &&
+    prev.member.role === next.member.role &&
     prev.member.profile.id === next.member.profile.id &&
     prev.member.profile.username === next.member.profile.username &&
     prev.member.profile.discriminator === next.member.profile.discriminator &&
