@@ -1,9 +1,10 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useCallback, useState, type UIEvent } from "react";
 import { Check, X, Loader2, Bold, Italic, Underline } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { getRingBackground, getUsernameColorStyle } from "@/lib/username-color";
 import type { UsernameSectionProps } from "./types";
 
 const fieldInputClass =
@@ -19,6 +20,7 @@ const panelToggleInactiveClass =
 
 export const UsernameSection = memo(function UsernameSection({
   username,
+  usernameColor,
   discriminator,
   usernameStatus,
   originalUsername,
@@ -28,6 +30,12 @@ export const UsernameSection = memo(function UsernameSection({
   onUsernameChange,
   t,
 }: UsernameSectionProps) {
+  const [inputScrollLeft, setInputScrollLeft] = useState(0);
+
+  const handleUsernameScroll = useCallback((e: UIEvent<HTMLInputElement>) => {
+    setInputScrollLeft(e.currentTarget.scrollLeft);
+  }, []);
+
   return (
     <div className="flex-1 space-y-2 w-full">
       {/* Username & Discriminator Row */}
@@ -41,13 +49,45 @@ export const UsernameSection = memo(function UsernameSection({
               {t.profile.username}
             </label>
             <div className="relative">
+              {username.length > 0 && (
+                <div
+                  aria-hidden="true"
+                  className={cn(
+                    "pointer-events-none absolute inset-y-0 left-0 right-10 z-0 flex items-center overflow-hidden px-3 text-base md:text-sm",
+                    formatState.bold && "font-bold",
+                    formatState.italic && "italic",
+                    isSaving && "opacity-50",
+                  )}
+                >
+                  <span
+                    className="relative block whitespace-nowrap"
+                    style={{
+                      transform: `translateX(-${inputScrollLeft}px)`,
+                    }}
+                  >
+                    <span style={getUsernameColorStyle(usernameColor)}>
+                      {username}
+                    </span>
+                    {formatState.underline && (
+                      <span
+                        aria-hidden="true"
+                        className="absolute inset-x-0 bottom-[3px] h-[1px]"
+                        style={{
+                          background: getRingBackground(usernameColor),
+                        }}
+                      />
+                    )}
+                  </span>
+                </div>
+              )}
               <Input
                 id="profile-username"
                 name="profile-username"
                 disabled={isSaving}
                 className={cn(
                   fieldInputClass,
-                  "pr-10",
+                  "pr-10 caret-theme-text-light",
+                  username.length > 0 && "text-transparent",
                   formatState.bold && "font-bold",
                   formatState.italic && "italic",
                   formatState.underline && "underline",
@@ -55,24 +95,25 @@ export const UsernameSection = memo(function UsernameSection({
                 placeholder={t.profile.usernamePlaceholder}
                 value={username}
                 onChange={(e) => onUsernameChange(e.target.value)}
+                onScroll={handleUsernameScroll}
               />
               {usernameStatus.checking && (
-                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-theme-text-muted" />
+                <Loader2 className="absolute right-3 top-1/2 z-10 -translate-y-1/2 h-4 w-4 animate-spin text-theme-text-muted" />
               )}
               {!usernameStatus.checking &&
                 usernameStatus.valid &&
                 username !== originalUsername && (
-                  <Check className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
+                  <Check className="absolute right-3 top-1/2 z-10 -translate-y-1/2 h-4 w-4 text-green-500" />
                 )}
               {!usernameStatus.checking &&
                 !usernameStatus.valid &&
                 username.length > 0 && (
-                  <X className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-red-500" />
+                  <X className="absolute right-3 top-1/2 z-10 -translate-y-1/2 h-4 w-4 text-red-500" />
                 )}
             </div>
             {usernameStatus.message && (
               <p
-                className={`text-xs mt-1 ${
+                className={`text-xs -mt-1 -mb-1 ${
                   usernameStatus.valid ? "text-green-400" : "text-red-400"
                 }`}
               >

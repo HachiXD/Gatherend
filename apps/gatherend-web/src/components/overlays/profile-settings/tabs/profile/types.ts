@@ -61,6 +61,7 @@ export interface AvatarSectionProps
 export interface UsernameSectionProps
   extends ProfileSectionProps, WithTranslations {
   username: string;
+  usernameColor: UsernameColor;
   discriminator: string | null;
   usernameStatus: {
     checking: boolean;

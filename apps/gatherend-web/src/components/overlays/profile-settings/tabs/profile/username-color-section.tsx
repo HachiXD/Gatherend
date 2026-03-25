@@ -1,11 +1,12 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { DEFAULT_USERNAME_COLOR } from "@/lib/theme/presets";
+import { isValidHexColor } from "@/lib/theme/utils";
 import { GradientSlider } from "@/components/ui/gradient-slider";
 import type { UsernameColorSectionProps } from "./types";
 
@@ -18,18 +19,58 @@ const panelToggleActiveClass =
 const panelToggleInactiveClass =
   "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border";
 
+function normalizeHexDraft(value: string): string {
+  return value.slice(0, 7).toUpperCase();
+}
+
 export const UsernameColorSection = memo(function UsernameColorSection({
   colorState,
   colorActions,
   isSaving,
   t,
 }: UsernameColorSectionProps) {
+  const [selectedColorDraft, setSelectedColorDraft] = useState("");
   const selectedColor =
     colorState.selectedGradientId !== null
       ? (colorState.gradientColors.find(
           (stop) => stop.editorId === colorState.selectedGradientId,
         ) ?? null)
       : null;
+
+  useEffect(() => {
+    setSelectedColorDraft(selectedColor?.color ?? "");
+  }, [selectedColor?.color, selectedColor?.editorId]);
+
+  const handleSelectedColorDraftChange = useCallback(
+    (value: string) => {
+      const nextDraft = normalizeHexDraft(value);
+      setSelectedColorDraft(nextDraft);
+      if (isValidHexColor(nextDraft)) {
+        colorActions.updateSelectedColor(nextDraft);
+      }
+    },
+    [colorActions],
+  );
+
+  const commitSelectedColorDraft = useCallback(() => {
+    if (!selectedColor) return;
+
+    const normalizedDraft = normalizeHexDraft(selectedColorDraft);
+    if (isValidHexColor(normalizedDraft)) {
+      colorActions.updateSelectedColor(normalizedDraft);
+      setSelectedColorDraft(normalizedDraft);
+      return;
+    }
+
+    setSelectedColorDraft(selectedColor.color);
+  }, [colorActions, selectedColor, selectedColorDraft]);
+
+  const isSelectedColorDraftInvalid =
+    selectedColor !== null &&
+    selectedColorDraft.length > 0 &&
+    selectedColorDraft.startsWith("#") &&
+    selectedColorDraft !== selectedColor.color &&
+    !isValidHexColor(selectedColorDraft);
 
   return (
     <div className="space-y-2">
@@ -145,48 +186,65 @@ export const UsernameColorSection = memo(function UsernameColorSection({
                   {selectedColor.position}%
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <div
-                  className="relative h-8 w-8 shrink-0 cursor-pointer overflow-hidden rounded-none border border-theme-border-subtle"
-                  style={{ backgroundColor: selectedColor.color }}
-                >
-                  <input
-                    id="username-gradient-color-picker"
-                    name="username-gradient-color-picker"
-                    type="color"
-                    value={selectedColor.color}
-                    onChange={(e) =>
-                      colorActions.updateSelectedColor(e.target.value)
-                    }
-                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                    disabled={isSaving}
-                    aria-label="Selector de color para gradiente"
-                  />
-                </div>
-                <Input
-                  id="username-gradient-color-hex"
-                  name="username-gradient-color-hex"
-                  disabled={isSaving}
-                  className={cn(
-                    fieldInputClass,
-                    "h-8 flex-1 font-mono text-xs uppercase mr-0.5",
-                  )}
-                  value={selectedColor.color}
-                  onChange={(e) =>
-                    colorActions.updateSelectedColor(e.target.value)
-                  }
-                />
-                {colorState.gradientColors.length > 2 && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={colorActions.removeSelectedColor}
-                    disabled={isSaving}
-                    className="h-8 w-8 mr-1 cursor-pointer rounded-none border border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg hover:bg-theme-channel-type-inactive-bg p-0 text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border hover:text-red-400"
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="relative h-8 w-8 shrink-0 cursor-pointer overflow-hidden rounded-none border border-theme-border-subtle"
+                    style={{ backgroundColor: selectedColor.color }}
                   >
-                    <X className="w-3 h-3" />
-                  </Button>
+                    <input
+                      id="username-gradient-color-picker"
+                      name="username-gradient-color-picker"
+                      type="color"
+                      value={selectedColor.color}
+                      onChange={(e) =>
+                        colorActions.updateSelectedColor(e.target.value)
+                      }
+                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                      disabled={isSaving}
+                      aria-label="Selector de color para gradiente"
+                    />
+                  </div>
+                  <Input
+                    id="username-gradient-color-hex"
+                    name="username-gradient-color-hex"
+                    disabled={isSaving}
+                    aria-invalid={isSelectedColorDraftInvalid}
+                    className={cn(
+                      fieldInputClass,
+                      "h-8 flex-1 font-mono text-xs uppercase mr-0.5",
+                      isSelectedColorDraftInvalid &&
+                        "border-red-400 text-red-200 focus-visible:border-red-400",
+                    )}
+                    value={selectedColorDraft}
+                    onChange={(e) =>
+                      handleSelectedColorDraftChange(e.target.value)
+                    }
+                    onBlur={commitSelectedColorDraft}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        commitSelectedColorDraft();
+                      }
+                    }}
+                  />
+                  {colorState.gradientColors.length > 2 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={colorActions.removeSelectedColor}
+                      disabled={isSaving}
+                      className="h-8 w-8 mr-1 cursor-pointer rounded-none border border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg hover:bg-theme-channel-type-inactive-bg p-0 text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border hover:text-red-400"
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  )}
+                </div>
+                {isSelectedColorDraftInvalid && (
+                  <p className="text-[10px] text-red-400">
+                    Enter a valid hex color like #A1B2C3.
+                  </p>
                 )}
               </div>
             </div>

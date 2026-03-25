@@ -357,6 +357,7 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
             <div className="-mt-1 w-full flex-1 space-y-2">
               <UsernameSection
                 username={username}
+                usernameColor={usernameColor.buildColor()}
                 discriminator={user.discriminator}
                 usernameStatus={usernameValidation.status}
                 originalUsername={originalUsername}
