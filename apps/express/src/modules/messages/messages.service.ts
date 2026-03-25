@@ -15,6 +15,7 @@ export const messageSelectFields = {
   content: true,
   type: true,
   attachmentAssetId: true,
+  messageSenderId: true,
   channelId: true,
   deleted: true,
   pinned: true,
@@ -23,6 +24,9 @@ export const messageSelectFields = {
   updatedAt: true,
   attachmentAsset: {
     select: uploadedAssetSelect,
+  },
+  messageSender: {
+    select: profileSelect,
   },
   member: {
     select: {
@@ -51,8 +55,12 @@ export const messageSelectFields = {
       id: true,
       content: true,
       attachmentAssetId: true,
+      messageSenderId: true,
       attachmentAsset: {
         select: uploadedAssetSelect,
+      },
+      messageSender: {
+        select: profileSelect,
       },
       member: {
         select: {
@@ -69,30 +77,40 @@ export const messageSelectFields = {
   },
 } as const;
 
+function serializeOptionalProfile(profile: any) {
+  return profile ? serializeProfile(profile) : null;
+}
+
 export function serializeMessageRecord(message: any) {
+  const {
+    attachmentAsset,
+    messageSender,
+    member,
+    sticker,
+    reactions,
+    replyTo,
+    ...rest
+  } = message;
+
   return {
-    ...message,
-    attachmentAsset: serializeAttachmentAsset(message.attachmentAsset),
-    member: {
-      ...message.member,
-      profile: serializeProfile(message.member.profile),
-    },
-    sticker: serializeSticker(message.sticker),
-    reactions: message.reactions?.map((reaction: any) => ({
+    ...rest,
+    attachmentAsset: serializeAttachmentAsset(attachmentAsset),
+    messageSender: serializeOptionalProfile(messageSender ?? member?.profile ?? null),
+    sticker: serializeSticker(sticker),
+    reactions: reactions?.map((reaction: any) => ({
       ...reaction,
-      profile: serializeProfile(reaction.profile),
+      profile: serializeOptionalProfile(reaction.profile),
     })),
-    replyTo: message.replyTo
+    replyTo: replyTo
       ? {
-          ...message.replyTo,
+          ...replyTo,
           attachmentAsset: serializeAttachmentAsset(
-            message.replyTo.attachmentAsset,
+            replyTo.attachmentAsset,
           ),
-          member: {
-            ...message.replyTo.member,
-            profile: serializeProfile(message.replyTo.member.profile),
-          },
-          sticker: serializeSticker(message.replyTo.sticker),
+          messageSender: serializeOptionalProfile(
+            replyTo.messageSender ?? replyTo.member?.profile ?? null,
+          ),
+          sticker: serializeSticker(replyTo.sticker),
         }
       : null,
   };
@@ -183,6 +201,7 @@ export async function createMessage({
   attachmentAssetId,
   channelId,
   memberId,
+  messageSenderId,
   stickerId,
   type,
   replyToId,
@@ -191,6 +210,7 @@ export async function createMessage({
   attachmentAssetId: string | null;
   channelId: string;
   memberId: string;
+  messageSenderId: string;
   stickerId?: string | null;
   type: MessageType;
   replyToId?: string | null;
@@ -201,6 +221,7 @@ export async function createMessage({
       attachmentAssetId,
       channelId,
       memberId,
+      messageSenderId,
       stickerId,
       type,
       replyToId,
@@ -243,6 +264,26 @@ export async function getPaginatedMessages(
   });
 
   return messages.map(serializeMessageRecord);
+}
+
+export async function getMessagesByIds(channelId: string, ids: string[]) {
+  if (ids.length === 0) return [];
+
+  const messages = await db.message.findMany({
+    where: {
+      channelId,
+      id: { in: ids },
+    },
+    select: messageSelectFields,
+  });
+
+  const serializedById = new Map(
+    messages.map((message) => [message.id, serializeMessageRecord(message)]),
+  );
+
+  return ids
+    .map((id) => serializedById.get(id))
+    .filter((message): message is NonNullable<typeof message> => Boolean(message));
 }
 
 export async function getMessage(messageId: string, channelId: string) {

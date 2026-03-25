@@ -4,6 +4,7 @@ import {
   serializeMessageRecord,
   createMessage,
   getPaginatedMessages,
+  getMessagesByIds,
   getMessage,
   updateMessageContent,
   hardDeleteMessage,
@@ -32,6 +33,7 @@ const router = Router();
 // UUID validation regex
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const MAX_BATCH_MESSAGE_IDS = 200;
 
 // POST → Enviar Mensaje
 
@@ -95,6 +97,7 @@ router.post("/", async (req, res) => {
       stickerId,
       channelId: channelId as string,
       memberId: member.id,
+      messageSenderId: profileId,
       type,
       replyToId,
     });
@@ -245,6 +248,57 @@ router.get("/", async (req, res) => {
   }
 });
 
+router.post("/by-ids", async (req, res) => {
+  try {
+    const profileId = req.profile?.id;
+    const { channelId, boardId } = req.query;
+    const rawIds = req.body?.ids;
+
+    if (!profileId) return res.status(401).json({ error: "Unauthorized" });
+    if (!channelId || !UUID_REGEX.test(channelId as string))
+      return res.status(400).json({ error: "Invalid channel ID" });
+    if (!boardId || !UUID_REGEX.test(boardId as string))
+      return res.status(400).json({ error: "Invalid board ID" });
+    if (!Array.isArray(rawIds) || rawIds.length === 0) {
+      return res.status(400).json({ error: "Ids must be a non-empty array" });
+    }
+    if (rawIds.length > MAX_BATCH_MESSAGE_IDS) {
+      return res.status(400).json({ error: "Too many message IDs" });
+    }
+    if (
+      rawIds.some((id) => typeof id !== "string" || !UUID_REGEX.test(id))
+    ) {
+      return res.status(400).json({ error: "Invalid message IDs" });
+    }
+
+    const ids = [...new Set(rawIds as string[])];
+    if (ids.length === 0) {
+      return res.status(400).json({ error: "No valid message IDs provided" });
+    }
+
+    const channel = await findChannelCached(
+      boardId as string,
+      channelId as string,
+    );
+    if (!channel) return res.status(404).json({ error: "Channel not found" });
+
+    const board = await verifyMemberInBoardCached(profileId, channel.boardId);
+    if (!board) return res.status(403).json({ error: "Access denied" });
+
+    const messages = await getMessagesByIds(channelId as string, ids);
+    const foundIds = new Set(messages.map((message) => message.id));
+    const missingIds = ids.filter((id) => !foundIds.has(id));
+
+    return res.json({
+      items: messages.map((message) => attachFilePreviews(message)),
+      missingIds,
+    });
+  } catch (err) {
+    logger.error("[MESSAGE_BY_IDS_POST]", err);
+    return res.status(500).json({ error: "Internal Error" });
+  }
+});
+
 // PATCH → Editar Mensaje
 
 router.patch("/:messageId", async (req, res) => {
@@ -281,7 +335,7 @@ router.patch("/:messageId", async (req, res) => {
     if (!message || message.deleted)
       return res.status(404).json({ error: "Message not found" });
 
-    const isOwner = message.member.id === member.id;
+    const isOwner = message.messageSenderId === profileId;
     if (!isOwner) return res.status(401).json({ error: "Unauthorized" });
 
     if (message.attachmentAssetId)
@@ -336,7 +390,7 @@ router.delete("/:messageId", async (req, res) => {
     if (!message || message.deleted)
       return res.status(404).json({ error: "Message not found" });
 
-    const isMessageOwner = message.member.id === member.id;
+    const isMessageOwner = message.messageSenderId === profileId;
     const isBoardOwner = member.role === MemberRole.OWNER;
     const isAdmin = member.role === MemberRole.ADMIN;
     const isModerator = member.role === MemberRole.MODERATOR;
