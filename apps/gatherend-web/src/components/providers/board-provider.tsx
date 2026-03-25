@@ -2,16 +2,8 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, ReactNode } from "react";
-import {
-  Board,
-  Channel,
-  Category,
-  Member,
-  Slot,
-  MemberRole,
-  ChannelType,
-} from "@prisma/client";
-import { useBoardMembersSocket } from "@/hooks/use-board-members-socket";
+import { Board, Member, Slot, MemberRole, ChannelType } from "@prisma/client";
+import { syncUserBoardFromBoardData } from "@/hooks/use-user-boards";
 import type { UsernameColor, UsernameFormatConfig } from "../../../types";
 import type {
   ClientStickerAssetRef,
@@ -95,10 +87,9 @@ export const BoardProvider = ({
     if (!existingData) {
       queryClient.setQueryData(["board", initialBoard.id], initialBoard);
     }
-  }, [queryClient, initialBoard.id]);
 
-  // Escuchar cambios en miembros del board via WebSocket
-  useBoardMembersSocket(initialBoard.id);
+    syncUserBoardFromBoardData(queryClient, initialBoard);
+  }, [queryClient, initialBoard]);
 
   return (
     <BoardContext.Provider

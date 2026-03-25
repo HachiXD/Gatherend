@@ -12,7 +12,7 @@ export const OverlayProvider = () => {
     <>
       {type === "boardSettings" && isOpen && (
         <BoardSettingsOverlay
-          board={data.board!}
+          boardId={data.boardId!}
           currentProfileId={data.currentProfileId}
           onClose={onClose}
         />
