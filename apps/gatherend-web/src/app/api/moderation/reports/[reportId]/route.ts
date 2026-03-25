@@ -209,6 +209,9 @@ export async function GET(
             deleted: false,
           },
           include: {
+            messageSender: {
+              select: moderationProfileSelect,
+            },
             member: {
               include: {
                 profile: {
@@ -229,6 +232,9 @@ export async function GET(
             deleted: false,
           },
           include: {
+            messageSender: {
+              select: moderationProfileSelect,
+            },
             member: {
               include: {
                 profile: {
@@ -245,6 +251,9 @@ export async function GET(
         const currentMessage = await db.message.findUnique({
           where: { id: report.targetId },
           include: {
+            messageSender: {
+              select: moderationProfileSelect,
+            },
             member: {
               include: {
                 profile: {
@@ -266,9 +275,12 @@ export async function GET(
           id: msg.id,
           content: msg.content,
           createdAt: msg.createdAt.toISOString(),
-          member: msg.member
+          messageSender: serializeModerationProfile(msg.messageSender ?? null),
+          member: msg.messageSender || msg.member
             ? {
-                profile: serializeModerationProfile(msg.member.profile),
+                profile: serializeModerationProfile(
+                  msg.messageSender ?? msg.member?.profile ?? null,
+                ),
               }
             : null,
           isReported: msg.id === report.targetId,
