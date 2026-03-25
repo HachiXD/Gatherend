@@ -185,3 +185,26 @@ export const getPaginatedDirectMessages = async (
 
   return messages.map(serializeDirectMessage);
 };
+
+export const getDirectMessagesByIds = async (
+  conversationId: string,
+  ids: string[],
+) => {
+  if (ids.length === 0) return [];
+
+  const messages = await db.directMessage.findMany({
+    where: {
+      conversationId,
+      id: { in: ids },
+    },
+    select: directMessageSelect,
+  });
+
+  const serializedById = new Map(
+    messages.map((message) => [message.id, serializeDirectMessage(message)]),
+  );
+
+  return ids
+    .map((id) => serializedById.get(id))
+    .filter((message): message is NonNullable<typeof message> => Boolean(message));
+};

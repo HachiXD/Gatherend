@@ -4,6 +4,7 @@ import {
   serializeDirectMessage,
   createDirectMessage,
   getPaginatedDirectMessages,
+  getDirectMessagesByIds,
   findConversationForProfile,
 } from "./direct-messages.service.js";
 import { AssetContext, AssetVisibility } from "@prisma/client";
@@ -18,6 +19,7 @@ const MESSAGES_BATCH = 40;
 // UUID validation regex
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const MAX_BATCH_MESSAGE_IDS = 200;
 
 // POST → enviar DM
 
@@ -184,6 +186,53 @@ router.get("/", async (req, res) => {
     }
   } catch (error) {
     logger.error("[DM_GET]", error);
+    return res.status(500).json({ error: "Internal Error" });
+  }
+});
+
+router.post("/by-ids", async (req, res) => {
+  try {
+    const profileId = req.profile?.id;
+    const { conversationId } = req.query;
+    const rawIds = req.body?.ids;
+
+    if (!profileId) return res.status(401).json({ error: "Unauthorized" });
+    if (!conversationId || !UUID_REGEX.test(conversationId as string))
+      return res.status(400).json({ error: "Invalid conversation ID" });
+    if (!Array.isArray(rawIds) || rawIds.length === 0) {
+      return res.status(400).json({ error: "Ids must be a non-empty array" });
+    }
+    if (rawIds.length > MAX_BATCH_MESSAGE_IDS) {
+      return res.status(400).json({ error: "Too many message IDs" });
+    }
+    if (
+      rawIds.some((id) => typeof id !== "string" || !UUID_REGEX.test(id))
+    ) {
+      return res.status(400).json({ error: "Invalid message IDs" });
+    }
+
+    const ids = [...new Set(rawIds as string[])];
+    if (ids.length === 0) {
+      return res.status(400).json({ error: "No valid message IDs provided" });
+    }
+
+    const validConv = await findConversationForProfile(
+      profileId,
+      conversationId as string,
+    );
+    if (!validConv)
+      return res.status(404).json({ error: "Conversation not found" });
+
+    const messages = await getDirectMessagesByIds(conversationId as string, ids);
+    const foundIds = new Set(messages.map((message) => message.id));
+    const missingIds = ids.filter((id) => !foundIds.has(id));
+
+    return res.json({
+      items: messages.map((message) => attachFilePreviews(message)),
+      missingIds,
+    });
+  } catch (error) {
+    logger.error("[DM_BY_IDS_POST]", error);
     return res.status(500).json({ error: "Internal Error" });
   }
 });
