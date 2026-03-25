@@ -118,7 +118,7 @@ function CommunityViewInner({ communityId }: CommunityViewProps) {
         variant="ghost"
         onClick={handleBackToDiscovery}
         disabled={isBackPending}
-        className="h-9 w-9 cursor-pointer rounded-none border-0 bg-[var(--community-header-btn-bg)] p-0 text-[var(--community-header-btn-text)] hover:bg-[var(--community-header-btn-hover)] hover:text-[var(--community-header-btn-text)] focus-visible:ring-2 focus-visible:ring-[var(--community-header-btn-ring)]"
+        className="h-8 w-8 cursor-pointer rounded-none border-0 bg-[var(--community-header-btn-bg)] p-0 text-[var(--community-header-btn-text)] hover:bg-[var(--community-header-btn-hover)] hover:text-[var(--community-header-btn-text)] focus-visible:ring-2 focus-visible:ring-[var(--community-header-btn-ring)]"
         aria-label="Back to discovery"
       >
         <ChevronLeft className="h-5 w-5" />
@@ -133,7 +133,7 @@ function CommunityViewInner({ communityId }: CommunityViewProps) {
         <button
           type="button"
           onClick={handleCreate}
-          className="inline-flex h-9 cursor-pointer items-center gap-2 border-0 bg-[var(--community-header-btn-bg)] px-3 text-[13px] font-semibold text-[var(--community-header-btn-text)] hover:bg-[var(--community-header-btn-hover)] focus-visible:ring-2 focus-visible:ring-[var(--community-header-btn-ring)] focus-visible:outline-none disabled:opacity-50 rounded-none"
+          className="inline-flex h-6.5 cursor-pointer items-center gap-2 border-0 bg-[var(--community-header-btn-bg)] px-3 text-[13px] font-semibold text-[var(--community-header-btn-text)] hover:bg-[var(--community-header-btn-hover)] focus-visible:ring-2 focus-visible:ring-[var(--community-header-btn-ring)] focus-visible:outline-none disabled:opacity-50 rounded-none"
         >
           <Plus className="h-4 w-4" />
           {activeSection === "boards" ? "Crear board" : "Crear post"}
@@ -142,7 +142,7 @@ function CommunityViewInner({ communityId }: CommunityViewProps) {
         {community?.canDeleteAnyPost && (
           <button
             type="button"
-            className="inline-flex h-9 w-9 cursor-pointer items-center justify-center border-0 bg-[var(--community-header-btn-bg)] text-[var(--community-header-btn-text)] hover:bg-[var(--community-header-btn-hover)] hover:text-[var(--community-header-btn-text)] focus-visible:ring-2 focus-visible:ring-[var(--community-header-btn-ring)] focus-visible:outline-none rounded-none"
+            className="inline-flex h-8 w-8 cursor-pointer items-center justify-center border-0 bg-[var(--community-header-btn-bg)] text-[var(--community-header-btn-text)] hover:bg-[var(--community-header-btn-hover)] hover:text-[var(--community-header-btn-text)] focus-visible:ring-2 focus-visible:ring-[var(--community-header-btn-ring)] focus-visible:outline-none rounded-none"
             title="Ajustes de comunidad (pendiente)"
             aria-label="Ajustes de comunidad"
           >

@@ -62,65 +62,6 @@ function rgbToHsl(red: number, green: number, blue: number) {
   return { h: hue / 6, s: saturation, l: lightness };
 }
 
-function hslToRgb(hue: number, saturation: number, lightness: number) {
-  if (saturation === 0) {
-    const value = Math.round(lightness * 255);
-    return [value, value, value] as const;
-  }
-
-  const hueToRgb = (p: number, q: number, t: number) => {
-    let channel = t;
-
-    if (channel < 0) channel += 1;
-    if (channel > 1) channel -= 1;
-    if (channel < 1 / 6) return p + (q - p) * 6 * channel;
-    if (channel < 1 / 2) return q;
-    if (channel < 2 / 3) return p + (q - p) * (2 / 3 - channel) * 6;
-    return p;
-  };
-
-  const q =
-    lightness < 0.5
-      ? lightness * (1 + saturation)
-      : lightness + saturation - lightness * saturation;
-  const p = 2 * lightness - q;
-
-  return [
-    Math.round(hueToRgb(p, q, hue + 1 / 3) * 255),
-    Math.round(hueToRgb(p, q, hue) * 255),
-    Math.round(hueToRgb(p, q, hue - 1 / 3) * 255),
-  ] as const;
-}
-
-function toMutedVariant(color: string) {
-  const rgb = parseRgbColor(color);
-  if (!rgb) return color;
-
-  const [red, green, blue] = rgb;
-  const { h, s, l } = rgbToHsl(red, green, blue);
-  const mutedSaturation = Math.max(0.08, s * 0.2);
-  const mutedLightness = Math.min(0.42, Math.max(0.18, l * 0.9 + 0.03));
-  const [mutedRed, mutedGreen, mutedBlue] = hslToRgb(
-    h,
-    mutedSaturation,
-    mutedLightness,
-  );
-
-  return `rgb(${mutedRed}, ${mutedGreen}, ${mutedBlue})`;
-}
-
-function darkenLightness(color: string) {
-  const rgb = parseRgbColor(color);
-  if (!rgb) return color;
-
-  const [red, green, blue] = rgb;
-  const { h, s, l } = rgbToHsl(red, green, blue);
-  const darkerLightness = Math.max(0.08, l * 0.72);
-  const [darkerRed, darkerGreen, darkerBlue] = hslToRgb(h, s, darkerLightness);
-
-  return `rgb(${darkerRed}, ${darkerGreen}, ${darkerBlue})`;
-}
-
 function isVeryDarkColor(color: string) {
   const rgb = parseRgbColor(color);
   if (!rgb) return false;
@@ -162,12 +103,6 @@ function CommunityViewShellInner({
   });
 
   const headerBg = dominantColor || "var(--theme-bg-secondary)";
-  const tabsBg = dominantColor
-    ? toMutedVariant(dominantColor)
-    : "var(--theme-community-tabs-fallback-bg)";
-  const activeTabBg = dominantColor
-    ? darkenLightness(tabsBg)
-    : "var(--theme-community-tabs-fallback-active-bg)";
   const useLightButtonVariant = isVeryDarkColor(headerBg);
   const headerButtonStyles = useMemo(
     () =>
@@ -179,12 +114,6 @@ function CommunityViewShellInner({
         "--community-header-btn-hover": useLightButtonVariant
           ? `color-mix(in srgb, ${headerBg} 68%, white)`
           : `color-mix(in srgb, ${headerBg} 58%, black)`,
-        "--community-header-btn-top-border": useLightButtonVariant
-          ? `color-mix(in srgb, ${headerBg} 38%, white)`
-          : `color-mix(in srgb, ${headerBg} 58%, white)`,
-        "--community-header-btn-shadow-border": useLightButtonVariant
-          ? `color-mix(in srgb, ${headerBg} 58%, black)`
-          : `color-mix(in srgb, ${headerBg} 42%, black)`,
         "--community-header-btn-text": `color-mix(in srgb, white 88%, ${headerBg} 12%)`,
         "--community-header-btn-muted": `color-mix(in srgb, white 68%, ${headerBg} 32%)`,
         "--community-header-btn-ring": `color-mix(in srgb, white 28%, ${headerBg} 72%)`,
@@ -199,7 +128,9 @@ function CommunityViewShellInner({
     const boardLabel =
       community.activeBoardsCount === 1 ? "board abierto" : "boards abiertos";
     const postLabel =
-      community.recentPostCount7d === 1 ? "post esta semana" : "posts esta semana";
+      community.recentPostCount7d === 1
+        ? "post esta semana"
+        : "posts esta semana";
 
     return `${community.memberCount} ${memberLabel} • ${community.activeBoardsCount} ${boardLabel} • ${community.recentPostCount7d} ${postLabel}`;
   }, [community]);
@@ -230,12 +161,12 @@ function CommunityViewShellInner({
               )}
               <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent" />
             </div>
-            <div className="sticky top-0 z-20 shrink-0 border-b border-theme-border transition-colors duration-300">
+            <div className="sticky top-0 z-20 shrink-0  transition-colors duration-300">
               <div className="px-0 pt-3.5 pb-2.5" style={headerButtonStyles}>
                 <div className="ml-4 mr-6 flex items-start justify-between gap-4">
                   <div className="flex min-w-0 flex-1 items-start gap-3">
                     {headerLeading && (
-                      <div className="shrink-0">{headerLeading}</div>
+                      <div className="shrink-0 self-center -mt-1">{headerLeading}</div>
                     )}
                     <div className="-mt-2 min-w-0 flex-1">
                       <h1 className="text-[20px] font-bold text-white">
@@ -248,23 +179,19 @@ function CommunityViewShellInner({
                   </div>
 
                   {headerAction && (
-                    <div className="shrink-0">{headerAction}</div>
+                    <div className="shrink-0 self-center -mt-1">{headerAction}</div>
                   )}
                 </div>
               </div>
-              <div className="flex w-full items-stretch" role="tablist">
+              <div className="flex gap-0 p-0" role="tablist">
                 <button
                   type="button"
                   onClick={() => onSelectSection("boards")}
-                  style={{
-                    backgroundColor:
-                      activeSection === "boards" ? activeTabBg : tabsBg,
-                  }}
                   className={cn(
-                    "flex-1 h-9 cursor-pointer flex items-center justify-center text-sm font-semibold transition-colors",
+                    "flex h-8 flex-1 cursor-pointer items-center justify-center gap-2 rounded-none border px-3 text-[13px] transition",
                     activeSection === "boards"
-                      ? "text-white border-b-2 border-theme-button-primary/70"
-                      : "text-white/50 border-b border-white/20 hover:text-white hover:border-white/40",
+                      ? "border-theme-channel-type-active-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
+                      : "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border",
                   )}
                   role="tab"
                   aria-selected={activeSection === "boards"}
@@ -274,15 +201,11 @@ function CommunityViewShellInner({
                 <button
                   type="button"
                   onClick={() => onSelectSection("posts")}
-                  style={{
-                    backgroundColor:
-                      activeSection === "posts" ? activeTabBg : tabsBg,
-                  }}
                   className={cn(
-                    "flex-1 h-9 flex cursor-pointer items-center justify-center text-sm font-semibold transition-colors",
+                    "flex h-8 flex-1 cursor-pointer items-center justify-center gap-2 rounded-none border px-3 text-[13px] transition",
                     activeSection === "posts"
-                      ? "text-white border-b-2 border-theme-button-primary/70"
-                      : "text-white/50 border-b border-white/20 hover:text-white hover:border-white/40",
+                      ? "border-theme-channel-type-active-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
+                      : "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border",
                   )}
                   role="tab"
                   aria-selected={activeSection === "posts"}
