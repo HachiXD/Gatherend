@@ -15,6 +15,7 @@ import { useTranslation } from "@/i18n";
 import { useMainChannelLastMessage } from "@/hooks/use-main-channel-last-message";
 import { useVoiceStore } from "@/hooks/use-voice-store";
 import { useProfile } from "@/components/app-shell/providers/profile-provider";
+import { getMessageAuthor } from "@/hooks/chat";
 
 interface LeftbarChannelProps {
   channel: {
@@ -77,6 +78,8 @@ const LeftbarChannelComponent = ({
   const isMainChannel = channel.type === ChannelType.MAIN;
   const isText = channel.type === ChannelType.TEXT || isMainChannel;
   const hasUnread = unreadCount > 0;
+  const canManageChannel =
+    role === MemberRole.OWNER || role === MemberRole.ADMIN;
 
   // Obtener último mensaje solo para canal MAIN
   const { lastMessage } = useMainChannelLastMessage({
@@ -91,7 +94,10 @@ const LeftbarChannelComponent = ({
     if (!lastMessage) return t.dm.noMessagesYet;
     if (lastMessage.deleted) return t.dm.messageDeleted;
 
-    const username = lastMessage.member?.profile?.username || "";
+    const username =
+      getMessageAuthor(lastMessage, {
+        fallbackLabel: t.chat.deletedMember,
+      })?.username || "";
     let preview = "";
 
     if (lastMessage.hasAttachment || lastMessage.attachmentAsset) {
@@ -284,7 +290,7 @@ const LeftbarChannelComponent = ({
         )}
 
         {/* ACCIONES */}
-        {role !== MemberRole.GUEST && (
+        {canManageChannel && (
           <div className="ml-auto mr-2 hidden shrink-0 items-center gap-2 transition group-hover:flex">
             {tooltipsEnabled ? (
               <ActionTooltip label={t.board.editChannel}>

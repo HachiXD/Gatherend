@@ -170,11 +170,11 @@ export const LeftbarBanner = ({
                   <UserPlus className="h-4 w-4 ml-auto text-theme-menu-accent-text" />
                 </DropdownMenuItem>
               )}
-              {isAdmin && (
-                <DropdownMenuItem
-                  onClick={() =>
-                    onOpenOverlay("boardSettings", {
-                      board,
+              {isModerator && (
+                 <DropdownMenuItem
+                   onClick={() =>
+                     onOpenOverlay("boardSettings", {
+                       boardId,
                       currentProfileId,
                     })
                   }
@@ -193,7 +193,7 @@ export const LeftbarBanner = ({
                   <PlusCircle className="h-4 w-4 ml-auto" />
                 </DropdownMenuItem>
               )}
-              {isModerator && (
+              {isAdmin && (
                 <DropdownMenuItem
                   onClick={() =>
                     onOpen("createChannel", { board, categoryId: null })
