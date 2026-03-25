@@ -15,7 +15,7 @@ import axios from "axios";
 import { useQueryClient } from "@tanstack/react-query";
 import { getBoardImageUrl } from "@/lib/avatar-utils";
 import { getDerivedColors } from "@/lib/color-extraction";
-import { useUserBoards } from "@/hooks/use-user-boards";
+import { upsertUserBoardFromJoin, useUserBoards } from "@/hooks/use-user-boards";
 import { useModal } from "@/hooks/use-modal-store";
 import { Siren } from "lucide-react";
 import { ActionTooltip } from "@/components/action-tooltip";
@@ -126,8 +126,12 @@ function DiscoveryBoardCardComponent({ board }: DiscoveryBoardCardProps) {
 
       // Si se unió exitosamente, navegar con SPA
       if (success || alreadyMember) {
-        // Invalidar queries primero para que el board aparezca en user-boards
-        await queryClient.invalidateQueries({ queryKey: ["user-boards"] });
+        upsertUserBoardFromJoin(queryClient, {
+          id: board.id,
+          name: board.name,
+          imageAsset: board.imageAsset,
+          targetChannelId: targetChannelId ?? null,
+        });
         await queryClient.invalidateQueries({ queryKey: ["board", board.id] });
 
         startTransition(() => {
