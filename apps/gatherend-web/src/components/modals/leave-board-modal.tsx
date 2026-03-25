@@ -15,6 +15,11 @@ import axios from "axios";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "@/i18n";
+import { useBoardSwitchSafe } from "@/contexts/board-switch-context";
+import {
+  removeUserBoardFromCache,
+  type UserBoard,
+} from "@/hooks/use-user-boards";
 
 export const LeaveBoardModal = () => {
   const { isOpen, onClose, type, data } = useModal();
@@ -22,6 +27,7 @@ export const LeaveBoardModal = () => {
   const queryClient = useQueryClient();
   const [, startTransition] = useTransition();
   const { t } = useTranslation();
+  const boardSwitch = useBoardSwitchSafe();
 
   const isModalOpen = isOpen && type === "leaveBoard";
   const { board } = data;
@@ -38,14 +44,35 @@ export const LeaveBoardModal = () => {
           ? response.data.redirectUrl
           : "/boards";
 
-      // Invalidar queries de boards para reflejar que ya no es miembro
-      await queryClient.invalidateQueries({ queryKey: ["user-boards"] });
-      await queryClient.invalidateQueries({ queryKey: ["board", board?.id] });
+      const remainingBoards = board?.id
+        ? removeUserBoardFromCache(queryClient, board.id)
+        : (queryClient.getQueryData<UserBoard[]>(["user-boards"]) ?? []);
+
+      if (board?.id) {
+        queryClient.removeQueries({ queryKey: ["board", board.id] });
+      }
 
       onClose();
       startTransition(() => {
+        const nextBoard = remainingBoards[0];
+
+        if (nextBoard) {
+          if (boardSwitch?.isClientNavigationEnabled) {
+            boardSwitch.switchBoard(
+              nextBoard.id,
+              nextBoard.mainChannelId ?? undefined,
+            );
+          } else {
+            router.push(
+              nextBoard.mainChannelId
+                ? `/boards/${nextBoard.id}/rooms/${nextBoard.mainChannelId}`
+                : `/boards/${nextBoard.id}`,
+            );
+          }
+          return;
+        }
+
         router.push(redirectUrl);
-        router.refresh();
       });
     } catch (error) {
       console.error(error);

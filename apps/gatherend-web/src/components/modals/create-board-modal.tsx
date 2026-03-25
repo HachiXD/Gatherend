@@ -114,6 +114,18 @@ const schema = z
       message: "Tu grupo es público, debes elegir una comunidad",
       path: ["communityId"],
     },
+  )
+  .refine(
+    (data) => {
+      if (data.publicSeats === 0 && data.communityId) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: "Tu grupo es privado, no puede estar asociado a una comunidad",
+      path: ["communityId"],
+    },
   );
 
 type FormSchema = z.infer<typeof schema>;
@@ -165,6 +177,7 @@ export const CreateBoardModal = () => {
 
   const publicSeats = form.watch("publicSeats");
   const invitationSeats = form.watch("invitationSeats");
+  const selectedCommunityId = form.watch("communityId");
   const totalSeats = publicSeats + invitationSeats;
 
   const cols = Math.max(2, Math.ceil(Math.sqrt(totalSeats + 1)));
@@ -303,7 +316,10 @@ export const CreateBoardModal = () => {
   return (
     <Dialog open={isModalOpen} onOpenChange={handleClose}>
       {/* En mobile: scroll + X visible. En desktop: look original (sin scroll y sin X). */}
-      <DialogContent className="sm:[&>button]:hidden max-w-5xl! max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain rounded-none border border-theme-border bg-theme-bg-modal p-0 text-theme-text-subtle sm:max-h-none sm:overflow-hidden">
+      <DialogContent
+        className=" max-w-5xl! max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain rounded-none border border-theme-border bg-theme-bg-modal p-0 text-theme-text-subtle sm:max-h-none sm:overflow-hidden"
+        closeButtonClassName="cursor-pointer rounded-none p-1 text-theme-text-subtle opacity-100 transition hover:text-theme-text-light data-[state=open]:bg-transparent data-[state=open]:text-theme-text-subtle focus:ring-0 focus:ring-offset-0 focus:outline-none"
+      >
         <DialogHeader className="border-b border-theme-border bg-theme-bg-secondary/20 px-6 pb-1 pt-2">
           <DialogTitle className="text-2xl text-center font-bold">
             {t.modals.createBoard.title}
@@ -375,10 +391,10 @@ export const CreateBoardModal = () => {
                               }
                               className={cn(
                                 "w-full border px-2 py-1.5 text-left text-sm transition",
-                                "border-theme-border cursor-pointer bg-theme-bg-secondary/20 hover:bg-theme-bg-tertiary/40 hover:text-theme-text-light shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.28),inset_0_-1px_0_rgba(0,0,0,0.28)]",
-                                !form.watch("communityId")
-                                  ? "border-theme-accent-primary bg-theme-accent-primary/12 text-theme-text-light"
-                                  : "text-theme-text-subtle",
+                                "border-theme-border cursor-pointer bg-theme-bg-secondary/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.28),inset_0_-1px_0_rgba(0,0,0,0.28)]",
+                                !selectedCommunityId
+                                  ? "border-theme-border-accent-active-channel bg-theme-bg-secondary/40 text-theme-text-light"
+                                  : "text-theme-text-subtle hover:bg-theme-bg-tertiary/40 hover:text-theme-text-light",
                               )}
                             >
                               Sin comunidad
@@ -392,20 +408,22 @@ export const CreateBoardModal = () => {
                             </div>
                           )}
 
-                          {communities.map((community) => (
-                            <CommunitySelectCard
-                              key={community.id}
-                              community={community}
-                              isSelected={
-                                form.watch("communityId") === community.id
-                              }
-                              onClick={() =>
-                                form.setValue("communityId", community.id, {
-                                  shouldValidate: true,
-                                })
-                              }
-                            />
-                          ))}
+                          <div className="space-y-1.5">
+                            {communities.map((community) => (
+                              <CommunitySelectCard
+                                key={community.id}
+                                community={community}
+                                isSelected={
+                                  selectedCommunityId === community.id
+                                }
+                                onClick={() =>
+                                  form.setValue("communityId", community.id, {
+                                    shouldValidate: true,
+                                  })
+                                }
+                              />
+                            ))}
+                          </div>
                         </>
                       )}
                     </div>

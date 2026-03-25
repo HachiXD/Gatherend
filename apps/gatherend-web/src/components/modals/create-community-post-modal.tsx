@@ -124,7 +124,10 @@ export const CreateCommunityPostModal = () => {
 
   return (
     <Dialog open={isModalOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl! overflow-hidden rounded-none border border-theme-border bg-theme-bg-modal p-0 text-theme-text-subtle">
+      <DialogContent
+        className="max-w-2xl! overflow-hidden rounded-none border border-theme-border bg-theme-bg-modal p-0 text-theme-text-subtle"
+        closeButtonClassName="cursor-pointer rounded-none p-1 text-theme-text-subtle opacity-100 transition hover:text-theme-text-light data-[state=open]:bg-transparent data-[state=open]:text-theme-text-subtle focus:ring-0 focus:ring-offset-0 focus:outline-none"
+      >
         <DialogHeader className="px-6 pt-2">
           <DialogTitle className="text-2xl text-center font-bold">
             Crear post

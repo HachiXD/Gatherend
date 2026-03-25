@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { X, Search, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { Input } from "@/components/ui/input";
 import { useMyCommunities, type MyCommunity } from "@/hooks/use-my-communities";
 import { useTranslation } from "@/i18n";
 
@@ -12,6 +13,13 @@ interface MyCommunitiesModalProps {
   onClose: () => void;
 }
 
+const sectionLabelClass =
+  "block uppercase text-xs font-bold text-theme-text-subtle";
+const panelSectionClass =
+  "space-y-2 border border-theme-border-subtle bg-theme-bg-edit-form/30 px-3 py-2";
+const fieldInputClass =
+  "h-8 rounded-none border border-theme-border-subtle bg-theme-bg-edit-form/50 pl-8 pr-3 text-[14px] text-theme-text-primary placeholder:text-theme-text-muted focus-visible:border-theme-border-subtle focus-visible:ring-0 focus-visible:ring-offset-0";
+
 // Skeleton for community list loading
 function CommunityListSkeleton() {
   return (
@@ -19,12 +27,12 @@ function CommunityListSkeleton() {
       {Array.from({ length: 4 }).map((_, i) => (
         <div
           key={i}
-          className="flex items-center gap-3 p-3 rounded-md bg-theme-bg-secondary animate-pulse"
+          className="flex items-center gap-2 border border-theme-border bg-theme-bg-secondary/20 px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.28),inset_0_-1px_0_rgba(0,0,0,0.28)] animate-pulse"
         >
-          <div className="w-10 h-10 rounded-md bg-white/10" />
+          <div className="h-8 w-8 border border-theme-border bg-white/10" />
           <div className="flex-1 space-y-2">
-            <div className="h-4 bg-white/10 rounded w-3/4" />
-            <div className="h-3 bg-white/10 rounded w-1/2" />
+            <div className="h-3 bg-white/10 w-3/4" />
+            <div className="h-2.5 bg-white/10 w-1/2" />
           </div>
         </div>
       ))}
@@ -37,11 +45,11 @@ function CommunityCard({ community }: { community: MyCommunity }) {
   return (
     <div
       className={cn(
-        "flex items-center gap-3 p-3 rounded-md transition-colors",
-        "bg-theme-bg-secondary hover:bg-theme-bg-tertiary",
+        "flex items-center gap-2 border px-2 py-1.5 text-left transition",
+        "border-theme-border bg-theme-bg-secondary/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.28),inset_0_-1px_0_rgba(0,0,0,0.28)] hover:bg-theme-bg-tertiary/40",
       )}
     >
-      <div className="relative w-10 h-10 rounded-md overflow-hidden shrink-0 bg-theme-bg-tertiary">
+      <div className="relative h-8 w-8 shrink-0 overflow-hidden border border-theme-border bg-theme-bg-tertiary">
         {community.imageAsset?.url ? (
           <Image
             src={community.imageAsset.url}
@@ -50,16 +58,16 @@ function CommunityCard({ community }: { community: MyCommunity }) {
             className="object-cover"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-sm font-bold text-theme-text-muted">
+          <div className="flex h-full w-full items-center justify-center text-xs font-bold text-theme-text-muted">
             {community.name.charAt(0).toUpperCase()}
           </div>
         )}
       </div>
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium text-theme-text-light truncate">
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm font-medium text-theme-text-light">
           {community.name}
         </div>
-        <div className="text-xs text-theme-text-muted">
+        <div className="text-[11px] text-theme-text-muted">
           {community.boardCount} / {community.totalBoardCount}{" "}
           {community.totalBoardCount === 1 ? "board" : "boards"}
         </div>
@@ -89,72 +97,74 @@ export function MyCommunitiesModal({
 
   return (
     <div
-      className="fixed top-16 right-4 z-50 w-80 bg-theme-bg-dropdown-menu-primary border border-theme-border-secondary rounded-lg shadow-xl animate-in fade-in slide-in-from-top-2 duration-200"
+      className="fixed top-16 right-4 z-50 w-[356px] overflow-hidden border border-theme-border bg-theme-bg-dropdown-menu-primary text-theme-text-subtle shadow-xl animate-in fade-in slide-in-from-top-2 duration-200"
       onClick={(e) => e.stopPropagation()}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-theme-border-secondary">
+      <div className="flex h-8 items-center justify-between border-b border-theme-border bg-theme-bg-secondary/40 px-4">
         <div className="flex items-center gap-2">
-          <Users className="w-4 h-4 text-theme-text-muted" />
-          <h3 className="text-sm font-semibold text-theme-text-light">
+          <Users className="h-4 w-4 text-theme-text-muted" />
+          <h3 className="text-[15px] font-bold tracking-[0.04em] text-theme-text-light">
             {t.modals.myCommunities.title}
           </h3>
         </div>
         <button
           onClick={onClose}
-          className="p-1 rounded hover:bg-theme-bg-tertiary transition-colors"
+          className="cursor-pointer rounded-none p-1 text-theme-text-subtle opacity-100 transition hover:text-theme-text-light data-[state=open]:bg-transparent data-[state=open]:text-theme-text-subtle focus:ring-0 focus:ring-offset-0 focus:outline-none"
         >
-          <X className="w-4 h-4 text-theme-text-muted" />
+          <X className="h-3.5 w-3.5" />
         </button>
       </div>
 
       {/* Search */}
-      <div className="px-4 py-3 border-b border-theme-border-secondary">
-        <div className="relative">
-          <label htmlFor="my-communities-search" className="sr-only">
+      <div className="scrollbar-ultra-thin max-h-[70vh] space-y-3 overflow-y-auto px-4 py-3">
+        <div className={panelSectionClass}>
+          <label htmlFor="my-communities-search" className={sectionLabelClass}>
             {t.modals.myCommunities.searchPlaceholder}
           </label>
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-theme-text-muted" />
-          <input
-            id="my-communities-search"
-            name="my-communities-search"
-            type="text"
-            placeholder={t.modals.myCommunities.searchPlaceholder}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className={cn(
-              "w-full pl-9 pr-3 py-2 text-sm rounded-md",
-              "bg-theme-bg-input border border-theme-border-secondary",
-              "text-theme-text-light placeholder:text-theme-text-muted",
-              "focus:outline-none focus:ring-1 focus:ring-theme-accent-primary",
-            )}
-          />
+          <div className="relative -mt-0.5">
+            <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-theme-text-muted" />
+            <Input
+              id="my-communities-search"
+              name="my-communities-search"
+              type="text"
+              placeholder={t.modals.myCommunities.searchPlaceholder}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className={fieldInputClass}
+            />
+          </div>
         </div>
-      </div>
 
-      {/* Content */}
-      <div className="p-4 max-h-[60vh] overflow-y-auto">
-        {isLoading ? (
-          <CommunityListSkeleton />
-        ) : filteredCommunities.length === 0 ? (
-          <div className="text-center py-8 text-sm text-theme-text-muted">
-            {search
-              ? t.modals.myCommunities.noResults
-              : t.modals.myCommunities.noCommunities}
+        {/* Content */}
+        <div className={cn(panelSectionClass, "space-y-2.5")}>
+          <div className="border-b border-theme-border-subtle pb-1">
+            <span className={sectionLabelClass}>
+              {t.modals.myCommunities.title}
+            </span>
           </div>
-        ) : (
-          <div className="space-y-2">
-            {filteredCommunities.map((community) => (
-              <CommunityCard key={community.id} community={community} />
-            ))}
-          </div>
-        )}
+          {isLoading ? (
+            <CommunityListSkeleton />
+          ) : filteredCommunities.length === 0 ? (
+            <div className="border border-theme-border-subtle bg-theme-bg-edit-form/35 px-3 py-6 text-center text-sm text-theme-text-muted">
+              {search
+                ? t.modals.myCommunities.noResults
+                : t.modals.myCommunities.noCommunities}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {filteredCommunities.map((community) => (
+                <CommunityCard key={community.id} community={community} />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Footer - Stats */}
       {!isLoading && communities.length > 0 && (
-        <div className="px-4 py-3 border-t border-theme-border-secondary">
-          <p className="text-xs text-theme-text-muted text-center">
+        <div className="border-t border-theme-border bg-theme-bg-secondary/40 px-4 py-1.5">
+          <p className="text-center text-xs text-theme-text-muted">
             {t.modals.myCommunities.memberOf.replace(
               "{count}",
               String(communities.length),

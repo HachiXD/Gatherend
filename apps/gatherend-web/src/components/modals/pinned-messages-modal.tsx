@@ -19,23 +19,17 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "@/i18n";
 import type {
   ClientAttachmentAsset,
-  ClientProfileSummary,
   ClientSticker,
 } from "@/types/uploaded-assets";
+import type { ChannelMessage, DirectMessageWithSender } from "@/hooks/chat/types";
+import { getMessageAuthor, getMessageOwnerProfileId } from "@/hooks/chat";
 
-interface PinnedMessage {
-  id: string;
-  content: string;
-  createdAt: string;
+type PinnedMessage = (ChannelMessage | DirectMessageWithSender) & {
   pinnedAt: string;
   attachmentAsset?: ClientAttachmentAsset | null;
   fileName?: string | null;
   sticker?: ClientSticker | null;
-  member?: {
-    profile: ClientProfileSummary;
-  };
-  sender?: ClientProfileSummary;
-}
+};
 
 export const PinnedMessagesModal = () => {
   const { isOpen, onClose, type, data } = useModal();
@@ -128,7 +122,11 @@ export const PinnedMessagesModal = () => {
           ) : (
             <div className="space-y-4">
               {pinnedMessages.map((message) => {
-                const author = message.member?.profile || message.sender;
+                const author = getMessageAuthor(message, {
+                  fallbackLabel: t.chat.deletedMember,
+                });
+                const authorProfileId =
+                  getMessageOwnerProfileId(message) || undefined;
                 const isImage = message.attachmentAsset?.mimeType?.startsWith(
                   "image/",
                 );
@@ -137,13 +135,13 @@ export const PinnedMessagesModal = () => {
                   <div
                     key={message.id}
                     className="group relative flex gap-x-3 p-3 rounded-md bg-theme-bg-tertiary/30 hover:bg-theme-bg-tertiary/50 transition border border-theme-border-primary/30"
-                  >
-                    <UserAvatar
-                      src={author?.avatarAsset?.url || undefined}
-                      profileId={author?.id}
-                      showStatus={false}
-                      className="h-10 w-10"
-                    />
+                    >
+                      <UserAvatar
+                        src={author?.avatarAsset?.url || undefined}
+                        profileId={authorProfileId}
+                        showStatus={false}
+                        className="h-10 w-10"
+                      />
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-x-2">

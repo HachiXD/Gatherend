@@ -4,9 +4,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { X, Plus, RotateCcw, Sun, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Slider } from "@/components/ui/slider";
 import {
   Select,
   SelectContent,
@@ -49,6 +48,37 @@ interface EditableGradientColorStop extends GradientColorStop {
   editorId: string;
 }
 
+const sectionLabelClass =
+  "block uppercase text-xs font-bold text-theme-text-subtle";
+const panelSectionClass =
+  "space-y-2 border border-theme-border-subtle bg-theme-bg-edit-form/30 px-3 py-2";
+const fieldInputClass =
+  "h-8 rounded-none border-theme-border-subtle bg-theme-bg-edit-form/50 text-theme-text-light placeholder:text-theme-text-muted focus-visible:border-theme-border-subtle";
+const panelToggleButtonClass =
+  "flex h-8 cursor-pointer items-center justify-center gap-2 rounded-none border px-3 text-[13px] transition";
+const panelToggleActiveClass =
+  "border-theme-channel-type-active-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text";
+const panelToggleInactiveClass =
+  "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border";
+const panelSelectTriggerClass =
+  "h-8 w-full cursor-pointer rounded-none border border-theme-border-subtle bg-theme-bg-edit-form/50 text-theme-text-light hover:bg-theme-bg-edit-form/50 focus:border-theme-border-subtle focus:ring-0";
+const panelSelectContentClass =
+  "w-[var(--radix-select-trigger-width)] min-w-[var(--radix-select-trigger-width)] rounded-none border-theme-border bg-theme-bg-modal p-0 text-theme-text-secondary [&>div]:p-0";
+const panelSelectItemClass =
+  "h-8 w-full cursor-pointer rounded-none border-x-0 border-t-0 border-b border-theme-border-subtle px-2 hover:border-theme-channel-type-active-border hover:bg-theme-channel-type-active-bg hover:text-theme-channel-type-active-text focus:border-theme-channel-type-active-border focus:bg-theme-channel-type-active-bg focus:text-theme-channel-type-active-text";
+
+function normalizeHexDraft(value: string): string {
+  return value.slice(0, 7).toUpperCase();
+}
+
+function clampGradientAngle(angle: number): number {
+  if (!Number.isFinite(angle)) {
+    return 90;
+  }
+
+  return Math.max(0, Math.min(180, Math.round(angle)));
+}
+
 function createEditableGradientColorStop(
   stop: GradientColorStop,
 ): EditableGradientColorStop {
@@ -70,7 +100,9 @@ function toEditableGradientColors(
   defaultColors: GradientColorStop[],
 ): EditableGradientColorStop[] {
   return normalizeEditableGradientColors(
-    normalizeGradientColors(colors, defaultColors).map(createEditableGradientColorStop),
+    normalizeGradientColors(colors, defaultColors).map(
+      createEditableGradientColorStop,
+    ),
   );
 }
 
@@ -217,14 +249,16 @@ export function ThemeModal({
   const [useGradient, setUseGradient] = useState(
     !!currentThemeConfig?.gradient,
   );
-  const [gradientColors, setGradientColors] = useState<EditableGradientColorStop[]>(
+  const [gradientColors, setGradientColors] = useState<
+    EditableGradientColorStop[]
+  >(
     toEditableGradientColors(currentThemeConfig?.gradient?.colors, [
       { color: DEFAULT_BASE_COLOR, position: 0 },
       { color: "#1a1a2e", position: 100 },
     ]),
   );
   const [gradientAngle, setGradientAngle] = useState(
-    currentThemeConfig?.gradient?.angle || 135,
+    clampGradientAngle(currentThemeConfig?.gradient?.angle || 135),
   );
   const [gradientType, setGradientType] = useState<"linear" | "radial">(
     currentThemeConfig?.gradient?.type || "linear",
@@ -247,7 +281,9 @@ export function ThemeModal({
         ]),
       );
       setSelectedColorId(null);
-      setGradientAngle(currentThemeConfig?.gradient?.angle || 135);
+      setGradientAngle(
+        clampGradientAngle(currentThemeConfig?.gradient?.angle || 135),
+      );
       setGradientType(currentThemeConfig?.gradient?.type || "linear");
     }
   }, [isOpen, currentThemeConfig]);
@@ -264,7 +300,7 @@ export function ThemeModal({
       colors = applyTransparencyToBackgrounds(colors);
       const gradient: GradientConfig = {
         colors: stripEditableGradientColors(gradientColors),
-        angle: gradientAngle,
+        angle: clampGradientAngle(gradientAngle),
         type: gradientType,
       };
       applyGradientToDOM(gradient);
@@ -347,7 +383,7 @@ export function ThemeModal({
       if (useGradient && gradientColors.length >= 2) {
         themeConfig.gradient = {
           colors: stripEditableGradientColors(gradientColors),
-          angle: gradientAngle,
+          angle: clampGradientAngle(gradientAngle),
           type: gradientType,
         };
       }
@@ -378,7 +414,7 @@ export function ThemeModal({
         colors = applyTransparencyToBackgrounds(colors);
         applyGradientToDOM({
           colors: stripEditableGradientColors(gradientColors),
-          angle: gradientAngle,
+          angle: clampGradientAngle(gradientAngle),
           type: gradientType,
         });
       } else {
@@ -406,7 +442,10 @@ export function ThemeModal({
     setGradientColors(
       toEditableGradientColors(
         [
-          { color: clampGradientColor(DEFAULT_BASE_COLOR, "dark"), position: 0 },
+          {
+            color: clampGradientColor(DEFAULT_BASE_COLOR, "dark"),
+            position: 0,
+          },
           { color: clampGradientColor("#1a1a2e", "dark"), position: 100 },
         ],
         [],
@@ -419,15 +458,28 @@ export function ThemeModal({
 
   // Estado para el color seleccionado en el gradient slider
   const [selectedColorId, setSelectedColorId] = useState<string | null>(null);
+  const [gradientColorDrafts, setGradientColorDrafts] = useState<
+    Record<string, string>
+  >({});
+
+  useEffect(() => {
+    setGradientColorDrafts(
+      Object.fromEntries(
+        gradientColors.map((stop) => [stop.editorId, stop.color]),
+      ),
+    );
+  }, [gradientColors]);
 
   // Remove gradient color
   const removeGradientColor = (editorId: string) => {
     if (gradientColors.length <= 2) return;
 
-    const nextColors = gradientColors.filter((stop) => stop.editorId !== editorId);
+    const nextColors = gradientColors.filter(
+      (stop) => stop.editorId !== editorId,
+    );
     setGradientColors(nextColors);
     setSelectedColorId((current) =>
-      current === editorId ? nextColors[0]?.editorId ?? null : current,
+      current === editorId ? (nextColors[0]?.editorId ?? null) : current,
     );
   };
 
@@ -477,39 +529,72 @@ export function ThemeModal({
     setGradientColors(clampedColors);
   };
 
+  const handleGradientColorDraftChange = useCallback(
+    (editorId: string, value: string) => {
+      const nextDraft = normalizeHexDraft(value);
+      setGradientColorDrafts((current) => ({
+        ...current,
+        [editorId]: nextDraft,
+      }));
+      if (isValidHexColor(nextDraft)) {
+        updateGradientColor(editorId, nextDraft);
+      }
+    },
+    [updateGradientColor],
+  );
+
+  const commitGradientColorDraft = useCallback(
+    (editorId: string, fallbackColor: string) => {
+      const draft = normalizeHexDraft(
+        gradientColorDrafts[editorId] ?? fallbackColor,
+      );
+      if (isValidHexColor(draft)) {
+        updateGradientColor(editorId, draft);
+        setGradientColorDrafts((current) => ({
+          ...current,
+          [editorId]: draft,
+        }));
+        return;
+      }
+
+      setGradientColorDrafts((current) => ({
+        ...current,
+        [editorId]: fallbackColor,
+      }));
+    },
+    [gradientColorDrafts, updateGradientColor],
+  );
+
   if (!isOpen) return null;
 
   return (
     <div
-      className="fixed top-16 right-4 z-50 w-80 bg-theme-bg-dropdown-menu-primary border border-theme-border-secondary rounded-lg shadow-xl animate-in fade-in slide-in-from-top-2 duration-200"
+      className="fixed top-16 right-4 z-50 w-[356px] overflow-hidden border border-theme-border bg-theme-bg-dropdown-menu-primary text-theme-text-subtle shadow-xl animate-in fade-in slide-in-from-top-2 duration-200"
       onClick={(e) => e.stopPropagation()}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-theme-border-secondary">
-        <h3 className="text-sm font-semibold text-theme-text-light">
+      <div className="flex items-center justify-between border-b py-0 border-theme-border bg-theme-bg-secondary/40 px-4 h-8">
+        <h3 className="text-[15px] font-bold tracking-[0.04em] text-theme-text-light">
           {t.modals.theme.title}
         </h3>
         <button
           onClick={handleCancel}
-          className="p-1 rounded hover:bg-theme-bg-tertiary transition-colors"
+          className="cursor-pointer rounded-none p-1 text-theme-text-subtle opacity-100 transition hover:text-theme-text-light data-[state=open]:bg-transparent data-[state=open]:text-theme-text-subtle focus:ring-0 focus:ring-offset-0 focus:outline-none"
         >
-          <X className="w-4 h-4 text-theme-text-muted" />
+          <X className="h-3.5 w-3.5" />
         </button>
       </div>
 
       {/* Content */}
-      <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
+      <div className="scrollbar-ultra-thin max-h-[70vh] space-y-3 overflow-y-auto px-4 py-3">
         {/* Base Color */}
-        <div className="space-y-2">
-          <Label
-            htmlFor="theme-base-color"
-            className="text-xs font-medium text-theme-text-subtle uppercase"
-          >
+        <div className={panelSectionClass}>
+          <Label htmlFor="theme-base-color" className={sectionLabelClass}>
             {t.modals.theme.baseColor}
           </Label>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center -mt-1 gap-2">
             <div
-              className="w-10 h-10 rounded-md border border-theme-border-secondary overflow-hidden cursor-pointer relative"
+              className="relative h-8 w-8 shrink-0 cursor-pointer overflow-hidden rounded-none border border-theme-border-subtle"
               style={{ backgroundColor: baseColor }}
             >
               <input
@@ -522,7 +607,7 @@ export function ThemeModal({
                 aria-label="Selector de color base"
               />
             </div>
-            <input
+            <Input
               id="theme-base-color"
               name="theme-base-color"
               type="text"
@@ -538,22 +623,22 @@ export function ThemeModal({
                   setBaseColor(DEFAULT_BASE_COLOR);
                 }
               }}
-              className="flex-1 px-2 py-1.5 text-sm bg-theme-bg-input border border-theme-border-secondary rounded text-theme-text-light font-mono uppercase"
+              className={cn(fieldInputClass, "flex-1 font-mono uppercase")}
               placeholder="#2E8376"
             />
           </div>
 
           {/* Preset Colors */}
-          <div className="flex flex-wrap gap-1.5 mt-2">
+          <div className="mt-1 flex flex-wrap gap-1.5">
             {THEME_PRESETS.slice(0, 12).map((preset) => (
               <button
                 key={preset.name}
                 onClick={() => setBaseColor(preset.baseColor)}
                 className={cn(
-                  "w-6 h-6 rounded-md border-2 transition-all",
+                  "h-6 w-6 cursor-pointer rounded-none border transition",
                   baseColor === preset.baseColor
-                    ? "border-white scale-110"
-                    : "border-transparent hover:scale-105",
+                    ? "border-theme-channel-type-active-border"
+                    : "border-theme-border-subtle hover:border-theme-channel-type-inactive-hover-border",
                 )}
                 style={{ backgroundColor: preset.baseColor }}
                 title={preset.name}
@@ -563,40 +648,39 @@ export function ThemeModal({
         </div>
 
         {/* Theme Mode Toggle */}
-        <div className="space-y-2">
-          <span
-            id="theme-mode-label"
-            className="text-xs font-medium text-theme-text-subtle uppercase"
-          >
+        <div className={panelSectionClass}>
+          <span id="theme-mode-label" className={sectionLabelClass}>
             {t.modals.theme.mode}
           </span>
           <div
-            className="flex gap-2"
+            className="-mt-1 flex gap-2"
             role="group"
             aria-labelledby="theme-mode-label"
           >
             <button
               onClick={() => setThemeMode("dark")}
               className={cn(
-                "flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md border transition-all",
+                panelToggleButtonClass,
+                "flex-1",
                 themeMode === "dark"
-                  ? "bg-theme-accent-primary/20 border-theme-accent-primary text-theme-text-light"
-                  : "bg-theme-bg-modal border-theme-border-secondary text-theme-text-muted hover:border-theme-border-primary",
+                  ? panelToggleActiveClass
+                  : panelToggleInactiveClass,
               )}
             >
-              <Moon className="w-4 h-4" />
+              <Moon className="h-4 w-4" />
               <span className="text-xs font-medium">{t.modals.theme.dark}</span>
             </button>
             <button
               onClick={() => setThemeMode("light")}
               className={cn(
-                "flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md border transition-all",
+                panelToggleButtonClass,
+                "flex-1",
                 themeMode === "light"
-                  ? "bg-theme-accent-primary/20 border-theme-accent-primary text-theme-text-light"
-                  : "bg-theme-bg-modal border-theme-border-secondary text-theme-text-muted hover:border-theme-border-primary",
+                  ? panelToggleActiveClass
+                  : panelToggleInactiveClass,
               )}
             >
-              <Sun className="w-4 h-4" />
+              <Sun className="h-4 w-4" />
               <span className="text-xs font-medium">
                 {t.modals.theme.light}
               </span>
@@ -605,44 +689,73 @@ export function ThemeModal({
         </div>
 
         {/* Gradient Toggle */}
-        <div className="flex items-center justify-between py-2">
-          <Label
-            htmlFor="theme-use-gradient"
-            className="text-xs font-medium text-theme-text-subtle uppercase"
-          >
-            {t.modals.theme.useGradient}
-          </Label>
-          <Switch
-            id="theme-use-gradient"
-            checked={useGradient}
-            onCheckedChange={(checked) => {
-              setUseGradient(checked);
-              // Cuando se activa el degradado, clampear los colores al modo actual
-              if (checked) {
-                setGradientColors((prev) =>
-                  normalizeEditableGradientColors(
-                    prev.map((stop) => ({
-                      ...stop,
-                      color: clampGradientColor(stop.color, themeMode),
-                    })),
-                  ),
-                );
-              }
-            }}
-          />
+        <div className={panelSectionClass}>
+          <div className="flex items-center justify-between gap-3">
+            <Label htmlFor="theme-use-gradient" className={sectionLabelClass}>
+              {t.modals.theme.useGradient}
+            </Label>
+            <div
+              className="flex"
+              role="group"
+              aria-label={t.modals.theme.useGradient}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setUseGradient(true);
+                  setGradientColors((prev) =>
+                    normalizeEditableGradientColors(
+                      prev.map((stop) => ({
+                        ...stop,
+                        color: clampGradientColor(stop.color, themeMode),
+                      })),
+                    ),
+                  );
+                }}
+                className={cn(
+                  "flex h-6 w-12 cursor-pointer items-center justify-center rounded-none border border-r-0 px-3 text-[12px] transition",
+                  useGradient
+                    ? "border-theme-channel-type-active-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
+                    : "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border",
+                )}
+                aria-pressed={useGradient === true}
+              >
+                {t.common.yes}
+              </button>
+              <button
+                type="button"
+                onClick={() => setUseGradient(false)}
+                className={cn(
+                  "flex h-6 w-12 cursor-pointer items-center justify-center rounded-none border px-3 text-[12px] transition",
+                  useGradient === false
+                    ? "border-theme-channel-type-active-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
+                    : "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border",
+                )}
+                aria-pressed={useGradient === false}
+              >
+                {t.common.no}
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Gradient Settings */}
         {useGradient && (
-          <div className="space-y-3 p-3 bg-theme-bg-modal rounded-md">
+          <div className={panelSectionClass}>
             {/* Gradient Slider - positions only */}
             <div className="space-y-2">
-              <span
-                id="theme-gradient-colors-label"
-                className="text-xs text-theme-text-muted"
-              >
-                {t.modals.theme.colors}
-              </span>
+              <div className="space-y-0 border-b border-theme-border-subtle pb-1 -mt-1.5">
+                <span
+                  id="theme-gradient-colors-label"
+                  className="text-[11px] font-semibold uppercase tracking-[0.06em] text-theme-text-subtle"
+                >
+                  {t.modals.theme.colors}
+                </span>
+                <p className="text-[10px] text-theme-text-muted -mt-0.5">
+                  Clickea en el botón + para añadir colores y arrástralos en la
+                  barra para moverlos.
+                </p>
+              </div>
               <GradientSlider
                 colors={gradientColors}
                 onChange={handleGradientColorsChange}
@@ -654,116 +767,140 @@ export function ThemeModal({
                 minColors={2}
                 maxColors={4}
                 allowAdd={false}
+                className="[&_p]:hidden"
                 aria-labelledby="theme-gradient-colors-label"
               />
             </div>
 
             {/* Permanent color editors (Color 1..4) */}
             <div className="space-y-2">
-              {gradientColors.map((stop, index) => (
-                <div
-                  key={stop.editorId}
-                  className={cn(
-                    "flex items-center gap-2 p-2 rounded border transition-colors",
-                    selectedColorId === stop.editorId
-                      ? "border-theme-accent-primary bg-theme-accent-primary/10"
-                      : "border-theme-border-secondary bg-theme-bg-tertiary",
-                  )}
-                  onMouseDown={() => setSelectedColorId(stop.editorId)}
-                >
-                  <Label
-                    htmlFor={`theme-gradient-color-${index}`}
-                    className="w-14 text-xs text-theme-text-muted shrink-0"
-                  >
-                    Color {index + 1}
-                  </Label>
+              {gradientColors.map((stop, index) => {
+                const colorDraft =
+                  gradientColorDrafts[stop.editorId] ?? stop.color;
+                const isGradientColorDraftInvalid =
+                  colorDraft !== stop.color && !isValidHexColor(colorDraft);
 
+                return (
                   <div
-                    className="w-8 h-8 rounded border border-theme-border-secondary overflow-hidden cursor-pointer relative shrink-0"
-                    style={{ backgroundColor: stop.color }}
-                  >
-                    <input
-                      id={`theme-gradient-color-picker-${index}`}
-                      name={`theme-gradient-color-picker-${index}`}
-                      type="color"
-                      value={stop.color}
-                      onChange={(e) =>
-                        updateGradientColor(stop.editorId, e.target.value)
-                      }
-                      onFocus={() => setSelectedColorId(stop.editorId)}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      aria-label={`Selector de color ${index + 1}`}
-                    />
-                  </div>
-
-                  <input
-                    id={`theme-gradient-color-${index}`}
-                    name={`theme-gradient-color-${index}`}
-                    type="text"
-                    value={stop.color}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val.startsWith("#") && val.length <= 7) {
-                        updateGradientColor(stop.editorId, val);
-                      }
-                    }}
-                    onFocus={() => setSelectedColorId(stop.editorId)}
-                    className="w-24 min-w-0 px-2 py-1 text-xs bg-theme-bg-input border border-theme-border-secondary rounded text-theme-text-light font-mono uppercase"
-                  />
-
-                  <span className="w-10 text-right text-xs text-theme-text-muted font-mono">
-                    {stop.position}%
-                  </span>
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeGradientColor(stop.editorId);
-                    }}
-                    disabled={gradientColors.length <= 2}
+                    key={stop.editorId}
                     className={cn(
-                      "p-1 rounded transition-colors",
-                      gradientColors.length <= 2
-                        ? "opacity-40 cursor-not-allowed"
-                        : "hover:bg-red-500/20",
+                      "border p-2 transition-colors",
+                      selectedColorId === stop.editorId
+                        ? panelToggleActiveClass
+                        : "border-theme-border-subtle bg-theme-bg-edit-form/35 text-theme-text-light",
                     )}
-                    title="Quitar color"
-                    aria-label="Quitar color"
+                    onMouseDown={() => setSelectedColorId(stop.editorId)}
                   >
-                    <X
-                      className="w-3.5 h-3.5 text-red-400"
-                      aria-hidden="true"
-                    />
-                  </button>
-                </div>
-              ))}
+                    <div className="flex items-center gap-2">
+                      <Label
+                        htmlFor={`theme-gradient-color-${index}`}
+                        className="w-14 shrink-0 text-[11px] font-semibold uppercase tracking-[0.05em] text-theme-text-subtle"
+                      >
+                        Color {index + 1}
+                      </Label>
+
+                      <div
+                        className="relative h-8 w-8 shrink-0 cursor-pointer overflow-hidden rounded-none border border-theme-border-subtle"
+                        style={{ backgroundColor: stop.color }}
+                      >
+                        <input
+                          id={`theme-gradient-color-picker-${index}`}
+                          name={`theme-gradient-color-picker-${index}`}
+                          type="color"
+                          value={stop.color}
+                          onChange={(e) =>
+                            updateGradientColor(stop.editorId, e.target.value)
+                          }
+                          onFocus={() => setSelectedColorId(stop.editorId)}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          aria-label={`Selector de color ${index + 1}`}
+                        />
+                      </div>
+
+                      <Input
+                        id={`theme-gradient-color-${index}`}
+                        name={`theme-gradient-color-${index}`}
+                        type="text"
+                        value={colorDraft}
+                        onChange={(e) =>
+                          handleGradientColorDraftChange(
+                            stop.editorId,
+                            e.target.value,
+                          )
+                        }
+                        onBlur={() =>
+                          commitGradientColorDraft(stop.editorId, stop.color)
+                        }
+                        onFocus={() => setSelectedColorId(stop.editorId)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            commitGradientColorDraft(stop.editorId, stop.color);
+                          }
+                        }}
+                        aria-invalid={isGradientColorDraftInvalid}
+                        className={cn(
+                          fieldInputClass,
+                          "h-8 w-20 min-w-0 font-mono text-xs uppercase",
+                          isGradientColorDraftInvalid &&
+                            "border-red-400 text-red-200 focus-visible:border-red-400",
+                        )}
+                      />
+
+                      <span className="w-9 border border-theme-border-subtle bg-theme-bg-edit-form/50 px-1 py-1 text-right text-[11px] font-mono text-theme-text-muted">
+                        {stop.position}%
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeGradientColor(stop.editorId);
+                        }}
+                        disabled={gradientColors.length <= 2}
+                        className={cn(
+                          "flex h-8 w-8 cursor-pointer items-center justify-center rounded-none border transition",
+                          gradientColors.length <= 2
+                            ? "cursor-not-allowed border-theme-border-subtle bg-theme-bg-edit-form/20 text-theme-text-muted opacity-40"
+                            : "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border hover:text-red-400",
+                        )}
+                        title="Quitar color"
+                        aria-label="Quitar color"
+                      >
+                        <X className="h-3.5 w-3.5" aria-hidden="true" />
+                      </button>
+                    </div>
+                    {isGradientColorDraftInvalid && (
+                      <p className="mt-1 text-[10px] text-red-400">
+                        Enter a valid hex color like #A1B2C3.
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
 
               <button
                 type="button"
                 onClick={addGradientColor}
                 disabled={gradientColors.length >= 4}
                 className={cn(
-                  "w-full h-8 rounded border border-dashed border-theme-border-secondary flex items-center justify-center transition-colors",
+                  "flex h-8 w-full cursor-pointer items-center justify-center rounded-none border border-dashed text-[13px] transition",
                   gradientColors.length >= 4
-                    ? "opacity-40 cursor-not-allowed"
-                    : "hover:bg-theme-bg-tertiary",
+                    ? "cursor-not-allowed border-theme-border-subtle bg-theme-bg-edit-form/20 text-theme-text-muted opacity-40"
+                    : "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border",
                 )}
                 title="Agregar color"
                 aria-label="Agregar color"
               >
-                <Plus
-                  className="w-4 h-4 text-theme-text-muted"
-                  aria-hidden="true"
-                />
+                <Plus className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
 
             {/* Gradient Type */}
-            <div className="space-y-2">
+            <div className="space-y-1 border border-theme-border-subtle bg-theme-bg-edit-form/35 p-2">
               <Label
                 htmlFor="theme-gradient-type"
-                className="text-xs text-theme-text-muted"
+                className="text-[11px] font-semibold uppercase tracking-[0.05em] text-theme-text-subtle"
               >
                 {t.modals.theme.type}
               </Label>
@@ -774,15 +911,16 @@ export function ThemeModal({
               >
                 <SelectTrigger
                   id="theme-gradient-type"
-                  className="h-8 text-xs bg-theme-bg-input border-theme-border-secondary"
+                  size="sm"
+                  className={cn(panelSelectTriggerClass, "text-xs")}
                 >
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="linear">
+                <SelectContent className={panelSelectContentClass}>
+                  <SelectItem value="linear" className={panelSelectItemClass}>
                     {t.modals.theme.linear}
                   </SelectItem>
-                  <SelectItem value="radial">
+                  <SelectItem value="radial" className={panelSelectItemClass}>
                     {t.modals.theme.radial}
                   </SelectItem>
                 </SelectContent>
@@ -791,59 +929,49 @@ export function ThemeModal({
 
             {/* Gradient Angle (only for linear) */}
             {gradientType === "linear" && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
+              <div className="space-y-1 border border-theme-border-subtle bg-theme-bg-edit-form/35 p-2">
+                <div className="flex items-center justify-between -mt-1 gap-2">
                   <span
                     id="theme-gradient-angle-label"
-                    className="text-xs text-theme-text-muted"
+                    className="text-[11px] font-semibold uppercase tracking-[0.05em] text-theme-text-subtle"
                   >
                     {t.modals.theme.angle}
                   </span>
-                  <span className="text-xs text-theme-text-muted font-mono">
+                  <span className="border border-theme-border-subtle bg-theme-bg-edit-form/50 px-2 py-0.5 text-[11px] font-mono text-theme-text-muted">
                     {gradientAngle}°
                   </span>
                 </div>
-                <Slider
-                  value={[gradientAngle]}
-                  onValueChange={([v]) => setGradientAngle(v)}
-                  min={0}
-                  max={360}
-                  step={5}
-                  className="w-full"
+                <input
+                  id="theme-gradient-angle"
+                  name="theme-gradient-angle"
+                  type="range"
+                  min="0"
+                  max="180"
+                  step="5"
+                  value={gradientAngle}
+                  onChange={(e) =>
+                    setGradientAngle(
+                      clampGradientAngle(parseInt(e.target.value)),
+                    )
+                  }
+                  className="h-2 w-full cursor-pointer appearance-none rounded-none bg-theme-bg-edit-form accent-theme-accent-primary"
                   aria-labelledby="theme-gradient-angle-label"
                 />
               </div>
             )}
-
-            {/* Gradient Preview */}
-            <div className="space-y-1">
-              <span className="text-xs text-theme-text-muted block">
-                {t.modals.theme.preview}
-              </span>
-              <div
-                className="h-12 rounded-md border border-theme-border-secondary"
-                style={{
-                  background: generateGradientPreviewCSS(
-                    gradientColors,
-                    gradientAngle,
-                    gradientType,
-                  ),
-                }}
-              />
-            </div>
           </div>
         )}
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-theme-border-secondary">
+      <div className="flex items-center justify-between border-t border-theme-border bg-theme-bg-secondary/40 px-4 py-1.5">
         <Button
           variant="ghost"
           size="sm"
           onClick={handleReset}
-          className="text-xs text-theme-text-muted hover:text-theme-text-light"
+          className="h-6.5 cursor-pointer rounded-none border border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg px-3 text-[13px] text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border hover:bg-theme-channel-type-inactive-bg hover:text-theme-text-light"
         >
-          <RotateCcw className="w-3.5 h-3.5 mr-1" />
+          <RotateCcw className="mr-1 h-3.5 w-3.5" />
           {t.modals.theme.reset}
         </Button>
         <div className="flex gap-2">
@@ -851,7 +979,7 @@ export function ThemeModal({
             size="sm"
             onClick={handleCancel}
             disabled={isSaving}
-            className="bg-theme-bg-cancel-button hover:bg-theme-bg-cancel-button-hover cursor-pointer"
+            className="h-6.5 cursor-pointer rounded-none bg-theme-bg-cancel-button px-3 text-[14px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
           >
             {t.modals.theme.cancel}
           </Button>
@@ -859,7 +987,7 @@ export function ThemeModal({
             size="sm"
             onClick={handleSave}
             disabled={isSaving}
-            className="bg-theme-tab-button-bg hover:bg-theme-tab-button-hover cursor-pointer"
+            className="h-6.5 cursor-pointer rounded-none bg-theme-tab-button-bg px-3 text-[14px] text-theme-text-light hover:bg-theme-tab-button-hover"
           >
             {isSaving ? t.modals.theme.saving : t.modals.theme.save}
           </Button>

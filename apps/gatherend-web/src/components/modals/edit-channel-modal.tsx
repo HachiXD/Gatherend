@@ -185,6 +185,7 @@ export const EditChannelModal = () => {
     <Dialog open={isModalOpen} onOpenChange={handleClose}>
       <DialogContent
         className="max-w-[440px]! overflow-hidden rounded-none border border-theme-border bg-theme-bg-modal p-0 text-theme-text-subtle"
+        closeButtonClassName="cursor-pointer rounded-none p-1 text-theme-text-subtle opacity-100 transition hover:text-theme-text-light data-[state=open]:bg-transparent data-[state=open]:text-theme-text-subtle focus:ring-0 focus:ring-offset-0 focus:outline-none"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader className="px-6 pt-2">
