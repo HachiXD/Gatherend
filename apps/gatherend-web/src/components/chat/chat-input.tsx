@@ -643,6 +643,7 @@ const ChatInputComponent = ({
         width: fileToSend.width ?? null,
         height: fileToSend.height ?? null,
         originalName: fileToSend.name,
+        dominantColor: null,
         url: fileToSend.url,
       });
     } catch (error) {

@@ -294,6 +294,7 @@ export const GeneralTab = ({ board }: GeneralTabProps) => {
               id: imageAssetId,
               width: null,
               height: null,
+              dominantColor: null,
               url: imageUpload?.url ?? boardImagePreviewUrl,
             }
           : null,
