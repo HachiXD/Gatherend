@@ -84,26 +84,63 @@ function formatPostDate(value: string) {
   }).format(new Date(value));
 }
 
+const FALLBACK_POST_IMAGE_SIZE = { width: 220, height: 180 };
+const POST_IMAGE_LANDSCAPE_MIN_RATIO = 1.6;
+const POST_IMAGE_PORTRAIT_MAX_RATIO = 0.625;
+const POST_IMAGE_BUCKET_LANDSCAPE = { width: 460, height: 260 };
+const POST_IMAGE_BUCKET_PORTRAIT = { width: 220, height: 370 };
+const POST_IMAGE_BUCKET_SQUAREISH = { width: 300, height: 300 };
+
+function getPostImageDisplaySize(
+  originalWidth: number | null | undefined,
+  originalHeight: number | null | undefined,
+): { width: number; height: number } {
+  if (!originalWidth || !originalHeight) return FALLBACK_POST_IMAGE_SIZE;
+  const ratio = originalWidth / originalHeight;
+  const bucket =
+    ratio >= POST_IMAGE_LANDSCAPE_MIN_RATIO
+      ? POST_IMAGE_BUCKET_LANDSCAPE
+      : ratio <= POST_IMAGE_PORTRAIT_MAX_RATIO
+        ? POST_IMAGE_BUCKET_PORTRAIT
+        : POST_IMAGE_BUCKET_SQUAREISH;
+  const scale = Math.min(
+    bucket.width / originalWidth,
+    bucket.height / originalHeight,
+    1,
+  );
+  return {
+    width: Math.max(1, Math.round(originalWidth * scale)),
+    height: Math.max(1, Math.round(originalHeight * scale)),
+  };
+}
+
 function PostImageAttachment({
   imageUrl,
   alt,
+  imageWidth,
+  imageHeight,
+  noFloat,
 }: {
   imageUrl: string;
   alt: string;
+  imageWidth?: number | null;
+  imageHeight?: number | null;
+  noFloat?: boolean;
 }) {
+  const displaySize = getPostImageDisplaySize(imageWidth, imageHeight);
   const [isOpen, setIsOpen] = useState(false);
   const [forceOriginalInline, setForceOriginalInline] = useState(false);
   const [forceOriginalPreview, setForceOriginalPreview] = useState(false);
   const inlineImageUrl = useMemo(() => {
     if (forceOriginalInline) return imageUrl;
     return getOptimizedStaticUiImageUrl(imageUrl, {
-      w: 360,
-      h: 440,
+      w: displaySize.width * 2,
+      h: displaySize.height * 2,
       q: 84,
       resize: "fit",
       gravity: "sm",
     });
-  }, [forceOriginalInline, imageUrl]);
+  }, [forceOriginalInline, imageUrl, displaySize.width, displaySize.height]);
   const previewImageUrl = useMemo(() => {
     if (forceOriginalPreview) return imageUrl;
     return getOptimizedStaticUiImageUrl(imageUrl, {
@@ -120,13 +157,19 @@ function PostImageAttachment({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="float-left mr-3 mt-1 block cursor-pointer overflow-hidden rounded-md border bg-secondary"
+        className={cn(
+          "mt-1 block cursor-pointer overflow-hidden rounded-md border bg-secondary",
+          noFloat ? "" : "float-left mr-3",
+        )}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={inlineImageUrl}
           alt={alt}
-          className="block max-h-[220px] max-w-[180px] object-contain"
+          width={displaySize.width}
+          height={displaySize.height}
+          className="block object-contain"
+          style={{ width: displaySize.width, height: displaySize.height }}
           loading="lazy"
           decoding="async"
           onError={() => {
@@ -222,12 +265,21 @@ function PostBodyWithImage({
   content,
   imageUrl,
   alt,
+  imageWidth,
+  imageHeight,
 }: {
   usernameSlot: ReactNode;
   content: string;
   imageUrl: string;
   alt: string;
+  imageWidth?: number | null;
+  imageHeight?: number | null;
 }) {
+  const isLandscape =
+    !!imageWidth &&
+    !!imageHeight &&
+    imageWidth / imageHeight >= POST_IMAGE_LANDSCAPE_MIN_RATIO;
+
   const lineRef = useRef<HTMLDivElement | null>(null);
   const usernameRef = useRef<HTMLSpanElement | null>(null);
   const [split, setSplit] = useState(() => ({
@@ -236,6 +288,7 @@ function PostBodyWithImage({
   }));
 
   useLayoutEffect(() => {
+    if (isLandscape) return;
     const lineElement = lineRef.current;
     const usernameElement = usernameRef.current;
     if (!lineElement || !usernameElement) return;
@@ -258,7 +311,31 @@ function PostBodyWithImage({
     observer.observe(usernameElement);
 
     return () => observer.disconnect();
-  }, [content]);
+  }, [content, isLandscape]);
+
+  if (isLandscape) {
+    return (
+      <>
+        <div className="-mt-0.5 text-[14px] leading-5">
+          <span className="whitespace-nowrap">{usernameSlot}</span>
+        </div>
+        <div className="mt-1 mb-1">
+          <PostImageAttachment
+            imageUrl={imageUrl}
+            alt={alt}
+            imageWidth={imageWidth}
+            imageHeight={imageHeight}
+            noFloat
+          />
+        </div>
+        {content && (
+          <div className="whitespace-pre-wrap break-words text-[14px] leading-5 text-theme-text-secondary [overflow-wrap:anywhere]">
+            {content}
+          </div>
+        )}
+      </>
+    );
+  }
 
   return (
     <>
@@ -274,7 +351,7 @@ function PostBodyWithImage({
       </div>
 
       <div className="whitespace-pre-wrap break-words text-[14px] leading-5 text-theme-text-secondary [overflow-wrap:anywhere]">
-        <PostImageAttachment imageUrl={imageUrl} alt={alt} />
+        <PostImageAttachment imageUrl={imageUrl} alt={alt} imageWidth={imageWidth} imageHeight={imageHeight} />
         <span>{split.remainder}</span>
       </div>
     </>
@@ -1223,6 +1300,8 @@ function CommunityPostsSectionInner({
                                           post.content || "community post image"
                                         }
                                         content={post.content}
+                                        imageWidth={post.imageAsset?.width}
+                                        imageHeight={post.imageAsset?.height}
                                         usernameSlot={
                                           <>
                                             <UserAvatarMenu
