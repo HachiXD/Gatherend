@@ -250,8 +250,25 @@ function splitPostContentForFirstLine(
     }
   }
 
-  const firstLine = chars.slice(0, low).join("");
-  const remainingCandidate = chars.slice(low).join("");
+  // Walk back to the last word boundary so we never split mid-word across containers
+  let splitPoint = low;
+  if (low < chars.length) {
+    let wordBoundary = low;
+    while (wordBoundary > 0 && chars[wordBoundary - 1] !== " ") {
+      wordBoundary--;
+    }
+    if (wordBoundary > 0) {
+      splitPoint = wordBoundary;
+      // Trim trailing spaces from the first-line portion
+      while (splitPoint > 0 && chars[splitPoint - 1] === " ") {
+        splitPoint--;
+      }
+    }
+    // If wordBoundary === 0 the first word alone doesn't fit; keep character split (splitPoint = low)
+  }
+
+  const firstLine = chars.slice(0, splitPoint).join("");
+  const remainingCandidate = chars.slice(splitPoint).join("").trimStart();
   const remainder = [remainingCandidate, trailing].filter(Boolean).join("\n");
 
   return {
@@ -329,7 +346,7 @@ function PostBodyWithImage({
           />
         </div>
         {content && (
-          <div className="whitespace-pre-wrap break-words text-[14px] leading-5 text-theme-text-secondary [overflow-wrap:anywhere]">
+          <div className="whitespace-pre-wrap break-words text-[14px] leading-5 text-theme-text-secondary">
             {content}
           </div>
         )}
@@ -341,7 +358,7 @@ function PostBodyWithImage({
     <>
       <div
         ref={lineRef}
-        className="-mt-0.5 whitespace-pre-wrap break-words text-[14px] leading-5 text-theme-text-secondary [overflow-wrap:anywhere]"
+        className="-mt-0.5 whitespace-pre-wrap break-words text-[14px] leading-5 text-theme-text-secondary"
       >
         <span ref={usernameRef} className="whitespace-nowrap">
           {usernameSlot}
@@ -350,7 +367,7 @@ function PostBodyWithImage({
         <span>{split.firstLine}</span>
       </div>
 
-      <div className="whitespace-pre-wrap break-words text-[14px] leading-5 text-theme-text-secondary [overflow-wrap:anywhere]">
+      <div className="whitespace-pre-wrap break-words text-[14px] leading-5 text-theme-text-secondary">
         <PostImageAttachment imageUrl={imageUrl} alt={alt} imageWidth={imageWidth} imageHeight={imageHeight} />
         <span>{split.remainder}</span>
       </div>
@@ -1368,7 +1385,7 @@ function CommunityPostsSectionInner({
                                         }
                                       />
                                     ) : (
-                                      <div className="-mt-0.5 whitespace-pre-wrap break-words text-[14px] leading-5 text-theme-text-secondary [overflow-wrap:anywhere]">
+                                      <div className="-mt-0.5 whitespace-pre-wrap break-words text-[14px] leading-5 text-theme-text-secondary">
                                         <span className="whitespace-nowrap">
                                           <UserAvatarMenu
                                             profileId={post.author.id}
