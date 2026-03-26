@@ -1,4 +1,4 @@
-import { AssetContext, AssetVisibility, Prisma } from "@prisma/client";
+import { AssetContext, AssetVisibility, CommunityRole, Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/require-auth";
@@ -172,6 +172,14 @@ export async function POST(req: Request) {
         data: {
           communityId: newCommunity.id,
           profileId: profile.id,
+        },
+      });
+
+      await tx.communityMember.create({
+        data: {
+          communityId: newCommunity.id,
+          profileId: profile.id,
+          role: CommunityRole.OWNER,
         },
       });
 

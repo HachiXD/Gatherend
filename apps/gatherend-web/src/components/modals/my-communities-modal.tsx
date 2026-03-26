@@ -69,10 +69,7 @@ function CommunityCard({ community }: { community: MyCommunity }) {
         <div className="truncate text-sm font-medium text-theme-text-light">
           {community.name}
         </div>
-        <div className="text-[11px] text-theme-text-muted">
-          {community.boardCount} / {community.totalBoardCount}{" "}
-          {community.totalBoardCount === 1 ? "board" : "boards"}
-        </div>
+
       </div>
     </div>
   );

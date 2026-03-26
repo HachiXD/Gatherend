@@ -77,6 +77,8 @@ interface CommunityViewShellProps {
   onSelectSection: (section: "boards" | "posts") => void;
   headerLeading?: ReactNode;
   headerAction?: ReactNode;
+  bannerAction?: ReactNode;
+  belowHeader?: ReactNode;
   scrollContainerRef?: RefObject<HTMLDivElement | null>;
   children: ReactNode;
 }
@@ -87,6 +89,8 @@ function CommunityViewShellInner({
   onSelectSection,
   headerLeading,
   headerAction,
+  bannerAction,
+  belowHeader,
   scrollContainerRef,
   children,
 }: CommunityViewShellProps) {
@@ -100,9 +104,11 @@ function CommunityViewShellInner({
 
   const precomputedColor = community?.imageAsset?.dominantColor || null;
 
-  const { dominantColor: extractedColor, handleImageLoad } = useColorExtraction({
-    imageUrl: precomputedColor ? null : bannerImageUrl,
-  });
+  const { dominantColor: extractedColor, handleImageLoad } = useColorExtraction(
+    {
+      imageUrl: precomputedColor ? null : bannerImageUrl,
+    },
+  );
 
   const dominantColor = precomputedColor || extractedColor;
   const headerBg = dominantColor || "var(--theme-bg-secondary)";
@@ -163,13 +169,18 @@ function CommunityViewShellInner({
                 </div>
               )}
               <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent" />
+              {bannerAction && (
+                <div className="absolute bottom-3 right-4">{bannerAction}</div>
+              )}
             </div>
             <div className="sticky top-0 z-20 shrink-0  transition-colors duration-300">
               <div className="px-0 pt-3.5 pb-2.5" style={headerButtonStyles}>
-                <div className="ml-4 mr-6 flex items-start justify-between gap-4">
+                <div className="ml-4 mr-4 flex items-start justify-between gap-4">
                   <div className="flex min-w-0 flex-1 items-start gap-3">
                     {headerLeading && (
-                      <div className="shrink-0 self-center -mt-1">{headerLeading}</div>
+                      <div className="shrink-0 self-center -mt-1">
+                        {headerLeading}
+                      </div>
                     )}
                     <div className="-mt-2 min-w-0 flex-1">
                       <h1 className="text-[20px] font-bold text-white">
@@ -182,10 +193,17 @@ function CommunityViewShellInner({
                   </div>
 
                   {headerAction && (
-                    <div className="shrink-0 self-center -mt-1">{headerAction}</div>
+                    <div className="shrink-0 self-center -mt-1">
+                      {headerAction}
+                    </div>
                   )}
                 </div>
               </div>
+              {belowHeader && (
+                <div style={headerButtonStyles} className="pb-2.5 px-3">
+                  {belowHeader}
+                </div>
+              )}
               <div className="flex gap-0 p-0" role="tablist">
                 <button
                   type="button"

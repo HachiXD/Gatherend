@@ -11,19 +11,25 @@ import {
 } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Plus, Settings } from "lucide-react";
+import { ChevronLeft, Plus, Settings, UserCheck, UserPlus } from "lucide-react";
 import {
   useBoardSwitchNavigation,
   useCurrentBoardId,
   useCurrentCommunitySection,
 } from "@/contexts/board-switch-context";
-import { useCommunityOverview } from "@/hooks/discovery/use-community-overview";
+import {
+  useCommunityOverview,
+  communityOverviewKey,
+} from "@/hooks/discovery/use-community-overview";
 import { useModal } from "@/hooks/use-modal-store";
 import { CommunityBoardsSection } from "./community-boards-section";
 import { CommunityPostsSection } from "./community-posts-section";
 import { CommunityViewShell } from "./community-view-shell";
+import { InlineCommunityPostForm } from "./inline-community-post-form";
 import { useBoardNavigationStore } from "@/stores/board-navigation-store";
 import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import type { MyCommunity } from "@/hooks/use-my-communities";
 
 interface CommunityViewProps {
   communityId: string;
@@ -38,11 +44,15 @@ function CommunityViewInner({ communityId }: CommunityViewProps) {
     switchToCommunityPosts,
     switchToDiscovery,
     isClientNavigationEnabled,
-  } =
-    useBoardSwitchNavigation();
-  const { community, isLoading, error } = useCommunityOverview(communityId);
+  } = useBoardSwitchNavigation();
+  const { community, isLoading, isFetchingMembership, error } =
+    useCommunityOverview(communityId);
+  const queryClient = useQueryClient();
   const { onOpen } = useModal();
-  const [sectionHeaderAction, setSectionHeaderAction] = useState<ReactNode>(null);
+  const [sectionHeaderAction, setSectionHeaderAction] =
+    useState<ReactNode>(null);
+  const [isJoinLeaveLoading, setIsJoinLeaveLoading] = useState(false);
+  const [showPostForm, setShowPostForm] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const boardsPersistScrollRef = useRef<(() => void) | null>(null);
   const postsPersistScrollRef = useRef<(() => void) | null>(null);
@@ -55,6 +65,8 @@ function CommunityViewInner({ communityId }: CommunityViewProps) {
         postsPersistScrollRef.current?.();
       }
 
+      setShowPostForm(false);
+
       if (section === "boards") {
         switchToCommunityBoards(communityId);
         return;
@@ -62,7 +74,12 @@ function CommunityViewInner({ communityId }: CommunityViewProps) {
 
       switchToCommunityPosts(communityId);
     },
-    [activeSection, communityId, switchToCommunityBoards, switchToCommunityPosts],
+    [
+      activeSection,
+      communityId,
+      switchToCommunityBoards,
+      switchToCommunityPosts,
+    ],
   );
 
   const persistActiveDiscoveryScroll = useCallback(() => {
@@ -99,17 +116,82 @@ function CommunityViewInner({ communityId }: CommunityViewProps) {
     });
   }, [currentBoardId, isClientNavigationEnabled, switchToDiscovery]);
 
+  const handleJoinLeave = useCallback(async () => {
+    if (!community || isJoinLeaveLoading) return;
+    const isMember = community.isMember;
+    setIsJoinLeaveLoading(true);
+    try {
+      const endpoint = isMember
+        ? `/api/communities/${communityId}/leave`
+        : `/api/communities/${communityId}/join`;
+      const res = await fetch(endpoint, { method: "POST" });
+      if (!res.ok) throw new Error("Request failed");
+      queryClient.setQueryData(
+        communityOverviewKey(communityId),
+        (old: typeof community | undefined) =>
+          old ? { ...old, isMember: !isMember } : old,
+      );
+      queryClient.setQueryData<MyCommunity[]>(["my-communities"], (old) => {
+        if (!old) return old;
+        if (isMember) {
+          return old.filter((c) => c.id !== communityId);
+        } else {
+          if (old.some((c) => c.id === communityId)) return old;
+          const newEntry: MyCommunity = {
+            id: community.id,
+            name: community.name,
+            imageAsset: community.imageAsset,
+          };
+          return [...old, newEntry].sort((a, b) =>
+            a.name.localeCompare(b.name),
+          );
+        }
+      });
+    } catch {
+      // no-op, state reverts naturally on next refetch
+    } finally {
+      setIsJoinLeaveLoading(false);
+    }
+  }, [community, communityId, isJoinLeaveLoading, queryClient]);
+
+  const bannerAction = useMemo(() => {
+    if (!community && !isFetchingMembership) return null;
+    const showLoading = isJoinLeaveLoading || isFetchingMembership;
+    return (
+      <button
+        type="button"
+        onClick={handleJoinLeave}
+        disabled={showLoading}
+        className="inline-flex cursor-pointer items-center gap-1.5 border border-white/25 bg-black/40 px-3 h-8 text-[13px] font-semibold text-white backdrop-blur-sm hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 disabled:cursor-not-allowed disabled:opacity-60 "
+      >
+        {showLoading ? (
+          <>
+            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+            Cargando...
+          </>
+        ) : community?.isMember ? (
+          <>
+            <UserCheck className="h-3.5 w-3.5" />
+            Dejar de seguir comunidad
+          </>
+        ) : (
+          <>
+            <UserPlus className="h-3.5 w-3.5" />
+            Unirse como miembro
+          </>
+        )}
+      </button>
+    );
+  }, [community, handleJoinLeave, isFetchingMembership, isJoinLeaveLoading]);
+
   const handleCreate = useCallback(() => {
     if (activeSection === "boards") {
       onOpen("createBoard");
       return;
     }
 
-    onOpen("createCommunityPost", {
-      communityId,
-      communityName: community?.name,
-    });
-  }, [activeSection, community?.name, communityId, onOpen]);
+    setShowPostForm((v) => !v);
+  }, [activeSection, onOpen]);
 
   const headerLeading = useMemo(
     () => (
@@ -151,7 +233,12 @@ function CommunityViewInner({ communityId }: CommunityViewProps) {
         )}
       </div>
     ),
-    [activeSection, community?.canDeleteAnyPost, handleCreate, sectionHeaderAction],
+    [
+      activeSection,
+      community?.canDeleteAnyPost,
+      handleCreate,
+      sectionHeaderAction,
+    ],
   );
 
   if (!community && isLoading) {
@@ -190,6 +277,17 @@ function CommunityViewInner({ communityId }: CommunityViewProps) {
       onSelectSection={handleSelectSection}
       headerLeading={headerLeading}
       headerAction={headerAction}
+      bannerAction={bannerAction}
+      belowHeader={
+        showPostForm && activeSection === "posts" ? (
+          <InlineCommunityPostForm
+            communityId={communityId}
+            communityName={community?.name}
+            onCancel={() => setShowPostForm(false)}
+            onSuccess={() => setShowPostForm(false)}
+          />
+        ) : undefined
+      }
       scrollContainerRef={scrollContainerRef}
     >
       <div className={activeSection === "boards" ? "block" : "hidden"}>

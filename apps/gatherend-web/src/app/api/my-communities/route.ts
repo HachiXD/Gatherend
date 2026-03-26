@@ -1,7 +1,7 @@
 // app/api/communities/my/route.ts
 
 // Obtiene las comunidades de las que el usuario es miembro
-// (derivado de estar en al menos un board de esa comunidad)
+// a partir de la membresía explícita en CommunityMember.
 
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
@@ -16,8 +16,6 @@ export interface MyCommunity {
   id: string;
   name: string;
   imageAsset: ReturnType<typeof serializeUploadedAsset>;
-  boardCount: number; // boards del usuario en esta comunidad
-  totalBoardCount: number; // total de boards de la comunidad
 }
 
 // GET - Listar comunidades del usuario
@@ -32,20 +30,11 @@ export async function GET() {
     if (!auth.success) return auth.response;
     const { profile } = auth;
 
-    // Obtener todos los boards del usuario que pertenecen a una comunidad
-    const userBoardsInCommunities = await db.board.findMany({
+    const memberships = await db.communityMember.findMany({
       where: {
-        members: {
-          some: {
-            profileId: profile.id,
-          },
-        },
-        communityId: {
-          not: null,
-        },
+        profileId: profile.id,
       },
       select: {
-        communityId: true,
         community: {
           select: {
             id: true,
@@ -53,40 +42,18 @@ export async function GET() {
             imageAsset: {
               select: uploadedAssetSummarySelect,
             },
-            _count: {
-              select: {
-                boards: true,
-              },
-            },
           },
         },
       },
     });
 
-    // Agrupar por comunidad y contar boards del usuario
-    const communityMap = new Map<string, MyCommunity>();
-
-    for (const board of userBoardsInCommunities) {
-      if (!board.communityId || !board.community) continue;
-
-      const existing = communityMap.get(board.communityId);
-      if (existing) {
-        existing.boardCount += 1;
-      } else {
-        communityMap.set(board.communityId, {
-          id: board.community.id,
-          name: board.community.name,
-          imageAsset: serializeUploadedAsset(board.community.imageAsset),
-          boardCount: 1,
-          totalBoardCount: board.community._count.boards,
-        });
-      }
-    }
-
-    // Convertir a array y ordenar por nombre
-    const result = Array.from(communityMap.values()).sort((a, b) =>
-      a.name.localeCompare(b.name),
-    );
+    const result = memberships
+      .map((membership) => ({
+        id: membership.community.id,
+        name: membership.community.name,
+        imageAsset: serializeUploadedAsset(membership.community.imageAsset),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
 
     return NextResponse.json(result);
   } catch (error) {

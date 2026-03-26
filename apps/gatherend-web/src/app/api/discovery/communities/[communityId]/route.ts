@@ -77,6 +77,14 @@ export async function GET(
         imageAsset: {
           select: uploadedAssetSummarySelect,
         },
+        members: {
+          where: {
+            profileId: profile.id,
+          },
+          select: {
+            id: true,
+          },
+        },
       },
     });
 
@@ -96,6 +104,7 @@ export async function GET(
       recentPostCount7d: community.recentPostCount7d,
       canDeleteAnyPost:
         community.createdById === profile.id || community.helpers.length > 0,
+      isMember: community.members.length > 0,
     });
   } catch (error) {
     console.error("[DISCOVERY_COMMUNITY_GET]", error);

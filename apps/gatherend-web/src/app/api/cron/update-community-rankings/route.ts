@@ -4,7 +4,7 @@
  * Called every 1 minute by external cron service (Railway cron, Vercel cron, etc.)
  *
  * This updates:
- * - memberCount: Total unique members across all boards
+ * - memberCount: Total explicit community memberships
  * - feedBoardCount: Boards currently in discovery feed (within 48h window + has vacant slots)
  * - rankingScore: LN(memberCount + 1) + feedBoardCount * 0.5 + recentPostCount7d * 0.2
  * - recentPostCount7d: Non-deleted posts created in the last 7 days
@@ -72,12 +72,11 @@ export async function POST(req: Request) {
       WITH community_stats AS (
         SELECT 
           c.id,
-          -- Count unique members across all boards in community
+          -- Count explicit community memberships
           COALESCE((
-            SELECT COUNT(DISTINCT m."profileId")
-            FROM "Board" b
-            JOIN "Member" m ON m."boardId" = b.id
-            WHERE b."communityId" = c.id
+            SELECT COUNT(*)
+            FROM "CommunityMember" cm
+            WHERE cm."communityId" = c.id
           ), 0)::INTEGER as member_count,
           -- Count boards currently in discovery feed:
           -- 1. Within 48h window (createdAt or refreshedAt)

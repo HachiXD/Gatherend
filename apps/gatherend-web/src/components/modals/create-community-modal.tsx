@@ -21,6 +21,7 @@ import {
   COMMUNITIES_FEED_KEY,
   type CommunityFeedItem,
 } from "@/hooks/discovery/community-feed/use-communities-feed";
+import type { MyCommunity } from "@/hooks/use-my-communities";
 import { getStoredUploadAssetId } from "@/lib/upload-values";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
@@ -143,6 +144,18 @@ export function CreateCommunityDialog({
 
       // Invalidar communities-list para el selector
       queryClient.invalidateQueries({ queryKey: ["communities-list"] });
+
+      // Actualizar my-communities con la nueva comunidad
+      queryClient.setQueryData<MyCommunity[]>(["my-communities"], (old) => {
+        const newEntry: MyCommunity = {
+          id: newCommunity.id,
+          name: newCommunity.name,
+          imageAsset: newCommunity.imageAsset,
+        };
+        if (!old) return [newEntry];
+        if (old.some((c) => c.id === newCommunity.id)) return old;
+        return [...old, newEntry].sort((a, b) => a.name.localeCompare(b.name));
+      });
 
       // Callback opcional
       onSuccess?.(newCommunity);

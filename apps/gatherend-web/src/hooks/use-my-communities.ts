@@ -7,8 +7,6 @@ export interface MyCommunity {
   id: string;
   name: string;
   imageAsset: ClientUploadedAsset | null;
-  boardCount: number; // boards del usuario en esta comunidad
-  totalBoardCount: number; // total de boards de la comunidad
 }
 
 async function fetchMyCommunities(): Promise<MyCommunity[]> {

@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { FileIcon, Pencil, Upload, X } from "lucide-react";
 import clsx from "clsx";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useTranslation } from "@/i18n";
 import { useUpload, type UploadContext } from "@/hooks/use-upload";
@@ -162,9 +163,7 @@ export const FileUpload = ({
 
   if (isImage && fileUrl) {
     return (
-      <div
-        className={clsx("relative h-20 w-20", imagePreviewWrapperClassName)}
-      >
+      <div className={clsx("relative h-20 w-20", imagePreviewWrapperClassName)}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={fileUrl}
@@ -235,7 +234,7 @@ export const FileUpload = ({
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        className={clsx(
+        className={cn(
           "flex flex-col items-center justify-center border border-dashed border-gray-400",
           isCircular ? "h-20 w-20 rounded-full gap-1" : "h-20 w-40 rounded-lg",
           uploading
@@ -245,7 +244,7 @@ export const FileUpload = ({
         )}
         disabled={uploading}
       >
-        <Upload className={clsx(isCircular ? "h-5 w-5" : "mr-2 h-5 w-5")} />
+        <Upload className="h-5 w-5" />
         {uploading ? (
           <span
             className={clsx(
@@ -260,7 +259,9 @@ export const FileUpload = ({
               isCircular && "text-[9px] text-center leading-tight px-1",
             )}
           >
-            {isCircular ? (label ?? t.common.uploadBoardImage) : t.common.uploadFile}
+            {isCircular
+              ? (label ?? t.common.uploadBoardImage)
+              : (label ?? t.common.uploadFile)}
           </span>
         )}
       </button>

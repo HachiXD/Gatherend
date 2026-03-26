@@ -8,7 +8,6 @@ import type {
 
 export type ModalType =
   | "createBoard"
-  | "createCommunityPost"
   | "createCommunity"
   | "invite"
   | "editBoard"

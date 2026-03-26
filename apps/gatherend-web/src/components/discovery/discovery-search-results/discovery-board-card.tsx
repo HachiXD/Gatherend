@@ -22,7 +22,7 @@ import { ActionTooltip } from "@/components/action-tooltip";
 import { useTranslation } from "@/i18n";
 import { useBoardSwitchSafe } from "@/contexts/board-switch-context";
 import { useColorExtraction } from "@/hooks/use-color-extraction";
-import { getNeverAnimatedImageUrl } from "@/lib/media-static";
+import { getOptimizedStaticUiImageUrl } from "@/lib/ui-image-optimizer";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 interface DiscoveryBoardCardProps {
@@ -70,7 +70,7 @@ function DiscoveryBoardCardComponent({ board }: DiscoveryBoardCardProps) {
 
   const displayImageUrl = useMemo(() => {
     if (!finalImageUrl) return null;
-    return getNeverAnimatedImageUrl(finalImageUrl, { w: 1024, h: 512, q: 82 });
+    return getOptimizedStaticUiImageUrl(finalImageUrl, { w: 450, h: 180, q: 82 });
   }, [finalImageUrl]);
 
   const precomputedColor = board.imageAsset?.dominantColor || null;

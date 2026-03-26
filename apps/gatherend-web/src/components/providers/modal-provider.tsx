@@ -1,7 +1,6 @@
 "use client";
 
 import { CreateBoardModal } from "@/components/modals/create-board-modal";
-import { CreateCommunityPostModal } from "@/components/modals/create-community-post-modal";
 import { InviteModal } from "@/components/modals/invite-modal";
 import { CreateChannelModal } from "@/components/modals/create-channel-modal";
 import { EditChannelModal } from "@/components/modals/edit-channel-modal";
@@ -28,7 +27,6 @@ export const ModalProvider = () => {
   return (
     <>
       <CreateBoardModal />
-      <CreateCommunityPostModal />
       <InviteModal />
       <CreateChannelModal />
       <EditChannelModal />

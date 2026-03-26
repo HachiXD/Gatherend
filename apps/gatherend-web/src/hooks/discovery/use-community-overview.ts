@@ -17,6 +17,7 @@ export interface CommunityOverview {
   activeBoardsCount: number;
   recentPostCount7d: number;
   canDeleteAnyPost: boolean;
+  isMember: boolean;
 }
 
 export const communityOverviewKey = (communityId: string) =>
@@ -38,7 +39,7 @@ async function fetchCommunityOverview(
 
 async function fetchCommunityPermissions(
   communityId: string,
-): Promise<{ canManageCommunityContent: boolean }> {
+): Promise<{ canManageCommunityContent: boolean; isMember: boolean }> {
   const url = new URL(
     `/api/discovery/communities/${communityId}/permissions`,
     window.location.origin,
@@ -94,6 +95,7 @@ export function useCommunityOverview(
           activeBoardsCount: cachedFeedCommunity.boardCount,
           recentPostCount7d: cachedFeedCommunity.recentPostCount7d,
           canDeleteAnyPost: permissions.canManageCommunityContent,
+          isMember: permissions.isMember,
         };
       }
 
@@ -107,8 +109,7 @@ export function useCommunityOverview(
           memberCount: cachedFeedCommunity.memberCount,
           activeBoardsCount: cachedFeedCommunity.boardCount,
           recentPostCount7d: cachedFeedCommunity.recentPostCount7d,
-          canDeleteAnyPost: false,
-        }
+          canDeleteAnyPost: false,          isMember: false,        }
       : undefined,
     staleTime: 1000 * 60,
     enabled: enabled && !!communityId,
@@ -127,6 +128,7 @@ export function useCommunityOverview(
   return {
     community: query.data ?? null,
     isLoading: query.isLoading,
+    isFetchingMembership: query.isLoading || query.isPlaceholderData,
     error: query.error?.message ?? null,
     refresh: query.refetch,
   };

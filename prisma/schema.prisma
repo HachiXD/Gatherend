@@ -88,6 +88,7 @@ model Profile {
   communityPosts                 CommunityPost[]
   communityPostComments          CommunityPostComment[]
   createdCommunities            Community[]             @relation("CommunityCreatedBy")
+  communityMemberships          CommunityMember[]
   communityHelpers              CommunityHelper[]
   conversationsInitiated        Conversation[]          @relation("ProfileOne")
   conversationsReceived         Conversation[]          @relation("ProfileTwo")
@@ -162,10 +163,26 @@ model Community {
   posts          CommunityPost[]
   imageAsset     UploadedAsset?    @relation("CommunityImageAsset", fields: [imageAssetId], references: [id], onDelete: SetNull)
   createdBy      Profile?          @relation("CommunityCreatedBy", fields: [createdById], references: [id])
+  members        CommunityMember[]
   helpers        CommunityHelper[]
 
   @@index([rankingScore(sort: Desc), id])
   @@index([imageAssetId])
+}
+
+model CommunityMember {
+  id          String        @id @default(uuid())
+  communityId String
+  profileId   String
+  role        CommunityRole @default(MEMBER)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  community   Community     @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  profile     Profile       @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([communityId, profileId])
+  @@index([communityId])
+  @@index([profileId])
 }
 
 model CommunityHelper {
@@ -653,6 +670,11 @@ enum CommunityHelperInviteStatus {
   ACCEPTED
   REVOKED
   EXPIRED
+}
+
+enum CommunityRole {
+  OWNER
+  MEMBER
 }
 
 enum SlotMode {

@@ -43,6 +43,14 @@ export async function GET(
             id: true,
           },
         },
+        members: {
+          where: {
+            profileId: profile.id,
+          },
+          select: {
+            id: true,
+          },
+        },
       },
     });
 
@@ -61,6 +69,7 @@ export async function GET(
       isOwner,
       isHelper: !isOwner && hasHelperAccess,
       canManageCommunityContent: isOwner || hasHelperAccess,
+      isMember: community.members.length > 0,
     });
   } catch (error) {
     console.error("[DISCOVERY_COMMUNITY_PERMISSIONS_GET]", error);
