@@ -158,7 +158,7 @@ function PostImageAttachment({
         type="button"
         onClick={() => setIsOpen(true)}
         className={cn(
-          "mt-1 block cursor-pointer overflow-hidden rounded-md border bg-secondary",
+          "mt-1 block cursor-pointer overflow-hidden rounded-md border bg-black/[0.03]",
           noFloat ? "" : "float-left mr-3",
         )}
       >
