@@ -13,7 +13,7 @@ const ActionTooltip = lazy(() =>
 );
 import { useColorExtraction } from "@/hooks/use-color-extraction";
 import { getDerivedColors } from "@/lib/color-extraction";
-import { getNeverAnimatedImageUrl } from "@/lib/media-static";
+import { getOptimizedStaticUiImageUrl } from "@/lib/ui-image-optimizer";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 
@@ -100,7 +100,7 @@ function CommunityCardInner({
 
   const displayImageUrl = useMemo(() => {
     if (!imageUrl) return null;
-    return getNeverAnimatedImageUrl(imageUrl, { w: 1024, h: 512, q: 82 });
+    return getOptimizedStaticUiImageUrl(imageUrl, { w: 450, h: 180, q: 82 });
   }, [imageUrl]);
 
   const { dominantColor: extractedColor, handleImageLoad } = useColorExtraction({
