@@ -283,6 +283,7 @@ function CommunityViewInner({ communityId }: CommunityViewProps) {
           <InlineCommunityPostForm
             communityId={communityId}
             communityName={community?.name}
+            hasDominantColor={!!community?.imageAsset?.dominantColor}
             onCancel={() => setShowPostForm(false)}
             onSuccess={() => setShowPostForm(false)}
           />
