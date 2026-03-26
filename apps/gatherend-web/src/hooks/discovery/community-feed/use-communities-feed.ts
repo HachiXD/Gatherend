@@ -42,7 +42,7 @@ export const COMMUNITIES_FEED_KEY = ["communities-feed"] as const;
 export const COMMUNITIES_FEED_SCROLL_KEY = "discovery:communities-feed";
 const PAGE_SIZE = 15; // TODO: cambiar a 20 en producción
 // Card height: imagen h-30 (120px) + contenido inferior (~78px con padding y line-heights) = 198px
-const COMMUNITY_CARD_HEIGHT = 198;
+const COMMUNITY_CARD_HEIGHT = 209;
 const COMMUNITY_CARD_GAP = 24; // Gap between cards (gap-6 = 24px)
 export const PAGE_GAP = 32; // Gap between pages (mb-8 = 32px)
 
@@ -344,10 +344,7 @@ export function useCommunitiesFeed({
       }
     }
 
-    if (
-      renderedCount > maxRenderedPages &&
-      pageAtViewportTop >= ws + 2
-    ) {
+    if (renderedCount > maxRenderedPages && pageAtViewportTop >= ws + 2) {
       const next = Math.min(ws + 1, totalPages - maxRenderedPages);
       if (next !== ws) {
         windowStartRef.current = next;
@@ -401,16 +398,6 @@ export function useCommunitiesFeed({
   useEffect(() => {
     if (!containerElement) return;
 
-    const prevOverflowAnchor =
-      containerElement.style.getPropertyValue("overflow-anchor");
-    const prevPriority =
-      containerElement.style.getPropertyPriority("overflow-anchor");
-    containerElement.style.setProperty(
-      "overflow-anchor",
-      "none",
-      "important",
-    );
-
     const onInputEvent = () => {
       handleScrollRef.current?.();
       schedulePersist();
@@ -459,16 +446,6 @@ export function useCommunitiesFeed({
         cancelAnimationFrame(dragReleaseRafRef.current);
       }
       if (persistIdleRef.current) clearTimeout(persistIdleRef.current);
-
-      if (prevOverflowAnchor) {
-        containerElement.style.setProperty(
-          "overflow-anchor",
-          prevOverflowAnchor,
-          prevPriority,
-        );
-      } else {
-        containerElement.style.removeProperty("overflow-anchor");
-      }
     };
   }, [containerElement, schedulePersist]);
 
@@ -490,7 +467,13 @@ export function useCommunitiesFeed({
       containerElement.scrollTop = targetScrollTop;
       didRestoreScrollRef.current = true;
     });
-  }, [containerElement, pagePositions, scrollStateKey, totalPages, windowStart]);
+  }, [
+    containerElement,
+    pagePositions,
+    scrollStateKey,
+    totalPages,
+    windowStart,
+  ]);
 
   useEffect(() => {
     if (!containerElement || totalPages === 0) return;
