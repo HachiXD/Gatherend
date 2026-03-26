@@ -31,6 +31,7 @@ model UploadedAsset {
   sizeBytes                  Int?
   width                      Int?
   height                     Int?
+  dominantColor              String?
   originalName               String?
   ownerProfileId             String?
   createdAt                  DateTime        @default(now())

@@ -4,6 +4,7 @@ export interface ClientPublicAsset {
   id: string;
   width: number | null;
   height: number | null;
+  dominantColor: string | null;
   url: string | null;
 }
 

@@ -18,6 +18,7 @@ export const uploadedAssetSummarySelect = {
   sizeBytes: true,
   width: true,
   height: true,
+  dominantColor: true,
   originalName: true,
 } satisfies Prisma.UploadedAssetSelect;
 
@@ -31,6 +32,7 @@ type UploadedAssetSummary = Pick<
   | "sizeBytes"
   | "width"
   | "height"
+  | "dominantColor"
   | "originalName"
 >;
 
@@ -73,6 +75,7 @@ export function serializePublicAsset(asset: UploadedAssetSummary | null) {
     id: asset.id,
     width: asset.width,
     height: asset.height,
+    dominantColor: asset.dominantColor ?? null,
     url: getPublicAssetUrl(asset.key),
   };
 }

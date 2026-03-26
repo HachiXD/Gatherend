@@ -23,6 +23,7 @@ import {
 } from "../../config/moderation.config.js";
 import { logger } from "../../lib/logger.js";
 import { db } from "../../lib/db.js";
+import { extractDominantColor } from "../../lib/color-extraction.js";
 
 const router = express.Router();
 
@@ -187,6 +188,7 @@ router.post("/", upload.single("image"), async (req, res) => {
 
     let imageWidth: number | null = null;
     let imageHeight: number | null = null;
+    let dominantColor: string | null = null;
 
     if (sniffed.kind === "image") {
       try {
@@ -205,6 +207,12 @@ router.post("/", upload.single("image"), async (req, res) => {
           mimetype: file.mimetype,
           error: err instanceof Error ? err.message : String(err),
         });
+      }
+
+      try {
+        dominantColor = await extractDominantColor(file.buffer);
+      } catch {
+        // non-critical
       }
     }
 
@@ -275,6 +283,7 @@ router.post("/", upload.single("image"), async (req, res) => {
         sizeBytes: file.size,
         width: imageWidth,
         height: imageHeight,
+        dominantColor,
         originalName: file.originalname || null,
         ownerProfileId: profileId,
       },

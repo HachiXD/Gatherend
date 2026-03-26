@@ -16,8 +16,7 @@ import { getDerivedColors } from "@/lib/color-extraction";
 import { getNeverAnimatedImageUrl } from "@/lib/media-static";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
-// Self-contained report button — owns its own hover state
-// so CommunityCardInner never re-renders on mouse enter/leave
+
 const ReportButton = memo(function ReportButton({
   communityId,
   communityName,
@@ -97,17 +96,18 @@ function CommunityCardInner({
 }: CommunityCardProps) {
   const [imageFailed, setImageFailed] = useState(false);
   const imageUrl = imageAsset?.url || null;
+  const precomputedColor = imageAsset?.dominantColor || null;
 
   const displayImageUrl = useMemo(() => {
     if (!imageUrl) return null;
     return getNeverAnimatedImageUrl(imageUrl, { w: 1024, h: 512, q: 82 });
   }, [imageUrl]);
 
-  // Use Web Worker for color extraction (eliminates main thread blocking)
-  const { dominantColor, handleImageLoad } = useColorExtraction({
-    imageUrl: displayImageUrl || imageUrl,
+  const { dominantColor: extractedColor, handleImageLoad } = useColorExtraction({
+    imageUrl: precomputedColor ? null : (displayImageUrl || imageUrl),
   });
 
+  const dominantColor = precomputedColor || extractedColor;
   const derivedColors = getDerivedColors(dominantColor || "#1F2D2C");
 
   return (

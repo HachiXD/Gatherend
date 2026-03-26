@@ -11,7 +11,7 @@ import { Search, X } from "lucide-react";
 import { useBoardSwitchNavigation } from "@/contexts/board-switch-context";
 import { memo, useCallback } from "react";
 
-// Search bar — isolated so feed scroll re-renders never touch it
+// Search bar
 const SearchBar = memo(function SearchBar({
   query,
   setQuery,

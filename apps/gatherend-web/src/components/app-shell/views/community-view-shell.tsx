@@ -98,10 +98,13 @@ function CommunityViewShellInner({
       })
     : undefined;
 
-  const { dominantColor, handleImageLoad } = useColorExtraction({
-    imageUrl: bannerImageUrl,
+  const precomputedColor = community?.imageAsset?.dominantColor || null;
+
+  const { dominantColor: extractedColor, handleImageLoad } = useColorExtraction({
+    imageUrl: precomputedColor ? null : bannerImageUrl,
   });
 
+  const dominantColor = precomputedColor || extractedColor;
   const headerBg = dominantColor || "var(--theme-bg-secondary)";
   const useLightButtonVariant = isVeryDarkColor(headerBg);
   const headerButtonStyles = useMemo(

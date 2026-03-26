@@ -1,5 +1,12 @@
 import { useInfiniteQuery, QueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 import { feedScrollStore } from "@/stores/feed-scroll-store";
 
@@ -105,26 +112,19 @@ export function useCommunitiesFeed({
   const initialScrollStateRef = useRef(feedScrollStore.get(scrollStateKey));
   const didRestoreScrollRef = useRef(false);
 
-  // Refs
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomSentinelRef = useRef<HTMLDivElement>(null);
 
-  // Window state: index of first RENDERED page
-  const [windowStart, setWindowStart] = useState(
-    initialScrollStateRef.current.windowStart,
-  );
+  const windowStartRef = useRef(initialScrollStateRef.current.windowStart);
+  const [, forceRender] = useReducer((c: number) => c + 1, 0);
 
-  // Ref mirror of windowStart — used inside scroll/persist callbacks
-  // to avoid re-creating them on every windowStart change
-  const windowStartRef = useRef(windowStart);
-  windowStartRef.current = windowStart;
+  const isDraggingRef = useRef(false);
+  const dragReleaseRafRef = useRef<number | null>(null);
+  const persistIdleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Track when container element changes (e.g., switching between search and feed)
-  // This forces IntersectionObserver to re-create with correct root
   const [containerElement, setContainerElement] =
     useState<HTMLDivElement | null>(null);
 
-  // Sync containerRef with containerElement state
   useEffect(() => {
     const checkContainer = () => {
       if (containerRef.current !== containerElement) {
@@ -132,7 +132,6 @@ export function useCommunitiesFeed({
       }
     };
 
-    // Check immediately and on next frame (for ref assignment timing)
     checkContainer();
     const frameId = requestAnimationFrame(checkContainer);
 
@@ -164,7 +163,11 @@ export function useCommunitiesFeed({
 
   useEffect(() => {
     if (totalPages === 0) return;
-    setWindowStart((current) => Math.min(current, totalPages - 1));
+    const clamped = Math.min(windowStartRef.current, totalPages - 1);
+    if (clamped !== windowStartRef.current) {
+      windowStartRef.current = clamped;
+      forceRender();
+    }
   }, [totalPages]);
 
   // FIXED HEIGHT CALCULATIONS - O(1) since all cards have same height
@@ -258,32 +261,32 @@ export function useCommunitiesFeed({
     [pagePositions],
   );
 
-  // AUTO-CONTRACT WHEN NEW PAGES ARE FETCHED
-
-  // Use ref to track previous totalPages
   const prevTotalPagesRef = useRef(totalPages);
 
   useEffect(() => {
     if (totalPages !== prevTotalPagesRef.current) {
       prevTotalPagesRef.current = totalPages;
 
-      const renderedCount = totalPages - windowStart;
+      const ws = windowStartRef.current;
+      const renderedCount = totalPages - ws;
       if (renderedCount > maxRenderedPages) {
-        const newWindowStart = totalPages - maxRenderedPages;
-        queueMicrotask(() => {
-          setWindowStart(newWindowStart);
-        });
+        const next = totalPages - maxRenderedPages;
+        if (next !== ws) {
+          windowStartRef.current = next;
+          forceRender();
+        }
       }
     }
-  }, [totalPages, windowStart, maxRenderedPages]);
+  }, [totalPages, maxRenderedPages]);
 
   useEffect(() => {
     const stored = feedScrollStore.get(scrollStateKey);
     didRestoreScrollRef.current = false;
-    setWindowStart(stored.windowStart);
+    windowStartRef.current = stored.windowStart;
+    forceRender();
   }, [scrollStateKey]);
 
-  // PAGE SLOTS CALCULATION
+  const windowStart = windowStartRef.current;
 
   const pageSlots = useMemo((): PageSlot[] => {
     const slots: PageSlot[] = [];
@@ -312,7 +315,7 @@ export function useCommunitiesFeed({
     return pages.flatMap((page) => page.items);
   }, [pages]);
 
-  // SCROLL HANDLER
+  const handleScrollRef = useRef<() => void>(null);
 
   const handleScroll = useCallback(() => {
     const container = containerRef.current;
@@ -325,7 +328,6 @@ export function useCommunitiesFeed({
     const firstRenderedPage = ws;
     const renderedCount = totalPages - ws;
 
-    // --- EXPAND WINDOW (scroll up) ---
     if (ws > 0 && pageAtViewportTop <= firstRenderedPage) {
       const firstPagePos = getPagePosition(firstRenderedPage);
       const scrollIntoFirstPage = scrollTop - firstPagePos.start;
@@ -333,22 +335,24 @@ export function useCommunitiesFeed({
       const percentIntoFirstPage = scrollIntoFirstPage / firstPageHeight;
 
       if (percentIntoFirstPage < expandThreshold) {
-        setWindowStart((prev) => Math.max(0, prev - 1));
+        const next = Math.max(0, ws - 1);
+        if (next !== ws) {
+          windowStartRef.current = next;
+          forceRender();
+        }
         return;
       }
     }
 
-    // --- CONTRACT WINDOW (scroll down) ---
-    // Only contract if:
-    // 1. We have more than maxRenderedPages rendered
-    // 2. The user has scrolled at least 2 pages past windowStart (hysteresis to prevent expand/contract loop)
     if (
       renderedCount > maxRenderedPages &&
       pageAtViewportTop >= ws + 2
     ) {
-      setWindowStart((prev) =>
-        Math.min(prev + 1, totalPages - maxRenderedPages),
-      );
+      const next = Math.min(ws + 1, totalPages - maxRenderedPages);
+      if (next !== ws) {
+        windowStartRef.current = next;
+        forceRender();
+      }
     }
   }, [
     totalPages,
@@ -357,6 +361,8 @@ export function useCommunitiesFeed({
     getPagePosition,
     expandThreshold,
   ]);
+
+  handleScrollRef.current = handleScroll;
 
   // INTERSECTION OBSERVER - For loading more pages
 
@@ -384,34 +390,96 @@ export function useCommunitiesFeed({
     return () => observer.disconnect();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage, containerElement]);
 
-  // SCROLL EVENT LISTENER
+  const schedulePersist = useCallback(() => {
+    if (persistIdleRef.current) clearTimeout(persistIdleRef.current);
+    persistIdleRef.current = setTimeout(() => {
+      persistIdleRef.current = null;
+      persistScrollState();
+    }, 150);
+  }, [persistScrollState]);
 
   useEffect(() => {
     if (!containerElement) return;
 
-    let ticking = false;
-    const onScroll = () => {
-      if (!ticking) {
-        requestAnimationFrame(() => {
-          handleScroll();
-          persistScrollState();
-          ticking = false;
+    const prevOverflowAnchor =
+      containerElement.style.getPropertyValue("overflow-anchor");
+    const prevPriority =
+      containerElement.style.getPropertyPriority("overflow-anchor");
+    containerElement.style.setProperty(
+      "overflow-anchor",
+      "none",
+      "important",
+    );
+
+    const onInputEvent = () => {
+      handleScrollRef.current?.();
+      schedulePersist();
+    };
+
+    const onPointerDown = (e: PointerEvent) => {
+      if (e.pointerType === "mouse") isDraggingRef.current = true;
+    };
+
+    const onPointerUp = (e: PointerEvent) => {
+      if (e.pointerType === "mouse") {
+        isDraggingRef.current = false;
+        if (dragReleaseRafRef.current != null) {
+          cancelAnimationFrame(dragReleaseRafRef.current);
+        }
+        dragReleaseRafRef.current = requestAnimationFrame(() => {
+          dragReleaseRafRef.current = null;
+          handleScrollRef.current?.();
+          schedulePersist();
         });
-        ticking = true;
       }
     };
 
-    containerElement.addEventListener("scroll", onScroll, { passive: true });
-    return () => containerElement.removeEventListener("scroll", onScroll);
-  }, [handleScroll, containerElement, persistScrollState]);
+    containerElement.addEventListener("wheel", onInputEvent, { passive: true });
+    containerElement.addEventListener("touchmove", onInputEvent, {
+      passive: true,
+    });
+    containerElement.addEventListener("pointerdown", onPointerDown, {
+      passive: true,
+    });
+    containerElement.addEventListener("pointermove", onInputEvent, {
+      passive: true,
+    });
+    window.addEventListener("pointerup", onPointerUp, { passive: true });
+    window.addEventListener("keydown", onInputEvent, { passive: true });
+
+    return () => {
+      containerElement.removeEventListener("wheel", onInputEvent);
+      containerElement.removeEventListener("touchmove", onInputEvent);
+      containerElement.removeEventListener("pointerdown", onPointerDown);
+      containerElement.removeEventListener("pointermove", onInputEvent);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("keydown", onInputEvent);
+
+      if (dragReleaseRafRef.current != null) {
+        cancelAnimationFrame(dragReleaseRafRef.current);
+      }
+      if (persistIdleRef.current) clearTimeout(persistIdleRef.current);
+
+      if (prevOverflowAnchor) {
+        containerElement.style.setProperty(
+          "overflow-anchor",
+          prevOverflowAnchor,
+          prevPriority,
+        );
+      } else {
+        containerElement.style.removeProperty("overflow-anchor");
+      }
+    };
+  }, [containerElement, schedulePersist]);
 
   useEffect(() => {
     if (!containerElement || totalPages === 0 || didRestoreScrollRef.current) {
       return;
     }
 
+    const ws = windowStartRef.current;
     const stored = feedScrollStore.get(scrollStateKey);
-    const placeholderHeight = pagePositions[windowStart]?.start ?? 0;
+    const placeholderHeight = pagePositions[ws]?.start ?? 0;
     const targetScrollTop = Math.max(
       0,
       stored.normalizedScrollTop + placeholderHeight,
@@ -444,7 +512,8 @@ export function useCommunitiesFeed({
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const refresh = useCallback(async () => {
-    setWindowStart(0);
+    windowStartRef.current = 0;
+    forceRender();
     await refetch();
   }, [refetch]);
 

@@ -70,16 +70,16 @@ function DiscoveryBoardCardComponent({ board }: DiscoveryBoardCardProps) {
 
   const displayImageUrl = useMemo(() => {
     if (!finalImageUrl) return null;
-    // Discovery board header: never animate even if the original is animated.
     return getNeverAnimatedImageUrl(finalImageUrl, { w: 1024, h: 512, q: 82 });
   }, [finalImageUrl]);
 
-  // Use Web Worker for color extraction (eliminates hidden img and main thread blocking)
-  const { dominantColor, handleImageLoad } = useColorExtraction({
-    imageUrl: displayImageUrl || finalImageUrl,
+  const precomputedColor = board.imageAsset?.dominantColor || null;
+
+  const { dominantColor: extractedColor, handleImageLoad } = useColorExtraction({
+    imageUrl: precomputedColor ? null : (displayImageUrl || finalImageUrl),
   });
 
-  // Colores derivados del color dominante
+  const dominantColor = precomputedColor || extractedColor;
   const derivedColors = getDerivedColors(dominantColor || "#1F2D2C");
 
   // Cleanup timeout on unmount to prevent memory leak
