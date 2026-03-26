@@ -40,6 +40,7 @@ type UploadedAssetSummary = {
   width: number | null;
   height: number | null;
   originalName: string | null;
+  dominantColor: string | null;
 };
 
 type SerializedUploadedAsset = ReturnType<typeof serializePublicAsset>;

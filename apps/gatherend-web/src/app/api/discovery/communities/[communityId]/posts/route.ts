@@ -79,6 +79,7 @@ function serializeCommentPreview(comment: {
     width: number | null;
     height: number | null;
     originalName: string | null;
+    dominantColor: string | null;
   } | null;
   author: {
     id: string;
@@ -98,6 +99,7 @@ function serializeCommentPreview(comment: {
       width: number | null;
       height: number | null;
       originalName: string | null;
+      dominantColor: string | null;
     } | null;
     badgeSticker: {
       id: string;
@@ -111,6 +113,7 @@ function serializeCommentPreview(comment: {
         width: number | null;
         height: number | null;
         originalName: string | null;
+        dominantColor: string | null;
       } | null;
     } | null;
   };
