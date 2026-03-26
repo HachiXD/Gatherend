@@ -115,7 +115,6 @@ function CommunityCardInner({
       data-community-id={id}
       className={cn(
         "border-t-1 border-r-2 border-b-2 overflow-hidden",
-        "shadow-md hover:shadow-xl transition-all duration-300",
         "w-full h-fit flex flex-col group cursor-pointer",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20",
         className,
@@ -150,11 +149,11 @@ function CommunityCardInner({
             <img
               src={displayImageUrl}
               alt={name}
-              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-101"
+              className="absolute inset-0 w-full h-full object-cover"
               loading="eager"
               decoding="async"
               crossOrigin="anonymous"
-              onLoad={handleImageLoad}
+              onLoad={precomputedColor ? undefined : handleImageLoad}
               onError={() => setImageFailed(true)}
             />
             {/* FADE OVERLAY */}

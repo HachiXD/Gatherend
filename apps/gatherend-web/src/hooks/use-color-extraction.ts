@@ -52,33 +52,29 @@ export function useColorExtraction({
     [onColorExtracted]
   );
 
-  // Inicializar worker una sola vez
+  // Solo crear Worker si hay URL que procesar
   useEffect(() => {
-    // Crear worker solo si está disponible
-    if (typeof Worker !== "undefined") {
-      try {
-        workerRef.current = new Worker(
+    if (!imageUrl || typeof Worker === "undefined") return;
+    try {
+      workerRef.current = new Worker(
           new URL("../workers/color-extraction.worker.ts", import.meta.url)
         );
 
-        workerRef.current.onmessage = (event) => {
+      workerRef.current.onmessage = (event) => {
           if (event.data.type === "colorResult" && event.data.color) {
-            // Usar el ref para saber para qué URL era este resultado
             setColor(event.data.color, processingUrlRef.current);
           }
           setIsProcessing(false);
         };
-      } catch {
-        // Worker no disponible, usaremos fallback
-        workerRef.current = null;
-      }
+    } catch {
+      workerRef.current = null;
     }
 
     return () => {
       workerRef.current?.terminate();
       workerRef.current = null;
     };
-  }, [setColor]);
+  }, [imageUrl, setColor]);
 
   // Función de extracción de color (fallback sin worker)
   const extractColorFallback = useCallback(

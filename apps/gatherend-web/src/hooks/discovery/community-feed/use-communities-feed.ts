@@ -407,6 +407,12 @@ export function useCommunitiesFeed({
       if (e.pointerType === "mouse") isDraggingRef.current = true;
     };
 
+    const onPointerMove = (e: PointerEvent) => {
+      if (e.pointerType === "mouse" && isDraggingRef.current) {
+        onInputEvent();
+      }
+    };
+
     const onPointerUp = (e: PointerEvent) => {
       if (e.pointerType === "mouse") {
         isDraggingRef.current = false;
@@ -428,7 +434,7 @@ export function useCommunitiesFeed({
     containerElement.addEventListener("pointerdown", onPointerDown, {
       passive: true,
     });
-    containerElement.addEventListener("pointermove", onInputEvent, {
+    containerElement.addEventListener("pointermove", onPointerMove, {
       passive: true,
     });
     window.addEventListener("pointerup", onPointerUp, { passive: true });
@@ -438,7 +444,7 @@ export function useCommunitiesFeed({
       containerElement.removeEventListener("wheel", onInputEvent);
       containerElement.removeEventListener("touchmove", onInputEvent);
       containerElement.removeEventListener("pointerdown", onPointerDown);
-      containerElement.removeEventListener("pointermove", onInputEvent);
+      containerElement.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("keydown", onInputEvent);
 
