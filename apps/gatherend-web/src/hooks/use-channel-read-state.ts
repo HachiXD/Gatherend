@@ -114,16 +114,8 @@ export function useChannelReadState(
           allMentions.push(...mentions);
         });
 
-        // Actualizar stores incrementalmente para que la UI se actualice más rápido
-        if (shouldReload) {
-          channelUnreadSnapshotRef.current = allCounts;
-          mentionsSnapshotRef.current = allMentions;
-          replaceFromServer({
-            ...allCounts,
-            ...conversationUnreadSnapshotRef.current,
-          });
-          replaceMentionsFromServer(allMentions);
-        } else {
+        if (!shouldReload) {
+          // Initial load: merge incrementally so the UI updates as each batch arrives
           channelUnreadSnapshotRef.current = {
             ...channelUnreadSnapshotRef.current,
             ...allCounts,
@@ -143,6 +135,17 @@ export function useChannelReadState(
         if (i + BATCH_SIZE < boardsToLoad.length) {
           await new Promise((resolve) => setTimeout(resolve, 100));
         }
+      }
+
+      // Reconnect: replace once after all batches are complete to avoid partial-state flashes
+      if (shouldReload) {
+        channelUnreadSnapshotRef.current = allCounts;
+        mentionsSnapshotRef.current = allMentions;
+        replaceFromServer({
+          ...allCounts,
+          ...conversationUnreadSnapshotRef.current,
+        });
+        replaceMentionsFromServer(allMentions);
       }
     };
 

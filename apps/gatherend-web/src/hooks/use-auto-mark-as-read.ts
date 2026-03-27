@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useCallback, useRef } from "react";
-import { useUnreadStore } from "./use-unread-store";
+import { useUnreadStore, addPendingRead, removePendingRead } from "./use-unread-store";
 import { useMentionStore } from "./use-mention-store";
 import { useProfile } from "@/components/app-shell/providers/profile-provider";
 import { useTokenGetter } from "@/components/providers/token-manager-provider";
@@ -36,6 +36,7 @@ export function useAutoMarkAsRead(
     async (roomIdToMark: string, isConv: boolean) => {
       if (!profile?.id) return;
 
+      addPendingRead(roomIdToMark);
       try {
         const socketUrl =
           process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
@@ -55,6 +56,8 @@ export function useAutoMarkAsRead(
 
       } catch (error) {
         console.error("[auto-mark-as-read] Error marking as read:", error);
+      } finally {
+        removePendingRead(roomIdToMark);
       }
     },
     [profile?.id, getToken],

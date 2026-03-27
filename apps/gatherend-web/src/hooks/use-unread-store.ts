@@ -1,5 +1,10 @@
 import { create } from "zustand";
 
+// Tracks in-flight POST /read requests so server-sync functions don't restore channels being marked as read
+const pendingReads = new Set<string>();
+export const addPendingRead = (roomId: string) => pendingReads.add(roomId);
+export const removePendingRead = (roomId: string) => pendingReads.delete(roomId);
+
 interface UnreadState {
   unreads: Record<string, number>; // channelId/conversationId => count
   lastAck: Record<string, number>; // roomId => timestamp de última lectura
@@ -78,19 +83,25 @@ export const useUnreadStore = create<UnreadState>((set, get) => ({
     return state.unreads[roomId] || 0;
   },
 
-  // Inicializa los contadores desde el servidor (para persistencia)
   initializeFromServer: (unreadCounts) =>
-    set((state) => ({
-      unreads: {
-        ...state.unreads,
-        ...unreadCounts,
-      },
-    })),
+    set((state) => {
+      const filtered: Record<string, number> = {};
+      for (const [id, count] of Object.entries(unreadCounts)) {
+        if (state.viewingRoom === id || pendingReads.has(id)) continue;
+        filtered[id] = count;
+      }
+      return { unreads: { ...state.unreads, ...filtered } };
+    }),
 
   replaceFromServer: (unreadCounts) =>
-    set(() => ({
-      unreads: unreadCounts,
-    })),
+    set((state) => {
+      const filtered: Record<string, number> = {};
+      for (const [id, count] of Object.entries(unreadCounts)) {
+        if (state.viewingRoom === id || pendingReads.has(id)) continue;
+        filtered[id] = count;
+      }
+      return { unreads: filtered };
+    }),
 
   // Establece el contador de unreads para un canal/conversación específico
   setUnreadCount: (roomId, count) =>
