@@ -277,8 +277,11 @@ const LeftbarChannelComponent = ({
 
         {/* INDICADOR DE MENCIÓN */}
         {hasMentionInChannel && !isActive && (
-          <div className="mr-1 flex h-[18px] w-[18px] pr-0.5  shrink-0 items-center justify-center rounded-full bg-theme-notification-bg">
-            <AtSign className="w-3 h-3 text-theme-text-tertiary" strokeWidth={3} />
+          <div className="mr-2 flex h-[18px] w-[18px] pr-0.5  shrink-0 items-center justify-center rounded-full bg-theme-notification-bg">
+            <AtSign
+              className="w-3 h-3 ml-0.5 text-theme-text-tertiary"
+              strokeWidth={3}
+            />
           </div>
         )}
 
