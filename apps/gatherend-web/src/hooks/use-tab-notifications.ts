@@ -45,9 +45,15 @@ function setFaviconBadge(total: number) {
   img.onload = () => {
     ctx.drawImage(img, 0, 0, 32, 32);
 
-    // Circle badge in top-right corner using theme color
+    // Circle/pill badge in top-right corner using theme color
+    const label = total > 99 ? "99+" : String(total);
     ctx.beginPath();
-    ctx.arc(22, 10, 10, 0, 2 * Math.PI);
+    if (total > 99) {
+      // Pill shape to fit "99+"
+      ctx.ellipse(22, 10, 13, 10, 0, 0, 2 * Math.PI);
+    } else {
+      ctx.arc(22, 10, 10, 0, 2 * Math.PI);
+    }
     ctx.fillStyle = badgeColor;
     ctx.fill();
 
@@ -55,7 +61,7 @@ function setFaviconBadge(total: number) {
     ctx.font = "bold 16px sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(total > 99 ? "99+" : String(total), 22, 12);
+    ctx.fillText(label, 22, 12);
 
     link.href = canvas.toDataURL("image/png");
   };
