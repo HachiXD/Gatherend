@@ -278,17 +278,13 @@ const LeftbarChannelComponent = ({
         {/* INDICADOR DE MENCIÓN */}
         {hasMentionInChannel && !isActive && (
           <div className="mr-1 flex h-[18px] w-[18px] pr-0.5  shrink-0 items-center justify-center rounded-full bg-theme-notification-bg">
-            <AtSign className="w-3 h-3 text-white " strokeWidth={3} />
+            <AtSign className="w-3 h-3 text-theme-text-tertiary" strokeWidth={3} />
           </div>
         )}
 
-        {/* CONTADOR DE MENSAJES NO LEÍDOS */}
+        {/* INDICADOR DE MENSAJES NO LEÍDOS */}
         {hasUnread && !isActive && (
-          <div className="mr-2 flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full bg-theme-unread-bg px-1">
-            <span className="text-[11px] font-bold text-white leading-none">
-              {unreadCount > 99 ? "99+" : unreadCount}
-            </span>
-          </div>
+          <div className="mr-2 w-2.5 h-2.5 bg-theme-unread-bg rounded-full shrink-0" />
         )}
 
         {/* ACCIONES */}

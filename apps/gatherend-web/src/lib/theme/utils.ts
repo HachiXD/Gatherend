@@ -379,11 +379,7 @@ export function generatePaletteFromBase(baseColor: string): ThemeColors {
 
     // Notification / Unread indicators - hue complementario (h+180) para máximo contraste con bgPrimary
     // notificationBg: badge vívido (saturation alta, lightness media)
-    notificationBg: hslToHex(
-      h + 140,
-      clampS(1.1, 65, 80),
-      clampL(1.35, 50, 60),
-    ),
+    notificationBg: hslToHex(h + 140, clampS(0.8, 65, 70), clampL(0.8, 24, 30)),
     // unreadBg: fondo sutil para canales/items no leídos (mismo hue complementario, oscuro)
     unreadBg: hslToHex(h + 140, clampS(0.6, 42, 55), clampL(0.65, 39, 44)),
   };

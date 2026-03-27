@@ -196,9 +196,13 @@ export const DirectMessageItem = memo(function DirectMessageItemComponent({
             </span>
           </div>
 
-          {/* INDICADOR DE MENSAJES NO LEÍDOS - bolita naranja */}
+          {/* CONTADOR DE MENSAJES NO LEÍDOS */}
           {hasUnread && !isActive && (
-            <div className="w-2.5 h-2.5 bg-theme-unread-bg rounded-full shrink-0" />
+            <div className="flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full bg-theme-unread-bg px-1">
+              <span className="text-[11px] font-bold text-white leading-none">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            </div>
           )}
         </button>
       </ContextMenuTrigger>

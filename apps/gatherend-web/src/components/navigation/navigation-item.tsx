@@ -156,7 +156,10 @@ const NavigationItemComponent = ({
             "hidden group-data-[mentions=true]/item:flex",
           )}
         >
-          <AtSign className="h-2.5 w-2.5 text-white" strokeWidth={3} />
+          <AtSign
+            className="h-2.5 w-2.5 text-theme-text-tertiary"
+            strokeWidth={3}
+          />
         </div>
 
         {/* Indicador de unreads - siempre renderizado, oculto via CSS */}
