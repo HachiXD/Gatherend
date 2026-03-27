@@ -118,7 +118,7 @@ router.post("/", async (req, res) => {
         for (const mentionedProfileId of mentionedProfileIds) {
           // No notificar si se menciona a sí mismo
           if (mentionedProfileId !== member.profileId) {
-            req.io.emit(`mention:${mentionedProfileId}`, {
+            req.io.to(`profile:${mentionedProfileId}`).emit(`mention:${mentionedProfileId}`, {
               messageId: message.id,
               channelId,
               boardId,
@@ -147,7 +147,7 @@ router.post("/", async (req, res) => {
     req.io.to(roomName).emit(eventKey, messageWithTempId);
 
     // Emitir evento global al board para notificaciones de usuarios en otros canales
-    req.io.to(`board:${boardId}`).emit("global:channel:message", {
+    req.io.to(`board-messages:${boardId}`).emit("global:channel:message", {
       channelId,
       boardId,
       messageTimestamp: Date.now(), // timestamp para comparar con lastAck en cliente

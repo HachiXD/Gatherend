@@ -9,6 +9,30 @@ import { expressMemberCache } from "@/lib/redis";
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+async function notifyBoardMembership(
+  profileId: string,
+  boardId: string,
+  action: "join" | "leave",
+) {
+  try {
+    const socketUrl =
+      process.env.SOCKET_SERVER_URL || process.env.NEXT_PUBLIC_SOCKET_URL;
+    const secret = process.env.INTERNAL_API_SECRET;
+    if (!socketUrl || !secret) return;
+    await fetch(`${socketUrl}/socket-membership`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Internal-Secret": secret,
+      },
+      body: JSON.stringify({ profileId, boardId, action }),
+      signal: AbortSignal.timeout(3000),
+    });
+  } catch (error) {
+    console.error("[NOTIFY_BOARD_MEMBERSHIP]", error);
+  }
+}
+
 // Helper para notificar a los miembros restantes y al usuario kickeado
 async function notifyMemberKicked(boardId: string, profileId: string) {
   try {
@@ -176,9 +200,10 @@ export async function POST(
     });
 
     await expressMemberCache.invalidate(boardId, result.targetProfileId);
+    expressMemberCache.invalidateBoardIds(result.targetProfileId);
 
     // Notificar a los miembros restantes (fire-and-forget)
-    // targetProfileId ya está validado arriba, así que lo usamos directamente
+    notifyBoardMembership(result.targetProfileId, boardId, "leave");
     notifyMemberKicked(boardId, targetProfileId);
 
     return NextResponse.json({

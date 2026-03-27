@@ -1,5 +1,4 @@
 import { useSocketClient } from "@/components/providers/socket-provider";
-import { acquireBoardRoom, releaseBoardRoom, rejoinBoardRooms } from "@/hooks/board-room-subscriptions";
 import { useEffect, useMemo, useRef } from "react";
 import { useUnreadStore } from "./use-unread-store";
 import { useQueryClient } from "@tanstack/react-query";
@@ -248,23 +247,6 @@ export const useGlobalUnreadSocket = ({
       }
     };
 
-    // Rejoin all board rooms on every connect/reconnect.
-    const joinAllBoards = () => {
-      boardIdList.forEach((boardId) => {
-        acquireBoardRoom(socket, boardId);
-      });
-    };
-
-    if (socket.connected) {
-      joinAllBoards();
-    }
-
-    const handleConnect = () => {
-      rejoinBoardRooms(socket);
-    };
-
-    // Escuchar eventos de nuevos mensajes en todos los boards
-    socket.on("connect", handleConnect);
     socket.on("global:channel:message", handleChannelMessage);
     socket.on("global:conversation:message", handleDirectMessage);
 
@@ -274,15 +256,8 @@ export const useGlobalUnreadSocket = ({
       timers.forEach((t) => clearTimeout(t));
       timers.clear();
 
-      // Limpiar listeners
-      socket.off("connect", handleConnect);
       socket.off("global:channel:message", handleChannelMessage);
       socket.off("global:conversation:message", handleDirectMessage);
-
-      // Salir de los boards
-      boardIdList.forEach((boardId) => {
-        releaseBoardRoom(socket, boardId);
-      });
     };
   }, [socket, currentProfileId, boardIdList, addUnread, queryClient]);
 };

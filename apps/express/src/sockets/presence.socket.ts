@@ -1,6 +1,7 @@
 // Presence socket handlers
 import { Server, Socket } from "socket.io";
 import { presenceManager } from "../lib/presence-manager.js";
+import { getProfileBoardIdsCached } from "../lib/cache.js";
 import { logger } from "../lib/logger.js";
 
 /**
@@ -63,6 +64,12 @@ export async function handlePresenceConnect(io: Server, socket: Socket) {
 
       // Join profile room for DM notifications
       socket.join(`profile:${socket.data.profileId}`);
+
+      // Join board-messages rooms for all boards the user belongs to
+      const boardIds = await getProfileBoardIdsCached(socket.data.profileId);
+      for (const boardId of boardIds) {
+        socket.join(`board-messages:${boardId}`);
+      }
 
       // Emit event that user is online
       io.emit("presence:user-online", {

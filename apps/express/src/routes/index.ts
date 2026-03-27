@@ -260,5 +260,40 @@ export function registerRoutes(app: express.Application, io: Server) {
     },
   );
 
+  // Move a profile's sockets into or out of a board-messages room
+  app.post(
+    "/socket-membership",
+    validateInternalSecret,
+    emitRateLimit,
+    (req, res) => {
+      try {
+        const { profileId, boardId, action } = req.body;
+
+        if (!profileId || !boardId || !action) {
+          return res.status(400).json({ error: "profileId, boardId y action son requeridos" });
+        }
+
+        if (action !== "join" && action !== "leave") {
+          return res.status(400).json({ error: "action debe ser 'join' o 'leave'" });
+        }
+
+        const room = `board-messages:${boardId}`;
+        if (action === "join") {
+          io.in(`profile:${profileId}`).socketsJoin(room);
+        } else {
+          io.in(`profile:${profileId}`).socketsLeave(room);
+        }
+
+        res.json({ success: true, action, profileId, boardId });
+      } catch (error) {
+        logger.error("Error en socket-membership:", error);
+        res.status(500).json({
+          error: "Error en socket-membership",
+          message: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    },
+  );
+
   logger.info("HTTP routes registered");
 }

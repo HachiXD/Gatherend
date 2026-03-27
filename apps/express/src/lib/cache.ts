@@ -699,12 +699,25 @@ export async function invalidateBoardCaches(boardId: string): Promise<void> {
   await invalidateVoiceChannelsCache(boardId);
 }
 
-/**
- * Invalidate all caches for a user (when user updates profile)
- */
+export async function getProfileBoardIdsCached(profileId: string): Promise<string[]> {
+  const cacheKey = `profile:${profileId}:board-ids`;
+  const cached = await cacheGet<string[]>(cacheKey);
+  if (cached) return cached;
+
+  const members = await db.member.findMany({
+    where: { profileId },
+    select: { boardId: true },
+  });
+  const boardIds = members.map((m) => m.boardId);
+  await cacheSet(cacheKey, boardIds, CACHE_TTL.PROFILE);
+  return boardIds;
+}
+
+// invalidación cuando el usuario entra o sale de un board
 export async function invalidateUserCaches(profileId: string): Promise<void> {
   await invalidateProfileCache(profileId);
   await cacheDeletePattern(`member:*:${profileId}`);
+  await cacheDelete(`profile:${profileId}:board-ids`);
 }
 
 // CACHE STATS (for debugging/monitoring)

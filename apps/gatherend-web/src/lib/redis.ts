@@ -261,6 +261,16 @@ export const expressMemberCache = {
       );
     }
   },
+
+  async invalidateBoardIds(profileId: string): Promise<void> {
+    try {
+      const client = await getRedis();
+      if (!client) return;
+      await client.del(`profile:${profileId}:board-ids`);
+    } catch (error) {
+      console.error("[REDIS] Error invalidating board-ids cache:", error);
+    }
+  },
 };
 
 export const expressProfileCache = {

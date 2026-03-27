@@ -55,6 +55,30 @@ function serializeWelcomeMessagePayload(message: any) {
   };
 }
 
+async function notifyBoardMembership(
+  profileId: string,
+  boardId: string,
+  action: "join" | "leave",
+) {
+  try {
+    const socketUrl =
+      process.env.SOCKET_SERVER_URL || process.env.NEXT_PUBLIC_SOCKET_URL;
+    const secret = process.env.INTERNAL_API_SECRET;
+    if (!socketUrl || !secret) return;
+    await fetch(`${socketUrl}/socket-membership`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Internal-Secret": secret,
+      },
+      body: JSON.stringify({ profileId, boardId, action }),
+      signal: AbortSignal.timeout(3000),
+    });
+  } catch (error) {
+    console.error("[NOTIFY_BOARD_MEMBERSHIP]", error);
+  }
+}
+
 async function notifyMemberJoined(
   boardId: string,
   newMemberProfile: {
@@ -310,7 +334,9 @@ export async function POST(
 
     // Notificar a los miembros existentes que alguien se unió
     await expressMemberCache.invalidate(boardId, profile.id);
+    expressMemberCache.invalidateBoardIds(profile.id);
 
+    notifyBoardMembership(profile.id, boardId, "join");
     notifyMemberJoined(boardId, {
       id: profile.id,
       username: profile.username,
