@@ -50,7 +50,7 @@ function setFaviconBadge(total: number) {
     ctx.beginPath();
     if (total > 99) {
       // Pill shape to fit "99+"
-      ctx.ellipse(22, 10, 13, 10, 0, 0, 2 * Math.PI);
+      ctx.ellipse(18, 10, 17, 10, 0, 0, 2 * Math.PI);
     } else {
       ctx.arc(22, 10, 10, 0, 2 * Math.PI);
     }
@@ -61,7 +61,7 @@ function setFaviconBadge(total: number) {
     ctx.font = "bold 16px sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(label, 22, 12);
+    ctx.fillText(label, total > 99 ? 18 : 22, 12);
 
     link.href = canvas.toDataURL("image/png");
   };
