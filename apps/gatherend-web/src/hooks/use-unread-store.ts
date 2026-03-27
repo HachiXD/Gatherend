@@ -1,20 +1,26 @@
 import { create } from "zustand";
 
-// Tracks in-flight POST /read requests so server-sync functions don't restore channels being marked as read
+// Tracks the in-flight POST /read requests so the server-sync functions don't restore channels being marked as read
 const pendingReads = new Set<string>();
 export const addPendingRead = (roomId: string) => pendingReads.add(roomId);
 export const removePendingRead = (roomId: string) => pendingReads.delete(roomId);
 
 interface UnreadState {
-  unreads: Record<string, number>; // channelId/conversationId => count
-  lastAck: Record<string, number>; // roomId => timestamp de última lectura
-  viewingRoom: string | null; // room actual que el usuario está viendo
+  unreads: Record<string, number>;
+  dmUnreads: Record<string, number>;
+  lastAck: Record<string, number>;
+  viewingRoom: string | null;
   addUnread: (roomId: string, messageTimestamp?: number) => void;
+  addDmUnread: (roomId: string, messageTimestamp?: number) => void;
   clearUnread: (roomId: string) => void;
+  clearDmUnread: (roomId: string) => void;
+  clearBoardUnreads: (channelIds: string[]) => void;
   hasBoardUnreads: (boardId: string, channelIds: string[]) => boolean;
   getUnreadCount: (roomId: string) => number;
   initializeFromServer: (unreadCounts: Record<string, number>) => void;
   replaceFromServer: (unreadCounts: Record<string, number>) => void;
+  initializeDmFromServer: (unreadCounts: Record<string, number>) => void;
+  replaceDmFromServer: (unreadCounts: Record<string, number>) => void;
   setUnreadCount: (roomId: string, count: number) => void;
   setViewingRoom: (roomId: string | null) => void;
   setLastAck: (roomId: string, timestamp?: number) => void;
@@ -23,6 +29,7 @@ interface UnreadState {
 
 export const useUnreadStore = create<UnreadState>((set, get) => ({
   unreads: {},
+  dmUnreads: {},
   lastAck: {},
   viewingRoom: null,
 
@@ -39,20 +46,28 @@ export const useUnreadStore = create<UnreadState>((set, get) => ({
 
   addUnread: (roomId, messageTimestamp) =>
     set((state) => {
-      // Verificar si debería marcar como unread
       const lastAck = state.lastAck[roomId] || 0;
       const isViewing = state.viewingRoom === roomId;
       const msgTime = messageTimestamp || Date.now();
-
-      // No incrementar si está viendo el room o si el mensaje es anterior al último ack
-      if (isViewing || msgTime <= lastAck) {
-        return state;
-      }
-
+      if (isViewing || msgTime <= lastAck) return state;
       return {
         unreads: {
           ...state.unreads,
           [roomId]: (state.unreads[roomId] || 0) + 1,
+        },
+      };
+    }),
+
+  addDmUnread: (roomId, messageTimestamp) =>
+    set((state) => {
+      const lastAck = state.lastAck[roomId] || 0;
+      const isViewing = state.viewingRoom === roomId;
+      const msgTime = messageTimestamp || Date.now();
+      if (isViewing || msgTime <= lastAck) return state;
+      return {
+        dmUnreads: {
+          ...state.dmUnreads,
+          [roomId]: (state.dmUnreads[roomId] || 0) + 1,
         },
       };
     }),
@@ -63,12 +78,35 @@ export const useUnreadStore = create<UnreadState>((set, get) => ({
       delete newUnreads[roomId];
       return {
         unreads: newUnreads,
-        // También actualizar lastAck al limpiar
         lastAck: {
           ...state.lastAck,
           [roomId]: Date.now(),
         },
       };
+    }),
+
+  clearDmUnread: (roomId) =>
+    set((state) => {
+      const newDmUnreads: Record<string, number> = { ...state.dmUnreads };
+      delete newDmUnreads[roomId];
+      return {
+        dmUnreads: newDmUnreads,
+        lastAck: {
+          ...state.lastAck,
+          [roomId]: Date.now(),
+        },
+      };
+    }),
+
+  clearBoardUnreads: (channelIds) =>
+    set((state) => {
+      const newUnreads = { ...state.unreads };
+      const newDmUnreads = { ...state.dmUnreads };
+      channelIds.forEach((id) => {
+        delete newUnreads[id];
+        delete newDmUnreads[id];
+      });
+      return { unreads: newUnreads, dmUnreads: newDmUnreads };
     }),
 
   // Verifica si un board tiene unreads en cualquiera de sus canales
@@ -101,6 +139,26 @@ export const useUnreadStore = create<UnreadState>((set, get) => ({
         filtered[id] = count;
       }
       return { unreads: filtered };
+    }),
+
+  initializeDmFromServer: (unreadCounts) =>
+    set((state) => {
+      const filtered: Record<string, number> = {};
+      for (const [id, count] of Object.entries(unreadCounts)) {
+        if (state.viewingRoom === id || pendingReads.has(id)) continue;
+        filtered[id] = count;
+      }
+      return { dmUnreads: { ...state.dmUnreads, ...filtered } };
+    }),
+
+  replaceDmFromServer: (unreadCounts) =>
+    set((state) => {
+      const filtered: Record<string, number> = {};
+      for (const [id, count] of Object.entries(unreadCounts)) {
+        if (state.viewingRoom === id || pendingReads.has(id)) continue;
+        filtered[id] = count;
+      }
+      return { dmUnreads: filtered };
     }),
 
   // Establece el contador de unreads para un canal/conversación específico

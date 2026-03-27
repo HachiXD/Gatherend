@@ -150,9 +150,10 @@ const NavigationItemComponent = ({
         {/* Indicador de mención - siempre renderizado, oculto via CSS */}
         <div
           className={cn(
-            "absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full border border-[#334b49] bg-[#E57373]",
-            // Mostrar solo si: tiene menciones Y NO está activo
-            "hidden group-data-[mentions=true]/item:flex group-data-[active=true]/item:hidden",
+            "absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full border border-black/30 bg-theme-notification-bg",
+            "group-data-[active=true]/item:border-theme-border-accent-active-channel",
+            // Mostrar solo si: tiene menciones
+            "hidden group-data-[mentions=true]/item:flex",
           )}
         >
           <AtSign className="h-2.5 w-2.5 text-white" strokeWidth={3} />
@@ -161,9 +162,10 @@ const NavigationItemComponent = ({
         {/* Indicador de unreads - siempre renderizado, oculto via CSS */}
         <div
           className={cn(
-            "absolute right-0 top-0 h-2.5 w-2.5 rounded-full border border-[#334b49] bg-[#D6A86C]",
-            // Mostrar solo si: tiene unreads Y NO tiene menciones Y NO está activo
-            "hidden group-data-[unreads=true]/item:block group-data-[mentions=true]/item:hidden group-data-[active=true]/item:hidden",
+            "absolute bottom-0 left-1/2 h-1.5 w-3/4 -translate-x-1/2 border-t border-x border-black/30 rounded-t-sm bg-theme-unread-bg",
+            "group-data-[active=true]/item:border-theme-border-accent-active-channel",
+            // Mostrar solo si: tiene unreads Y NO tiene menciones
+            "hidden group-data-[unreads=true]/item:block group-data-[mentions=true]/item:hidden",
           )}
         />
       </div>

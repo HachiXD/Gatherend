@@ -376,6 +376,16 @@ export function generatePaletteFromBase(baseColor: string): ThemeColors {
 
     // Edit form background - dark mode
     bgEditForm: hslToHex(h + 4, clampS(0.32, 22, 43), clampL(0.52, 21, 24)),
+
+    // Notification / Unread indicators - hue complementario (h+180) para máximo contraste con bgPrimary
+    // notificationBg: badge vívido (saturation alta, lightness media)
+    notificationBg: hslToHex(
+      h + 140,
+      clampS(1.1, 65, 80),
+      clampL(1.35, 50, 60),
+    ),
+    // unreadBg: fondo sutil para canales/items no leídos (mismo hue complementario, oscuro)
+    unreadBg: hslToHex(h + 140, clampS(0.6, 42, 55), clampL(0.65, 39, 44)),
   };
 }
 
@@ -655,6 +665,14 @@ export function generateLightPaletteFromBase(baseColor: string): ThemeColors {
 
     // Edit form background - light mode
     bgEditForm: hslToHex(h + 33, clampS(1.2, 60, 85), clampL(2.1, 80, 90)),
+
+    // Notification / Unread indicators - light mode (TODO: refinar)
+    notificationBg: hslToHex(
+      h + 180,
+      clampS(1.1, 65, 80),
+      clampL(0.72, 24, 35),
+    ),
+    unreadBg: hslToHex(h + 180, clampS(0.6, 38, 55), clampL(1.87, 70, 78)),
   };
 }
 
@@ -923,6 +941,8 @@ export function applyThemeToDOM(colors: ThemeColors): void {
     colors.borderAccentActiveChannel,
   );
   root.style.setProperty("--theme-bg-edit-form", colors.bgEditForm);
+  root.style.setProperty("--theme-notification-bg", colors.notificationBg);
+  root.style.setProperty("--theme-unread-bg", colors.unreadBg);
 }
 
 /**
@@ -1117,6 +1137,12 @@ const BACKGROUND_ALPHA_MAP: Record<string, number> = {
   // EDIT FORM BACKGROUND
   // ═══════════════════════════════════════════════════════════════════════════
   bgEditForm: 1.0,
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // NOTIFICATION / UNREAD INDICATORS - Siempre opacos (no deben transparentarse)
+  // ═══════════════════════════════════════════════════════════════════════════
+  notificationBg: 1.0,
+  unreadBg: 1.0,
 };
 
 /**

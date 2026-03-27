@@ -21,7 +21,10 @@ export function useChannelReadState(
   const {
     initializeFromServer,
     replaceFromServer,
+    initializeDmFromServer,
+    replaceDmFromServer,
     clearUnread,
+    clearDmUnread,
     setViewingRoom,
     setLastAck,
   } =
@@ -115,7 +118,7 @@ export function useChannelReadState(
         });
 
         if (!shouldReload) {
-          // Initial load: merge incrementally so the UI updates as each batch arrives
+          // In the initial load, merge incrementally so the UI updates incrementally
           channelUnreadSnapshotRef.current = {
             ...channelUnreadSnapshotRef.current,
             ...allCounts,
@@ -137,14 +140,11 @@ export function useChannelReadState(
         }
       }
 
-      // Reconnect: replace once after all batches are complete to avoid partial-state flashes
+      // Replace just when all batches are complete to avoid flashes
       if (shouldReload) {
         channelUnreadSnapshotRef.current = allCounts;
         mentionsSnapshotRef.current = allMentions;
-        replaceFromServer({
-          ...allCounts,
-          ...conversationUnreadSnapshotRef.current,
-        });
+        replaceFromServer(allCounts);
         replaceMentionsFromServer(allMentions);
       }
     };
@@ -188,16 +188,13 @@ export function useChannelReadState(
           const unreadCounts = await res.json();
           if (reconnectVersion > 0) {
             conversationUnreadSnapshotRef.current = unreadCounts;
-            replaceFromServer({
-              ...channelUnreadSnapshotRef.current,
-              ...unreadCounts,
-            });
+            replaceDmFromServer(unreadCounts);
           } else if (Object.keys(unreadCounts).length > 0) {
             conversationUnreadSnapshotRef.current = {
               ...conversationUnreadSnapshotRef.current,
               ...unreadCounts,
             };
-            initializeFromServer(unreadCounts);
+            initializeDmFromServer(unreadCounts);
           }
           conversationsLoadedRef.current = true;
         }
@@ -210,7 +207,7 @@ export function useChannelReadState(
     };
 
     loadConversationUnreads();
-  }, [profileId, tokenReady, reconnectVersion, getToken, initializeFromServer, replaceFromServer]);
+  }, [profileId, tokenReady, reconnectVersion, getToken, initializeDmFromServer, replaceDmFromServer]);
 
   // Función para marcar un canal como leído
   const markAsRead = useCallback(
@@ -222,6 +219,7 @@ export function useChannelReadState(
 
       // Limpiar inmediatamente en el store local
       clearUnread(roomId);
+      if (isConversation) clearDmUnread(roomId);
       clearMention(roomId);
 
       // Actualizar lastAck
@@ -253,6 +251,7 @@ export function useChannelReadState(
       profileId,
       getToken,
       clearUnread,
+      clearDmUnread,
       clearMention,
       setViewingRoom,
       setLastAck,

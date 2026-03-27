@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useSocketClient } from "@/components/providers/socket-provider";
 import { useMentionStore } from "./use-mention-store";
+import { useUnreadStore } from "./use-unread-store";
 import type { ClientProfileSummary } from "@/types/uploaded-assets";
 
 interface MentionNotification {
@@ -18,9 +19,6 @@ interface UseMentionNotificationsProps {
   onMention?: (notification: MentionNotification) => void;
 }
 
-/**
- * Hook para escuchar notificaciones de menciones en tiempo real
- */
 export const useMentionNotifications = ({
   profileId,
   onMention,
@@ -34,11 +32,12 @@ export const useMentionNotifications = ({
     const eventKey = `mention:${profileId}`;
 
     const handleMention = (notification: MentionNotification) => {
+      // Don't count the mention if the user is already viewing that channel
+      const viewingRoom = useUnreadStore.getState().viewingRoom;
+      if (viewingRoom === notification.channelId) return;
 
-      // Añadir la mención al store para mostrar el indicador @
       addMention(notification.channelId);
 
-      // Mostrar notificación del navegador si está permitido
       if (Notification.permission === "granted") {
         new Notification(`${notification.sender.username} mentioned you`, {
           body: notification.content,
@@ -46,7 +45,6 @@ export const useMentionNotifications = ({
         });
       }
 
-      // Callback personalizado
       onMention?.(notification);
     };
 

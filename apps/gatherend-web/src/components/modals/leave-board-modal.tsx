@@ -20,6 +20,8 @@ import {
   removeUserBoardFromCache,
   type UserBoard,
 } from "@/hooks/use-user-boards";
+import { useUnreadStore } from "@/hooks/use-unread-store";
+import { useMentionStore } from "@/hooks/use-mention-store";
 
 export const LeaveBoardModal = () => {
   const { isOpen, onClose, type, data } = useModal();
@@ -43,6 +45,16 @@ export const LeaveBoardModal = () => {
         typeof response.data?.redirectUrl === "string"
           ? response.data.redirectUrl
           : "/boards";
+
+      // Read channel IDs before destroying the cache
+      if (board?.id) {
+        const userBoards = queryClient.getQueryData<UserBoard[]>(["user-boards"]);
+        const channelIds = userBoards?.find((b) => b.id === board.id)?.channels.map((c) => c.id) ?? [];
+        if (channelIds.length > 0) {
+          useUnreadStore.getState().clearBoardUnreads(channelIds);
+          useMentionStore.getState().clearBoardMentions(channelIds);
+        }
+      }
 
       const remainingBoards = board?.id
         ? removeUserBoardFromCache(queryClient, board.id)

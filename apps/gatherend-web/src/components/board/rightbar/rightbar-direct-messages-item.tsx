@@ -54,7 +54,7 @@ export const DirectMessageItem = memo(function DirectMessageItemComponent({
   // Zustand con selector - solo re-render cuando cambia ESTA conversación
   const unreadCount = useUnreadStore(
     useCallback(
-      (state) => state.unreads[conversation.id] || 0,
+      (state) => state.dmUnreads[conversation.id] || 0,
       [conversation.id],
     ),
   );
@@ -198,7 +198,7 @@ export const DirectMessageItem = memo(function DirectMessageItemComponent({
 
           {/* INDICADOR DE MENSAJES NO LEÍDOS - bolita naranja */}
           {hasUnread && !isActive && (
-            <div className="w-2.5 h-2.5 bg-[#D6A86C] rounded-full shrink-0" />
+            <div className="w-2.5 h-2.5 bg-theme-unread-bg rounded-full shrink-0" />
           )}
         </button>
       </ContextMenuTrigger>

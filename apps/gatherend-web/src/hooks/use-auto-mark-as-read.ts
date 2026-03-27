@@ -24,6 +24,7 @@ export function useAutoMarkAsRead(
   const profile = useProfile();
   const getToken = useTokenGetter();
   const clearUnread = useUnreadStore((state) => state.clearUnread);
+  const clearDmUnread = useUnreadStore((state) => state.clearDmUnread);
   const setViewingRoom = useUnreadStore((state) => state.setViewingRoom);
   const setLastAck = useUnreadStore((state) => state.setLastAck);
   const clearMention = useMentionStore((state) => state.clearMention);
@@ -77,8 +78,11 @@ export function useAutoMarkAsRead(
     // Establecer que estamos viendo este room
     setViewingRoom(roomId);
 
-    // Limpiar inmediatamente en el store local
-    clearUnread(roomId);
+    if (isConversation) {
+      clearDmUnread(roomId);
+    } else {
+      clearUnread(roomId);
+    }
     clearMention(roomId);
 
     // Actualizar lastAck para evitar race conditions con mensajes entrantes
@@ -98,6 +102,7 @@ export function useAutoMarkAsRead(
     roomId,
     isConversation,
     clearUnread,
+    clearDmUnread,
     clearMention,
     setViewingRoom,
     setLastAck,

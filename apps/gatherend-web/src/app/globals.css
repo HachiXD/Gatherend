@@ -143,6 +143,8 @@
     --theme-border-accent-active-channel
   );
   --color-theme-bg-edit-form: var(--theme-bg-edit-form);
+  --color-theme-notification-bg: var(--theme-notification-bg);
+  --color-theme-unread-bg: var(--theme-unread-bg);
 
   /* Role colors */
   --color-role-owner-bg: var(--role-owner-bg);
@@ -270,6 +272,8 @@
   --theme-border-accent-item-reply-preview: #2d7d6e;
   --theme-border-accent-active-channel: #2d7d6e;
   --theme-bg-edit-form: #384745;
+  --theme-notification-bg: #e24662;
+  --theme-unread-bg: #642b35;
   --theme-background-gradient: none;
   --theme-has-gradient: 0;
 

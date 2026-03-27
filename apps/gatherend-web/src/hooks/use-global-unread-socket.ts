@@ -57,7 +57,7 @@ export const useGlobalUnreadSocket = ({
   boardIds,
 }: UseGlobalUnreadSocketProps) => {
   const { socket } = useSocketClient();
-  const { addUnread, viewingRoom, lastAck } = useUnreadStore();
+  const { addUnread, addDmUnread, viewingRoom, lastAck } = useUnreadStore();
   const queryClient = useQueryClient();
 
   // Debounce invalidateQueries per room to avoid repeated work during bursts
@@ -189,11 +189,8 @@ export const useGlobalUnreadSocket = ({
 
       // Solo marcar como unread si cumple las condiciones
       if (!isOwnMessage && !isViewingThisRoom && isAfterLastAck) {
-        addUnread(conversationId, msgTime);
+        addDmUnread(conversationId, msgTime);
 
-        // Marcar el chat query como stale sin refetch inmediato (debounced).
-        // Caso que arregla: estás fuera del board/chat, recibes notificación,
-        // entras al DM y React Query no refetchea porque el cache está "fresh".
         scheduleChatInvalidate("conversation", conversationId);
 
         // If this conversation was previously opened and its message window is still in memory,

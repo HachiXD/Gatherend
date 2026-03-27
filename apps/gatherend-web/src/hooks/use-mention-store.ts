@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { useUnreadStore } from "./use-unread-store";
 
 interface MentionState {
   // Menciones por roomId/channelId => tiene menciones no leídas
@@ -9,6 +10,7 @@ interface MentionState {
 
   // Limpiar las menciones de un room (cuando el usuario lo visita)
   clearMention: (roomId: string) => void;
+  clearBoardMentions: (channelIds: string[]) => void;
 
   // Verificar si un room tiene menciones no leídas
   hasMention: (roomId: string) => boolean;
@@ -39,6 +41,13 @@ export const useMentionStore = create<MentionState>((set, get) => ({
       return { mentions: newMentions };
     }),
 
+  clearBoardMentions: (channelIds) =>
+    set((state) => {
+      const newMentions = { ...state.mentions };
+      channelIds.forEach((id) => delete newMentions[id]);
+      return { mentions: newMentions };
+    }),
+
   hasMention: (roomId) => {
     return get().mentions[roomId] === true;
   },
@@ -50,18 +59,20 @@ export const useMentionStore = create<MentionState>((set, get) => ({
 
   initializeFromServer: (roomIds) =>
     set((state) => {
+      const viewingRoom = useUnreadStore.getState().viewingRoom;
       const newMentions: Record<string, boolean> = { ...state.mentions };
       roomIds.forEach((roomId) => {
-        newMentions[roomId] = true;
+        if (roomId !== viewingRoom) newMentions[roomId] = true;
       });
       return { mentions: newMentions };
     }),
 
   replaceFromServer: (roomIds) =>
     set(() => {
+      const viewingRoom = useUnreadStore.getState().viewingRoom;
       const mentions: Record<string, boolean> = {};
       roomIds.forEach((roomId) => {
-        mentions[roomId] = true;
+        if (roomId !== viewingRoom) mentions[roomId] = true;
       });
       return { mentions };
     }),

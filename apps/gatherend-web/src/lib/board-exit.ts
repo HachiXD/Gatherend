@@ -1,7 +1,9 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { removeUserBoardFromCache } from "@/hooks/use-user-boards";
+import { removeUserBoardFromCache, type UserBoard } from "@/hooks/use-user-boards";
 import { useModal } from "@/hooks/use-modal-store";
 import { useOverlayStore } from "@/hooks/use-overlay-store";
+import { useUnreadStore } from "@/hooks/use-unread-store";
+import { useMentionStore } from "@/hooks/use-mention-store";
 
 interface BoardSwitchLike {
   isClientNavigationEnabled: boolean;
@@ -27,6 +29,15 @@ export function exitBoardWithSpaFallback({
   boardId,
   currentBoardId,
 }: ExitBoardOptions): void {
+  // Read channel IDs before destroying the cache so we can clean notification state
+  const userBoards = queryClient.getQueryData<UserBoard[]>(["user-boards"]);
+  const channelIds = userBoards?.find((b) => b.id === boardId)?.channels.map((c) => c.id) ?? [];
+
+  if (channelIds.length > 0) {
+    useUnreadStore.getState().clearBoardUnreads(channelIds);
+    useMentionStore.getState().clearBoardMentions(channelIds);
+  }
+
   const remainingBoards = removeUserBoardFromCache(queryClient, boardId);
   queryClient.removeQueries({ queryKey: ["board", boardId] });
 

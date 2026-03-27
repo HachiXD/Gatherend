@@ -6,6 +6,8 @@ import { useCachedBoardSync } from "@/hooks/use-cached-board-sync";
 import { useChannelReadState } from "@/hooks/use-channel-read-state";
 import { useFriendRequestSocket } from "@/hooks/use-friend-request-socket";
 import { useNewConversationSocket } from "@/hooks/use-new-conversation-socket";
+import { useMentionNotifications } from "@/hooks/use-mention-notifications";
+import { useTabNotifications } from "@/hooks/use-tab-notifications";
 
 /**
  * GlobalUnreadProvider - Solo inicializa sockets y carga estado inicial
@@ -45,6 +47,11 @@ export const GlobalUnreadProvider = ({
   // Cargar estado inicial de unreads desde servidor
   useChannelReadState(currentProfileId, boardIds);
 
+  // Escuchar menciones en tiempo real
+  useMentionNotifications({
+    profileId: currentProfileId,
+  });
+
   // Escuchar friend requests en tiempo real
   useFriendRequestSocket({
     profileId: currentProfileId,
@@ -54,6 +61,8 @@ export const GlobalUnreadProvider = ({
   useNewConversationSocket({
     profileId: currentProfileId,
   });
+
+  useTabNotifications();
 
   // No Context needed - just initialize sockets and render children
   return <>{children}</>;

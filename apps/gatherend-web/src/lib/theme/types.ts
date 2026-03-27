@@ -138,6 +138,10 @@ export interface ThemeColors {
 
   // Edit form background
   bgEditForm: string; // Fondo del formulario de edición en chat
+
+  // Notification / Unread indicators
+  notificationBg: string; // Fondo de badges y puntos de notificación (hue complementario al bgPrimary)
+  unreadBg: string; // Fondo sutil para estados de no-leído (hue complementario, oscuro)
 }
 
 /** Modo del tema: dark o light */
@@ -261,4 +265,6 @@ export const THEME_CSS_VAR_MAP: Record<ThemeColorKey, string> = {
   borderAccentItemReplyPreview: "--theme-border-accent-item-reply-preview",
   borderAccentActiveChannel: "--theme-border-accent-active-channel",
   bgEditForm: "--theme-bg-edit-form",
+  notificationBg: "--theme-notification-bg",
+  unreadBg: "--theme-unread-bg",
 } as const;
