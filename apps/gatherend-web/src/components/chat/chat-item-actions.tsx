@@ -175,7 +175,7 @@ export const ChatItemActions = memo(function ChatItemActions({
         fileName,
         sticker,
       },
-      roomId
+      roomId,
     );
     triggerScroll();
   };
@@ -188,13 +188,16 @@ export const ChatItemActions = memo(function ChatItemActions({
 
       const token = await getToken();
       if (isPinned) {
-        await axios.delete(url, getExpressAxiosConfig(currentProfile.id, token));
+        await axios.delete(
+          url,
+          getExpressAxiosConfig(currentProfile.id, token),
+        );
         setIsPinned(false);
       } else {
         await axios.post(
           url,
           {},
-          getExpressAxiosConfig(currentProfile.id, token)
+          getExpressAxiosConfig(currentProfile.id, token),
         );
         setIsPinned(true);
       }
@@ -213,10 +216,10 @@ export const ChatItemActions = memo(function ChatItemActions({
     <div
       onMouseEnter={enableTooltipsOnce}
       className={cn(
-        "items-center gap-x-2 absolute p-1 -top-2 right-5 bg-theme-toolbar-bg border border-theme-toolbar-border rounded-sm z-10",
+        "items-center gap-x-2 absolute p-1 -top-2 right-5 bg-theme-toolbar-bg border border-theme-toolbar-border rounded-none shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)] z-10",
         showMoreMenu || showEmojiPicker
           ? "flex"
-          : "hidden group-hover:flex hover:flex"
+          : "hidden group-hover:flex hover:flex",
       )}
     >
       {!deleted && (
@@ -254,7 +257,7 @@ export const ChatItemActions = memo(function ChatItemActions({
             }}
             className={cn(
               "cursor-pointer ml-auto w-5 h-5 text-theme-toolbar-icon hover:text-theme-text-light transition",
-              isCloningSticker && "opacity-50 cursor-not-allowed"
+              isCloningSticker && "opacity-50 cursor-not-allowed",
             )}
           />
         </MaybeActionTooltip>
@@ -295,7 +298,7 @@ export const ChatItemActions = memo(function ChatItemActions({
             createPortal(
               <div
                 ref={emojiPickerPortalRef}
-                className="fixed z-[9999] flex gap-1 p-2 bg-theme-dropdown-bg border border-theme-dropdown-border rounded-full shadow-lg"
+                className="fixed z-[9999] h-8 flex mt-3 ml-2 gap-1 p-2 bg-theme-dropdown-bg border border-theme-dropdown-border  shadow-lg"
                 style={{
                   top: emojiPickerPosition.top,
                   left: emojiPickerPosition.left,
@@ -304,7 +307,7 @@ export const ChatItemActions = memo(function ChatItemActions({
                 {["👍", "❤️", "😂", "💀", "😭", "🤑"].map((emoji) => {
                   const existingReaction = reactions.find(
                     (r) =>
-                      r.emoji === emoji && r.profileId === currentProfile.id
+                      r.emoji === emoji && r.profileId === currentProfile.id,
                   );
                   return (
                     <button
@@ -329,14 +332,14 @@ export const ChatItemActions = memo(function ChatItemActions({
                         }
                         setShowEmojiPicker(false);
                       }}
-                      className="text-2xl hover:scale-125 cursor-pointer transition-transform"
+                      className="flex items-center justify-center text-[20px] hover:scale-105 cursor-pointer transition-transform"
                     >
                       {emoji}
                     </button>
                   );
                 })}
               </div>,
-              document.body
+              document.body,
             )}
         </div>
       )}
@@ -354,13 +357,13 @@ export const ChatItemActions = memo(function ChatItemActions({
         </MaybeActionTooltip>
         {showMoreMenu && (
           <div
-            className="fixed z-50 w-48 py-1 bg-theme-dropdown-bg border border-theme-dropdown-border rounded-md shadow-lg"
+            className="fixed z-50 w-48 py-1 px-1 bg-theme-dropdown-bg border border-theme-dropdown-border rounded-none shadow-[0_10px_24px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.1),inset_1px_0_0_rgba(255,255,255,0.08),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)] animate-in fade-in slide-in-from-top-2 duration-200"
             style={{ top: menuPosition.top, left: menuPosition.left }}
           >
             {canPinMessage && (
               <button
                 onClick={handleTogglePin}
-                className="w-full flex items-center gap-2 px-3 py-1 text-sm cursor-pointer text-theme-text-subtle hover:bg-theme-dropdown-hover transition"
+                className="h-8 w-full flex items-center gap-2 px-3 py-2 text-sm cursor-pointer text-theme-text-subtle rounded-none border border-transparent hover:border-theme-border hover:bg-theme-dropdown-hover hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.28)] focus:border-theme-border focus:bg-theme-dropdown-hover focus:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.28)]"
               >
                 <Pin className="h-4 w-4" />
                 <span>
@@ -384,7 +387,7 @@ export const ChatItemActions = memo(function ChatItemActions({
                     profileId: currentProfile.id,
                   });
                 }}
-                className="w-full flex items-center gap-2 px-3 py-1 text-sm cursor-pointer text-red-400 hover:bg-theme-dropdown-hover transition"
+                className="h-8 w-full flex items-center gap-2 px-3 py-2 text-sm cursor-pointer text-red-400 rounded-none border border-rose-500/20 bg-rose-500/6 hover:border-rose-500/35 hover:bg-rose-500/10 focus:border-rose-500/35 focus:bg-rose-500/10"
               >
                 <TriangleAlert className="h-4 w-4" />
                 <span>{t.chat.reportMessage}</span>
@@ -396,4 +399,3 @@ export const ChatItemActions = memo(function ChatItemActions({
     </div>
   );
 });
-

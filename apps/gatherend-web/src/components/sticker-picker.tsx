@@ -156,7 +156,7 @@ function StickerPickerPopover({
         side={isNarrowScreen ? "top" : "left"}
         sideOffset={isNarrowScreen ? 12 : -22}
         collisionPadding={isNarrowScreen ? 8 : 0}
-        className="bg-theme-picker-bg border-theme-picker-border
+        className="bg-theme-picker-bg border-theme-picker-border rounded-none
           shadow-lg mb-16 w-[320px] max-[420px]:w-[calc(100vw-16px)] max-[420px]:translate-y-[64px] p-0"
       >
         {isLoading ? (
@@ -184,7 +184,7 @@ function StickerPickerPopover({
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={!canUploadMore || isUploading}
-                className="relative aspect-square rounded bg-theme-bg-secondary 
+                className="relative aspect-square rounded-none bg-theme-bg-secondary 
                   hover:bg-theme-bg-tertiary transition p-2 
                   flex items-center cursor-pointer justify-center group disabled:opacity-50 disabled:cursor-not-allowed"
                 title={
@@ -214,7 +214,7 @@ function StickerPickerPopover({
                 const stickerButton = (
                   <button
                     onClick={() => onChange(sticker)}
-                    className="relative aspect-square rounded hover:bg-theme-channel-hover cursor-pointer transition p-2 group w-full h-full"
+                    className="relative aspect-square rounded-none hover:bg-theme-channel-hover cursor-pointer transition p-2 group w-full h-full"
                     title={sticker.name}
                   >
                     <AnimatedSticker

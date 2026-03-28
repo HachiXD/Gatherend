@@ -2,7 +2,7 @@
 
 import axios from "axios";
 import { format } from "date-fns";
-import { X, Pin, Loader2 } from "lucide-react";
+import { X, Pin } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -11,7 +11,6 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useModal } from "@/hooks/use-modal-store";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { UserAvatar } from "@/components/user-avatar";
 import { cn } from "@/lib/utils";
 import { AnimatedSticker } from "@/components/ui/animated-sticker";
@@ -21,7 +20,10 @@ import type {
   ClientAttachmentAsset,
   ClientSticker,
 } from "@/types/uploaded-assets";
-import type { ChannelMessage, DirectMessageWithSender } from "@/hooks/chat/types";
+import type {
+  ChannelMessage,
+  DirectMessageWithSender,
+} from "@/hooks/chat/types";
 import { getMessageAuthor, getMessageOwnerProfileId } from "@/hooks/chat";
 
 type PinnedMessage = (ChannelMessage | DirectMessageWithSender) & {
@@ -30,6 +32,26 @@ type PinnedMessage = (ChannelMessage | DirectMessageWithSender) & {
   fileName?: string | null;
   sticker?: ClientSticker | null;
 };
+
+function MessageListSkeleton() {
+  return (
+    <div className="space-y-2">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div
+          key={i}
+          className="flex items-start gap-2 border border-theme-border bg-theme-bg-secondary/20 px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.28),inset_0_-1px_0_rgba(0,0,0,0.28)] animate-pulse"
+        >
+          <div className="h-8 w-8 shrink-0 border border-theme-border bg-white/10" />
+          <div className="flex-1 space-y-2 py-0.5">
+            <div className="h-3 w-1/3 bg-white/10" />
+            <div className="h-2.5 w-3/4 bg-white/10" />
+            <div className="h-2 w-1/4 bg-white/10" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export const PinnedMessagesModal = () => {
   const { isOpen, onClose, type, data } = useModal();
@@ -99,56 +121,55 @@ export const PinnedMessagesModal = () => {
 
   return (
     <Dialog open={isModalOpen} onOpenChange={handleClose}>
-      <DialogContent className="bg-theme-bg-modal !max-w-[500px] text-theme-text-subtle p-0 overflow-hidden border-theme-border-primary">
-        <DialogHeader className="pt-8 px-6">
-          <DialogTitle className="text-2xl text-center font-bold flex items-center justify-center gap-2 text-theme-text-subtle">
-            <Pin className="h-6 w-6" />
+      <DialogContent
+        className="max-w-[500px]! overflow-hidden rounded-none border border-theme-border bg-theme-bg-modal p-0 text-theme-text-subtle"
+        closeButtonClassName="cursor-pointer rounded-none p-1 text-theme-text-subtle opacity-100 transition hover:text-theme-text-light data-[state=open]:bg-transparent data-[state=open]:text-theme-text-subtle focus:ring-0 focus:ring-offset-0 focus:outline-none"
+      >
+        <DialogHeader className="px-6 pt-2 -mb-5">
+          <DialogTitle className="flex items-center justify-center gap-2 text-2xl font-bold">
             {t.modals.pinnedMessages.title}
           </DialogTitle>
-          <DialogDescription className="text-center text-[15px] text-theme-text-subtle">
+          <DialogDescription className="-mt-2 text-center text-[15px] text-theme-text-subtle">
             {pinnedMessages.length} {t.modals.pinnedMessages.messageCount}
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[500px] px-6 pb-6">
+        <div className="scrollbar-ultra-thin max-h-[500px] space-y-2 overflow-y-auto px-4 py-3">
           {isLoading ? (
-            <div className="flex items-center justify-center py-10">
-              <Loader2 className="h-8 w-8 animate-spin text-theme-accent-primary" />
-            </div>
+            <MessageListSkeleton />
           ) : pinnedMessages.length === 0 ? (
-            <div className="text-center py-10 text-theme-text-subtle">
+            <div className="border border-theme-border-subtle bg-theme-bg-edit-form/35 px-3 py-6 text-center text-sm text-theme-text-muted">
               {t.modals.pinnedMessages.noMessages}
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-2">
               {pinnedMessages.map((message) => {
                 const author = getMessageAuthor(message, {
                   fallbackLabel: t.chat.deletedMember,
                 });
                 const authorProfileId =
                   getMessageOwnerProfileId(message) || undefined;
-                const isImage = message.attachmentAsset?.mimeType?.startsWith(
-                  "image/",
-                );
+                const isImage =
+                  message.attachmentAsset?.mimeType?.startsWith("image/");
 
                 return (
                   <div
                     key={message.id}
-                    className="group relative flex gap-x-3 p-3 rounded-md bg-theme-bg-tertiary/30 hover:bg-theme-bg-tertiary/50 transition border border-theme-border-primary/30"
-                    >
-                      <UserAvatar
-                        src={author?.avatarAsset?.url || undefined}
-                        profileId={authorProfileId}
-                        showStatus={false}
-                        className="h-10 w-10"
-                      />
+                    className="group relative flex items-start gap-2 border border-theme-border bg-theme-bg-secondary/20 px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.28),inset_0_-1px_0_rgba(0,0,0,0.28)] transition hover:bg-theme-bg-tertiary/40"
+                  >
+                    <UserAvatar
+                      src={author?.avatarAsset?.url || undefined}
+                      profileId={authorProfileId}
+                      showStatus={false}
+                      className="h-8 w-8 shrink-0"
+                    />
 
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-x-2">
-                        <p className="font-semibold text-sm text-theme-accent-primary">
+                        <p className="text-sm font-semibold text-theme-accent-primary">
                           {author?.username}
                         </p>
-                        <span className="text-xs text-theme-text-subtle">
+                        <span className="text-xs text-theme-text-muted">
                           {format(
                             new Date(message.createdAt),
                             "MMM d, yyyy HH:mm",
@@ -157,38 +178,36 @@ export const PinnedMessagesModal = () => {
                       </div>
 
                       {message.sticker ? (
-                        <div className="mt-2">
-                          <div className="relative h-20 w-20">
-                            <AnimatedSticker
-                              src={message.sticker.asset?.url || ""}
-                              alt={message.sticker.name}
-                              containerClassName="h-full w-full"
-                              fallbackWidthPx={80}
-                              fallbackHeightPx={80}
-                            />
-                          </div>
+                        <div className="relative mt-1 h-16 w-16">
+                          <AnimatedSticker
+                            src={message.sticker.asset?.url || ""}
+                            alt={message.sticker.name}
+                            containerClassName="h-full w-full"
+                            fallbackWidthPx={64}
+                            fallbackHeightPx={64}
+                          />
                         </div>
                       ) : isImage && message.attachmentAsset?.url ? (
-                        <div className="mt-2">
-                          <div className="relative h-32 w-32 rounded overflow-hidden border border-theme-border-primary/50">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={message.attachmentAsset.url}
-                              alt={message.attachmentAsset.originalName || "Image"}
-                              className="absolute inset-0 h-full w-full object-cover"
-                              loading="lazy"
-                              decoding="async"
-                            />
-                          </div>
+                        <div className="relative mt-1 h-24 w-24 overflow-hidden border border-theme-border">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={message.attachmentAsset.url}
+                            alt={
+                              message.attachmentAsset.originalName || "Image"
+                            }
+                            className="absolute inset-0 h-full w-full object-cover"
+                            loading="lazy"
+                            decoding="async"
+                          />
                         </div>
                       ) : message.attachmentAsset?.url ? (
-                        <p className="text-sm text-theme-accent-primary mt-1 hover:underline cursor-pointer">
+                        <p className="mt-0.5 cursor-pointer text-sm text-theme-accent-primary hover:underline">
                           📎 {message.fileName}
                         </p>
                       ) : (
                         <p
                           className={cn(
-                            "text-sm text-theme-text-light mt-1 wrap-break-word",
+                            "mt-0.5 text-sm text-theme-text-light wrap-break-word",
                             message.content.length > 100 && "line-clamp-3",
                           )}
                         >
@@ -196,7 +215,7 @@ export const PinnedMessagesModal = () => {
                         </p>
                       )}
 
-                      <p className="text-xs text-theme-text-subtle mt-1 italic">
+                      <p className="mt-0.5 text-xs italic text-theme-text-muted">
                         Pinned{" "}
                         {format(new Date(message.pinnedAt), "MMM d 'at' HH:mm")}
                       </p>
@@ -205,17 +224,25 @@ export const PinnedMessagesModal = () => {
                     <button
                       onClick={() => unpinMutation.mutate(message.id)}
                       disabled={unpinMutation.isPending}
-                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition p-1 rounded hover:bg-theme-bg-quaternary text-theme-text-subtle disabled:opacity-50"
+                      className="shrink-0 cursor-pointer p-1 text-theme-text-subtle opacity-0 transition hover:text-theme-text-light group-hover:opacity-100 disabled:opacity-50"
                       title={t.chat.unpinMessage}
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 );
               })}
             </div>
           )}
-        </ScrollArea>
+        </div>
+
+        {!isLoading && pinnedMessages.length > 0 && (
+          <div className="border-t border-theme-border bg-theme-bg-secondary/40 px-4 py-1.5">
+            <p className="text-center text-xs text-theme-text-muted">
+              {pinnedMessages.length} {t.modals.pinnedMessages.messageCount}
+            </p>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

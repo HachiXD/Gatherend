@@ -355,6 +355,53 @@ html[data-theme-gradient="true"] .indicator-ring-slot {
   }
 }
 
+/* Remove border radius from emoji-picker-react */
+.EmojiPickerReact,
+.EmojiPickerReact .epr-main {
+  border-radius: 0 !important;
+}
+
+/* Remove border radius from emoji picker search input */
+.EmojiPickerReact .epr-search-container input {
+  border-radius: 0 !important;
+}
+
+/* Apply custom scrollbar to emoji picker scroll area */
+.EmojiPickerReact .epr-emoji-list {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-card-thumb, rgba(255, 255, 255, 0.1)) transparent;
+}
+.EmojiPickerReact .epr-emoji-list::-webkit-scrollbar {
+  width: 8px;
+}
+.EmojiPickerReact .epr-emoji-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.EmojiPickerReact .epr-emoji-list::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-card-thumb, rgba(255, 255, 255, 0.1));
+  border-radius: 3px;
+  background-clip: padding-box;
+}
+.EmojiPickerReact .epr-emoji-list::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-card-thumb-hover, rgba(255, 255, 255, 0.2));
+}
+
+/* Fallback: target any scrollable child of the picker */
+.EmojiPickerReact *::-webkit-scrollbar {
+  width: 8px;
+}
+.EmojiPickerReact *::-webkit-scrollbar-track {
+  background: transparent;
+}
+.EmojiPickerReact *::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-card-thumb, rgba(255, 255, 255, 0.1));
+  border-radius: 3px;
+  background-clip: padding-box;
+}
+.EmojiPickerReact *::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-card-thumb-hover, rgba(255, 255, 255, 0.2));
+}
+
 /* Scrollbar ultra delgado para descripción de cards */
 .scrollbar-ultra-thin::-webkit-scrollbar {
   width: 8px;

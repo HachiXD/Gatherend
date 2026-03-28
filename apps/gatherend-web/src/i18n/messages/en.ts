@@ -542,7 +542,7 @@ export const en: TranslationKeys = {
       subtitle:
         "Enter the username and identifier of the person you want to add",
       inputLabel: "I want to befriend:",
-      inputPlaceholder: "alejandro/g5x",
+      inputPlaceholder: "username/g5x",
       sendRequest: "Send Friend Request",
       sending: "Sending...",
       pendingRequests: "Pending Requests",

@@ -50,33 +50,45 @@ export const DeleteMessageModal = () => {
 
   return (
     <Dialog open={isModalOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-theme-bg-modal !max-w-[400px] text-theme-text-subtle p-0 overflow-hidden">
-        <DialogHeader className="pt-8 px-6">
+      <DialogContent
+        className="max-w-[420px]! overflow-hidden rounded-none border border-theme-border bg-theme-bg-modal p-0 text-theme-text-subtle"
+        closeButtonClassName="cursor-pointer rounded-none p-1 text-theme-text-subtle opacity-100 transition hover:text-theme-text-light data-[state=open]:bg-transparent data-[state=open]:text-theme-text-subtle focus:ring-0 focus:ring-offset-0 focus:outline-none"
+      >
+        <DialogHeader className="px-6 pt-2">
           <DialogTitle className="text-2xl text-center font-bold">
             {t.modals.deleteMessage.title}
           </DialogTitle>
-          <DialogDescription className="text-center text-[15px] text-theme-text-tertiary">
-            {t.modals.deleteMessage.description} <br />
-            {t.modals.deleteMessage.willBeDeleted}
+          <DialogDescription className="text-center text-[15px] -mt-2 text-theme-text-subtle">
+            {t.modals.deleteMessage.description}
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter className="bg-theme-bg-modal px-6 py-4">
-          <div className="flex items-center justify-center gap-20 w-full">
-            <Button
-              disabled={isLoading}
-              onClick={onClose}
-              className="bg-theme-bg-cancel-button hover:bg-theme-bg-cancel-button-hover cursor-pointer text-theme-text-subtle hover:text-theme-text-light"
-            >
-              {t.common.cancel}
-            </Button>
-            <Button
-              disabled={isLoading}
-              className="bg-red-500 cursor-pointer hover:bg-red-600 text-theme-text-light hover:text-theme-text-light"
-              onClick={onClick}
-            >
-              {t.common.confirm}
-            </Button>
+
+        <div className="space-y-3 px-6 pb-4 -mt-2.5">
+          <div className="flex h-8 items-center justify-center border border-theme-border bg-theme-bg-edit-form/60 px-3">
+            <p className="text-center text-[14px] leading-none text-theme-text-tertiary">
+              Este mensaje será eliminado permanentemente
+            </p>
           </div>
+        </div>
+
+        <DialogFooter className="border-t border-theme-border bg-theme-bg-secondary/40 px-6 py-1.5 -mt-5.5">
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={isLoading}
+            onClick={onClose}
+            className="h-6.5 cursor-pointer rounded-none bg-theme-bg-cancel-button px-3 text-[14px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+          >
+            {t.common.cancel}
+          </Button>
+          <Button
+            type="button"
+            disabled={isLoading}
+            className="h-6.5 cursor-pointer rounded-none border border-red-500/60 bg-red-500/80 px-3 text-[14px] text-theme-text-light hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-70"
+            onClick={onClick}
+          >
+            {t.common.confirm}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

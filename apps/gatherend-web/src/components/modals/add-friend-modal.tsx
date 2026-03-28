@@ -4,6 +4,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -14,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Check, UserPlus, X } from "lucide-react";
 import { useState } from "react";
 import axios from "axios";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { UserAvatar } from "@/components/user-avatar";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
@@ -31,6 +31,29 @@ interface PendingRequest {
   requester: ClientProfileSummary & {
     fullUsername: string;
   };
+}
+
+function RequestListSkeleton() {
+  return (
+    <div className="space-y-2">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div
+          key={i}
+          className="flex items-center gap-2 border border-theme-border bg-theme-bg-secondary/20 px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.28),inset_0_-1px_0_rgba(0,0,0,0.28)] animate-pulse"
+        >
+          <div className="h-8 w-8 shrink-0 border border-theme-border bg-white/10" />
+          <div className="flex-1 space-y-2 py-0.5">
+            <div className="h-3 w-1/3 bg-white/10" />
+            <div className="h-2 w-1/2 bg-white/10" />
+          </div>
+          <div className="flex gap-1">
+            <div className="h-6 w-6 bg-white/10" />
+            <div className="h-6 w-6 bg-white/10" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export const AddFriendModal = () => {
@@ -152,23 +175,26 @@ export const AddFriendModal = () => {
 
   return (
     <Dialog open={isModalOpen} onOpenChange={handleClose}>
-      <DialogContent className="bg-theme-bg-modal !max-w-[400px] text-theme-text-subtle p-0 overflow-hidden max-h-[90vh] flex flex-col">
-        <DialogHeader className="pt-8 px-6">
+      <DialogContent
+        className="max-w-[440px]! overflow-hidden rounded-none border border-theme-border bg-theme-bg-modal p-0 text-theme-text-subtle"
+        closeButtonClassName="cursor-pointer rounded-none p-1 text-theme-text-subtle opacity-100 transition hover:text-theme-text-light data-[state=open]:bg-transparent data-[state=open]:text-theme-text-subtle focus:ring-0 focus:ring-offset-0 focus:outline-none"
+      >
+        <DialogHeader className="px-6 pt-2">
           <DialogTitle className="text-2xl text-center font-bold">
             {t.modals.addFriend.title}
           </DialogTitle>
-          <DialogDescription className="text-center text-[15px] text-theme-text-subtle">
+          <DialogDescription className="-mt-2 text-center text-[15px] text-theme-text-subtle">
             {t.modals.addFriend.subtitle}
-            <br />
           </DialogDescription>
         </DialogHeader>
 
-        <div className="px-6 flex-1 overflow-hidden flex flex-col mt-4">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
+        {/* Add friend form */}
+        <form onSubmit={handleSubmit}>
+          <div className="px-6 pb-3 ">
+            <div className="space-y-2 bg-theme-bg-modal px-3 py-0 -mt-3.5">
               <Label
                 htmlFor="add-friend-username"
-                className="uppercase text-[15px] font-bold text-theme-text-subtle"
+                className="block uppercase text-[15px] font-bold text-theme-text-subtle mb-0.5"
               >
                 {t.modals.addFriend.inputLabel}
               </Label>
@@ -176,89 +202,72 @@ export const AddFriendModal = () => {
                 id="add-friend-username"
                 name="add-friend-username"
                 disabled={sendRequestMutation.isPending}
-                className="bg-theme-bg-input-modal border-0 focus-visible:ring-0 text-theme-text-light focus-visible:ring-offset-0 !text-[15px]"
+                className="rounded-none border border-theme-border bg-theme-bg-edit-form/60 h-8 px-3 py-2 text-[14px] text-theme-text-primary focus-visible:border-theme-border-accent focus-visible:ring-0 focus-visible:ring-offset-0"
                 placeholder={t.modals.addFriend.inputPlaceholder}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoComplete="off"
               />
-            </div>
 
-            {/* Mensaje de éxito o error */}
-            {message.type && (
-              <div
-                className={`flex items-center gap-2 p-3 rounded-md text-sm ${
-                  message.type === "success"
-                    ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                    : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
-                }`}
-              >
-                {message.type === "success" && <Check className="w-4 h-4" />}
-                <span>{message.text}</span>
-              </div>
-            )}
-
-            <div className="flex justify-center pt-2">
-              <Button
-                type="submit"
-                disabled={sendRequestMutation.isPending || !username.trim()}
-                className="bg-theme-tab-button-bg hover:bg-theme-tab-button-hover cursor-pointer text-theme-text-light w-full"
-              >
-                {sendRequestMutation.isPending ? (
-                  t.modals.addFriend.sending
-                ) : (
-                  <>
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    {t.modals.addFriend.sendRequest}
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
-
-          {/* Lista de solicitudes pendientes */}
-          <div className="mt-6 overflow-hidden flex flex-col border-t border-theme-border-secondary pt-4">
-            <h3 className="text-sm font-semibold text-theme-text-subtle mb-3 uppercase">
-              {t.modals.addFriend.pendingRequests}{" "}
-              {pendingRequests.length > 0 && `(${pendingRequests.length})`}
-            </h3>
-
-            <ScrollArea className="h-[400px] pr-4 -mr-4">
-              {isLoadingRequests ? (
-                <div className="text-sm text-theme-text-tertiary py-4 text-center">
-                  {t.modals.addFriend.loading}
+              {/* Mensaje de éxito o error */}
+              {message.type && (
+                <div
+                  className={`flex items-center gap-2 px-2 py-1.5 text-sm border ${
+                    message.type === "success"
+                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                      : "border-rose-500/30 bg-rose-500/10 text-rose-400"
+                  }`}
+                >
+                  {message.type === "success" && (
+                    <Check className="w-4 h-4 shrink-0" />
+                  )}
+                  <span>{message.text}</span>
                 </div>
+              )}
+            </div>
+          </div>
+
+          {/* Pending requests list */}
+          <div className="scrollbar-ultra-thin max-h-[300px] space-y-2 overflow-y-auto px-4 pb-3">
+            <div className="space-y-2 border border-theme-border-subtle bg-theme-bg-edit-form/30 px-3 py-2">
+              <span className="block uppercase text-xs font-bold text-theme-text-subtle border-b border-theme-border-subtle pb-1">
+                {t.modals.addFriend.pendingRequests}
+                {pendingRequests.length > 0 && (
+                  <span className="ml-1 text-theme-text-muted">
+                    ({pendingRequests.length})
+                  </span>
+                )}
+              </span>
+
+              {isLoadingRequests ? (
+                <RequestListSkeleton />
               ) : pendingRequests.length === 0 ? (
-                <div className="text-sm text-theme-text-tertiary py-4 text-center">
+                <div className="border border-theme-border-subtle bg-theme-bg-edit-form/35 px-3 py-4 text-center text-sm text-theme-text-muted">
                   {t.modals.addFriend.noPendingRequests}
                 </div>
               ) : (
-                <div className="space-y-2 pr-4">
+                <div className="space-y-2">
                   {pendingRequests.map((request) => (
                     <div
                       key={request.id}
-                      className="flex items-center justify-between p-3 bg-theme-bg-modal rounded-md"
+                      className="flex items-center gap-2 border border-theme-border bg-theme-bg-secondary/20 px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.28),inset_0_-1px_0_rgba(0,0,0,0.28)] transition hover:bg-theme-bg-tertiary/40"
                     >
-                      <div className="flex items-center gap-3">
-                        <UserAvatar
-                          src={request.requester.avatarAsset?.url || undefined}
-                          showStatus={false}
-                          className="h-8 w-8 md:h-8 md:w-8"
-                        />
-                        <div>
-                          <p className="text-sm font-medium text-theme-text-primary">
-                            {request.requester.username}
-                            <span className="text-theme-text-tertiary text-xs ml-1">
-                              /{request.requester.discriminator}
-                            </span>
-                          </p>
-                        </div>
+                      <UserAvatar
+                        src={request.requester.avatarAsset?.url || undefined}
+                        showStatus={false}
+                        className="h-8 w-8 shrink-0"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-theme-text-light">
+                          {request.requester.username}
+                          <span className="ml-1 text-xs text-theme-text-muted">
+                            /{request.requester.discriminator}
+                          </span>
+                        </p>
                       </div>
-                      <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 w-8 p-0 hover:bg-emerald-500/10 hover:text-emerald-400"
+                      <div className="flex shrink-0 gap-1">
+                        <button
+                          type="button"
                           disabled={handleRequestMutation.isPending}
                           onClick={() =>
                             handleRequestMutation.mutate({
@@ -266,13 +275,12 @@ export const AddFriendModal = () => {
                               action: "accept",
                             })
                           }
+                          className="cursor-pointer p-1 text-theme-text-subtle opacity-100 transition hover:text-theme-text-light disabled:opacity-50"
                         >
-                          <Check className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 w-8 p-0 hover:bg-rose-500/10 hover:text-rose-400"
+                          <Check className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
                           disabled={handleRequestMutation.isPending}
                           onClick={() =>
                             handleRequestMutation.mutate({
@@ -280,30 +288,40 @@ export const AddFriendModal = () => {
                               action: "reject",
                             })
                           }
+                          className="cursor-pointer p-1 text-theme-text-subtle opacity-100 transition hover:text-theme-text-light disabled:opacity-50"
                         >
-                          <X className="w-4 h-4" />
-                        </Button>
+                          <X className="h-4 w-4" />
+                        </button>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
-            </ScrollArea>
+            </div>
           </div>
-        </div>
 
-        {/* Botón Cancel abajo del todo */}
-        <div className="p-6 pt-0 bg-theme-bg-modal">
-          <Button
-            type="button"
-            variant="ghost"
-            disabled={sendRequestMutation.isPending}
-            onClick={handleClose}
-            className="w-full bg-theme-bg-cancel-button hover:bg-theme-bg-cancel-button-hover cursor-pointer text-theme-text-subtle hover:text-theme-text-light"
-          >
-            {t.modals.addFriend.close}
-          </Button>
-        </div>
+          <DialogFooter className="border-t border-theme-border bg-theme-bg-secondary/40 px-6 py-1.5">
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={sendRequestMutation.isPending}
+              onClick={handleClose}
+              className="h-6.5 cursor-pointer rounded-none bg-theme-bg-cancel-button px-3 text-[14px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+            >
+              {t.modals.addFriend.close}
+            </Button>
+            <Button
+              type="submit"
+              disabled={sendRequestMutation.isPending || !username.trim()}
+              className="h-6.5 cursor-pointer rounded-none bg-theme-tab-button-bg px-3 text-[14px] text-theme-text-light hover:bg-theme-tab-button-hover disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              <UserPlus className=" h-4 w-4" />
+              {sendRequestMutation.isPending
+                ? t.modals.addFriend.sending
+                : t.modals.addFriend.sendRequest}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

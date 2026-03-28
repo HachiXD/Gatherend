@@ -48,9 +48,9 @@ export const ChatVideoButton = ({
     <ActionTooltip side="bottom" label={tooltipLabel}>
       <button
         onClick={onClick}
-        className="hover:opacity-75 cursor-pointer transition mr-4"
+        className="flex h-7 w-7 cursor-pointer items-center justify-center border border-theme-border bg-theme-bg-secondary/40 text-theme-text-tertiary transition hover:text-theme-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]"
       >
-        <Icon className="h-6 w-6 text-theme-text-tertiary" />
+        <Icon className="h-4.5 w-4.5" />
       </button>
     </ActionTooltip>
   );

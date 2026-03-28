@@ -546,7 +546,7 @@ export const es: TranslationKeys = {
       subtitle:
         "Ingresa el nombre de usuario e identificador de la persona que quieres agregar",
       inputLabel: "Quiero agregar a:",
-      inputPlaceholder: "alejandro/g5x",
+      inputPlaceholder: "nombreDeUsuario/g5x",
       sendRequest: "Enviar Solicitud",
       sending: "Enviando...",
       pendingRequests: "Solicitudes Pendientes",
