@@ -22,7 +22,9 @@ type Frame =
   | { kind: "color"; color: string; nodes: AstNode[] };
 
 function tokenize(text: string): Token[] {
-  const re = /\[color=(#[0-9a-fA-F]{3,8})\]|(\[\/color\])|([*_#])/g;
+  // grupo 1 = cualquier valor de color (válido o no), para consumir el tag completo antes de que # sea marcador
+  // grupo 2 = [/color], grupo 3 = marcador de símbolo
+  const re = /\[color=([^\]]{0,32})\]|(\[\/color\])|([*_#])/g;
   const tokens: Token[] = [];
   let lastIndex = 0;
   let match: RegExpExecArray | null;
@@ -31,8 +33,14 @@ function tokenize(text: string): Token[] {
     if (match.index > lastIndex) {
       tokens.push({ type: "text", value: text.slice(lastIndex, match.index) });
     }
-    if (match[1]) {
-      tokens.push({ type: "color_open", color: match[1], raw: match[0] });
+    if (match[1] !== undefined) {
+      const rawColor = match[1];
+      if (/^#[0-9a-fA-F]{3,8}$/.test(rawColor)) {
+        tokens.push({ type: "color_open", color: rawColor, raw: match[0] });
+      } else {
+        // color inválido: consumir el tag completo como texto para no parsear # dentro
+        tokens.push({ type: "text", value: match[0] });
+      }
     } else if (match[2]) {
       tokens.push({ type: "color_close", raw: match[0] });
     } else {
