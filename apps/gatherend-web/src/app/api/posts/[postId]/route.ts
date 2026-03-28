@@ -163,6 +163,7 @@ export async function PATCH(
         select: {
           id: true,
           communityId: true,
+          title: true,
           content: true,
           createdAt: true,
           updatedAt: true,
@@ -200,6 +201,7 @@ export async function PATCH(
     return NextResponse.json({
       id: updatedPost.id,
       communityId: updatedPost.communityId,
+      title: updatedPost.title,
       content: updatedPost.content,
       imageAsset: serializeUploadedAsset(updatedPost.imageAsset),
       createdAt: updatedPost.createdAt.toISOString(),
@@ -289,6 +291,7 @@ export async function DELETE(
         data: {
           deleted: true,
           imageAssetId: null,
+          title: "",
           content: "",
         },
       });

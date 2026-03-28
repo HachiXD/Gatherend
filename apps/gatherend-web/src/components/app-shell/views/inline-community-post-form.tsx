@@ -27,7 +27,9 @@ export function InlineCommunityPostForm({
   onSuccess,
 }: InlineCommunityPostFormProps) {
   const queryClient = useQueryClient();
+  const titleRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [imageUpload, setImageUpload] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,7 +42,7 @@ export function InlineCommunityPostForm({
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      textareaRef.current?.focus();
+      titleRef.current?.focus();
     }, 50);
     return () => window.clearTimeout(timer);
   }, []);
@@ -66,9 +68,11 @@ export function InlineCommunityPostForm({
     return () => window.removeEventListener("keydown", handleKeyDown);
   });
 
+  const trimmedTitle = title.trim();
   const trimmedContent = content.trim();
   const imageAssetId = getStoredUploadAssetId(imageUpload);
-  const canSubmit = trimmedContent.length > 0 || Boolean(imageAssetId);
+  const canSubmit =
+    trimmedTitle.length > 0 && (trimmedContent.length > 0 || Boolean(imageAssetId));
 
   const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const items = Array.from(e.clipboardData.items);
@@ -112,6 +116,7 @@ export function InlineCommunityPostForm({
 
       await axios.post("/api/posts", {
         communityId,
+        title: trimmedTitle,
         content: trimmedContent,
         imageAssetId: imageAssetId ?? null,
       });
@@ -126,6 +131,7 @@ export function InlineCommunityPostForm({
       ]);
 
       toast.success("Post publicado");
+      setTitle("");
       setContent("");
       setImageUpload("");
       onSuccess?.();
@@ -203,17 +209,26 @@ export function InlineCommunityPostForm({
           </div>
         </div>
 
-        {/* Right: textarea + hint row */}
+        {/* Right: title input + textarea + hint row */}
         <div className="flex min-w-0 flex-1 flex-col gap-y-1.5 -mb-1">
+          <input
+            ref={titleRef}
+            type="text"
+            value={title}
+            onChange={(event) => setTitle(event.target.value.slice(0, 200))}
+            disabled={isSubmitting}
+            className="h-8 w-full shrink-0 border border-theme-border-subtle bg-transparent px-3 text-[14px] leading-5 text-theme-text-light outline-none focus:border-theme-border-accent"
+            placeholder="Título del post..."
+          />
           <textarea
             ref={textareaRef}
             value={content}
             onChange={(event) => setContent(event.target.value)}
             disabled={isSubmitting}
-            rows={6}
+            rows={5}
             maxLength={2000}
             onPaste={(e) => void handlePaste(e)}
-            className="scrollbar-ultra-thin min-h-[220px] w-full flex-1 resize-none border border-theme-border-subtle bg-transparent px-3 py-2 text-[14px] leading-5 text-theme-text-light outline-none focus:border-theme-border-accent"
+            className="scrollbar-ultra-thin min-h-[182px] w-full flex-1 resize-none border border-theme-border-subtle bg-transparent px-3 py-2 text-[14px] leading-5 text-theme-text-light outline-none focus:border-theme-border-accent"
             placeholder={
               isPastingImage ? "Subiendo imagen..." : "Escribe tu post..."
             }

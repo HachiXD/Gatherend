@@ -212,16 +212,13 @@ export const AddFriendModal = () => {
               {/* Mensaje de éxito o error */}
               {message.type && (
                 <div
-                  className={`flex items-center gap-2 px-2 py-1.5 text-sm border ${
+                  className={`px-3 py-1 text-[13px] border ${
                     message.type === "success"
-                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                      ? "border-theme-border-accent-active-channel bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
                       : "border-rose-500/30 bg-rose-500/10 text-rose-400"
                   }`}
                 >
-                  {message.type === "success" && (
-                    <Check className="w-4 h-4 shrink-0" />
-                  )}
-                  <span>{message.text}</span>
+                  <span className="font-medium">{message.text}</span>
                 </div>
               )}
             </div>

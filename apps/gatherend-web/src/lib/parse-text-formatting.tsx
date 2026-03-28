@@ -2,9 +2,6 @@
 
 import React from "react";
 
-/**
- * Convierte URLs en enlaces clickeables
- */
 export const parseUrls = (content: string): React.ReactNode[] => {
   const urlRegex = /(https?:\/\/[^\s<>"{}|\\^`[\]]+)/gi;
   const parts: React.ReactNode[] = [];
@@ -13,12 +10,9 @@ export const parseUrls = (content: string): React.ReactNode[] => {
   let keyIndex = 0;
 
   while ((match = urlRegex.exec(content)) !== null) {
-    // Add text before the URL
     if (match.index > lastIndex) {
       parts.push(content.substring(lastIndex, match.index));
     }
-
-    // Add the URL as a clickable link
     const url = match[1];
     parts.push(
       <a
@@ -31,11 +25,9 @@ export const parseUrls = (content: string): React.ReactNode[] => {
         {url}
       </a>
     );
-
     lastIndex = match.index + match[0].length;
   }
 
-  // Add remaining text
   if (lastIndex < content.length) {
     parts.push(content.substring(lastIndex));
   }
@@ -43,175 +35,195 @@ export const parseUrls = (content: string): React.ReactNode[] => {
   return parts.length > 0 ? parts : [content];
 };
 
-/**
- * Parsea el formato de texto y convierte a elementos con estilos
- * - *texto* → bold
- * - _texto_ → underline (subrayado)
- * - #texto# → italic (cursiva)
- * - Combinaciones: *#texto#* → bold + italic, *_texto_* → bold + underline, etc.
- */
-export const parseTextFormatting = (content: string): React.ReactNode[] => {
-  const parts: React.ReactNode[] = [];
+// --- tokenizer types ---
 
-  // Regex para los diferentes formatos (orden importa: más específico primero)
-  // Combinaciones de 3: *#_texto_#* o cualquier orden
-  // Combinaciones de 2: *#texto#*, *_texto_*, #_texto_#
-  // Individuales: *texto*, _texto_, #texto#
-  const formatRegex = new RegExp(
-    [
-      // Triple combinación (los 3 formatos) - diferentes órdenes
-      "(\\*#_([^_]+)_#\\*)", // *#_texto_#* → bold + italic + underline
-      "(\\*_#([^#]+)#_\\*)", // *_#texto#_* → bold + underline + italic
-      "(#\\*_([^_]+)_\\*#)", // #*_texto_*# → italic + bold + underline
-      "(#_\\*([^*]+)\\*_#)", // #_*texto*_# → italic + underline + bold
-      "(_\\*#([^#]+)#\\*_)", // _*#texto#*_ → underline + bold + italic
-      "(_#\\*([^*]+)\\*#_)", // _#*texto*#_ → underline + italic + bold
-      // Doble combinación
-      "(\\*#([^#]+)#\\*)", // *#texto#* → bold + italic
-      "(#\\*([^*]+)\\*#)", // #*texto*# → italic + bold
-      "(\\*_([^_]+)_\\*)", // *_texto_* → bold + underline
-      "(_\\*([^*]+)\\*_)", // _*texto*_ → underline + bold
-      "(#_([^_]+)_#)", // #_texto_# → italic + underline
-      "(_#([^#]+)#_)", // _#texto#_ → underline + italic
-      // Individual
-      "(\\*([^*]+)\\*)", // *texto* → bold
-      "(_([^_]+)_)", // _texto_ → underline
-      "(#([^#]+)#)", // #texto# → italic
-    ].join("|"),
-    "g"
-  );
+type SymbolKind = "bold" | "underline" | "italic";
 
+type Token =
+  | { type: "text"; value: string }
+  | { type: "marker"; kind: SymbolKind; raw: string }
+  | { type: "color_open"; color: string; raw: string }
+  | { type: "color_close"; raw: string };
+
+type AstNode =
+  | { type: "text"; value: string }
+  | { type: "format"; bold: boolean; underline: boolean; italic: boolean; children: AstNode[] }
+  | { type: "color"; color: string; children: AstNode[] };
+
+// tokenize: escanea izq-der emitiendo marcadores y texto
+function tokenize(text: string, withColor: boolean): Token[] {
+  // grupo 1=color_open hex, grupo 2=color_close, grupo 3=marker char
+  const re = withColor
+    ? /\[color=(#[0-9a-fA-F]{3,8})\]|(\[\/color\])|([*_#])/g
+    : /([*_#])/g;
+  const tokens: Token[] = [];
   let lastIndex = 0;
-  let match;
-  let keyIndex = 0;
+  let match: RegExpExecArray | null;
 
-  while ((match = formatRegex.exec(content)) !== null) {
-    // Agregar texto antes del formato
+  while ((match = re.exec(text)) !== null) {
     if (match.index > lastIndex) {
-      parts.push(content.substring(lastIndex, match.index));
+      tokens.push({ type: "text", value: text.slice(lastIndex, match.index) });
     }
-
-    // Triple combinación (bold + italic + underline)
-    if (match[1] || match[3] || match[5] || match[7] || match[9] || match[11]) {
-      const text =
-        match[2] || match[4] || match[6] || match[8] || match[10] || match[12];
-      parts.push(
-        <span
-          key={`format-${keyIndex++}`}
-          className="font-bold italic underline"
-        >
-          {text}
-        </span>
-      );
+    if (withColor && match[1]) {
+      tokens.push({ type: "color_open", color: match[1], raw: match[0] });
+    } else if (withColor && match[2]) {
+      tokens.push({ type: "color_close", raw: match[0] });
+    } else {
+      const ch = withColor ? match[3] : match[1];
+      const kind: SymbolKind = ch === "*" ? "bold" : ch === "_" ? "underline" : "italic";
+      tokens.push({ type: "marker", kind, raw: ch! });
     }
-    // *#texto#* o #*texto*# → bold + italic
-    else if (match[13] || match[15]) {
-      const text = match[14] || match[16];
-      parts.push(
-        <span key={`format-${keyIndex++}`} className="font-bold italic">
-          {text}
-        </span>
-      );
-    }
-    // *_texto_* o _*texto*_ → bold + underline
-    else if (match[17] || match[19]) {
-      const text = match[18] || match[20];
-      parts.push(
-        <span key={`format-${keyIndex++}`} className="font-bold underline">
-          {text}
-        </span>
-      );
-    }
-    // #_texto_# o _#texto#_ → italic + underline
-    else if (match[21] || match[23]) {
-      const text = match[22] || match[24];
-      parts.push(
-        <span key={`format-${keyIndex++}`} className="italic underline">
-          {text}
-        </span>
-      );
-    }
-    // *texto* → bold
-    else if (match[25]) {
-      parts.push(
-        <span key={`format-${keyIndex++}`} className="font-bold">
-          {match[26]}
-        </span>
-      );
-    }
-    // _texto_ → underline
-    else if (match[27]) {
-      parts.push(
-        <span key={`format-${keyIndex++}`} className="underline">
-          {match[28]}
-        </span>
-      );
-    }
-    // #texto# → italic
-    else if (match[29]) {
-      parts.push(
-        <span key={`format-${keyIndex++}`} className="italic">
-          {match[30]}
-        </span>
-      );
-    }
-
     lastIndex = match.index + match[0].length;
   }
 
-  // Agregar texto restante
-  if (lastIndex < content.length) {
-    parts.push(content.substring(lastIndex));
+  if (lastIndex < text.length) {
+    tokens.push({ type: "text", value: text.slice(lastIndex) });
   }
+  return tokens;
+}
 
-  return parts.length > 0 ? parts : [content];
-};
+// stack frame: marcador abierto + nodos acumulados hasta ahora
+type Frame =
+  | { kind: "root" | SymbolKind; nodes: AstNode[] }
+  | { kind: "color"; color: string; nodes: AstNode[] };
 
-/**
- * Combina el parseo de menciones con el formato de texto y URLs
- */
-export const parseTextWithFormatting = (
-  content: string,
-  parseMentionsFn: (text: string) => React.ReactNode[]
-): React.ReactNode[] => {
-  // Primero parseamos las menciones
-  const mentionParts = parseMentionsFn(content);
+// buildTree: LIFO estricto
+// si el cierre no coincide con el tope → el marcador de apertura se emite como texto
+function buildTree(tokens: Token[]): AstNode[] {
+  const stack: Frame[] = [{ kind: "root", nodes: [] }];
 
-  // Luego aplicamos formato de texto a las partes que son strings
-  const result: React.ReactNode[] = [];
+  const top = () => stack[stack.length - 1];
+  const pushText = (value: string) => {
+    const t = top();
+    const last = t.nodes[t.nodes.length - 1];
+    if (last?.type === "text") {
+      last.value += value;
+    } else {
+      t.nodes.push({ type: "text", value });
+    }
+  };
 
-  mentionParts.forEach((part, index) => {
-    if (typeof part === "string") {
-      // Primero aplicar formato de texto
-      const formattedParts = parseTextFormatting(part);
-      formattedParts.forEach((formattedPart, fIndex) => {
-        if (typeof formattedPart === "string") {
-          // Luego convertir URLs en enlaces
-          const urlParts = parseUrls(formattedPart);
-          urlParts.forEach((urlPart, uIndex) => {
-            if (typeof urlPart === "string") {
-              result.push(urlPart);
-            } else {
-              result.push(
-                React.cloneElement(urlPart as React.ReactElement, {
-                  key: `url-${index}-${fIndex}-${uIndex}`,
-                })
-              );
-            }
-          });
-        } else {
-          result.push(
-            React.cloneElement(formattedPart as React.ReactElement, {
-              key: `formatted-${index}-${fIndex}`,
-            })
-          );
-        }
+  for (const token of tokens) {
+    if (token.type === "text") {
+      pushText(token.value);
+      continue;
+    }
+
+    if (token.type === "color_open") {
+      stack.push({ kind: "color", color: token.color, nodes: [] });
+      continue;
+    }
+
+    if (token.type === "color_close") {
+      if (top().kind === "color") {
+        const frame = stack.pop() as Extract<Frame, { kind: "color" }>;
+        top().nodes.push({ type: "color", color: frame.color, children: frame.nodes });
+      } else {
+        // [/color] sin apertura correspondiente → texto literal
+        pushText(token.raw);
+      }
+      continue;
+    }
+
+    // token es marker
+    const { kind, raw } = token;
+    const openIdx = stack.findLastIndex((f) => f.kind === kind);
+
+    if (openIdx === -1) {
+      // no hay apertura en el stack → abrir nuevo frame
+      stack.push({ kind, nodes: [] });
+      continue;
+    }
+
+    if (openIdx === stack.length - 1) {
+      // LIFO: el tope es la apertura correspondiente → cerrar
+      const frame = stack.pop()!;
+      top().nodes.push({
+        type: "format",
+        bold: kind === "bold",
+        underline: kind === "underline",
+        italic: kind === "italic",
+        children: frame.nodes,
       });
     } else {
-      // Mantener elementos React (menciones) sin cambios
+      // cruce: el marcador de cierre no coincide con el tope del stack
+      // LIFO estricto: emitir el marcador de la apertura como texto y descartar ese frame
+      const frame = stack.splice(openIdx, 1)[0];
+      // reinsertar los nodos acumulados en ese frame en el frame padre
+      const parent = stack[openIdx - 1 < 0 ? 0 : openIdx] ?? top();
+      parent.nodes.push({ type: "text", value: raw }, ...frame.nodes);
+    }
+  }
+
+  // frames que nunca cerraron: emitir sus marcadores como texto
+  while (stack.length > 1) {
+    const frame = stack.pop()!;
+    const raw = frame.kind === "color" ? `[color=${(frame as Extract<Frame, {kind:"color"}>).color}]` : (frame.kind === "bold" ? "*" : frame.kind === "underline" ? "_" : "#");
+    top().nodes.push({ type: "text", value: raw }, ...frame.nodes);
+  }
+
+  return stack[0].nodes;
+}
+
+// renderNodes: AST → React
+function renderNodes(nodes: AstNode[], counter: { n: number }, color?: string): React.ReactNode[] {
+  const result: React.ReactNode[] = [];
+  for (const node of nodes) {
+    if (node.type === "text") {
+      result.push(node.value);
+    } else if (node.type === "color") {
+      const key = `c-${counter.n++}`;
+      result.push(
+        <span key={key} style={{ color: node.color }}>
+          {renderNodes(node.children, counter, node.color)}
+        </span>,
+      );
+    } else {
+      const key = `f-${counter.n++}`;
+      const cls = [
+        node.bold ? "font-bold" : "",
+        node.underline ? "underline" : "",
+        node.italic ? "italic" : "",
+      ].filter(Boolean).join(" ");
+      const style = color ? { color } : undefined;
+      result.push(
+        <span key={key} className={cls} style={style}>
+          {renderNodes(node.children, counter, color)}
+        </span>,
+      );
+    }
+  }
+  return result;
+}
+
+// *texto* bold, _texto_ underline, #texto# italic
+// cualquier permutación y anidamiento; LIFO estricto para marcadores cruzados
+export const parseTextFormatting = (content: string): React.ReactNode[] => {
+  const nodes = buildTree(tokenize(content, false));
+  return renderNodes(nodes, { n: 0 });
+};
+
+// menciones → bold/underline/italic/URLs sobre nodos de texto plano
+export const parseTextWithFormatting = (
+  content: string,
+  parseMentionsFn: (text: string) => React.ReactNode[],
+): React.ReactNode[] => {
+  const parts = parseMentionsFn(content);
+  const result: React.ReactNode[] = [];
+
+  for (const part of parts) {
+    if (typeof part === "string") {
+      for (const fPart of parseTextFormatting(part)) {
+        if (typeof fPart === "string") {
+          result.push(...parseUrls(fPart));
+        } else {
+          result.push(fPart);
+        }
+      }
+    } else {
       result.push(part);
     }
-  });
+  }
 
   return result;
 };

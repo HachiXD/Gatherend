@@ -206,11 +206,11 @@ export const DirectMessageItem = memo(function DirectMessageItemComponent({
           )}
         </button>
       </ContextMenuTrigger>
-      <ContextMenuContent className="w-48">
+      <ContextMenuContent className="w-48 rounded-none border border-theme-dropdown-border bg-theme-dropdown-bg p-1 shadow-[0_10px_24px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.1),inset_1px_0_0_rgba(255,255,255,0.08),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]">
         <ContextMenuItem
           onClick={handleDeleteConversation}
           disabled={isHiding}
-          className="text-rose-500 focus:text-rose-500 focus:bg-rose-500/10 cursor-pointer"
+          className="h-11 cursor-pointer rounded-none border border-rose-500/20 bg-rose-500/6 px-3 py-2 text-sm text-rose-400 focus:border-rose-500/35 focus:bg-rose-500/10 focus:text-rose-400 disabled:opacity-50"
         >
           <Trash2 className="w-4 h-4 mr-2" />
           {t.dm.deleteConversation}

@@ -151,10 +151,11 @@ export const UsernameColorSection = memo(function UsernameColorSection({
           <div className="space-y-0 border-b border-theme-border-subtle pb-1">
             <div className="space-y-0">
               <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-theme-text-subtle">
-                Gradient Editor
+                Editor de Gradiente
               </p>
               <p className="text-[10px] text-theme-text-muted ">
-                Click the bar to add colors and drag them to reposition.
+                Clickea la barra para agregar colores y arrastralos para cambiar
+                su posición.
               </p>
             </div>
           </div>

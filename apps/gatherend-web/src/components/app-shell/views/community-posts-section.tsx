@@ -22,6 +22,7 @@ import axios from "axios";
 import { useTheme } from "next-themes";
 import { AnimatedSticker } from "@/components/ui/animated-sticker";
 import { Edit, Lock, Pin, RefreshCw, Siren, Trash } from "lucide-react";
+import { parsePostContent } from "@/lib/parse-post-formatting";
 import { DiscoverySkeleton } from "@/components/discovery/discovery-skeleton";
 import { FeedBottomSkeleton } from "@/components/discovery/feed-bottom-skeleton";
 import {
@@ -284,6 +285,7 @@ function PostBodyWithImage({
   alt,
   imageWidth,
   imageHeight,
+  themeMode,
 }: {
   usernameSlot: ReactNode;
   content: string;
@@ -291,6 +293,7 @@ function PostBodyWithImage({
   alt: string;
   imageWidth?: number | null;
   imageHeight?: number | null;
+  themeMode: "dark" | "light";
 }) {
   const isLandscape =
     !!imageWidth &&
@@ -347,7 +350,7 @@ function PostBodyWithImage({
         </div>
         {content && (
           <div className="whitespace-pre-wrap break-words text-[14px] leading-5 text-theme-text-secondary">
-            {content}
+            {parsePostContent(content, themeMode)}
           </div>
         )}
       </>
@@ -364,12 +367,17 @@ function PostBodyWithImage({
           {usernameSlot}
         </span>
         {"\u00A0"}
-        <span>{split.firstLine}</span>
+        <span>{parsePostContent(split.firstLine, themeMode)}</span>
       </div>
 
       <div className="whitespace-pre-wrap break-words text-[14px] leading-5 text-theme-text-secondary">
-        <PostImageAttachment imageUrl={imageUrl} alt={alt} imageWidth={imageWidth} imageHeight={imageHeight} />
-        <span>{split.remainder}</span>
+        <PostImageAttachment
+          imageUrl={imageUrl}
+          alt={alt}
+          imageWidth={imageWidth}
+          imageHeight={imageHeight}
+        />
+        <span>{parsePostContent(split.remainder, themeMode)}</span>
       </div>
     </>
   );
@@ -1180,7 +1188,7 @@ function CommunityPostsSectionInner({
                         >
                           <div className="relative bg-theme-bg-edit-form/95 px-4 pt-3 pb-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.16),inset_-1px_-1px_0_rgba(0,0,0,0.38)]">
                             {!isEditing && (
-                              <div className="absolute right-4 top-0.5 z-10 hidden items-center gap-x-2 rounded-sm border border-theme-toolbar-border bg-theme-toolbar-bg p-1 group-hover:flex hover:flex">
+                              <div className="absolute right-1 top-0.5 z-10 hidden items-center gap-x-2 rounded-none border border-theme-toolbar-border bg-theme-toolbar-bg p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)] group-hover:flex hover:flex">
                                 {isOwnPost && (
                                   <ActionTooltip label="Edit post">
                                     <button
@@ -1310,6 +1318,12 @@ function CommunityPostsSectionInner({
                                       )}
                                     </div>
 
+                                    {post.title && (
+                                      <div className="break-words text-[18px] font-normal leading-snug text-theme-text-primary">
+                                        {post.title}
+                                      </div>
+                                    )}
+
                                     {postImageUrl ? (
                                       <PostBodyWithImage
                                         imageUrl={postImageUrl}
@@ -1319,6 +1333,7 @@ function CommunityPostsSectionInner({
                                         content={post.content}
                                         imageWidth={post.imageAsset?.width}
                                         imageHeight={post.imageAsset?.height}
+                                        themeMode={themeMode}
                                         usernameSlot={
                                           <>
                                             <UserAvatarMenu
@@ -1448,7 +1463,12 @@ function CommunityPostsSectionInner({
                                           </span>
                                         </span>
                                         {"\u00A0"}
-                                        <span>{post.content}</span>
+                                        <span>
+                                          {parsePostContent(
+                                            post.content,
+                                            themeMode,
+                                          )}
+                                        </span>
                                       </div>
                                     )}
                                   </>

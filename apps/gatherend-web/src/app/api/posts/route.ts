@@ -12,6 +12,7 @@ import {
 } from "@/lib/uploaded-assets";
 
 const MAX_CONTENT_LENGTH = 2000;
+const MAX_TITLE_LENGTH = 200;
 
 export async function POST(req: Request) {
   try {
@@ -35,10 +36,12 @@ export async function POST(req: Request) {
 
     const {
       communityId,
+      title,
       content,
       imageAssetId,
     }: {
       communityId?: unknown;
+      title?: unknown;
       content?: unknown;
       imageAssetId?: unknown;
     } = body;
@@ -46,6 +49,28 @@ export async function POST(req: Request) {
     if (!communityId || typeof communityId !== "string" || !UUID_REGEX.test(communityId)) {
       return NextResponse.json(
         { error: "Community ID is required and must be valid" },
+        { status: 400 },
+      );
+    }
+
+    if (!title || typeof title !== "string") {
+      return NextResponse.json(
+        { error: "Title is required and must be a string" },
+        { status: 400 },
+      );
+    }
+
+    const trimmedTitle = title.trim();
+    if (trimmedTitle.length === 0) {
+      return NextResponse.json(
+        { error: "Title cannot be empty" },
+        { status: 400 },
+      );
+    }
+
+    if (trimmedTitle.length > MAX_TITLE_LENGTH) {
+      return NextResponse.json(
+        { error: `Title must be ${MAX_TITLE_LENGTH} characters or less` },
         { status: 400 },
       );
     }
@@ -116,6 +141,20 @@ export async function POST(req: Request) {
       }
     }
 
+    const titleModerationResult = moderateDescription(trimmedTitle);
+    if (!titleModerationResult.allowed) {
+      return NextResponse.json(
+        {
+          error: "MODERATION_BLOCKED",
+          message:
+            titleModerationResult.message ||
+            "Post title contains prohibited content",
+          reason: titleModerationResult.reason,
+        },
+        { status: 400 },
+      );
+    }
+
     const community = await db.community.findUnique({
       where: { id: communityId },
       select: { id: true },
@@ -132,12 +171,14 @@ export async function POST(req: Request) {
       data: {
         communityId,
         authorProfileId: profile.id,
+        title: trimmedTitle,
         content: trimmedContent,
         imageAssetId: resolvedImageAssetId,
       },
       select: {
         id: true,
         communityId: true,
+        title: true,
         content: true,
         createdAt: true,
         updatedAt: true,
@@ -162,6 +203,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       id: post.id,
       communityId: post.communityId,
+      title: post.title,
       content: post.content,
       imageAsset: serializeUploadedAsset(post.imageAsset),
       createdAt: post.createdAt.toISOString(),

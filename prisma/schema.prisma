@@ -223,6 +223,7 @@ model CommunityPost {
   id              String         @id @default(uuid())
   communityId     String
   authorProfileId String
+  title           String
   content         String
   imageAssetId    String?
   commentCount    Int            @default(0)

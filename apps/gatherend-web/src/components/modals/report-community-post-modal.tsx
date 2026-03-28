@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import axios from "axios";
 import { cn } from "@/lib/utils";
-import { FileWarning, Loader2 } from "lucide-react";
+import { FileWarning } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { useTokenGetter } from "@/components/providers/token-manager-provider";
 import { getExpressAuthHeaders } from "@/lib/express-fetch";
@@ -189,138 +189,123 @@ export const ReportCommunityPostModal = () => {
 
   return (
     <Dialog open={isModalOpen} onOpenChange={handleClose}>
-      <DialogContent className="bg-theme-bg-modal max-w-md text-theme-text-subtle p-0 overflow-hidden">
-        <DialogHeader className="pt-6 px-6">
-            <div className="mb-2 flex items-center justify-center gap-2">
-              <FileWarning className="h-6 w-6 text-red-400" />
-              <DialogTitle className="text-xl text-center font-bold">
-                {isCommentModal ? "Report Comment" : "Report Post"}
-              </DialogTitle>
-            </div>
-            <DialogDescription className="text-center text-sm text-theme-text-tertiary">
-              Report this community {isCommentModal ? "comment" : "post"} by{" "}
-              <span className="font-semibold text-theme-text-subtle">
-                {previewAuthorUsername || "Unknown"}
-              </span>
-            </DialogDescription>
+      <DialogContent
+        className="max-w-[440px]! overflow-hidden rounded-none border border-theme-border bg-theme-bg-modal p-0 text-theme-text-subtle"
+        closeButtonClassName="cursor-pointer rounded-none p-1 text-theme-text-subtle opacity-100 transition hover:text-theme-text-light data-[state=open]:bg-transparent data-[state=open]:text-theme-text-subtle focus:ring-0 focus:ring-offset-0 focus:outline-none"
+      >
+        <DialogHeader className="bg-theme-bg-secondary/20 px-6 pb-2 pt-2">
+          <div className="flex items-center justify-center gap-2">
+            <DialogTitle className="text-[17px] font-bold">
+              {isCommentModal ? "Report Comment" : "Report Post"}
+            </DialogTitle>
+          </div>
+          <DialogDescription className="text-center text-[13px] -mt-1 text-theme-text-tertiary">
+            Report this community {isCommentModal ? "comment" : "post"} by{" "}
+            <span className="font-semibold text-theme-text-subtle">
+              {previewAuthorUsername || "Unknown"}
+            </span>
+          </DialogDescription>
         </DialogHeader>
 
-        {success ? (
-          <div className="px-6 py-8 text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-500/20">
-              <svg
-                className="h-6 w-6 text-green-500"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
+        <div className="overflow-hidden space-y-3 px-6 pb-0 -mt-5 -mb-3 pt-0">
+          {/* Post / Comment Preview */}
+          <div>
+            <p className="mb-1 text-[11px] text-theme-text-tertiary">
+              {isCommentModal ? "Comment preview" : "Post preview"}
+            </p>
+            <div className="overflow-hidden border border-theme-border bg-theme-bg-secondary/20 px-3 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.28),inset_0_-1px_0_rgba(0,0,0,0.28)]">
+              <p className="truncate text-[13px] font-semibold text-theme-text-subtle">
+                {previewContent}
+              </p>
             </div>
-            <p className="font-medium text-theme-text-subtle">
-              {t.modals.report.success}
-            </p>
-            <p className="mt-1 text-sm text-theme-text-tertiary">
-              {t.modals.report.successMessage}
-            </p>
           </div>
-        ) : (
-          <>
-            <div className="px-6 py-2">
-              <p className="mb-1 text-xs text-theme-text-tertiary">
-                {isCommentModal ? "Comment preview" : "Post preview"}
-              </p>
-              <div className="rounded-md bg-theme-bg-overlay-secondary p-2.5">
-                <p className="break-words text-sm text-theme-text-secondary">
-                  {previewContent}
-                </p>
-              </div>
-            </div>
 
-            <div className="px-6 py-1">
-              <p className="mb-2 text-xs text-theme-text-tertiary">
-                {t.modals.report.whyReporting}
-              </p>
-              <div className="max-h-[140px] space-y-1.5 overflow-y-auto">
-                {REPORT_CATEGORIES.map((category) => (
-                  <button
-                    key={category.value}
-                    onClick={() => setSelectedCategory(category.value)}
-                    disabled={isLoading}
+          {/* Category Selection */}
+          <div>
+            <p className="mb-1 text-[11px] text-theme-text-tertiary">
+              {t.modals.report.whyReporting}
+            </p>
+            <div className="max-h-[180px] space-y-1 p-1 overflow-y-auto scrollbar-ultra-thin border border-theme-border-subtle">
+              {REPORT_CATEGORIES.map((category) => (
+                <button
+                  key={category.value}
+                  onClick={() => setSelectedCategory(category.value)}
+                  disabled={isLoading}
+                  className={cn(
+                    "flex min-h-[40px] w-full cursor-pointer flex-col justify-center rounded-none border px-3 py-1 text-left transition",
+                    selectedCategory === category.value
+                      ? "border-theme-border-accent-active-channel bg-theme-border-accent-active-channel/40"
+                      : "border-theme-border-subtle hover:border-theme-border hover:bg-theme-bg-secondary/30",
+                  )}
+                >
+                  <span
                     className={cn(
-                      "w-full cursor-pointer rounded-md border p-2.5 text-left transition",
+                      "block text-[13px] font-medium leading-none",
                       selectedCategory === category.value
-                        ? "border-red-500 bg-red-500/10"
-                        : "border-theme-border-subtle hover:border-theme-border-accent hover:bg-theme-bg-overlay-secondary",
+                        ? "text-theme-channel-type-active-text"
+                        : "text-theme-text-subtle",
                     )}
                   >
-                    <span
-                      className={cn(
-                        "text-sm font-medium",
-                        selectedCategory === category.value
-                          ? "text-red-400"
-                          : "text-theme-text-subtle",
-                      )}
-                    >
-                      {category.label}
-                    </span>
-                    <p className="text-xs text-theme-text-tertiary">
-                      {category.description}
-                    </p>
-                  </button>
-                ))}
-              </div>
+                    {category.label}
+                  </span>
+                  <span className="mt-0.5 text-[11px] leading-none text-theme-text-tertiary">
+                    {category.description}
+                  </span>
+                </button>
+              ))}
             </div>
+          </div>
 
-            <div className="px-6 py-2">
-              <p className="mb-1 text-xs text-theme-text-tertiary">
-                {t.modals.report.additionalDetails}
+          {/* Additional Details */}
+          <div>
+            <p className="mb-1 text-[11px] text-theme-text-tertiary">
+              {t.modals.report.additionalDetails}
+            </p>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              disabled={isLoading}
+              placeholder={t.modals.report.additionalDetailsPlaceholder}
+              className="h-20 w-full scrollbar-ultra-thin resize-none rounded-none border border-theme-border-subtle bg-transparent px-3 py-2 text-[12px] leading-5 text-theme-text-light outline-none placeholder:text-theme-text-tertiary focus:border-theme-border-accent"
+              maxLength={500}
+            />
+          </div>
+
+          {success && (
+            <div className="border border-theme-border-accent-active-channel bg-theme-channel-type-active-bg px-3 py-1 -mt-3 mb-1 text-[13px]">
+              <p className="font-medium text-theme-channel-type-active-text">
+                {t.modals.report.success}
               </p>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                disabled={isLoading}
-                placeholder={t.modals.report.additionalDetailsPlaceholder}
-                className="h-20 w-full resize-none rounded-md border border-theme-border-subtle bg-theme-bg-overlay-secondary px-3 py-2 text-sm text-theme-text-subtle placeholder:text-theme-text-tertiary focus:outline-none focus:border-theme-border-accent"
-                maxLength={500}
-              />
             </div>
+          )}
 
-            {error && (
-              <div className="px-6">
-                <p className="text-center text-sm text-red-400">{error}</p>
-              </div>
-            )}
+          {error && (
+            <p className="text-center text-[12px] -mt-3.5 text-red-400">
+              {error}
+            </p>
+          )}
+        </div>
 
-            <DialogFooter className="bg-theme-bg-modal px-6 py-4">
-              <div className="flex w-full items-center justify-between gap-3">
-                <Button
-                  disabled={isLoading}
-                  onClick={handleClose}
-                  className="flex-1 bg-theme-bg-cancel-button hover:bg-theme-bg-cancel-button-hover cursor-pointer text-theme-text-subtle hover:text-theme-text-light"
-                >
-                  {t.modals.report.cancel}
-                </Button>
-                <Button
-                  disabled={isLoading || !selectedCategory}
-                  className="flex-1 cursor-pointer bg-red-500 text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-                  onClick={onSubmit}
-                >
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    t.modals.report.submit
-                  )}
-                </Button>
-              </div>
-            </DialogFooter>
-          </>
-        )}
+        <DialogFooter className="border-t border-theme-border bg-theme-bg-secondary/40 px-6 py-1.5">
+          <div className="flex w-full items-center justify-end gap-2">
+            <Button
+              type="button"
+              disabled={isLoading}
+              onClick={handleClose}
+              className="h-6.5 cursor-pointer rounded-none bg-theme-bg-cancel-button px-3 text-[13px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+            >
+              {t.modals.report.cancel}
+            </Button>
+            <Button
+              type="button"
+              disabled={isLoading || !selectedCategory}
+              className="h-6.5 cursor-pointer rounded-none bg-red-500/80 px-3 text-[13px] text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={onSubmit}
+            >
+              {isLoading ? t.modals.report.submitting : t.modals.report.submit}
+            </Button>
+          </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

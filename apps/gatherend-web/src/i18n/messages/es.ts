@@ -612,7 +612,7 @@ export const es: TranslationKeys = {
       additionalDetailsPlaceholder:
         "Proporciona cualquier contexto adicional...",
       submit: "Enviar Reporte",
-      submitting: "Enviando...",
+      submitting: "Enviando Reporte...",
       success: "Reporte Enviado",
       successMessage: "Gracias por ayudar a mantener segura nuestra comunidad.",
       error: "Error al enviar el reporte",
