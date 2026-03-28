@@ -146,12 +146,8 @@ function buildTree(tokens: Token[]): AstNode[] {
         children: frame.nodes,
       });
     } else {
-      // cruce: el marcador de cierre no coincide con el tope del stack
-      // LIFO estricto: emitir el marcador de la apertura como texto y descartar ese frame
-      const frame = stack.splice(openIdx, 1)[0];
-      // reinsertar los nodos acumulados en ese frame en el frame padre
-      const parent = stack[openIdx - 1 < 0 ? 0 : openIdx] ?? top();
-      parent.nodes.push({ type: "text", value: raw }, ...frame.nodes);
+      // cruce LIFO estricto: el cierre no coincide con el tope → emitir como texto, no tocar el stack
+      pushText(raw);
     }
   }
 

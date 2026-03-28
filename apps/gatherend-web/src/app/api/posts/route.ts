@@ -14,6 +14,7 @@ import {
 const MAX_CONTENT_LENGTH = 2000;
 const MAX_TITLE_LENGTH = 200;
 
+
 export async function POST(req: Request) {
   try {
     const rateLimitResponse = await checkRateLimit(RATE_LIMITS.boardCreate);
@@ -46,6 +47,9 @@ export async function POST(req: Request) {
       imageAssetId?: unknown;
     } = body;
 
+    const rawTitle = title !== undefined && typeof title === "string" ? title.trim() : null;
+    const trimmedTitle = rawTitle && rawTitle.length > 0 ? rawTitle : null;
+
     if (!communityId || typeof communityId !== "string" || !UUID_REGEX.test(communityId)) {
       return NextResponse.json(
         { error: "Community ID is required and must be valid" },
@@ -53,22 +57,7 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!title || typeof title !== "string") {
-      return NextResponse.json(
-        { error: "Title is required and must be a string" },
-        { status: 400 },
-      );
-    }
-
-    const trimmedTitle = title.trim();
-    if (trimmedTitle.length === 0) {
-      return NextResponse.json(
-        { error: "Title cannot be empty" },
-        { status: 400 },
-      );
-    }
-
-    if (trimmedTitle.length > MAX_TITLE_LENGTH) {
+    if (trimmedTitle !== null && trimmedTitle.length > MAX_TITLE_LENGTH) {
       return NextResponse.json(
         { error: `Title must be ${MAX_TITLE_LENGTH} characters or less` },
         { status: 400 },
@@ -141,18 +130,20 @@ export async function POST(req: Request) {
       }
     }
 
-    const titleModerationResult = moderateDescription(trimmedTitle);
-    if (!titleModerationResult.allowed) {
-      return NextResponse.json(
-        {
-          error: "MODERATION_BLOCKED",
-          message:
-            titleModerationResult.message ||
-            "Post title contains prohibited content",
-          reason: titleModerationResult.reason,
-        },
-        { status: 400 },
-      );
+    if (trimmedTitle) {
+      const titleModerationResult = moderateDescription(trimmedTitle);
+      if (!titleModerationResult.allowed) {
+        return NextResponse.json(
+          {
+            error: "MODERATION_BLOCKED",
+            message:
+              titleModerationResult.message ||
+              "Post title contains prohibited content",
+            reason: titleModerationResult.reason,
+          },
+          { status: 400 },
+        );
+      }
     }
 
     const community = await db.community.findUnique({
@@ -171,7 +162,7 @@ export async function POST(req: Request) {
       data: {
         communityId,
         authorProfileId: profile.id,
-        title: trimmedTitle,
+        title: trimmedTitle ?? null,
         content: trimmedContent,
         imageAssetId: resolvedImageAssetId,
       },

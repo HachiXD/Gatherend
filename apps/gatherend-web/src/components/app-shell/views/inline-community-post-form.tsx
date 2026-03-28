@@ -71,8 +71,7 @@ export function InlineCommunityPostForm({
   const trimmedTitle = title.trim();
   const trimmedContent = content.trim();
   const imageAssetId = getStoredUploadAssetId(imageUpload);
-  const canSubmit =
-    trimmedTitle.length > 0 && (trimmedContent.length > 0 || Boolean(imageAssetId));
+  const canSubmit = trimmedContent.length > 0 || Boolean(imageAssetId);
 
   const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const items = Array.from(e.clipboardData.items);

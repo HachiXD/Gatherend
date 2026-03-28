@@ -23,7 +23,7 @@ export interface CommunityPostAuthor
 
 export interface CommunityPostFeedItem {
   id: string;
-  title: string;
+  title: string | null;
   content: string;
   imageAsset: ClientUploadedAsset | null;
   commentCount: number;

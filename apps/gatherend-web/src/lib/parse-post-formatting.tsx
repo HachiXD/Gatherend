@@ -104,10 +104,8 @@ function buildTree(tokens: Token[]): AstNode[] {
         children: frame.nodes,
       });
     } else {
-      // cruce: LIFO estricto → emitir marcador de apertura como texto, reinsertar nodos
-      const frame = stack.splice(openIdx, 1)[0];
-      const parent = stack[openIdx] ?? top();
-      parent.nodes.push({ type: "text", value: raw }, ...frame.nodes);
+      // cruce LIFO estricto: el cierre no coincide con el tope → emitir como texto, no tocar el stack
+      pushText(raw);
     }
   }
 

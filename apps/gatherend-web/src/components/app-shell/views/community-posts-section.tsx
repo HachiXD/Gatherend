@@ -8,7 +8,6 @@ import {
   type RefObject,
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -90,7 +89,7 @@ const POST_IMAGE_LANDSCAPE_MIN_RATIO = 1.6;
 const POST_IMAGE_PORTRAIT_MAX_RATIO = 0.625;
 const POST_IMAGE_BUCKET_LANDSCAPE = { width: 460, height: 260 };
 const POST_IMAGE_BUCKET_PORTRAIT = { width: 220, height: 370 };
-const POST_IMAGE_BUCKET_SQUAREISH = { width: 300, height: 300 };
+const POST_IMAGE_BUCKET_SQUAREISH = { width: 210, height: 210 };
 
 function getPostImageDisplaySize(
   originalWidth: number | null | undefined,
@@ -209,75 +208,6 @@ function PostImageAttachment({
   );
 }
 
-function splitPostContentForFirstLine(
-  content: string,
-  availableWidth: number,
-  font: string,
-) {
-  if (!content || availableWidth <= 0) {
-    return {
-      firstLine: "",
-      remainder: content,
-    };
-  }
-
-  const newlineIndex = content.indexOf("\n");
-  const candidate =
-    newlineIndex >= 0 ? content.slice(0, newlineIndex) : content;
-  const trailing = newlineIndex >= 0 ? content.slice(newlineIndex + 1) : "";
-
-  const canvas = document.createElement("canvas");
-  const context = canvas.getContext("2d");
-  if (!context) {
-    return {
-      firstLine: candidate,
-      remainder: newlineIndex >= 0 ? `${trailing ? `\n${trailing}` : ""}` : "",
-    };
-  }
-
-  context.font = font;
-
-  const chars = Array.from(candidate);
-  let low = 0;
-  let high = chars.length;
-
-  while (low < high) {
-    const mid = Math.ceil((low + high) / 2);
-    const sample = chars.slice(0, mid).join("");
-    if (context.measureText(sample).width <= availableWidth) {
-      low = mid;
-    } else {
-      high = mid - 1;
-    }
-  }
-
-  // Walk back to the last word boundary so we never split mid-word across containers
-  let splitPoint = low;
-  if (low < chars.length) {
-    let wordBoundary = low;
-    while (wordBoundary > 0 && chars[wordBoundary - 1] !== " ") {
-      wordBoundary--;
-    }
-    if (wordBoundary > 0) {
-      splitPoint = wordBoundary;
-      // Trim trailing spaces from the first-line portion
-      while (splitPoint > 0 && chars[splitPoint - 1] === " ") {
-        splitPoint--;
-      }
-    }
-    // If wordBoundary === 0 the first word alone doesn't fit; keep character split (splitPoint = low)
-  }
-
-  const firstLine = chars.slice(0, splitPoint).join("");
-  const remainingCandidate = chars.slice(splitPoint).join("").trimStart();
-  const remainder = [remainingCandidate, trailing].filter(Boolean).join("\n");
-
-  return {
-    firstLine,
-    remainder,
-  };
-}
-
 function PostBodyWithImage({
   usernameSlot,
   content,
@@ -300,46 +230,24 @@ function PostBodyWithImage({
     !!imageHeight &&
     imageWidth / imageHeight >= POST_IMAGE_LANDSCAPE_MIN_RATIO;
 
-  const lineRef = useRef<HTMLDivElement | null>(null);
-  const usernameRef = useRef<HTMLSpanElement | null>(null);
-  const [split, setSplit] = useState(() => ({
-    firstLine: content,
-    remainder: "",
-  }));
+  const isPortrait =
+    !!imageWidth &&
+    !!imageHeight &&
+    imageWidth / imageHeight <= POST_IMAGE_PORTRAIT_MAX_RATIO;
 
-  useLayoutEffect(() => {
-    if (isLandscape) return;
-    const lineElement = lineRef.current;
-    const usernameElement = usernameRef.current;
-    if (!lineElement || !usernameElement) return;
-
-    const recompute = () => {
-      const styles = window.getComputedStyle(lineElement);
-      const font = `${styles.fontStyle} ${styles.fontWeight} ${styles.fontSize} ${styles.fontFamily}`;
-      const usernameWidth = usernameElement.getBoundingClientRect().width;
-      const fontSize = Number.parseFloat(styles.fontSize) || 0;
-      const availableWidth =
-        lineElement.clientWidth - usernameWidth - fontSize * 0.35;
-
-      setSplit(splitPostContentForFirstLine(content, availableWidth, font));
-    };
-
-    recompute();
-
-    const observer = new ResizeObserver(recompute);
-    observer.observe(lineElement);
-    observer.observe(usernameElement);
-
-    return () => observer.disconnect();
-  }, [content, isLandscape]);
-
-  if (isLandscape) {
+  if (isLandscape || (!isPortrait && !!imageWidth && !!imageHeight)) {
     return (
       <>
-        <div className="-mt-0.5 text-[14px] leading-5">
+        <div className="-mt-0.5 whitespace-pre-wrap break-words text-[14px] leading-5 text-theme-text-secondary">
           <span className="whitespace-nowrap">{usernameSlot}</span>
+          {content && (
+            <>
+              {"\u00A0"}
+              {parsePostContent(content, themeMode)}
+            </>
+          )}
         </div>
-        <div className="mt-1 mb-1">
+        <div className="mt-1">
           <PostImageAttachment
             imageUrl={imageUrl}
             alt={alt}
@@ -348,38 +256,26 @@ function PostBodyWithImage({
             noFloat
           />
         </div>
-        {content && (
-          <div className="whitespace-pre-wrap break-words text-[14px] leading-5 text-theme-text-secondary">
-            {parsePostContent(content, themeMode)}
-          </div>
-        )}
       </>
     );
   }
 
   return (
-    <>
-      <div
-        ref={lineRef}
-        className="-mt-0.5 whitespace-pre-wrap break-words text-[14px] leading-5 text-theme-text-secondary"
-      >
-        <span ref={usernameRef} className="whitespace-nowrap">
-          {usernameSlot}
-        </span>
-        {"\u00A0"}
-        <span>{parsePostContent(split.firstLine, themeMode)}</span>
-      </div>
-
-      <div className="whitespace-pre-wrap break-words text-[14px] leading-5 text-theme-text-secondary">
-        <PostImageAttachment
-          imageUrl={imageUrl}
-          alt={alt}
-          imageWidth={imageWidth}
-          imageHeight={imageHeight}
-        />
-        <span>{parsePostContent(split.remainder, themeMode)}</span>
-      </div>
-    </>
+    <div className="overflow-hidden mt-0.5 whitespace-pre-wrap break-words text-[14px] leading-5 text-theme-text-secondary">
+      <PostImageAttachment
+        imageUrl={imageUrl}
+        alt={alt}
+        imageWidth={imageWidth}
+        imageHeight={imageHeight}
+      />
+      <span className="whitespace-nowrap">{usernameSlot}</span>
+      {content && (
+        <>
+          {"\u00A0"}
+          {parsePostContent(content, themeMode)}
+        </>
+      )}
+    </div>
   );
 }
 
@@ -1248,7 +1144,7 @@ function CommunityPostsSectionInner({
                                 )}
                               </div>
                             )}
-                            <div className="flex items-start gap-3">
+                            <div className="flex items-start gap-2 -ml-1.5">
                               <div className="shrink-0">
                                 <UserAvatarMenu
                                   profileId={post.author.id}
@@ -1256,14 +1152,14 @@ function CommunityPostsSectionInner({
                                   username={post.author.username}
                                   discriminator={post.author.discriminator}
                                   currentProfileId={profile.id}
-                                  className="h-10 w-10"
+                                  className="h-8 w-8"
                                   showStatus={false}
                                   disableHoverShadow
                                   avatarAnimationMode="never"
                                 />
                               </div>
 
-                              <div className="-mt-1.5 min-w-0 flex-1">
+                              <div className="-mt-2 min-w-0 flex-1">
                                 {isEditing ? (
                                   <CommunityPostEditForm
                                     postId={post.id}
@@ -1274,54 +1170,103 @@ function CommunityPostsSectionInner({
                                   />
                                 ) : (
                                   <>
-                                    <div className="mb-0 flex flex-wrap items-center gap-1">
-                                      {(post.author.badge ||
-                                        authorBadgeStickerUrl) && (
-                                        <>
-                                          <span className="inline-flex items-center gap-0.5">
-                                            {authorBadgeStickerUrl && (
-                                              <AnimatedSticker
-                                                src={authorBadgeStickerUrl}
-                                                alt="badge"
-                                                containerClassName="h-5 w-5"
-                                                fallbackWidthPx={20}
-                                                fallbackHeightPx={20}
-                                                className="object-contain"
-                                                isHovered={false}
-                                              />
-                                            )}
-                                            {post.author.badge && (
-                                              <span className="pt-2.5 text-[11px] leading-none text-theme-text-tertiary">
-                                                {post.author.badge}
+                                    {post.title ? (
+                                      <>
+                                        {/* Con título: fila 1 = badge+timestamp, fila 2 = título */}
+                                        <div className="mb-0 flex flex-wrap items-center gap-1">
+                                          {(post.author.badge ||
+                                            authorBadgeStickerUrl) && (
+                                            <>
+                                              <span className="inline-flex items-center gap-0.5">
+                                                {authorBadgeStickerUrl && (
+                                                  <AnimatedSticker
+                                                    src={authorBadgeStickerUrl}
+                                                    alt="badge"
+                                                    containerClassName="h-5 w-5"
+                                                    fallbackWidthPx={20}
+                                                    fallbackHeightPx={20}
+                                                    className="object-contain"
+                                                    isHovered={false}
+                                                  />
+                                                )}
+                                                {post.author.badge && (
+                                                  <span className="pt-2.5 text-[11px] leading-none text-theme-text-tertiary">
+                                                    {post.author.badge}
+                                                  </span>
+                                                )}
                                               </span>
-                                            )}
-                                          </span>
+                                              <span className="pt-2.5 text-[11px] text-theme-text-tertiary">
+                                                |
+                                              </span>
+                                            </>
+                                          )}
                                           <span className="pt-2.5 text-[11px] text-theme-text-tertiary">
-                                            |
+                                            {formatPostDate(post.createdAt)}
                                           </span>
-                                        </>
-                                      )}
-                                      <span className="pt-2.5 text-[11px] text-theme-text-tertiary">
-                                        {formatPostDate(post.createdAt)}
-                                      </span>
-                                      {post.pinnedAt && (
-                                        <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[11px] font-medium leading-none text-theme-text-subtle">
-                                          <Pin className="h-3 w-3" />
-                                          Fijado
-                                        </span>
-                                      )}
-                                      {post.lockedAt && (
-                                        <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[11px] font-medium leading-none text-theme-text-subtle">
-                                          <Lock className="h-3 w-3" />
-                                          Cerrado
-                                        </span>
-                                      )}
-                                    </div>
-
-                                    {post.title && (
-                                      <div className="break-words text-[18px] font-normal leading-snug text-theme-text-primary">
-                                        {post.title}
-                                      </div>
+                                          {post.pinnedAt && (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[11px] font-medium leading-none text-theme-text-subtle">
+                                              <Pin className="h-3 w-3" />
+                                              Fijado
+                                            </span>
+                                          )}
+                                          {post.lockedAt && (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[11px] font-medium leading-none text-theme-text-subtle">
+                                              <Lock className="h-3 w-3" />
+                                              Cerrado
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div className="break-words mt-1 mb-1.5 border-2 border-theme-channel-type-active-border pl-1 text-[18px] font-light leading-snug text-theme-text-primary">
+                                          {post.title}
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <>
+                                        {/* Sin título: badge+timestamp en fila 1 como siempre */}
+                                        <div className="mb-0 flex flex-wrap items-center gap-1">
+                                          {(post.author.badge ||
+                                            authorBadgeStickerUrl) && (
+                                            <>
+                                              <span className="inline-flex items-center gap-0.5">
+                                                {authorBadgeStickerUrl && (
+                                                  <AnimatedSticker
+                                                    src={authorBadgeStickerUrl}
+                                                    alt="badge"
+                                                    containerClassName="h-5 w-5"
+                                                    fallbackWidthPx={20}
+                                                    fallbackHeightPx={20}
+                                                    className="object-contain"
+                                                    isHovered={false}
+                                                  />
+                                                )}
+                                                {post.author.badge && (
+                                                  <span className="pt-2.5 text-[11px] leading-none text-theme-text-tertiary">
+                                                    {post.author.badge}
+                                                  </span>
+                                                )}
+                                              </span>
+                                              <span className="pt-2.5 text-[11px] text-theme-text-tertiary">
+                                                |
+                                              </span>
+                                            </>
+                                          )}
+                                          <span className="pt-2.5 text-[11px] text-theme-text-tertiary">
+                                            {formatPostDate(post.createdAt)}
+                                          </span>
+                                          {post.pinnedAt && (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[11px] font-medium leading-none text-theme-text-subtle">
+                                              <Pin className="h-3 w-3" />
+                                              Fijado
+                                            </span>
+                                          )}
+                                          {post.lockedAt && (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[11px] font-medium leading-none text-theme-text-subtle">
+                                              <Lock className="h-3 w-3" />
+                                              Cerrado
+                                            </span>
+                                          )}
+                                        </div>
+                                      </>
                                     )}
 
                                     {postImageUrl ? (
