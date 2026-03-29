@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     description: "Meet new friends through small groups and big communities.",
     images: [
       {
-        url: "/portadaFINAL.png",
+        url: "/portadaFINAL.webp",
         width: 1200,
         height: 630,
         alt: "Gatherend — Small communities",
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Gatherend — Small communities",
     description: "Meet new friends through small groups and big communities.",
-    images: ["/portadaFINAL.png"],
+    images: ["/portadaFINAL.webp"],
   },
 };
 

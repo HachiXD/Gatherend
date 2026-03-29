@@ -14,7 +14,13 @@ type Token =
 
 type AstNode =
   | { type: "text"; value: string }
-  | { type: "format"; bold: boolean; underline: boolean; italic: boolean; children: AstNode[] }
+  | {
+      type: "format";
+      bold: boolean;
+      underline: boolean;
+      italic: boolean;
+      children: AstNode[];
+    }
   | { type: "color"; color: string; children: AstNode[] };
 
 type Frame =
@@ -45,13 +51,15 @@ function tokenize(text: string): Token[] {
       tokens.push({ type: "color_close", raw: match[0] });
     } else {
       const ch = match[3]!;
-      const kind: SymbolKind = ch === "*" ? "bold" : ch === "_" ? "underline" : "italic";
+      const kind: SymbolKind =
+        ch === "*" ? "bold" : ch === "_" ? "underline" : "italic";
       tokens.push({ type: "marker", kind, raw: ch });
     }
     lastIndex = match.index + match[0].length;
   }
 
-  if (lastIndex < text.length) tokens.push({ type: "text", value: text.slice(lastIndex) });
+  if (lastIndex < text.length)
+    tokens.push({ type: "text", value: text.slice(lastIndex) });
   return tokens;
 }
 
@@ -67,7 +75,10 @@ function buildTree(tokens: Token[]): AstNode[] {
   };
 
   for (const token of tokens) {
-    if (token.type === "text") { pushText(token.value); continue; }
+    if (token.type === "text") {
+      pushText(token.value);
+      continue;
+    }
 
     if (token.type === "color_open") {
       stack.push({ kind: "color", color: token.color, nodes: [] });
@@ -77,7 +88,11 @@ function buildTree(tokens: Token[]): AstNode[] {
     if (token.type === "color_close") {
       if (top().kind === "color") {
         const frame = stack.pop() as Extract<Frame, { kind: "color" }>;
-        top().nodes.push({ type: "color", color: frame.color, children: frame.nodes });
+        top().nodes.push({
+          type: "color",
+          color: frame.color,
+          children: frame.nodes,
+        });
       } else {
         // [/color] sin apertura → texto literal
         pushText(token.raw);
@@ -104,18 +119,22 @@ function buildTree(tokens: Token[]): AstNode[] {
         children: frame.nodes,
       });
     } else {
-      // cruce LIFO estricto: el cierre no coincide con el tope → emitir como texto, no tocar el stack
+      // cruce LIFO estricto: el cierre no coincide con el tope -> emitir como texto, no tocar el stack
       pushText(raw);
     }
   }
 
-  // frames sin cerrar → emitir marcador como texto
+  // frames sin cerrar -> emitir marcador como texto
   while (stack.length > 1) {
     const frame = stack.pop()!;
     const raw =
       frame.kind === "color"
         ? `[color=${(frame as Extract<Frame, { kind: "color" }>).color}]`
-        : frame.kind === "bold" ? "*" : frame.kind === "underline" ? "_" : "#";
+        : frame.kind === "bold"
+          ? "*"
+          : frame.kind === "underline"
+            ? "_"
+            : "#";
     top().nodes.push({ type: "text", value: raw }, ...frame.nodes);
   }
 
@@ -144,7 +163,9 @@ function renderNodes(
         node.bold ? "font-bold" : "",
         node.underline ? "underline" : "",
         node.italic ? "italic" : "",
-      ].filter(Boolean).join(" ");
+      ]
+        .filter(Boolean)
+        .join(" ");
       const style = inheritedColor ? { color: inheritedColor } : undefined;
       result.push(
         <span key={`f-${counter.n++}`} className={cls} style={style}>
