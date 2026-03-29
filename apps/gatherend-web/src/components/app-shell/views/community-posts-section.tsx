@@ -235,7 +235,34 @@ function PostBodyWithImage({
     !!imageHeight &&
     imageWidth / imageHeight <= POST_IMAGE_PORTRAIT_MAX_RATIO;
 
-  if (isLandscape || (!isPortrait && !!imageWidth && !!imageHeight)) {
+  if (isLandscape) {
+    // Landscape: imagen arriba, texto abajo
+    return (
+      <>
+        <div className="mt-1 mb-1">
+          <PostImageAttachment
+            imageUrl={imageUrl}
+            alt={alt}
+            imageWidth={imageWidth}
+            imageHeight={imageHeight}
+            noFloat
+          />
+        </div>
+        <div className="-mt-0.5 whitespace-pre-wrap break-words text-[14px] leading-5 text-theme-text-secondary">
+          <span className="whitespace-nowrap">{usernameSlot}</span>
+          {content && (
+            <>
+              {"\u00A0"}
+              {parsePostContent(content, themeMode)}
+            </>
+          )}
+        </div>
+      </>
+    );
+  }
+
+  if (!isPortrait && !!imageWidth && !!imageHeight) {
+    // Squarish: texto arriba, imagen abajo izquierda
     return (
       <>
         <div className="-mt-0.5 whitespace-pre-wrap break-words text-[14px] leading-5 text-theme-text-secondary">
