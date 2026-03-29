@@ -30,7 +30,7 @@ interface CommunityMetadata {
 
 interface CommunityPostFeedItem {
   id: string;
-  title: string;
+  title: string | null;
   content: string;
   imageAsset: ReturnType<typeof serializeUploadedAsset>;
   commentCount: number;
@@ -364,7 +364,7 @@ export async function GET(
 
     const result: CommunityPostFeedItem[] = items.map((post) => ({
       id: post.id,
-      title: post.title,
+      title: post.title ?? null,
       content: post.content,
       imageAsset: serializeUploadedAsset(post.imageAsset),
       commentCount: post.commentCount,
