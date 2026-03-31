@@ -53,12 +53,12 @@ export const AppShell = memo(function AppShell({
         />
 
         {/* Navigation Sidebar (top) - Solo desktop */}
-        <div className="hidden md:flex fixed border-r border-theme-border-secondary top-0 left-0 w-[312px] h-[192px] z-30 flex-col bg-theme-bg-primary">
+        <div className="hidden md:flex fixed border-r border-theme-border-secondary top-0 left-0 w-[312px] h-[calc(100vh-386px)] z-30 flex-col bg-theme-bg-primary">
           {navigationSidebar}
         </div>
 
         {/* Board Leftbar (bottom) - Solo desktop */}
-        <div className="hidden md:flex fixed border-r border-theme-border-secondary left-0 bottom-0 w-[312px] h-[calc(100vh-192px)] z-20 flex-col bg-theme-bg-secondary">
+        <div className="hidden md:flex fixed border-r border-theme-border-secondary left-0 bottom-0 w-[312px] h-[386px] z-20 flex-col bg-theme-bg-secondary">
           {leftbar}
         </div>
 

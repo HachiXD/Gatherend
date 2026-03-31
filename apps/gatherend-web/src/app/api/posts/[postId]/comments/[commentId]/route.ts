@@ -378,11 +378,14 @@ export async function DELETE(
           authorProfileId: true,
           post: {
             select: {
-              community: {
+              board: {
                 select: {
-                  createdById: true,
-                  helpers: {
-                    where: { profileId: profile.id },
+                  profileId: true,
+                  members: {
+                    where: {
+                      profileId: profile.id,
+                      role: { in: ["OWNER", "ADMIN", "MODERATOR"] },
+                    },
                     select: { id: true },
                     take: 1,
                   },
@@ -398,11 +401,10 @@ export async function DELETE(
       }
 
       const isAuthor = comment.authorProfileId === profile.id;
-      const isCommunityOwner = comment.post.community?.createdById === profile.id;
-      const isCommunityHelper =
-        (comment.post.community?.helpers.length ?? 0) > 0;
+      const isBoardOwner = comment.post.board?.profileId === profile.id;
+      const isBoardModerator = (comment.post.board?.members.length ?? 0) > 0;
 
-      if (!isAuthor && !isCommunityOwner && !isCommunityHelper) {
+      if (!isAuthor && !isBoardOwner && !isBoardModerator) {
         throw new Error("FORBIDDEN");
       }
 

@@ -14,8 +14,9 @@ const CDN_DOMAIN = process.env.NEXT_PUBLIC_STORAGE_DOMAIN || "";
 const ENDPOINT_TO_CONTEXT = {
   messageFile: "message_attachment",
   boardImage: "board_image",
-  communityImage: "community_image",
+  channelImage: "channel_image",
   communityPostImage: "community_post_image",
+  boardRulesImage: "board_rules_image",
 } satisfies Record<string, UploadContext>;
 
 type FileUploadEndpoint = keyof typeof ENDPOINT_TO_CONTEXT;
@@ -53,8 +54,7 @@ export const FileUpload = ({
   const { t } = useTranslation();
 
   const context = ENDPOINT_TO_CONTEXT[endpoint];
-  const isCircularImagePicker =
-    context === "board_image" || context === "community_image";
+  const isCircularImagePicker = context === "board_image";
   const acceptsMixedFiles = context === "message_attachment";
 
   const { startUpload } = useUpload(context, {
@@ -111,7 +111,6 @@ export const FileUpload = ({
     !!fileUrl &&
     (fileType?.startsWith("image/") ||
       context === "board_image" ||
-      context === "community_image" ||
       context === "community_post_image" ||
       looksLikeImageUrl(fileUrl));
 

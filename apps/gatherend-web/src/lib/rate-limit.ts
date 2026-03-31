@@ -229,4 +229,10 @@ export const RATE_LIMITS = {
     windowSeconds: 600, // 10 minutos
     prefix: "livekit-token",
   } as RateLimitConfig,
+
+  channelJoin: {
+    limit: 20,
+    windowSeconds: 60,
+    prefix: "channel-join",
+  } as RateLimitConfig,
 } as const;

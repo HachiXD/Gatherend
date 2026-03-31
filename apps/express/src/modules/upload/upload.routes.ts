@@ -68,9 +68,10 @@ interface UploadResponse {
 
 const MODERATED_CONTEXTS: ModerationContext[] = [
   "board_image",
-  "community_image",
+  "channel_image",
   "community_post_image",
   "community_post_comment_image",
+  "board_rules_image",
   "profile_avatar",
   "profile_banner",
   "sticker",
@@ -82,9 +83,10 @@ function requiresModeration(context: ModerationContext): boolean {
 
 const CONTEXT_TO_ASSET_CONTEXT: Record<ModerationContext, AssetContext> = {
   board_image: AssetContext.BOARD_IMAGE,
-  community_image: AssetContext.COMMUNITY_IMAGE,
+  channel_image: AssetContext.CHANNEL_IMAGE,
   community_post_image: AssetContext.COMMUNITY_POST_IMAGE,
   community_post_comment_image: AssetContext.COMMUNITY_POST_COMMENT_IMAGE,
+  board_rules_image: AssetContext.BOARD_RULES_IMAGE,
   profile_avatar: AssetContext.PROFILE_AVATAR,
   profile_banner: AssetContext.PROFILE_BANNER,
   message_attachment: AssetContext.MESSAGE_ATTACHMENT,

@@ -6,7 +6,9 @@ import { ChannelView } from "./views/channel-view";
 import { ConversationView } from "./views/conversation-view";
 import { BoardView } from "./views/board-view";
 import { DiscoveryCommunityView } from "./views/discovery-community-view";
-import { CommunityView } from "./views/community-view";
+import { ForumView } from "./views/forum-view";
+import { RulesView } from "./views/rules-view";
+import { MembersView } from "./views/members-view";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ViewLoadingFallback, ViewErrorFallback } from "./views/view-fallbacks";
 // Instancia estable de loading fallback — evita recrear JSX en cada render
@@ -27,11 +29,11 @@ const ERROR_FALLBACK_RENDER = ({ reset }: { reset: () => void }) => (
  * para evitar re-renders cuando cambian propiedades que no afectan el routing.
  *
  * Vistas posibles:
- * - CommunityView: cuando hay un currentCommunityId
- * - DiscoveryCommunityView: cuando isDiscovery es true (lista de comunidades)
+ * - DiscoveryCommunityView: cuando isDiscovery es true (lista de boards públicos)
  * - ConversationView: cuando hay un currentConversationId
  * - ChannelView: cuando hay un currentChannelId
- * - BoardView: fallback (redirige al primer canal)
+ * - ForumView: cuando isForum es true
+ * - BoardView: fallback (redirige al foro)
  */
 function CenterContentRouterInner() {
   // Hook selectivo - solo se suscribe a valores de routing
@@ -39,30 +41,21 @@ function CenterContentRouterInner() {
     currentBoardId,
     currentChannelId,
     currentConversationId,
-    currentCommunityId,
-    currentCommunitySection,
     isDiscovery,
+    isForum,
+    isRules,
+    isMembers,
   } = useBoardSwitchRouting();
 
   // Memoizar la vista para evitar recrear JSX innecesariamente
   const currentView = useMemo(() => {
     // Prioridad de renderizado:
-    // 1. Discovery con communityId
-    if (isDiscovery && currentCommunityId) {
-      return (
-        <CommunityView
-          key={`community-${currentCommunityId}`}
-          communityId={currentCommunityId}
-        />
-      );
-    }
-
-    // 2. Discovery sin communityId (lista de comunidades)
+    // 1. Discovery (lista de boards públicos)
     if (isDiscovery) {
       return <DiscoveryCommunityView key={`discovery-${currentBoardId}`} />;
     }
 
-    // 3. Conversación (si hay currentConversationId)
+    // 2. Conversación (si hay currentConversationId)
     if (currentConversationId) {
       return (
         <ConversationView
@@ -73,7 +66,7 @@ function CenterContentRouterInner() {
       );
     }
 
-    // 4. Canal (si hay currentChannelId)
+    // 3. Canal (si hay currentChannelId)
     if (currentChannelId) {
       return (
         <ChannelView
@@ -84,35 +77,47 @@ function CenterContentRouterInner() {
       );
     }
 
-    // 5. BoardView (fallback - redirige al primer canal)
+    // 4. Reglas del board
+    if (isRules) {
+      return <RulesView key={`rules-${currentBoardId}`} />;
+    }
+
+    // 5. Miembros del board
+    if (isMembers) {
+      return <MembersView key={`members-${currentBoardId}`} />;
+    }
+
+    // 6. Foro del board
+    if (isForum) {
+      return <ForumView key={`forum-${currentBoardId}`} />;
+    }
+
+    // 6. BoardView (fallback - redirige al foro)
     return <BoardView key={`board-${currentBoardId}`} />;
   }, [
     currentBoardId,
     currentChannelId,
     currentConversationId,
-    currentCommunityId,
     isDiscovery,
+    isForum,
+    isRules,
+    isMembers,
   ]);
 
   const routeKey = useMemo(
     () => {
-      if (isDiscovery && currentCommunityId) {
-        return `${currentBoardId}:community:${currentCommunityId}`;
-      }
-
       return `${currentBoardId}:${currentChannelId ?? "none"}:${
         currentConversationId ?? "none"
-      }:${currentCommunityId ?? "none"}:${currentCommunitySection}:${
-        isDiscovery ? "1" : "0"
-      }`;
+      }:${isDiscovery ? "discovery" : isRules ? "rules" : isMembers ? "members" : isForum ? "forum" : "other"}`;
     },
     [
       currentBoardId,
       currentChannelId,
       currentConversationId,
-      currentCommunityId,
-      currentCommunitySection,
       isDiscovery,
+      isForum,
+      isRules,
+      isMembers,
     ],
   );
 

@@ -64,6 +64,18 @@ router.post("/", async (req, res) => {
     const member = board.members.find((m) => m.profileId === profileId);
     if (!member) return res.status(404).json({ error: "Member not found" });
 
+    const channelMember = await db.channelMember.findUnique({
+      where: {
+        channelId_profileId: {
+          channelId: channelId as string,
+          profileId,
+        },
+      },
+      select: { id: true },
+    });
+    if (!channelMember)
+      return res.status(403).json({ error: "Not a channel member" });
+
     let resolvedAttachmentAssetId: string | null = null;
     if (attachmentAssetId !== undefined && attachmentAssetId !== null && attachmentAssetId !== "") {
       if (typeof attachmentAssetId !== "string" || !UUID_REGEX.test(attachmentAssetId)) {

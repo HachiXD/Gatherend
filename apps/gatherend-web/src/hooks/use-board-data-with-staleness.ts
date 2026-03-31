@@ -30,7 +30,7 @@ export function useBoardDataWithStaleness(): UseBoardDataWithStalenessResult {
   // Solo depender del boardId para evitar re-renders en navegación (discovery/channel/etc).
   const currentBoardId = useBoardNavigationStore((state) => state.currentBoardId);
 
-  const { data: board, isLoading, isFetching } = useCurrentBoardData();
+  const { data: board, isLoading, isFetching, status, error } = useCurrentBoardData();
 
   // Data is stale if we have board data but it's from a different board
   const isStaleData = Boolean(board && board.id !== currentBoardId);
@@ -39,6 +39,7 @@ export function useBoardDataWithStaleness(): UseBoardDataWithStalenessResult {
   // 1. Loading without cached data
   // 2. Cached data is stale (from different board)
   const showSkeleton = (isLoading && !board) || isStaleData;
+
 
   return {
     board,

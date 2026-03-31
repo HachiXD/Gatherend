@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Category, Channel, ChannelType, Board } from "@prisma/client";
+import { Channel, ChannelType, Board } from "@prisma/client";
 import type {
   ClientAttachmentAsset,
   ClientProfileSummary,
@@ -8,7 +8,6 @@ import type {
 
 export type ModalType =
   | "createBoard"
-  | "createCommunity"
   | "invite"
   | "editBoard"
   | "members"
@@ -27,7 +26,6 @@ export type ModalType =
   | "reportMessage"
   | "reportBoard"
   | "reportProfile"
-  | "reportCommunity"
   | "reportCommunityPost"
   | "reportCommunityPostComment"
   | "deleteCommunityPost"
@@ -42,7 +40,7 @@ interface ModalData {
   boardId?: string; // Alternativa a board completo para evitar re-renders
   channel?: Partial<Channel>;
   channelType?: ChannelType;
-  category?: Category;
+  category?: { id: string; name: string };
   apiUrl?: string;
   query?: Record<string, unknown>;
   conversationId?: string;
@@ -64,10 +62,7 @@ interface ModalData {
   reportProfileUsername?: string;
   reportProfileDiscriminator?: string | null;
   reportProfileImageUrl?: string;
-  // Report community modal data
-  reportCommunityId?: string;
-  reportCommunityName?: string;
-  reportCommunityImageUrl?: string | null;
+  // Report community post modal data
   reportCommunityPostId?: string;
   reportCommunityPostContent?: string;
   reportCommunityPostImageUrl?: string | null;
@@ -84,8 +79,6 @@ interface ModalData {
   deleteCommunityPostCommunityId?: string;
   deleteCommunityPostCommentId?: string;
   onDeleteCommunityPostCommentConfirm?: (() => Promise<void>) | (() => void);
-  communityId?: string;
-  communityName?: string;
 }
 
 interface ModalStore {

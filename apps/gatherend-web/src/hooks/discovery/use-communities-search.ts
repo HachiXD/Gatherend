@@ -11,7 +11,6 @@ export interface CommunitySearchResult {
   name: string;
   imageAsset: ClientUploadedAsset | null;
   memberCount: number;
-  boardCount: number;
   recentPostCount7d: number;
 }
 
@@ -76,7 +75,7 @@ export function useCommunitiesSearch(): UseCommunitiesSearchReturn {
         }
 
         const res = await fetch(
-          `/api/discovery/communities/search?${params.toString()}`,
+          `/api/discovery/boards/search?${params.toString()}`,
           { signal: controller.signal },
         );
 

@@ -1,4 +1,4 @@
-import { MemberRole, AssetContext, AssetVisibility, SlotMode } from "@prisma/client";
+import { MemberRole, AssetContext, AssetVisibility } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
@@ -19,7 +19,6 @@ import {
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-const MAX_CONFIGURABLE_SEATS = 48;
 
 async function notifyBoardDeleted(
   boardId: string,
@@ -103,14 +102,18 @@ export async function GET(
           select: uploadedAssetSummarySelect,
         },
         channels: {
-          where: { parentId: null },
-          orderBy: { position: "asc" },
-        },
-        categories: {
           orderBy: { position: "asc" },
           include: {
-            channels: {
-              orderBy: { position: "asc" },
+            imageAsset: {
+              select: uploadedAssetSummarySelect,
+            },
+            _count: {
+              select: { channelMembers: true },
+            },
+            channelMembers: {
+              where: { profileId: profile.id },
+              select: { id: true },
+              take: 1,
             },
           },
         },
@@ -135,37 +138,6 @@ export async function GET(
                     id: true,
                     asset: {
                       select: uploadedAssetSummarySelect,
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-        slots: {
-          include: {
-            member: {
-              include: {
-                profile: {
-                  select: {
-                    id: true,
-                    username: true,
-                    discriminator: true,
-                    usernameColor: true,
-                    profileTags: true,
-                    badge: true,
-                    usernameFormat: true,
-                    longDescription: true,
-                    avatarAsset: {
-                      select: uploadedAssetSummarySelect,
-                    },
-                    badgeSticker: {
-                      select: {
-                        id: true,
-                        asset: {
-                          select: uploadedAssetSummarySelect,
-                        },
-                      },
                     },
                   },
                 },
@@ -201,18 +173,17 @@ export async function GET(
     return NextResponse.json({
       ...board,
       imageAsset: serializeUploadedAsset(board.imageAsset),
+      channels: board.channels.map((channel) => ({
+        ...channel,
+        imageAsset: serializeUploadedAsset(channel.imageAsset),
+        channelMemberCount: channel._count.channelMembers,
+        isJoined: channel.channelMembers.length > 0,
+        _count: undefined,
+        channelMembers: undefined,
+      })),
       members: board.members.map((member) => ({
         ...member,
         profile: serializeProfile(member.profile),
-      })),
-      slots: board.slots.map((slot) => ({
-        ...slot,
-        member: slot.member
-          ? {
-              ...slot.member,
-              profile: serializeProfile(slot.member.profile),
-            }
-          : null,
       })),
     });
   } catch (error) {
@@ -355,9 +326,7 @@ export async function PATCH(
       name?: unknown;
       imageAssetId?: unknown;
       description?: unknown;
-      publicSeats?: unknown;
-      invitationSeats?: unknown;
-      communityId?: unknown;
+      isPrivate?: unknown;
     };
     try {
       body = await req.json();
@@ -369,9 +338,7 @@ export async function PATCH(
       name,
       imageAssetId,
       description,
-      publicSeats,
-      invitationSeats,
-      communityId,
+      isPrivate,
     } = body;
 
     if (name !== undefined) {
@@ -406,44 +373,11 @@ export async function PATCH(
       }
     }
 
-    if (
-      publicSeats !== undefined &&
-      (typeof publicSeats !== "number" ||
-        !Number.isInteger(publicSeats) ||
-        publicSeats < 0 ||
-        publicSeats > MAX_CONFIGURABLE_SEATS)
-    ) {
+    if (isPrivate !== undefined && typeof isPrivate !== "boolean") {
       return NextResponse.json(
-        { error: "Public seats must be a valid integer" },
+        { error: "isPrivate must be a boolean" },
         { status: 400 },
       );
-    }
-
-    if (
-      invitationSeats !== undefined &&
-      (typeof invitationSeats !== "number" ||
-        !Number.isInteger(invitationSeats) ||
-        invitationSeats < 0 ||
-        invitationSeats > MAX_CONFIGURABLE_SEATS)
-    ) {
-      return NextResponse.json(
-        { error: "Invitation seats must be a valid integer" },
-        { status: 400 },
-      );
-    }
-
-    let normalizedCommunityId: string | null | undefined = undefined;
-    if (communityId !== undefined) {
-      if (communityId === null || communityId === "") {
-        normalizedCommunityId = null;
-      } else if (typeof communityId !== "string" || !UUID_REGEX.test(communityId)) {
-        return NextResponse.json(
-          { error: "Invalid community ID format" },
-          { status: 400 },
-        );
-      } else {
-        normalizedCommunityId = communityId;
-      }
     }
 
     let resolvedImageAssetId: string | null | undefined = undefined;
@@ -511,20 +445,6 @@ export async function PATCH(
       }
     }
 
-    if (typeof normalizedCommunityId === "string") {
-      const communityExists = await db.community.findUnique({
-        where: { id: normalizedCommunityId },
-        select: { id: true },
-      });
-
-      if (!communityExists) {
-        return NextResponse.json(
-          { error: "Community not found" },
-          { status: 400 },
-        );
-      }
-    }
-
     const board = await db.$transaction(async (tx) => {
       const member = await tx.member.findFirst({
         where: { boardId, profileId: profile.id },
@@ -542,196 +462,9 @@ export async function PATCH(
         throw new Error("FORBIDDEN");
       }
 
-      const currentBoard = await tx.board.findUnique({
-        where: { id: boardId },
-        select: {
-          communityId: true,
-          slots: {
-            select: {
-              id: true,
-              mode: true,
-              memberId: true,
-            },
-          },
-        },
-      });
-
-      if (!currentBoard) {
+      const boardExists = await tx.board.findUnique({ where: { id: boardId }, select: { id: true } });
+      if (!boardExists) {
         throw new Error("NOT_FOUND");
-      }
-
-      const currentInvitation = currentBoard.slots.filter(
-        (slot) => slot.mode === SlotMode.BY_INVITATION,
-      );
-      const currentDiscovery = currentBoard.slots.filter(
-        (slot) => slot.mode === SlotMode.BY_DISCOVERY,
-      );
-
-      const currentPublicSeats = currentDiscovery.length;
-      const currentInvitationSeats = Math.max(0, currentInvitation.length - 1);
-      const effectivePublicSeats =
-        publicSeats !== undefined ? publicSeats : currentPublicSeats;
-      const effectiveInvitationSeats =
-        invitationSeats !== undefined
-          ? invitationSeats
-          : currentInvitationSeats;
-      const effectiveInvitationCount = effectiveInvitationSeats + 1;
-      const effectiveCommunityId =
-        normalizedCommunityId !== undefined
-          ? normalizedCommunityId
-          : currentBoard.communityId;
-
-      if (
-        effectivePublicSeats + effectiveInvitationSeats >
-        MAX_CONFIGURABLE_SEATS
-      ) {
-        throw new Error("EXCEEDS_MAX_SIZE");
-      }
-
-      if (effectivePublicSeats > 0 && effectivePublicSeats < 4) {
-        throw new Error("INVALID_DISCOVERY_MIN");
-      }
-
-      if (effectivePublicSeats > 0 && !effectiveCommunityId) {
-        throw new Error("COMMUNITY_REQUIRED");
-      }
-
-      if (effectivePublicSeats === 0 && effectiveCommunityId) {
-        throw new Error("COMMUNITY_NOT_ALLOWED");
-      }
-
-      const occupiedInvitation = currentInvitation.filter(
-        (slot) => slot.memberId !== null,
-      ).length;
-      const occupiedDiscovery = currentDiscovery.filter(
-        (slot) => slot.memberId !== null,
-      ).length;
-
-      if (effectiveInvitationCount < occupiedInvitation) {
-        throw new Error("BELOW_OCCUPIED_INVITATION");
-      }
-
-      if (effectivePublicSeats < occupiedDiscovery) {
-        throw new Error("BELOW_OCCUPIED_DISCOVERY");
-      }
-
-      const freeInvitation = currentInvitation.filter(
-        (slot) => slot.memberId === null,
-      );
-      const freeDiscovery = currentDiscovery.filter(
-        (slot) => slot.memberId === null,
-      );
-
-      const invitationDelta = effectiveInvitationCount - currentInvitation.length;
-      const discoveryDelta = effectivePublicSeats - currentDiscovery.length;
-      const toConvertInvToDisc: string[] = [];
-      const toConvertDiscToInv: string[] = [];
-      const toDelete: string[] = [];
-
-      if (invitationDelta < 0) {
-        const excess = Math.abs(invitationDelta);
-        const canConvert = Math.min(
-          freeInvitation.length,
-          excess,
-          Math.max(0, discoveryDelta),
-        );
-
-        for (let i = 0; i < canConvert; i++) {
-          toConvertInvToDisc.push(freeInvitation[i].id);
-        }
-
-        const toDeleteCount = excess - canConvert;
-        for (
-          let i = canConvert;
-          i < canConvert + toDeleteCount && i < freeInvitation.length;
-          i++
-        ) {
-          toDelete.push(freeInvitation[i].id);
-        }
-      }
-
-      if (discoveryDelta < 0) {
-        const excess = Math.abs(discoveryDelta);
-        const effectiveInvitationNeed = Math.max(
-          0,
-          invitationDelta - toConvertInvToDisc.length,
-        );
-        const canConvert = Math.min(
-          freeDiscovery.length,
-          excess,
-          effectiveInvitationNeed,
-        );
-
-        for (let i = 0; i < canConvert; i++) {
-          toConvertDiscToInv.push(freeDiscovery[i].id);
-        }
-
-        const toDeleteCount = excess - canConvert;
-        for (
-          let i = canConvert;
-          i < canConvert + toDeleteCount && i < freeDiscovery.length;
-          i++
-        ) {
-          toDelete.push(freeDiscovery[i].id);
-        }
-      }
-
-      if (toConvertInvToDisc.length > 0) {
-        await tx.slot.updateMany({
-          where: { id: { in: toConvertInvToDisc } },
-          data: { mode: SlotMode.BY_DISCOVERY },
-        });
-      }
-
-      if (toConvertDiscToInv.length > 0) {
-        await tx.slot.updateMany({
-          where: { id: { in: toConvertDiscToInv } },
-          data: { mode: SlotMode.BY_INVITATION },
-        });
-      }
-
-      if (toDelete.length > 0) {
-        await tx.slot.deleteMany({
-          where: { id: { in: toDelete } },
-        });
-      }
-
-      const afterInvitation =
-        currentInvitation.length -
-        toConvertInvToDisc.length -
-        toDelete.filter((id) => freeInvitation.some((slot) => slot.id === id))
-          .length +
-        toConvertDiscToInv.length;
-
-      const afterDiscovery =
-        currentDiscovery.length -
-        toConvertDiscToInv.length -
-        toDelete.filter((id) => freeDiscovery.some((slot) => slot.id === id))
-          .length +
-        toConvertInvToDisc.length;
-
-      const createInvitation = Math.max(
-        0,
-        effectiveInvitationCount - afterInvitation,
-      );
-      const createDiscovery = Math.max(0, effectivePublicSeats - afterDiscovery);
-
-      if (createInvitation > 0) {
-        await tx.slot.createMany({
-          data: Array.from({ length: createInvitation }, () => ({
-            boardId,
-            mode: SlotMode.BY_INVITATION,
-          })),
-        });
-      }
-
-      if (createDiscovery > 0) {
-        await tx.slot.createMany({
-          data: Array.from({ length: createDiscovery }, () => ({
-            boardId,
-            mode: SlotMode.BY_DISCOVERY,
-          })),
-        });
       }
 
       return tx.board.update({
@@ -744,8 +477,7 @@ export async function PATCH(
           ...(description !== undefined && {
             description: description ? (description as string).trim() : null,
           }),
-          size: effectivePublicSeats + effectiveInvitationCount,
-          communityId: effectiveCommunityId,
+          ...(isPrivate !== undefined && { isPrivate: isPrivate as boolean }),
         },
         select: {
           id: true,
@@ -756,7 +488,7 @@ export async function PATCH(
           },
           inviteCode: true,
           inviteEnabled: true,
-          size: true,
+          isPrivate: true,
           profileId: true,
           createdAt: true,
           refreshedAt: true,
@@ -764,7 +496,6 @@ export async function PATCH(
           languages: true,
           hiddenFromFeed: true,
           reportCount: true,
-          communityId: true,
         },
       });
     });
@@ -793,47 +524,6 @@ export async function PATCH(
         );
       }
 
-      if (error.message === "EXCEEDS_MAX_SIZE") {
-        return NextResponse.json(
-          { error: "Total seats exceed maximum board size" },
-          { status: 400 },
-        );
-      }
-
-      if (error.message === "INVALID_DISCOVERY_MIN") {
-        return NextResponse.json(
-          { error: "Public groups must have at least 4 public slots" },
-          { status: 400 },
-        );
-      }
-
-      if (error.message === "COMMUNITY_REQUIRED") {
-        return NextResponse.json(
-          { error: "Community is required when public seats are enabled" },
-          { status: 400 },
-        );
-      }
-
-      if (error.message === "COMMUNITY_NOT_ALLOWED") {
-        return NextResponse.json(
-          { error: "Private boards cannot be assigned to a community" },
-          { status: 400 },
-        );
-      }
-
-      if (error.message === "BELOW_OCCUPIED_INVITATION") {
-        return NextResponse.json(
-          { error: "Cannot reduce invitation slots below occupied count" },
-          { status: 400 },
-        );
-      }
-
-      if (error.message === "BELOW_OCCUPIED_DISCOVERY") {
-        return NextResponse.json(
-          { error: "Cannot reduce discovery slots below occupied count" },
-          { status: 400 },
-        );
-      }
     }
 
     console.error("[BOARD_ID_PATCH]", error);

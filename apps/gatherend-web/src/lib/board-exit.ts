@@ -51,16 +51,9 @@ export function exitBoardWithSpaFallback({
   const nextBoard = remainingBoards[0];
   if (nextBoard) {
     if (boardSwitch?.isClientNavigationEnabled) {
-      boardSwitch.switchBoard(
-        nextBoard.id,
-        nextBoard.mainChannelId ?? undefined,
-      );
+      boardSwitch.switchBoard(nextBoard.id);
     } else {
-      router.push(
-        nextBoard.mainChannelId
-          ? `/boards/${nextBoard.id}/rooms/${nextBoard.mainChannelId}`
-          : `/boards/${nextBoard.id}`,
-      );
+      router.push(`/boards/${nextBoard.id}`);
     }
     return;
   }

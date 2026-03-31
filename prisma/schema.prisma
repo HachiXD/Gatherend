@@ -40,12 +40,13 @@ model UploadedAsset {
   profileAvatarFor           Profile[]       @relation("ProfileAvatarAsset")
   profileBannerFor           Profile[]       @relation("ProfileBannerAsset")
   boardImageFor              Board[]         @relation("BoardImageAsset")
-  communityImageFor          Community[]     @relation("CommunityImageAsset")
   communityPostImageFor      CommunityPost[] @relation("CommunityPostImageAsset")
   communityPostCommentImageFor CommunityPostComment[] @relation("CommunityPostCommentImageAsset")
+  channelImageFor            Channel[]       @relation("ChannelImageAsset")
   messageAttachmentFor       Message[]       @relation("MessageAttachmentAsset")
   directMessageAttachmentFor DirectMessage[] @relation("DirectMessageAttachmentAsset")
   stickerImageFor            Sticker[]       @relation("StickerImageAsset")
+  boardRulesImageFor         BoardRules[]    @relation("BoardRulesImageAsset")
 
   @@index([ownerProfileId])
   @@index([visibility, context, createdAt(sort: Desc)])
@@ -81,15 +82,9 @@ model Profile {
   badgeSticker                   Sticker?                @relation("ProfileBadgeSticker", fields: [badgeStickerId], references: [id], onDelete: SetNull)
   boards                         Board[]
   boardBans                      BoardBan[]
-  categories                     Category[]
   channels                       Channel[]
-  communityHelperInvitesAccepted CommunityHelperInvite[] @relation("CommunityHelperInviteAcceptedBy")
-  communityHelperInvitesCreated  CommunityHelperInvite[] @relation("CommunityHelperInviteCreatedBy")
   communityPosts                 CommunityPost[]
   communityPostComments          CommunityPostComment[]
-  createdCommunities            Community[]             @relation("CommunityCreatedBy")
-  communityMemberships          CommunityMember[]
-  communityHelpers              CommunityHelper[]
   conversationsInitiated        Conversation[]          @relation("ProfileOne")
   conversationsReceived         Conversation[]          @relation("ProfileTwo")
   directMessages                DirectMessage[]
@@ -105,6 +100,7 @@ model Profile {
   uploadedAssets                UploadedAsset[]         @relation("UploadedAssetOwner")
   uploadedStickers              Sticker[]               @relation("StickerUploader")
   strikes                       Strike[]
+  channelMembers                 ChannelMember[]
 
   @@unique([username, discriminator])
   @@index([username])
@@ -129,99 +125,11 @@ model AuthIdentity {
   @@index([providerUserId])
 }
 
-model Slot {
-  id        String   @id @default(uuid())
-  mode      SlotMode @default(BY_INVITATION)
-  memberId  String?
-  boardId   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  member    Member?  @relation(fields: [memberId], references: [id])
 
-  @@index([memberId])
-  @@index([boardId])
-  @@index([boardId, mode, memberId])
-  @@index([mode, memberId])
-}
-
-model Community {
-  id             String            @id @default(uuid())
-  name           String            @unique
-  imageAssetId   String?
-  createdById    String?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-  // Materialized fields for discovery feed ranking (updated by cron)
-  memberCount    Int               @default(0)
-  feedBoardCount Int               @default(0)
-  recentPostCount7d Int            @default(0)
-  rankingScore   Float             @default(0)
-  rankedAt       DateTime          @default(now())
-  boards         Board[]
-  helperInvites  CommunityHelperInvite[]
-  posts          CommunityPost[]
-  imageAsset     UploadedAsset?    @relation("CommunityImageAsset", fields: [imageAssetId], references: [id], onDelete: SetNull)
-  createdBy      Profile?          @relation("CommunityCreatedBy", fields: [createdById], references: [id])
-  members        CommunityMember[]
-  helpers        CommunityHelper[]
-
-  @@index([rankingScore(sort: Desc), id])
-  @@index([imageAssetId])
-}
-
-model CommunityMember {
-  id          String        @id @default(uuid())
-  communityId String
-  profileId   String
-  role        CommunityRole @default(MEMBER)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  community   Community     @relation(fields: [communityId], references: [id], onDelete: Cascade)
-  profile     Profile       @relation(fields: [profileId], references: [id], onDelete: Cascade)
-
-  @@unique([communityId, profileId])
-  @@index([communityId])
-  @@index([profileId])
-}
-
-model CommunityHelper {
-  id          String    @id @default(uuid())
-  communityId String
-  profileId   String
-  createdAt   DateTime  @default(now())
-  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
-  profile     Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
-
-  @@unique([communityId, profileId])
-  @@index([profileId])
-}
-
-model CommunityHelperInvite {
-  id                  String                      @id @default(uuid())
-  communityId         String
-  createdByProfileId  String
-  acceptedByProfileId String?
-  inviteCode          String                      @unique
-  status              CommunityHelperInviteStatus @default(PENDING)
-  createdAt           DateTime                    @default(now())
-  updatedAt           DateTime                    @updatedAt
-  expiresAt           DateTime?
-  acceptedAt          DateTime?
-  revokedAt           DateTime?
-  community           Community                   @relation(fields: [communityId], references: [id], onDelete: Cascade)
-  createdBy           Profile                     @relation("CommunityHelperInviteCreatedBy", fields: [createdByProfileId], references: [id], onDelete: Cascade)
-  acceptedBy          Profile?                    @relation("CommunityHelperInviteAcceptedBy", fields: [acceptedByProfileId], references: [id], onDelete: SetNull)
-
-  @@index([communityId, status, createdAt(sort: Desc)])
-  @@index([createdByProfileId, status, createdAt(sort: Desc)])
-  @@index([acceptedByProfileId])
-  @@index([expiresAt])
-}
 
 model CommunityPost {
   id              String         @id @default(uuid())
-  communityId     String
+  boardId         String
   authorProfileId String
   title           String?
   content         String
@@ -232,15 +140,15 @@ model CommunityPost {
   lockedAt        DateTime?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
-  community       Community      @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  board           Board          @relation(fields: [boardId], references: [id], onDelete: Cascade)
   author          Profile        @relation(fields: [authorProfileId], references: [id], onDelete: Cascade)
   imageAsset      UploadedAsset? @relation("CommunityPostImageAsset", fields: [imageAssetId], references: [id], onDelete: SetNull)
   comments        CommunityPostComment[]
 
   @@index([authorProfileId])
   @@index([imageAssetId])
-  @@index([communityId, deleted, pinnedAt(sort: Desc), createdAt(sort: Desc), id(sort: Desc)])
-  @@index([communityId, deleted, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([boardId, deleted, pinnedAt(sort: Desc), createdAt(sort: Desc), id(sort: Desc)])
+  @@index([boardId, deleted, createdAt(sort: Desc), id(sort: Desc)])
 }
 
 model CommunityPostComment {
@@ -272,7 +180,7 @@ model Board {
   imageAssetId          String?
   inviteCode            String                   @unique
   inviteEnabled         Boolean                  @default(true)
-  size                  Int                      @default(5)
+  isPrivate             Boolean                  @default(true)
   profileId             String?
   createdAt             DateTime                 @default(now())
   refreshedAt           DateTime                 @default(now())
@@ -281,21 +189,24 @@ model Board {
   languages             Languages[]              @default([EN])
   hiddenFromFeed        Boolean                  @default(false)
   reportCount           Int                      @default(0)
-  communityId           String?
+  // Materialized fields for discovery feed ranking (updated by cron)
+  memberCount           Int                      @default(0)
+  recentPostCount7d     Int                      @default(0)
+  rankingScore          Float                    @default(0)
+  rankedAt              DateTime                 @default(now())
   imageAsset            UploadedAsset?           @relation("BoardImageAsset", fields: [imageAssetId], references: [id], onDelete: SetNull)
-  community             Community?               @relation(fields: [communityId], references: [id])
   profile               Profile?                 @relation(fields: [profileId], references: [id])
   boardBans             BoardBan[]
-  categories            Category[]
   channels              Channel[]
   members               Member[]
-  slots                 Slot[]
+  posts                 CommunityPost[]
+  rules                 BoardRules?
 
   @@index([profileId])
   @@index([refreshedAt])
   @@index([languages])
   @@index([hiddenFromFeed])
-  @@index([communityId])
+  @@index([rankingScore(sort: Desc), id])
   @@index([imageAssetId])
 }
 
@@ -322,7 +233,6 @@ model Member {
   board     Board      @relation(fields: [boardId], references: [id], onDelete: Cascade)
   profile   Profile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
   messages  Message[]
-  slots     Slot[]
 
   @@index([profileId])
   @@index([boardId])
@@ -331,41 +241,40 @@ model Member {
   @@index([profileId, role])
 }
 
-model Category {
-  id        String    @id @default(uuid())
-  name      String
-  position  Float     @default(1000)
-  profileId String?
-  boardId   String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  board     Board     @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  profile   Profile?  @relation(fields: [profileId], references: [id])
-  channels  Channel[]
-
-  @@index([boardId])
-}
-
 model Channel {
-  id         String             @id @default(uuid())
-  name       String
-  type       ChannelType        @default(TEXT)
-  position   Float              @default(1000)
-  profileId  String?
-  boardId    String
-  parentId   String?
-  createdAt  DateTime           @default(now())
-  updatedAt  DateTime           @updatedAt
-  board      Board              @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  parent     Category?          @relation(fields: [parentId], references: [id], onDelete: Cascade)
-  profile    Profile?           @relation(fields: [profileId], references: [id])
-  readStates ChannelReadState[]
-  messages   Message[]
+  id           String             @id @default(uuid())
+  name         String
+  type         ChannelType        @default(TEXT)
+  position     Float              @default(1000)
+  profileId    String?
+  boardId      String
+  imageAssetId String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  board        Board              @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  profile      Profile?           @relation(fields: [profileId], references: [id])
+  imageAsset   UploadedAsset?     @relation("ChannelImageAsset", fields: [imageAssetId], references: [id], onDelete: SetNull)
+  channelMembers ChannelMember[]
+  readStates     ChannelReadState[]
+  messages       Message[]
 
   @@index([profileId])
   @@index([boardId])
-  @@index([parentId])
-  @@index([boardId, parentId])
+  @@index([imageAssetId])
+}
+
+model ChannelMember {
+  id        String   @id @default(uuid())
+  channelId String
+  profileId String
+  muted     Boolean  @default(false)
+  joinedAt  DateTime @default(now())
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([channelId, profileId])
+  @@index([profileId])
+  @@index([channelId])
 }
 
 model Message {
@@ -631,9 +540,10 @@ enum AssetContext {
   PROFILE_AVATAR
   PROFILE_BANNER
   BOARD_IMAGE
-  COMMUNITY_IMAGE
+  BOARD_RULES_IMAGE
   COMMUNITY_POST_IMAGE
   COMMUNITY_POST_COMMENT_IMAGE
+  CHANNEL_IMAGE
   MESSAGE_ATTACHMENT
   DM_ATTACHMENT
   STICKER_IMAGE
@@ -644,7 +554,6 @@ enum ReportTargetType {
   DIRECT_MESSAGE
   PROFILE
   BOARD
-  COMMUNITY
   COMMUNITY_POST
   COMMUNITY_POST_COMMENT
 }
@@ -666,23 +575,6 @@ enum ReportStatus {
   DISMISSED
 }
 
-enum CommunityHelperInviteStatus {
-  PENDING
-  ACCEPTED
-  REVOKED
-  EXPIRED
-}
-
-enum CommunityRole {
-  OWNER
-  MEMBER
-}
-
-enum SlotMode {
-  BY_INVITATION
-  BY_DISCOVERY
-}
-
 enum MemberRole {
   OWNER
   ADMIN
@@ -693,7 +585,6 @@ enum MemberRole {
 enum ChannelType {
   TEXT
   VOICE
-  MAIN
 }
 
 enum MessageType {
@@ -771,6 +662,20 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+model BoardRules {
+  id           String         @id @default(uuid())
+  boardId      String         @unique
+  title        String
+  content      String
+  imageAssetId String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  board        Board          @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  imageAsset   UploadedAsset? @relation("BoardRulesImageAsset", fields: [imageAssetId], references: [id], onDelete: SetNull)
+
+  @@index([imageAssetId])
 }
 
 model EmailSuppression {

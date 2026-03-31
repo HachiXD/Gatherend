@@ -5,7 +5,6 @@ import {
   ChannelType,
   Languages,
   MemberRole,
-  SlotMode,
 } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
@@ -19,8 +18,6 @@ import {
   serializeUploadedAsset,
   uploadedAssetSummarySelect,
 } from "@/lib/uploaded-assets";
-
-const MAX_SEATS = 48;
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -59,31 +56,10 @@ export async function GET() {
       },
     });
 
-    const boardIds = boards.map((board) => board.id);
-
-    const mainChannels = await db.channel.findMany({
-      where: {
-        boardId: { in: boardIds },
-        type: ChannelType.MAIN,
-      },
-      select: {
-        boardId: true,
-        id: true,
-      },
-    });
-
-    const mainChannelIdByBoardId = new Map<string, string>();
-    for (const channel of mainChannels) {
-      if (!mainChannelIdByBoardId.has(channel.boardId)) {
-        mainChannelIdByBoardId.set(channel.boardId, channel.id);
-      }
-    }
-
     return NextResponse.json(
       boards.map((board) => ({
         ...board,
         imageAsset: serializeUploadedAsset(board.imageAsset),
-        mainChannelId: mainChannelIdByBoardId.get(board.id) ?? null,
       })),
     );
   } catch (error) {
@@ -116,16 +92,12 @@ export async function POST(req: Request) {
       name,
       description,
       imageAssetId,
-      publicSeats,
-      invitationSeats,
-      communityId,
+      isPrivate,
     }: {
       name?: unknown;
       description?: unknown;
       imageAssetId?: unknown;
-      publicSeats?: unknown;
-      invitationSeats?: unknown;
-      communityId?: unknown;
+      isPrivate?: unknown;
     } = body;
 
     const languagesNorm: Languages[] =
@@ -163,76 +135,7 @@ export async function POST(req: Request) {
       }
     }
 
-    if (
-      typeof publicSeats !== "number" ||
-      typeof invitationSeats !== "number" ||
-      !Number.isInteger(publicSeats) ||
-      !Number.isInteger(invitationSeats)
-    ) {
-      return NextResponse.json(
-        { error: "Seats must be integer numbers" },
-        { status: 400 },
-      );
-    }
-
-    if (publicSeats < 0 || invitationSeats < 0) {
-      return NextResponse.json(
-        { error: "Seats cannot be negative" },
-        { status: 400 },
-      );
-    }
-
-    if (publicSeats > 0 && publicSeats < 4) {
-      return NextResponse.json(
-        { error: "Public seats must be at least 4 or 0" },
-        { status: 400 },
-      );
-    }
-
-    const totalSeats = publicSeats + invitationSeats;
-    if (totalSeats > MAX_SEATS) {
-      return NextResponse.json(
-        { error: `Total seats cannot exceed ${MAX_SEATS}` },
-        { status: 400 },
-      );
-    }
-
-    if (communityId !== undefined && communityId !== null && communityId !== "") {
-      if (typeof communityId !== "string" || !UUID_REGEX.test(communityId)) {
-        return NextResponse.json(
-          { error: "Invalid community ID format" },
-          { status: 400 },
-        );
-      }
-    }
-
-    if (publicSeats > 0 && !communityId) {
-      return NextResponse.json(
-        { error: "Community is required when public seats are enabled" },
-        { status: 400 },
-      );
-    }
-
-    if (publicSeats === 0 && communityId) {
-      return NextResponse.json(
-        { error: "Private boards cannot be assigned to a community" },
-        { status: 400 },
-      );
-    }
-
-    if (typeof communityId === "string" && communityId.trim().length > 0) {
-      const communityExists = await db.community.findUnique({
-        where: { id: communityId },
-        select: { id: true },
-      });
-
-      if (!communityExists) {
-        return NextResponse.json(
-          { error: "Community not found" },
-          { status: 400 },
-        );
-      }
-    }
+    const resolvedIsPrivate = isPrivate === false ? false : true;
 
     if (description && description.trim().length > 0) {
       const moderationResult = moderateDescription(description);
@@ -288,8 +191,6 @@ export async function POST(req: Request) {
       resolvedImageAssetId = imageAsset.id;
     }
 
-    const size = totalSeats + 1;
-
     const board = await db.$transaction(async (tx) => {
       const newBoard = await tx.board.create({
         data: {
@@ -299,15 +200,11 @@ export async function POST(req: Request) {
               ? description.trim()
               : null,
           imageAssetId: resolvedImageAssetId,
-          size,
+          isPrivate: resolvedIsPrivate,
           languages: languagesNorm,
           profileId: profile.id,
           inviteCode: uuidv4(),
           refreshedAt: new Date(),
-          communityId:
-            typeof communityId === "string" && communityId.trim().length > 0
-              ? communityId
-              : null,
           members: {
             create: {
               profileId: profile.id,
@@ -319,11 +216,6 @@ export async function POST(req: Request) {
               data: [
                 {
                   name: "Main",
-                  type: ChannelType.MAIN,
-                  profileId: profile.id,
-                },
-                {
-                  name: "Text room",
                   type: ChannelType.TEXT,
                   profileId: profile.id,
                 },
@@ -336,48 +228,8 @@ export async function POST(req: Request) {
             },
           },
         },
-        include: {
-          members: true,
-          channels: true,
-        },
+        select: { id: true },
       });
-
-      const ownerMember = newBoard.members.find(
-        (member) => member.role === MemberRole.OWNER,
-      );
-      if (!ownerMember) {
-        throw new Error("Owner member not created");
-      }
-
-      const slotsData: {
-        boardId: string;
-        mode: SlotMode;
-        memberId: string | null;
-      }[] = [
-        {
-          boardId: newBoard.id,
-          mode: SlotMode.BY_INVITATION,
-          memberId: ownerMember.id,
-        },
-      ];
-
-      for (let i = 0; i < publicSeats; i++) {
-        slotsData.push({
-          boardId: newBoard.id,
-          mode: SlotMode.BY_DISCOVERY,
-          memberId: null,
-        });
-      }
-
-      for (let i = 0; i < invitationSeats; i++) {
-        slotsData.push({
-          boardId: newBoard.id,
-          mode: SlotMode.BY_INVITATION,
-          memberId: null,
-        });
-      }
-
-      await tx.slot.createMany({ data: slotsData });
 
       return tx.board.findUnique({
         where: { id: newBoard.id },
@@ -387,19 +239,12 @@ export async function POST(req: Request) {
           description: true,
           inviteCode: true,
           inviteEnabled: true,
-          size: true,
+          isPrivate: true,
           profileId: true,
           createdAt: true,
-          refreshedAt: true,
-          updatedAt: true,
-          languages: true,
-          hiddenFromFeed: true,
-          reportCount: true,
-          communityId: true,
           imageAsset: {
             select: uploadedAssetSummarySelect,
           },
-          slots: true,
           members: true,
           channels: true,
         },
@@ -407,27 +252,6 @@ export async function POST(req: Request) {
     });
 
     revalidatePath("/boards");
-
-    if (board?.communityId) {
-      const socketUrl = `${process.env.SOCKET_SERVER_URL}/emit-to-room`;
-      const roomName = `discovery:community:${board.communityId}`;
-
-      fetch(socketUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Internal-Secret": process.env.INTERNAL_API_SECRET || "",
-        },
-        body: JSON.stringify({
-          room: roomName,
-          event: "discovery:board-created",
-          data: { communityId: board.communityId, boardId: board.id },
-        }),
-        signal: AbortSignal.timeout(3000),
-      }).catch((error) => {
-        console.error("Error emitiendo discovery:board-created:", error);
-      });
-    }
 
     if (!board) {
       return NextResponse.json({ error: "Board not found" }, { status: 404 });

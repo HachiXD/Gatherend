@@ -7,6 +7,35 @@ import { revalidatePath } from "next/cache";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
 
+async function notifyChannelEvent(
+  boardId: string,
+  event: "board:channel-deleted" | "board:channel-updated",
+  data: Record<string, unknown>,
+) {
+  try {
+    const socketUrl =
+      process.env.SOCKET_SERVER_URL || process.env.NEXT_PUBLIC_SOCKET_URL;
+    const secret = process.env.INTERNAL_API_SECRET;
+    if (!socketUrl || !secret) return;
+
+    await fetch(`${socketUrl}/emit-to-room`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Internal-Secret": secret,
+      },
+      body: JSON.stringify({
+        room: `board:${boardId}`,
+        event,
+        data: { boardId, ...data, timestamp: Date.now() },
+      }),
+      signal: AbortSignal.timeout(3000),
+    });
+  } catch (error) {
+    console.error(`[${event.toUpperCase()}]`, error);
+  }
+}
+
 // UUID validation regex
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -66,10 +95,6 @@ export async function DELETE(
         throw new Error("CHANNEL_NOT_FOUND");
       }
 
-      if (channel.type === ChannelType.MAIN) {
-        throw new Error("CANNOT_DELETE_MAIN_CHANNEL");
-      }
-
       // Verificar que no sea el último canal de TEXTO del board
       if (channel.type === ChannelType.TEXT) {
         const textChannels = await tx.channel.count({
@@ -90,6 +115,8 @@ export async function DELETE(
     // Invalidar cache del layout para forzar re-render
     revalidatePath(`/boards/${boardId}`);
 
+    void notifyChannelEvent(boardId, "board:channel-deleted", { channelId });
+
     return NextResponse.json({ success: true });
   } catch (error) {
     // Manejar errores personalizados lanzados desde la transacción
@@ -103,11 +130,6 @@ export async function DELETE(
         return NextResponse.json(
           { error: "Channel not found" },
           { status: 404 },
-        );
-      if (error.message === "CANNOT_DELETE_MAIN_CHANNEL")
-        return NextResponse.json(
-          { error: "Cannot delete the main channel" },
-          { status: 400 },
         );
       if (error.message === "LAST_TEXT_CHANNEL")
         return NextResponse.json(
@@ -216,16 +238,6 @@ export async function PATCH(
 
       // Validaciones de tipo solo si realmente se intenta cambiar
       if (isTypeChange) {
-        // No permitir cambiar tipo de canal MAIN
-        if (channel.type === ChannelType.MAIN) {
-          throw new Error("CANNOT_MODIFY_MAIN_CHANNEL");
-        }
-
-        // No permitir establecer tipo MAIN
-        if (type === ChannelType.MAIN) {
-          throw new Error("CANNOT_SET_TYPE_TO_MAIN");
-        }
-
         // Si cambia de TEXT a otro tipo, verificar que no sea el último
         if (channel.type === ChannelType.TEXT && type !== ChannelType.TEXT) {
           const textChannels = await tx.channel.count({
@@ -251,6 +263,15 @@ export async function PATCH(
     // Invalidar cache del layout para forzar re-render
     revalidatePath(`/boards/${boardId}`);
 
+    void notifyChannelEvent(boardId, "board:channel-updated", {
+      channel: {
+        id: updatedChannel.id,
+        name: updatedChannel.name,
+        type: updatedChannel.type,
+        updatedAt: updatedChannel.updatedAt.toISOString(),
+      },
+    });
+
     return NextResponse.json(updatedChannel);
   } catch (error) {
     // Manejar errores personalizados lanzados desde la transacción
@@ -264,16 +285,6 @@ export async function PATCH(
         return NextResponse.json(
           { error: "Channel not found" },
           { status: 404 },
-        );
-      if (error.message === "CANNOT_MODIFY_MAIN_CHANNEL")
-        return NextResponse.json(
-          { error: "Cannot modify the main channel type" },
-          { status: 400 },
-        );
-      if (error.message === "CANNOT_SET_TYPE_TO_MAIN")
-        return NextResponse.json(
-          { error: "Cannot set channel type to MAIN" },
-          { status: 400 },
         );
       if (error.message === "LAST_TEXT_CHANNEL")
         return NextResponse.json(

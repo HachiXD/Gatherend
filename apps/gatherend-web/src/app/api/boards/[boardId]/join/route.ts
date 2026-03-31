@@ -1,59 +1,13 @@
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
-import { ChannelType, MemberRole, Prisma, SlotMode } from "@prisma/client";
+import { MemberRole, Prisma } from "@prisma/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
 import { expressMemberCache } from "@/lib/redis";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
-import { serializeProfileSummary } from "@/lib/uploaded-assets";
-
 // UUID validation regex
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-// Helper function to notify the members about the Welcome Message
-async function notifyWelcomeMessage(channelId: string, message: object) {
-  try {
-    const socketUrl =
-      process.env.SOCKET_SERVER_URL || process.env.NEXT_PUBLIC_SOCKET_URL;
-    const secret = process.env.INTERNAL_API_SECRET;
-
-    if (!socketUrl || !secret) return;
-
-    await fetch(`${socketUrl}/emit-to-room`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Internal-Secret": secret,
-      },
-      body: JSON.stringify({
-        room: `channel:${channelId}`,
-        event: `chat:${channelId}:messages`,
-        data: message,
-      }),
-      signal: AbortSignal.timeout(3000),
-    });
-  } catch (error) {
-    console.error("[NOTIFY_WELCOME_MESSAGE]", error);
-  }
-}
-
-function serializeWelcomeMessagePayload(message: any) {
-  return {
-    ...message,
-    messageSender: message.messageSender
-      ? serializeProfileSummary(message.messageSender)
-      : null,
-    member: message.member
-      ? {
-          ...message.member,
-          profile: serializeProfileSummary(
-            message.member.profile ?? message.messageSender ?? null,
-          ),
-        }
-      : null,
-  };
-}
 
 async function notifyBoardMembership(
   profileId: string,
@@ -81,10 +35,25 @@ async function notifyBoardMembership(
 
 async function notifyMemberJoined(
   boardId: string,
-  newMemberProfile: {
+  member: {
     id: string;
-    username: string;
-    avatarAsset: ClientUploadedAsset | null;
+    role: string;
+    profileId: string;
+    boardId: string;
+    createdAt: string;
+    updatedAt: string;
+    profile: {
+      id: string;
+      username: string;
+      discriminator: string | null;
+      avatarAsset: ClientUploadedAsset | null;
+      usernameColor: unknown;
+      profileTags: string[];
+      badge: string | null;
+      badgeSticker: { id: string; asset: ClientUploadedAsset | null } | null;
+      usernameFormat: unknown;
+      longDescription: string | null;
+    };
   },
 ) {
   try {
@@ -106,7 +75,7 @@ async function notifyMemberJoined(
         event: "board:member-joined",
         data: {
           boardId,
-          profile: newMemberProfile,
+          member,
           timestamp: Date.now(),
         },
       }),
@@ -146,18 +115,14 @@ export async function POST(
       return NextResponse.json({ error: "Invalid source" }, { status: 400 });
     }
 
-    // 1. TRAER BOARD (solo slots libres)
+    // 1. TRAER BOARD
     const board = await db.board.findUnique({
       where: { id: boardId },
       select: {
         id: true,
         inviteCode: true,
         inviteEnabled: true,
-        slots: {
-          where: {
-            memberId: null,
-          },
-        },
+        isPrivate: true,
       },
     });
 
@@ -185,11 +150,7 @@ export async function POST(
     }
 
     if (source === "discovery") {
-      const hasPublicSlots = board.slots.some(
-        (s) => s.mode === SlotMode.BY_DISCOVERY,
-      );
-
-      if (!hasPublicSlots) {
+      if (board.isPrivate) {
         return NextResponse.json(
           { error: "Not discoverable" },
           { status: 403 },
@@ -204,16 +165,11 @@ export async function POST(
     });
 
     if (existingMember) {
-      const targetChannel =
-        (await db.channel.findFirst({
-          where: { boardId, type: ChannelType.MAIN },
-          select: { id: true },
-        })) ??
-        (await db.channel.findFirst({
-          where: { boardId },
-          orderBy: { position: "asc" },
-          select: { id: true },
-        }));
+      const targetChannel = await db.channel.findFirst({
+        where: { boardId },
+        orderBy: { position: "asc" },
+        select: { id: true },
+      });
 
       return NextResponse.json({
         alreadyMember: true,
@@ -224,16 +180,8 @@ export async function POST(
       });
     }
 
-    // 4. SLOT ADECUADO SEGÚN ORIGEN
-    const targetMode =
-      source === "invitation" ? SlotMode.BY_INVITATION : SlotMode.BY_DISCOVERY;
-
-    // 5. JOIN ATÓMICO con FOR UPDATE SKIP LOCKED (evita race conditions)
-    const {
-      newMember: member,
-      welcomeMessage,
-      targetChannelId,
-    } = await db.$transaction(async (tx) => {
+    // 4. JOIN ATÓMICO dentro de transacción
+    const { targetChannelId, newMember } = await db.$transaction(async (tx) => {
       // Verificar ban dentro de la transacción para evitar TOCTOU
       const banned = await tx.boardBan.findFirst({
         where: { boardId, profileId: profile.id },
@@ -244,22 +192,6 @@ export async function POST(
         throw new Error("BANNED");
       }
 
-      const availableSlots = await tx.$queryRaw<Array<{ id: string }>>`
-        SELECT id
-        FROM "Slot"
-        WHERE "boardId" = ${boardId}
-          AND "mode" = ${targetMode}::"SlotMode"
-          AND "memberId" IS NULL
-        LIMIT 1
-        FOR UPDATE SKIP LOCKED
-      `;
-
-      if (availableSlots.length === 0) {
-        throw new Error("No slots available");
-      }
-
-      const slotId = availableSlots[0].id;
-
       const newMember = await tx.member.create({
         data: {
           boardId,
@@ -268,66 +200,14 @@ export async function POST(
         },
       });
 
-      await tx.slot.update({
-        where: { id: slotId },
-        data: {
-          memberId: newMember.id,
-        },
+      const targetChannel = await tx.channel.findFirst({
+        where: { boardId },
+        orderBy: { position: "asc" },
+        select: { id: true },
       });
-
-      const targetChannel =
-        (await tx.channel.findFirst({
-          where: { boardId, type: ChannelType.MAIN },
-          select: { id: true },
-        })) ??
-        (await tx.channel.findFirst({
-          where: { boardId },
-          orderBy: { position: "asc" },
-          select: { id: true },
-        }));
-
-      let welcomeMessage = null;
-      if (targetChannel) {
-        welcomeMessage = await tx.message.create({
-          data: {
-            channelId: targetChannel.id,
-            type: "WELCOME",
-            content: "",
-            memberId: newMember.id,
-            messageSenderId: profile.id,
-          },
-          include: {
-            member: {
-              include: {
-                profile: {
-                  include: {
-                    avatarAsset: true,
-                    badgeSticker: {
-                      include: {
-                        asset: true,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-            messageSender: {
-              include: {
-                avatarAsset: true,
-                badgeSticker: {
-                  include: {
-                    asset: true,
-                  },
-                },
-              },
-            },
-          },
-        });
-      }
 
       return {
         newMember,
-        welcomeMessage,
         targetChannelId: targetChannel?.id ?? null,
       };
     });
@@ -338,19 +218,27 @@ export async function POST(
 
     notifyBoardMembership(profile.id, boardId, "join");
     notifyMemberJoined(boardId, {
-      id: profile.id,
-      username: profile.username,
-      avatarAsset: profile.avatarAsset,
+      id: newMember.id,
+      role: newMember.role,
+      profileId: newMember.profileId,
+      boardId: newMember.boardId,
+      createdAt: newMember.createdAt.toISOString(),
+      updatedAt: newMember.updatedAt.toISOString(),
+      profile: {
+        id: profile.id,
+        username: profile.username,
+        discriminator: profile.discriminator ?? null,
+        avatarAsset: profile.avatarAsset,
+        usernameColor: profile.usernameColor,
+        profileTags: profile.profileTags,
+        badge: profile.badge,
+        badgeSticker: profile.badgeSticker,
+        usernameFormat: profile.usernameFormat,
+        longDescription: profile.longDescription,
+      },
     });
 
-    if (targetChannelId && welcomeMessage) {
-      notifyWelcomeMessage(
-        targetChannelId,
-        serializeWelcomeMessagePayload(welcomeMessage),
-      );
-    }
-
-    // 6. RESPUESTA
+    // 5. RESPUESTA
     return NextResponse.json({
       success: true,
       targetChannelId,
@@ -369,17 +257,12 @@ export async function POST(
           { status: 403 },
         );
       }
-      if (error.message === "No slots available") {
-        return NextResponse.json(
-          { error: "No slots available" },
-          { status: 409 },
-        );
-      }
     }
 
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      // P2002: unique constraint — already a member (concurrent requests)
       return NextResponse.json(
-        { error: "Slot no longer available" },
+        { error: "Already a member" },
         { status: 409 },
       );
     }

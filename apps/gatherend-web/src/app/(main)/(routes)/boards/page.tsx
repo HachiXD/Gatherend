@@ -17,10 +17,10 @@ export default async function BoardsHome() {
     redirect("/sign-in");
   }
 
-  // 1) Buscar si ya tiene un board
+  // 1) Buscar el board propio del usuario (su comunidad personal)
   logger.server("[BOARDS_PAGE] Searching for existing board...");
   const board = await db.board.findFirst({
-    where: { members: { some: { profileId: profile.id } } },
+    where: { profileId: profile.id },
   });
   logger.server("[BOARDS_PAGE] Board found:", !!board, board?.id);
 

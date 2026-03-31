@@ -4,12 +4,11 @@ import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/db";
 import { hash } from "@/lib/hash";
-import { MemberRole, SlotMode, ChannelType, Prisma } from "@prisma/client";
+import { MemberRole, ChannelType, Prisma } from "@prisma/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
 import { moderateDescription } from "@/lib/text-moderation";
 
-const INITIAL_SLOTS = 5;
 const IDEMPOTENCY_EXPIRATION_HOURS = 24;
 const IDEMPOTENCY_STATUS_PENDING = 0;
 const IDEMPOTENCY_STATUS_FAILED = -1;
@@ -209,7 +208,7 @@ export async function POST(req: Request) {
           profileId: profile.id,
           name,
           inviteCode: uuidv4(),
-          size: INITIAL_SLOTS,
+          isPrivate: true,
           languages: profile.languages.length ? profile.languages : ["EN"],
           refreshedAt: new Date(),
 
@@ -225,11 +224,6 @@ export async function POST(req: Request) {
               data: [
                 {
                   name: "Main",
-                  type: ChannelType.MAIN,
-                  profileId: profile.id,
-                },
-                {
-                  name: "Text room",
                   type: ChannelType.TEXT,
                   profileId: profile.id,
                 },
@@ -244,16 +238,6 @@ export async function POST(req: Request) {
         },
         include: { members: true },
       });
-
-      const creatorMember = newBoard.members[0];
-
-      const slotsData = Array.from({ length: INITIAL_SLOTS }, (_, i) => ({
-        boardId: newBoard.id,
-        mode: SlotMode.BY_INVITATION,
-        memberId: i === 0 ? creatorMember.id : null,
-      }));
-
-      await tx.slot.createMany({ data: slotsData });
 
       return { board: newBoard, created: true };
     });

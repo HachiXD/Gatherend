@@ -14,7 +14,8 @@ import { useState } from "react";
 import axios from "axios";
 import { useQueryClient } from "@tanstack/react-query";
 import { communityPostsKey } from "@/hooks/discovery/posts-feed/use-community-posts-feed";
-import { communityOverviewKey } from "@/hooks/discovery/use-community-overview";
+import type { BoardWithData } from "@/components/providers/board-provider";
+
 import { useTranslation } from "@/i18n";
 
 export const DeleteCommunityPostModal = () => {
@@ -33,14 +34,14 @@ export const DeleteCommunityPostModal = () => {
       setIsLoading(true);
       await axios.delete(`/api/posts/${deleteCommunityPostId}`);
 
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: communityPostsKey(deleteCommunityPostCommunityId),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: communityOverviewKey(deleteCommunityPostCommunityId),
-        }),
-      ]);
+      queryClient.setQueryData<BoardWithData>(["board", deleteCommunityPostCommunityId], (old) => {
+        if (!old) return old;
+        return { ...old, recentPostCount7d: Math.max(0, old.recentPostCount7d - 1) };
+      });
+
+      await queryClient.invalidateQueries({
+        queryKey: communityPostsKey(deleteCommunityPostCommunityId),
+      });
 
       onClose();
     } catch (error) {

@@ -7,12 +7,6 @@ import {
   COMMUNITIES_FEED_KEY,
   COMMUNITIES_FEED_SCROLL_KEY,
 } from "@/hooks/discovery/community-feed/use-communities-feed";
-import {
-  communityBoardsScrollKey,
-} from "@/hooks/discovery/boards-feed/use-community-boards-feed";
-import {
-  communityPostsScrollKey,
-} from "@/hooks/discovery/posts-feed/use-community-posts-feed";
 
 export function useFeedScrollStoreSync() {
   const queryClient = useQueryClient();
@@ -31,23 +25,6 @@ export function useFeedScrollStoreSync() {
       ) {
         feedScrollStore.clear(COMMUNITIES_FEED_SCROLL_KEY);
         return;
-      }
-
-      if (
-        queryKey.length === 2 &&
-        queryKey[0] === "community-boards-feed" &&
-        typeof queryKey[1] === "string"
-      ) {
-        feedScrollStore.clear(communityBoardsScrollKey(queryKey[1]));
-        return;
-      }
-
-      if (
-        queryKey.length === 2 &&
-        queryKey[0] === "community-posts-feed" &&
-        typeof queryKey[1] === "string"
-      ) {
-        feedScrollStore.clear(communityPostsScrollKey(queryKey[1]));
       }
     });
 

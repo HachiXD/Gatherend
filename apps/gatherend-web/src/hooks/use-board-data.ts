@@ -9,7 +9,6 @@ import axios from "axios";
 import type {
   BoardWithData,
   BoardChannel,
-  BoardCategory,
 } from "@/components/providers/board-provider";
 import { useBoardNavigationStore } from "@/stores/board-navigation-store";
 import { syncUserBoardFromBoardData } from "@/hooks/use-user-boards";
@@ -101,19 +100,7 @@ export function useChannelData(boardId: string, channelId: string) {
   const channel = useMemo(() => {
     if (!board) return null;
 
-    // Buscar en root channels
-    const rootChannel = board.channels.find((ch) => ch.id === channelId);
-    if (rootChannel) return rootChannel;
-
-    // Buscar en categorías
-    for (const category of board.categories) {
-      const categoryChannel = category.channels.find(
-        (ch) => ch.id === channelId,
-      );
-      if (categoryChannel) return categoryChannel;
-    }
-
-    return null;
+    return board.channels.find((ch) => ch.id === channelId) ?? null;
   }, [board, channelId]);
 
   return { channel, board };
@@ -138,19 +125,6 @@ export function useBoardMutations(boardId: string) {
       queryClient.setQueryData<BoardWithData>(["board", boardId], (old) => {
         if (!old) return old;
 
-        // Si tiene categoryId, agregarlo a la categoría
-        if (channel.parentId) {
-          return {
-            ...old,
-            categories: old.categories.map((cat) =>
-              cat.id === channel.parentId
-                ? { ...cat, channels: [...cat.channels, channel] }
-                : cat,
-            ),
-          };
-        }
-
-        // Si no, agregarlo a root channels
         return {
           ...old,
           channels: [...old.channels, channel],
@@ -171,13 +145,6 @@ export function useBoardMutations(boardId: string) {
           channels: old.channels.map((ch) =>
             ch.id === channelId ? { ...ch, ...updates } : ch,
           ),
-          // Actualizar en categorías
-          categories: old.categories.map((cat) => ({
-            ...cat,
-            channels: cat.channels.map((ch) =>
-              ch.id === channelId ? { ...ch, ...updates } : ch,
-            ),
-          })),
         };
       });
     },
@@ -192,53 +159,6 @@ export function useBoardMutations(boardId: string) {
         return {
           ...old,
           channels: old.channels.filter((ch) => ch.id !== channelId),
-          categories: old.categories.map((cat) => ({
-            ...cat,
-            channels: cat.channels.filter((ch) => ch.id !== channelId),
-          })),
-        };
-      });
-    },
-    [queryClient, boardId],
-  );
-
-  //  CATEGORIES
-
-  const addCategory = useCallback(
-    (category: BoardCategory) => {
-      queryClient.setQueryData<BoardWithData>(["board", boardId], (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          categories: [...old.categories, category],
-        };
-      });
-    },
-    [queryClient, boardId],
-  );
-
-  const updateCategory = useCallback(
-    (categoryId: string, updates: Partial<BoardCategory>) => {
-      queryClient.setQueryData<BoardWithData>(["board", boardId], (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          categories: old.categories.map((cat) =>
-            cat.id === categoryId ? { ...cat, ...updates } : cat,
-          ),
-        };
-      });
-    },
-    [queryClient, boardId],
-  );
-
-  const removeCategory = useCallback(
-    (categoryId: string) => {
-      queryClient.setQueryData<BoardWithData>(["board", boardId], (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          categories: old.categories.filter((cat) => cat.id !== categoryId),
         };
       });
     },
@@ -326,10 +246,6 @@ export function useBoardMutations(boardId: string) {
     addChannel,
     updateChannel,
     removeChannel,
-    // Categories
-    addCategory,
-    updateCategory,
-    removeCategory,
     // Board
     updateBoard,
     // Members
@@ -382,10 +298,6 @@ export function useDeleteChannel() {
         return {
           ...old,
           channels: old.channels.filter((ch) => ch.id !== channelId),
-          categories: old.categories.map((cat) => ({
-            ...cat,
-            channels: cat.channels.filter((ch) => ch.id !== channelId),
-          })),
         };
       });
 
@@ -410,53 +322,6 @@ export function useDeleteChannel() {
   });
 }
 
-interface DeleteCategoryVariables {
-  categoryId: string;
-  boardId: string;
-}
-
-/**
- * Hook para eliminar una categoría con optimistic update
- */
-export function useDeleteCategory() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ categoryId, boardId }: DeleteCategoryVariables) => {
-      await axios.delete(`/api/boards/${boardId}/categories/${categoryId}`);
-      return { categoryId, boardId };
-    },
-
-    onMutate: async ({ categoryId, boardId }) => {
-      await queryClient.cancelQueries({ queryKey: ["board", boardId] });
-
-      const previousBoard = queryClient.getQueryData<BoardWithData>([
-        "board",
-        boardId,
-      ]);
-
-      queryClient.setQueryData<BoardWithData>(["board", boardId], (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          categories: old.categories.filter((cat) => cat.id !== categoryId),
-        };
-      });
-
-      return { previousBoard, boardId };
-    },
-
-    onError: (_error, _variables, context) => {
-      if (context?.previousBoard) {
-        queryClient.setQueryData(
-          ["board", context.boardId],
-          context.previousBoard,
-        );
-      }
-    },
-  });
-}
-
 //  SELECTORS Y HOOKS OPTIMIZADOS
 
 /**
@@ -469,15 +334,7 @@ function createChannelsMap(
 ): Map<string, BoardChannel> {
   const map = new Map<string, BoardChannel>();
   if (!board) return map;
-
-  // Canales raíz
   board.channels.forEach((c) => map.set(c.id, c));
-
-  // Canales en categorías
-  board.categories.forEach((cat) =>
-    cat.channels.forEach((c) => map.set(c.id, c)),
-  );
-
   return map;
 }
 
@@ -601,12 +458,5 @@ export function useBoardMemberIds(): string[] {
  * @returns Array de profile IDs en slots
  */
 export function useBoardSlotProfileIds(): string[] {
-  const { data: board } = useCurrentBoardData();
-
-  return useMemo(() => {
-    if (!board?.slots) return [];
-    return board.slots
-      .map((s) => s.member?.profile?.id)
-      .filter((id): id is string => !!id);
-  }, [board?.slots]);
+  return [];
 }

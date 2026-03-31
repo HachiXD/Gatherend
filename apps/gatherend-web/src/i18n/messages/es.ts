@@ -422,7 +422,7 @@ export const es: TranslationKeys = {
       descriptionPlaceholder: "¿De qué trata tu board :D?",
       createButton: "Crear un Board",
       subtitle:
-        "Dale un nombre a tu board y decide cómo quieres que sea tu micro-comunidad!",
+        "Dale un nombre a tu board y decide cómo quieres que sea tu comunidad!",
       tagLabel: "Categoría",
       tagPlaceholder: "Selecciona una categoría",
       tellUsMore: "Cuenta algo interesante sobre este board ( ﾟヮﾟ)/",

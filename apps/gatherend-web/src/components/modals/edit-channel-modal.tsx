@@ -30,17 +30,23 @@ import { useEffect, useRef } from "react";
 import { Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SlashSVG } from "@/lib/slash";
+import { FileUpload } from "@/components/file-upload";
+import { getStoredUploadAssetId } from "@/lib/upload-values";
 import type {
   BoardWithData,
   BoardChannel,
 } from "@/components/providers/board-provider";
 import { useTranslation } from "@/i18n";
 
+const PANEL_SHELL =
+  "border border-theme-border bg-theme-bg-secondary/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.28),inset_0_-1px_0_rgba(0,0,0,0.28)]";
+
 const formSchema = z.object({
   name: z.string().min(1, {
     message: "Room name is required",
   }),
   type: z.enum(ChannelType),
+  imageUpload: z.string().optional(),
 });
 
 export const EditChannelModal = () => {
@@ -59,6 +65,7 @@ export const EditChannelModal = () => {
     defaultValues: {
       name: "",
       type: ChannelType.TEXT,
+      imageUpload: "",
     },
   });
 
@@ -69,6 +76,7 @@ export const EditChannelModal = () => {
       form.reset({
         name: channel.name || "",
         type: channel.type || ChannelType.TEXT,
+        imageUpload: "",
       });
 
       // Posicionar cursor al final del texto
@@ -85,12 +93,17 @@ export const EditChannelModal = () => {
   //  MUTATION con TanStack Query  //
   const editChannelMutation = useMutation({
     mutationFn: async (values: z.infer<typeof formSchema>) => {
-      const payload: Partial<z.infer<typeof formSchema>> = {
+      const payload: Partial<z.infer<typeof formSchema>> & { imageAssetId?: string | null } = {
         name: values.name,
       };
 
       if (channel?.type !== values.type) {
         payload.type = values.type;
+      }
+
+      const assetId = getStoredUploadAssetId(values.imageUpload);
+      if (assetId !== undefined) {
+        payload.imageAssetId = assetId;
       }
 
       const response = await axios.patch(
@@ -121,13 +134,6 @@ export const EditChannelModal = () => {
           channels: old.channels.map((ch) =>
             ch.id === channel.id ? { ...ch, ...values } : ch,
           ),
-          // Actualizar en categorías
-          categories: old.categories.map((cat) => ({
-            ...cat,
-            channels: cat.channels.map((ch) =>
-              ch.id === channel.id ? { ...ch, ...values } : ch,
-            ),
-          })),
         };
       });
 
@@ -145,12 +151,6 @@ export const EditChannelModal = () => {
           channels: old.channels.map((ch) =>
             ch.id === updatedChannel.id ? updatedChannel : ch,
           ),
-          categories: old.categories.map((cat) => ({
-            ...cat,
-            channels: cat.channels.map((ch) =>
-              ch.id === updatedChannel.id ? updatedChannel : ch,
-            ),
-          })),
         };
       });
 
@@ -230,9 +230,33 @@ export const EditChannelModal = () => {
                   )}
                 />
 
-                {/* Solo mostrar selector de tipo si NO es canal MAIN */}
-                {channel?.type !== ChannelType.MAIN && (
-                  <FormField
+                <div className={cn("p-3", PANEL_SHELL)}>
+                  <div className="uppercase text-[15px] font-bold text-theme-text-subtle mb-2">
+                    Imagen (opcional)
+                  </div>
+                  <div className="flex items-center justify-center text-center">
+                    <FormField
+                      control={form.control}
+                      name="imageUpload"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <FileUpload
+                              endpoint="boardImage"
+                              value={field.value || ""}
+                              onChange={field.onChange}
+                              uploadButtonClassName="rounded-none border-theme-border-subtle bg-theme-bg-cancel-button text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+                              label="Sube una imagen para este room"
+                            />
+                          </FormControl>
+                          <FormMessage className="-mt-1 text-[11px] leading-tight" />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                <FormField
                     control={form.control}
                     name="type"
                     render={({ field }) => (
@@ -283,7 +307,6 @@ export const EditChannelModal = () => {
                       </FormItem>
                     )}
                   />
-                )}
               </div>
             </div>
 

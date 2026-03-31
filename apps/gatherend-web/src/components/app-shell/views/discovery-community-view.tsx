@@ -10,6 +10,7 @@ import { CommunityCard } from "@/components/discovery/community-card";
 import { Search, X } from "lucide-react";
 import { useBoardSwitchNavigation } from "@/contexts/board-switch-context";
 import { memo, useCallback } from "react";
+import { useUserBoards } from "@/hooks/use-user-boards";
 
 // Search bar
 const SearchBar = memo(function SearchBar({
@@ -26,7 +27,7 @@ const SearchBar = memo(function SearchBar({
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Buscar comunidades..."
+        placeholder="Buscar boards..."
         className="w-full pl-10 pr-10 py-2.5 bg-theme-bg-tertiary border border-theme-border rounded-lg text-theme-text-light placeholder:text-theme-text-muted focus:outline-none focus:ring-2 focus:ring-theme-border-accent-active-channel focus:border-theme-border-accent-active-channel transition-colors"
       />
       {query && (
@@ -118,7 +119,8 @@ export const DiscoveryCommunityView = memo(function DiscoveryCommunityView() {
     bottomSentinelRef,
   } = useCommunitiesFeed();
 
-  const { switchToCommunityPosts } = useBoardSwitchNavigation();
+  const { switchToForum } = useBoardSwitchNavigation();
+  const { data: userBoards } = useUserBoards();
 
   // Hook para búsqueda server-side con debounce
   const {
@@ -145,10 +147,21 @@ export const DiscoveryCommunityView = memo(function DiscoveryCommunityView() {
 
   // Callback estable para onExplore — evita recrear arrows en cada render
   const handleExplore = useCallback(
-    (communityId: string) => {
-      switchToCommunityPosts(communityId);
+    async (boardId: string) => {
+      const isMember = userBoards?.some((b) => b.id === boardId) ?? false;
+      if (!isMember) {
+        try {
+          await fetch(`/api/boards/${boardId}/join?source=discovery`, {
+            method: "POST",
+            credentials: "include",
+          });
+        } catch {
+          // If join fails, still navigate — board GET will show 404 naturally
+        }
+      }
+      switchToForum(boardId);
     },
-    [switchToCommunityPosts],
+    [switchToForum, userBoards],
   );
 
   return (
@@ -181,7 +194,6 @@ export const DiscoveryCommunityView = memo(function DiscoveryCommunityView() {
                 name={community.name}
                 imageAsset={community.imageAsset}
                 memberCount={community.memberCount || 0}
-                boardCount={community.boardCount || 0}
                 recentPostCount7d={community.recentPostCount7d || 0}
                 onExplore={handleExplore}
               />
@@ -195,7 +207,7 @@ export const DiscoveryCommunityView = memo(function DiscoveryCommunityView() {
           </div>
         ) : (
           <div className="text-center py-8 text-theme-text-muted">
-            No se encontraron comunidades para &quot;{searchQuery}&quot;
+            No se encontraron boards para &quot;{searchQuery}&quot;
           </div>
         )
       ) : (
@@ -230,7 +242,6 @@ export const DiscoveryCommunityView = memo(function DiscoveryCommunityView() {
                     name={community.name}
                     imageAsset={community.imageAsset}
                     memberCount={community.memberCount || 0}
-                    boardCount={community.boardCount || 0}
                     recentPostCount7d={community.recentPostCount7d || 0}
                     onExplore={handleExplore}
                   />

@@ -15,7 +15,6 @@ interface BoardItem {
   boardImageUrl: string | null;
   imageAsset: ClientUploadedAsset | null;
   channelIds: string[];
-  mainChannelId: string | null;
 }
 
 /**
@@ -46,7 +45,6 @@ function NavigationSidebarClientInner() {
       ),
       imageAsset: board.imageAsset,
       channelIds: board.channels?.map((c) => c.id) || [],
-      mainChannelId: board.mainChannelId ?? null,
     }));
   }, [boards]);
 
@@ -68,7 +66,6 @@ function NavigationSidebarClientInner() {
             boardImageUrl={board.boardImageUrl}
             imageAsset={board.imageAsset}
             channelIds={board.channelIds}
-            mainChannelId={board.mainChannelId}
             isActive={currentBoardId === board.id}
           />
         ))}

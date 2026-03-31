@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { MemberRole } from "@prisma/client";
-import { revalidatePath } from "next/cache";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
 
@@ -30,46 +29,23 @@ export async function POST(
       return NextResponse.json({ error: "Invalid board ID" }, { status: 400 });
     }
 
-    // Parse body with error handling
-    let body: {
-      id?: unknown;
-      position?: unknown;
-      parentId?: unknown;
-      type?: unknown;
-    };
+    let body: { id?: unknown; position?: unknown };
     try {
       body = await req.json();
     } catch {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const { id, position, parentId, type } = body;
+    const { id, position } = body;
 
-    if (!id || typeof id !== "string" || typeof position !== "number") {
-      return NextResponse.json({ error: "Invalid body" }, { status: 400 });
+    if (!id || typeof id !== "string" || !UUID_REGEX.test(id)) {
+      return NextResponse.json({ error: "Invalid channel ID" }, { status: 400 });
     }
 
-    // Validate id is UUID
-    if (!UUID_REGEX.test(id)) {
-      return NextResponse.json({ error: "Invalid item ID" }, { status: 400 });
+    if (typeof position !== "number") {
+      return NextResponse.json({ error: "Invalid position" }, { status: 400 });
     }
 
-    // Validate parentId if provided
-    if (parentId !== undefined && parentId !== null) {
-      if (typeof parentId !== "string" || !UUID_REGEX.test(parentId)) {
-        return NextResponse.json(
-          { error: "Invalid parent ID" },
-          { status: 400 },
-        );
-      }
-    }
-
-    // Validate type early
-    if (type !== "category" && type !== "channels") {
-      return NextResponse.json({ error: "Invalid type" }, { status: 400 });
-    }
-
-    // Ejecutar toda la lógica dentro de una transacción para consistencia
     await db.$transaction(async (tx) => {
       const member = await tx.member.findFirst({
         where: { boardId, profileId: profile.id },
@@ -85,26 +61,14 @@ export async function POST(
         throw new Error("FORBIDDEN");
       }
 
-      if (type === "category") {
-        const updated = await tx.category.updateMany({
-          where: { id, boardId },
-          data: { position },
-        });
-        if (updated.count === 0) throw new Error("NOT_FOUND");
-        return;
-      }
+      const updated = await tx.channel.updateMany({
+        where: { id, boardId },
+        data: { position },
+      });
 
-      if (type === "channels") {
-        const updated = await tx.channel.updateMany({
-          where: { id, boardId },
-          data: { position, parentId: parentId ?? null },
-        });
-        if (updated.count === 0) throw new Error("NOT_FOUND");
-        return;
-      }
+      if (updated.count === 0) throw new Error("NOT_FOUND");
     });
 
-    revalidatePath(`/boards/${boardId}`);
     return NextResponse.json({ success: true });
   } catch (error) {
     // Manejar errores personalizados lanzados desde la transacción

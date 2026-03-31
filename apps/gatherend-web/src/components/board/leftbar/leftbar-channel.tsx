@@ -3,7 +3,7 @@
 import { memo, useTransition, useCallback, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { ChannelType, MemberRole } from "@prisma/client";
-import { Edit, Mic, Trash, AtSign, Home } from "lucide-react";
+import { Edit, Mic, Trash, AtSign, Users } from "lucide-react";
 import { ActionTooltip } from "@/components/action-tooltip";
 import { ModalType, useModal } from "@/hooks/use-modal-store";
 import { SlashSVG } from "@/lib/slash";
@@ -12,10 +12,8 @@ import { useMentionStore } from "@/hooks/use-mention-store";
 import { VoiceChannelParticipants } from "./voice-channel-participants";
 import { useBoardNavigationStore } from "@/stores/board-navigation-store";
 import { useTranslation } from "@/i18n";
-import { useMainChannelLastMessage } from "@/hooks/use-main-channel-last-message";
 import { useVoiceStore } from "@/hooks/use-voice-store";
-import { useProfile } from "@/components/app-shell/providers/profile-provider";
-import { getMessageAuthor } from "@/hooks/chat";
+import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 interface LeftbarChannelProps {
   channel: {
@@ -24,6 +22,8 @@ interface LeftbarChannelProps {
     type: ChannelType;
     position: number;
     parentId: string | null;
+    imageAsset?: ClientUploadedAsset | null;
+    channelMemberCount?: number;
   };
   boardId: string;
   role?: MemberRole;
@@ -38,7 +38,6 @@ const LeftbarChannelComponent = ({
   const { onOpen } = useModal();
   const [, startTransition] = useTransition();
   const { t } = useTranslation();
-  const profile = useProfile();
 
   // Lazy-mount tooltips once per channel to avoid paying Radix Popper setup costs
   // for every channel during navigation/mount. Keep behavior equivalent after first hover.
@@ -74,47 +73,10 @@ const LeftbarChannelComponent = ({
     useCallback((state) => state.mentions[channel.id] === true, [channel.id]),
   );
 
-  // MAIN y TEXT son canales de texto
-  const isMainChannel = channel.type === ChannelType.MAIN;
-  const isText = channel.type === ChannelType.TEXT || isMainChannel;
+  const isText = channel.type === ChannelType.TEXT;
   const hasUnread = unreadCount > 0;
   const canManageChannel =
     role === MemberRole.OWNER || role === MemberRole.ADMIN;
-
-  // Obtener último mensaje solo para canal MAIN
-  const { lastMessage } = useMainChannelLastMessage({
-    channelId: channel.id,
-    boardId,
-    profileId: profile.id,
-    enabled: isMainChannel,
-  });
-
-  // Memoizar preview del último mensaje
-  const lastMessagePreview = useMemo(() => {
-    if (!lastMessage) return t.dm.noMessagesYet;
-    if (lastMessage.deleted) return t.dm.messageDeleted;
-
-    const username =
-      getMessageAuthor(lastMessage, {
-        fallbackLabel: t.chat.deletedMember,
-      })?.username || "";
-    let preview = "";
-
-    if (lastMessage.sticker) {
-      preview = `[Sticker: ${lastMessage.sticker.name}]`;
-    } else if (lastMessage.hasAttachment || lastMessage.attachmentAsset) {
-      preview = `📎 ${t.dm.sentAFile}`;
-    } else {
-      const maxLength = 30;
-      if (lastMessage.content.length > maxLength) {
-        preview = lastMessage.content.substring(0, maxLength) + "...";
-      } else {
-        preview = lastMessage.content;
-      }
-    }
-
-    return username ? `${username}: ${preview}` : preview;
-  }, [lastMessage, t.dm.noMessagesYet, t.dm.messageDeleted, t.dm.sentAFile]);
 
   const onClick = () => {
     const isVoice = channel.type === ChannelType.VOICE;
@@ -142,7 +104,7 @@ const LeftbarChannelComponent = ({
       return;
     }
 
-    // For TEXT/MAIN channels OR if already in the voice channel → navigate
+    // For TEXT channels OR if already in the voice channel → navigate
     startTransition(() => {
       if (isClientNavigationEnabled) {
         switchChannel(channel.id);
@@ -164,120 +126,96 @@ const LeftbarChannelComponent = ({
   // Si el contexto está disponible, usarlo exclusivamente para determinar el estado activo
   // Esto evita que el canal anterior aparezca como activo cuando navegamos a discovery o conversación
   const isVoiceChannel = channel.type === ChannelType.VOICE;
+  const channelImageUrl = channel.imageAsset?.url ?? null;
 
   return (
     <div className="w-full min-w-0">
       <button
         onClick={onClick}
         onMouseEnter={enableTooltipsOnce}
+        style={
+          channelImageUrl
+            ? { backgroundImage: `url(${channelImageUrl})` }
+            : undefined
+        }
         className={cn(
-          "group flex w-full min-w-0 max-w-full cursor-pointer items-center overflow-hidden rounded-none px-0 text-left transition",
-          channel.type === ChannelType.MAIN
-            ? "shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]"
-            : " hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_-1px_0_rgba(0,0,0,0.38)]",
-
-          // Mayor altura para canal MAIN
-          channel.type === ChannelType.MAIN
-            ? "bg-theme-bg-edit-form/35 px-1.5 py-1"
-            : "py-1",
-
-          // Editorial hover: underline + soft background on hover
-          channel.type === ChannelType.MAIN
-            ? "hover:bg-theme-channel-hover"
-            : "hover:bg-theme-channel-hover",
-
-          // Active = editorial highlight + bold + stronger underline
-          isActive &&
-            channel.type !== ChannelType.MAIN &&
-            "border-theme-border shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_-1px_0_rgba(0,0,0,0.38)]",
-          isActive && "bg-theme-channel-active",
+          "group relative flex w-full min-w-0 max-w-full cursor-pointer items-center overflow-hidden rounded-none px-0 h-13 text-left transition",
+          channelImageUrl
+            ? [
+                "bg-cover bg-center bg-no-repeat",
+                "shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_-1px_0_rgba(0,0,0,0.38)]",
+                isActive &&
+                  "shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_-1px_0_rgba(0,0,0,0.38)]",
+              ]
+            : [
+                "bg-theme-channel-bg shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_-1px_0_rgba(0,0,0,0.38)]",
+                "hover:bg-theme-channel-hover",
+                isActive && "border-theme-border",
+                isActive && "bg-theme-channel-active",
+              ],
           isActive && "border-l-4 border-theme-border-accent-active-channel",
         )}
       >
-        {/* ICONO HOME centrado verticalmente (solo para MAIN) */}
-        {isMainChannel && (
-          <Home
+        {/* Overlay oscuro cuando hay imagen de fondo */}
+        {channelImageUrl && (
+          <div
             className={cn(
-              "ml-1 h-7 w-7 shrink-0 self-center border border-theme-border bg-theme-bg-secondary/40 p-1.5 text-theme-text-tertiary transition shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]",
-              isActive && "bg-theme-channel-active text-theme-accent-primary",
+              "absolute inset-0 pointer-events-none transition",
+              isActive ? "bg-black/50" : "bg-black/45 group-hover:bg-black/35",
             )}
           />
         )}
 
-        {/* CONTENIDO: ICONO + NOMBRE (+ PREVIEW para MAIN) */}
-        <div
-          className={cn(
-            "flex flex-1 min-w-0 overflow-hidden",
-            isMainChannel ? "flex-col items-stretch gap-0" : "items-center",
-          )}
-        >
+        {/* CONTENIDO: ICONO + NOMBRsE */}
+        <div className="relative flex flex-1 ml-1 min-w-0 overflow-hidden items-center">
           <div className="flex w-full min-w-0 items-center">
-            {/* ICON (solo para TEXT y VOICE) */}
-            {!isMainChannel &&
-              (isText ? (
-                <SlashSVG
+            {/* NOMBRE + CONTADOR */}
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <div className="flex min-w-0 items-center">
+                {/* ICON */}
+                {isText ? (
+                  <SlashSVG
+                    className={cn(
+                      "w-5 h-5 shrink-0 text-theme-text-tertiary",
+                      isActive && "text-theme-accent-primary",
+                    )}
+                  />
+                ) : (
+                  <Mic
+                    className={cn(
+                      "w-5 h-5 shrink-0 ml-0.5 text-theme-text-tertiary",
+                      isActive && "text-theme-accent-primary",
+                    )}
+                  />
+                )}
+                <p
                   className={cn(
-                    "w-5 h-5 text-theme-text-tertiary shrink-0",
-                    isActive && "text-theme-accent-primary",
+                    "min-w-0 flex-1 truncate font-medium text-[14.5px] text-theme-text-primary transition",
+                    isText ? "-ml-0.5" : "ml-0.5",
+                    "group-hover:underline underline-offset-4",
+                    isActive &&
+                      "font-semibold text-theme-accent-primary underline underline-offset-4",
                   )}
-                />
-              ) : (
-                <Mic
-                  className={cn(
-                    "w-5 h-5 text-theme-text-tertiary shrink-0 ml-0.5",
-                    isActive && "text-theme-accent-primary",
-                  )}
-                />
-              ))}
-
-            {/* NOMBRE DEL CANAL */}
-            <p
-              className={cn(
-                "min-w-0 flex-1 truncate font-medium text-theme-text-primary transition",
-
-                // Tamaño de texto: MAIN más grande
-                channel.type === ChannelType.MAIN
-                  ? "text-[15.5px]"
-                  : "text-[14.5px]",
-
-                // Margin izquierdo: MAIN tiene más espacio, texto tiene menos, voz tiene más
-                channel.type === ChannelType.MAIN
-                  ? "ml-2 mr-1"
-                  : isText
-                    ? "-ml-0.5"
-                    : "ml-0.5",
-
-                // Editorial hover: underline
-                channel.type === ChannelType.MAIN
-                  ? "tracking-[0.01em]"
-                  : "group-hover:underline underline-offset-4",
-
-                isActive &&
-                  (channel.type === ChannelType.MAIN
-                    ? "font-semibold text-theme-accent-primary"
-                    : "font-semibold text-theme-accent-primary underline underline-offset-4"),
+                >
+                  {channel.name}
+                </p>
+              </div>
+              {isText && (
+                <span className="flex ml-2 items-center gap-1 text-[12px] text-theme-text-muted">
+                  <Users className="w-3.5 h-3.5" />
+                  {channel.channelMemberCount == null ||
+                  channel.channelMemberCount === 0
+                    ? "Sin miembros"
+                    : `${channel.channelMemberCount} ${channel.channelMemberCount === 1 ? "miembro" : "miembros"}`}
+                </span>
               )}
-            >
-              {channel.name}
-            </p>
+            </div>
           </div>
-
-          {/* PREVIEW DEL ÚLTIMO MENSAJE (solo para MAIN) */}
-          {isMainChannel && (
-            <span
-              className={cn(
-                "w-full min-w-0 truncate pl-2 pr-1 text-left text-[13px] leading-tight text-theme-text-tertiary",
-                isActive && "text-theme-text-subtle",
-              )}
-            >
-              {lastMessagePreview}
-            </span>
-          )}
         </div>
 
         {/* INDICADOR DE MENCIÓN */}
         {hasMentionInChannel && !isActive && (
-          <div className="mr-2 flex h-[18px] w-[18px] pr-0.5  shrink-0 items-center justify-center rounded-full bg-theme-notification-bg">
+          <div className="relative mr-2 flex h-[18px] w-[18px] pr-0.5  shrink-0 items-center justify-center rounded-full bg-theme-notification-bg">
             <AtSign
               className="w-3 h-3 ml-0.5 text-theme-text-tertiary"
               strokeWidth={3}
@@ -287,12 +225,12 @@ const LeftbarChannelComponent = ({
 
         {/* INDICADOR DE MENSAJES NO LEÍDOS */}
         {hasUnread && !isActive && (
-          <div className="mr-2 w-2.5 h-2.5 bg-theme-unread-bg rounded-full shrink-0" />
+          <div className="relative mr-2 w-2.5 h-2.5 bg-theme-unread-bg rounded-full shrink-0" />
         )}
 
         {/* ACCIONES */}
         {canManageChannel && (
-          <div className="ml-auto mr-2 hidden shrink-0 items-center gap-2 transition group-hover:flex">
+          <div className="relative ml-auto mr-2 hidden shrink-0 items-center gap-2 transition group-hover:flex">
             {tooltipsEnabled ? (
               <ActionTooltip label={t.board.editChannel}>
                 <Edit
@@ -307,23 +245,18 @@ const LeftbarChannelComponent = ({
               />
             )}
 
-            {/* No mostrar delete en canal MAIN */}
-            {!isMainChannel && (
-              <>
-                {tooltipsEnabled ? (
-                  <ActionTooltip label={t.board.deleteChannel}>
-                    <Trash
-                      onClick={(e) => onAction(e, "deleteChannel")}
-                      className="w-4 h-4 text-theme-text-tertiary hover:text-red-400 transition"
-                    />
-                  </ActionTooltip>
-                ) : (
-                  <Trash
-                    onClick={(e) => onAction(e, "deleteChannel")}
-                    className="w-4 h-4 text-theme-text-tertiary hover:text-red-400 transition"
-                  />
-                )}
-              </>
+            {tooltipsEnabled ? (
+              <ActionTooltip label={t.board.deleteChannel}>
+                <Trash
+                  onClick={(e) => onAction(e, "deleteChannel")}
+                  className="w-4 h-4 text-theme-text-tertiary hover:text-red-400 transition"
+                />
+              </ActionTooltip>
+            ) : (
+              <Trash
+                onClick={(e) => onAction(e, "deleteChannel")}
+                className="w-4 h-4 text-theme-text-tertiary hover:text-red-400 transition"
+              />
             )}
           </div>
         )}
@@ -342,6 +275,8 @@ export const LeftbarChannel = memo(LeftbarChannelComponent, (prev, next) => {
     prev.channel.name === next.channel.name &&
     prev.channel.type === next.channel.type &&
     prev.channel.position === next.channel.position &&
+    prev.channel.imageAsset?.id === next.channel.imageAsset?.id &&
+    prev.channel.channelMemberCount === next.channel.channelMemberCount &&
     prev.role === next.role
   );
 });

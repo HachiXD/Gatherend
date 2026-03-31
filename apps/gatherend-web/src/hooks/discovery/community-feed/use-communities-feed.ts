@@ -15,10 +15,8 @@ import { feedScrollStore } from "@/stores/feed-scroll-store";
 export interface CommunityFeedItem {
   id: string;
   name: string;
-  description: string | null;
   imageAsset: ClientUploadedAsset | null;
   memberCount: number;
-  boardCount: number;
   recentPostCount7d: number;
 }
 
@@ -51,11 +49,11 @@ export const PAGE_GAP = 32; // Gap between pages (mb-8 = 32px)
 async function fetchCommunitiesFeed(
   cursor?: string | null,
 ): Promise<CommunityFeedPage> {
-  const url = new URL("/api/discovery/communities", window.location.origin);
+  const url = new URL("/api/discovery/boards", window.location.origin);
   if (cursor) url.searchParams.set("cursor", cursor);
 
   const res = await fetch(url.toString());
-  if (!res.ok) throw new Error("Error al cargar comunidades");
+  if (!res.ok) throw new Error("Error al cargar boards");
   return res.json();
 }
 
@@ -65,9 +63,9 @@ async function fetchCommunitiesFeed(
  * Merge updated community data into the feed cache.
  * Called when we get fresh data from a community detail view.
  */
-export function mergeCommunityToFeedCache(
+export function mergeBoardToFeedCache(
   queryClient: QueryClient,
-  update: { id: string; memberCount?: number; boardCount?: number },
+  update: { id: string; memberCount?: number },
 ) {
   queryClient.setQueryData(
     COMMUNITIES_FEED_KEY,
@@ -85,7 +83,6 @@ export function mergeCommunityToFeedCache(
               ? {
                   ...item,
                   memberCount: update.memberCount ?? item.memberCount,
-                  boardCount: update.boardCount ?? item.boardCount,
                 }
               : item,
           ),

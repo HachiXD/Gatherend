@@ -91,13 +91,13 @@ async function fetchCommunityPostsFeed(
   cursor?: string | null,
 ): Promise<CommunityPostsFeedPage> {
   const url = new URL(
-    `/api/discovery/communities/${communityId}/posts`,
+    `/api/boards/${communityId}/posts`,
     window.location.origin,
   );
   if (cursor) url.searchParams.set("cursor", cursor);
 
   const res = await fetch(url.toString());
-  if (!res.ok) throw new Error("Error al cargar posts de la comunidad");
+  if (!res.ok) throw new Error("Error al cargar posts del board");
   return res.json();
 }
 

@@ -1,9 +1,8 @@
 "use client";
 
 import { useMemo, memo } from "react";
-import { RightbarSkeleton } from "@/components/board/board-skeletons";
+import { RightbarSkeleton as _RightbarSkeleton } from "@/components/board/board-skeletons";
 import { Separator } from "@/components/ui/separator";
-import { SlotGrid } from "@/components/board/rightbar/members-section/member-grid";
 import { DirectMessages } from "@/components/board/rightbar/rightbar-direct-messages-list";
 import { VoiceControlBar } from "@/components/voice-control-bar";
 import {
@@ -14,12 +13,14 @@ import { usePresence } from "@/hooks/use-presence";
 import { useBoardDataWithStaleness } from "@/hooks/use-board-data-with-staleness";
 import {
   useBoardMemberIds,
-  useBoardSlotProfileIds,
+  useCurrentMemberRole,
 } from "@/hooks/use-board-data";
 import { useProfileRoomSubscriptions } from "@/hooks/use-profile-room-subscriptions";
 import { useProfile } from "@/components/app-shell/providers/profile-provider";
 import { useTranslation } from "@/i18n";
-import { cn } from "@/lib/utils";
+import { cn as _cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { LeftbarClient } from "@/components/board/leftbar/board-leftbar-client";
 
 /**
  *
@@ -50,13 +51,15 @@ function BoardRightbarClientInner() {
       {/* Presencia centralizada - invisible, no causa re-renders visuales */}
       <PresenceManager profileId={profile.id} />
 
-      {/* Members Section - reacciona a cambios del board */}
-      <MembersSectionClient profileId={profile.id} />
+      {/* Channels Section - canales del board activo */}
+      <ChannelsSectionClient />
 
       <Separator className="bg-theme-border-primary rounded-md mt-0 mb-2" />
 
       {/* Direct Messages - independiente del board, memoizado */}
-      <DirectMessagesSectionClient profileId={profile.id} />
+      <div className="h-[49%] shrink-0 flex flex-col min-h-0">
+        <DirectMessagesSectionClient profileId={profile.id} />
+      </div>
 
       {/* Voice Control Bar - aparece al final cuando hay llamada activa */}
       <VoiceControlBar position="right" />
@@ -74,19 +77,11 @@ const PresenceManager = memo(function PresenceManager({
   profileId: string;
 }) {
   const memberIds = useBoardMemberIds();
-  const slotProfileIds = useBoardSlotProfileIds();
   const conversationProfileIds = useConversationProfileIds();
 
   const allProfileIds = useMemo(() => {
-    return [
-      ...new Set([
-        profileId,
-        ...memberIds,
-        ...conversationProfileIds,
-        ...slotProfileIds,
-      ]),
-    ];
-  }, [profileId, memberIds, conversationProfileIds, slotProfileIds]);
+    return [...new Set([profileId, ...memberIds, ...conversationProfileIds])];
+  }, [profileId, memberIds, conversationProfileIds]);
 
   usePresence(allProfileIds);
 
@@ -94,63 +89,45 @@ const PresenceManager = memo(function PresenceManager({
 });
 
 /**
- * Sección de miembros - SE RE-RENDERIZA cuando cambia el board.
- * Esto es correcto porque los miembros cambian por board.
+ * ChannelsSectionClient - Canales del board activo.
+ * Se re-renderiza cuando cambia el board.
  */
-const MembersSectionClient = memo(function MembersSectionClient({
-  profileId,
-}: {
-  profileId: string;
-}) {
+const ChannelsSectionClient = memo(function ChannelsSectionClient() {
   const { t } = useTranslation();
-  const { board, isFetching, showSkeleton } = useBoardDataWithStaleness();
+  const { board, showSkeleton } = useBoardDataWithStaleness();
   const profile = useProfile();
+  const role = useCurrentMemberRole(profile.id);
 
   if (showSkeleton || !board) {
-    return <MembersSkeleton />;
+    return <ChannelsSkeleton />;
   }
 
   return (
-    <div className={cn(isFetching && "opacity-90 transition-opacity")}>
-      <div className="px-4 pt-3 pb-0">
+    <div className="flex flex-col flex-1 min-h-0">
+      <div className="px-3 pt-2 pb-1 shrink-0">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-theme-text-tertiary">
-          {t.rightbar.members} —{" "}
-          {board.slots.filter((s) => s.member !== null).length}/
-          {board.slots.length}
+          {t.board.channels}
         </h2>
       </div>
-
-      <SlotGrid
-        slots={board.slots}
-        currentProfileId={profileId}
-        currentProfile={profile}
-      />
+      <ScrollArea className="flex-1 min-h-0 px-1">
+        <div className="px-1 pb-2">
+          <LeftbarClient boardId={board.id} role={role} />
+        </div>
+      </ScrollArea>
     </div>
   );
 });
 
-function MembersSkeleton() {
+function ChannelsSkeleton() {
   return (
-    <div className="px-4 pt-3 pb-0">
-      <div className="h-4 w-24 bg-theme-bg-tertiary rounded animate-pulse mb-3" />
-      <div className="relative w-full h-[250px] flex items-center justify-center">
-        <div className="grid grid-cols-3 grid-rows-3 gap-3 w-full max-w-[200px]">
-          {/* Fila 1: solo círculo central */}
-          <div />
-          <div className="aspect-square rounded-full bg-theme-bg-tertiary animate-pulse" />
-          <div />
-
-          {/* Fila 2: 3 círculos */}
-          <div className="aspect-square rounded-full bg-theme-bg-tertiary animate-pulse" />
-          <div className="aspect-square rounded-full bg-theme-bg-tertiary animate-pulse" />
-          <div className="aspect-square rounded-full bg-theme-bg-tertiary animate-pulse" />
-
-          {/* Fila 3: solo círculo central */}
-          <div />
-          <div className="aspect-square rounded-full bg-theme-bg-tertiary animate-pulse" />
-          <div />
+    <div className="px-4 pt-3 flex-1">
+      <div className="h-3 w-16 bg-theme-bg-tertiary rounded animate-pulse mb-3" />
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-2 py-1.5">
+          <div className="h-4 w-4 rounded bg-theme-bg-tertiary animate-pulse shrink-0" />
+          <div className="h-3 flex-1 rounded bg-theme-bg-tertiary animate-pulse" />
         </div>
-      </div>
+      ))}
     </div>
   );
 }

@@ -162,7 +162,7 @@ export async function PATCH(
         },
         select: {
           id: true,
-          communityId: true,
+          boardId: true,
           title: true,
           content: true,
           createdAt: true,
@@ -200,7 +200,7 @@ export async function PATCH(
 
     return NextResponse.json({
       id: updatedPost.id,
-      communityId: updatedPost.communityId,
+      boardId: updatedPost.boardId,
       title: updatedPost.title,
       content: updatedPost.content,
       imageAsset: serializeUploadedAsset(updatedPost.imageAsset),
@@ -261,11 +261,14 @@ export async function DELETE(
           id: true,
           deleted: true,
           authorProfileId: true,
-          community: {
+          board: {
             select: {
-              createdById: true,
-              helpers: {
-                where: { profileId: profile.id },
+              profileId: true,
+              members: {
+                where: {
+                  profileId: profile.id,
+                  role: { in: ["OWNER", "ADMIN", "MODERATOR"] },
+                },
                 select: { id: true },
                 take: 1,
               },
@@ -279,10 +282,10 @@ export async function DELETE(
       }
 
       const isAuthor = post.authorProfileId === profile.id;
-      const isCommunityOwner = post.community.createdById === profile.id;
-      const isCommunityHelper = post.community.helpers.length > 0;
+      const isBoardOwner = post.board.profileId === profile.id;
+      const isBoardModerator = post.board.members.length > 0;
 
-      if (!isAuthor && !isCommunityOwner && !isCommunityHelper) {
+      if (!isAuthor && !isBoardOwner && !isBoardModerator) {
         throw new Error("FORBIDDEN");
       }
 

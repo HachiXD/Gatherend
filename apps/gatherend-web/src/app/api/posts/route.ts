@@ -36,12 +36,12 @@ export async function POST(req: Request) {
     }
 
     const {
-      communityId,
+      boardId,
       title,
       content,
       imageAssetId,
     }: {
-      communityId?: unknown;
+      boardId?: unknown;
       title?: unknown;
       content?: unknown;
       imageAssetId?: unknown;
@@ -50,9 +50,9 @@ export async function POST(req: Request) {
     const rawTitle = title !== undefined && typeof title === "string" ? title.trim() : null;
     const trimmedTitle = rawTitle && rawTitle.length > 0 ? rawTitle : null;
 
-    if (!communityId || typeof communityId !== "string" || !UUID_REGEX.test(communityId)) {
+    if (!boardId || typeof boardId !== "string" || !UUID_REGEX.test(boardId)) {
       return NextResponse.json(
-        { error: "Community ID is required and must be valid" },
+        { error: "Board ID is required and must be valid" },
         { status: 400 },
       );
     }
@@ -146,21 +146,21 @@ export async function POST(req: Request) {
       }
     }
 
-    const community = await db.community.findUnique({
-      where: { id: communityId },
+    const board = await db.board.findUnique({
+      where: { id: boardId },
       select: { id: true },
     });
 
-    if (!community) {
+    if (!board) {
       return NextResponse.json(
-        { error: "Community not found" },
+        { error: "Board not found" },
         { status: 404 },
       );
     }
 
     const post = await db.communityPost.create({
       data: {
-        communityId,
+        boardId,
         authorProfileId: profile.id,
         title: trimmedTitle ?? null,
         content: trimmedContent,
@@ -168,7 +168,7 @@ export async function POST(req: Request) {
       },
       select: {
         id: true,
-        communityId: true,
+        boardId: true,
         title: true,
         content: true,
         createdAt: true,
@@ -193,7 +193,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       id: post.id,
-      communityId: post.communityId,
+      boardId: post.boardId,
       title: post.title,
       content: post.content,
       imageAsset: serializeUploadedAsset(post.imageAsset),

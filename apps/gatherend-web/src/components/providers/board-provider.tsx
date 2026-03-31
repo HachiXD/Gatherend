@@ -2,7 +2,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, ReactNode } from "react";
-import { Board, Member, Slot, MemberRole, ChannelType } from "@prisma/client";
+import { Board, Member, MemberRole, ChannelType } from "@prisma/client";
 import { syncUserBoardFromBoardData } from "@/hooks/use-user-boards";
 import type { UsernameColor, UsernameFormatConfig } from "../../../types";
 import type {
@@ -16,18 +16,12 @@ export type BoardChannel = {
   name: string;
   type: ChannelType;
   position: number;
-  parentId: string | null;
   boardId: string;
+  imageAsset: ClientUploadedAsset | null;
+  channelMemberCount: number;
+  isJoined: boolean;
   createdAt: Date;
   updatedAt: Date;
-};
-
-export type BoardCategory = {
-  id: string;
-  name: string;
-  position: number;
-  boardId: string;
-  channels: BoardChannel[];
 };
 
 export type BoardMember = Member & {
@@ -45,16 +39,10 @@ export type BoardMember = Member & {
   };
 };
 
-export type BoardSlot = Slot & {
-  member: BoardMember | null;
-};
-
 export type BoardWithData = Board & {
   imageAsset: ClientUploadedAsset | null;
   channels: BoardChannel[];
-  categories: BoardCategory[];
   members: BoardMember[];
-  slots: BoardSlot[];
 };
 
 interface BoardContextValue {

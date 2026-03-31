@@ -63,10 +63,10 @@ export async function getRedis(): Promise<RedisClientType | null> {
 }
 
 /**
- * Cache helpers for community feed
+ * Cache helpers for board discovery feed
  */
-export const communityFeedCache = {
-  CACHE_PREFIX: "communities:feed:",
+export const boardFeedCache = {
+  CACHE_PREFIX: "boards:feed:",
   MAX_CACHED_PAGES: 10,
   TTL_SECONDS: 120, // 2 min fallback TTL (cron invalidates every 1 min)
 

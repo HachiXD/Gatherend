@@ -187,20 +187,11 @@ export async function POST(
       }
 
       // 5. Expulsar al miembro
-      const slot = await tx.slot.findFirst({
-        where: { boardId, memberId: targetMember.id },
-      });
-
-      if (!slot) {
-        console.error(
-          `[BAN] Inconsistent state: Member ${targetMember.id} has no slot in board ${boardId}`,
-        );
-        throw new Error("INTERNAL_ERROR");
-      }
-
-      await tx.slot.update({
-        where: { id: slot.id },
-        data: { memberId: null },
+      await tx.channelMember.deleteMany({
+        where: {
+          profileId: targetProfileId,
+          channel: { boardId },
+        },
       });
 
       await tx.member.delete({
@@ -250,8 +241,6 @@ export async function POST(
           { error: "Insufficient permissions" },
           { status: 403 },
         );
-      if (error.message === "INTERNAL_ERROR")
-        return NextResponse.json({ error: "Internal Error" }, { status: 500 });
     }
 
     console.error("[BAN_MEMBER]", error);

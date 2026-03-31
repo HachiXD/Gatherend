@@ -27,19 +27,10 @@ export function useMobileTitle(): string | undefined {
 
     // Si hay un canal activo
     if (context.currentChannelId && board) {
-      // Buscar el canal en root channels
-      const rootChannel = board.channels.find(
+      const channel = board.channels.find(
         (ch) => ch.id === context.currentChannelId
       );
-      if (rootChannel) return `/ ${rootChannel.name}`;
-
-      // Buscar en categorías
-      for (const category of board.categories) {
-        const categoryChannel = category.channels.find(
-          (ch) => ch.id === context.currentChannelId
-        );
-        if (categoryChannel) return `/ ${categoryChannel.name}`;
-      }
+      if (channel) return `/ ${channel.name}`;
     }
 
     // Fallback al nombre del board

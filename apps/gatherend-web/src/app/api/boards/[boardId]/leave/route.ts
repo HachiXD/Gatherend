@@ -110,28 +110,14 @@ async function handleLeaveBoard(
         throw new Error("OWNER_CANNOT_LEAVE");
       }
 
-      // 3. Encontrar el slot del usuario
-      const userSlot = await tx.slot.findFirst({
+      // 3. Eliminar membresías de canales y member
+      await tx.channelMember.deleteMany({
         where: {
-          boardId,
-          memberId: member.id,
+          profileId: profile.id,
+          channel: { boardId },
         },
       });
 
-      if (!userSlot) {
-        console.error(
-          `[LEAVE] Inconsistent state: Member ${member.id} has no slot in board ${boardId}`,
-        );
-        throw new Error("INTERNAL_ERROR");
-      }
-
-      // 4. Liberar el slot (preservar el modo original)
-      await tx.slot.update({
-        where: { id: userSlot.id },
-        data: { memberId: null },
-      });
-
-      // 5. Borrar el member
       await tx.member.delete({
         where: { id: member.id },
       });
@@ -158,8 +144,6 @@ async function handleLeaveBoard(
           { error: "The owner cannot leave the board" },
           { status: 403 },
         );
-      if (error.message === "INTERNAL_ERROR")
-        return NextResponse.json({ error: "Internal Error" }, { status: 500 });
     }
 
     console.error("[LEAVE_BOARD]", error);

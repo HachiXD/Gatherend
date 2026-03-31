@@ -18,13 +18,13 @@ import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 
 const ReportButton = memo(function ReportButton({
-  communityId,
-  communityName,
+  boardId,
+  boardName,
   imageUrl,
   borderColor,
 }: {
-  communityId: string;
-  communityName: string;
+  boardId: string;
+  boardName: string;
   imageUrl: string | null;
   borderColor: string;
 }) {
@@ -35,13 +35,13 @@ const ReportButton = memo(function ReportButton({
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      onOpen("reportCommunity", {
-        reportCommunityId: communityId,
-        reportCommunityName: communityName,
-        reportCommunityImageUrl: imageUrl,
+      onOpen("reportBoard", {
+        reportBoardId: boardId,
+        reportBoardName: boardName,
+        reportBoardImageUrl: imageUrl,
       });
     },
-    [onOpen, communityId, communityName, imageUrl],
+    [onOpen, boardId, boardName, imageUrl],
   );
 
   const buttonElement = (
@@ -62,7 +62,7 @@ const ReportButton = memo(function ReportButton({
     >
       {isHovered ? (
         <Suspense fallback={buttonElement}>
-          <ActionTooltip label={t.discovery.reportCommunity} side="left">
+          <ActionTooltip label={t.discovery.reportBoard} side="left">
             {buttonElement}
           </ActionTooltip>
         </Suspense>
@@ -78,7 +78,6 @@ export interface CommunityCardProps {
   name: string;
   imageAsset: ClientUploadedAsset | null;
   memberCount: number;
-  boardCount: number;
   recentPostCount7d: number;
   onExplore: (id: string) => void;
   className?: string;
@@ -89,7 +88,6 @@ function CommunityCardInner({
   name,
   imageAsset,
   memberCount,
-  boardCount,
   recentPostCount7d,
   onExplore,
   className,
@@ -167,8 +165,8 @@ function CommunityCardInner({
 
         {/* REPORT BUTTON - isolated component with its own hover state */}
         <ReportButton
-          communityId={id}
-          communityName={name}
+          boardId={id}
+          boardName={name}
           imageUrl={imageUrl}
           borderColor={derivedColors.reliefBorderLight}
         />
@@ -178,9 +176,7 @@ function CommunityCardInner({
       <div className="flex flex-row items-center px-4 py-2">
         <div className="flex flex-col gap-1">
           <div className="text-[14px] text-white/70 font-medium">
-            {memberCount} miembro{memberCount === 1 ? "" : "s"} — {boardCount}{" "}
-            board{boardCount === 1 ? "" : "s"} abierto
-            {boardCount === 1 ? "" : "s"} — {recentPostCount7d} post
+            {memberCount} miembro{memberCount === 1 ? "" : "s"} — {recentPostCount7d} post
             {recentPostCount7d === 1 ? "" : "s"} esta semana
           </div>
         </div>

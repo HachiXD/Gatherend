@@ -85,17 +85,17 @@ export async function POST(
         select: {
           id: true,
           refreshedAt: true,
-          communityId: true,
+          isPrivate: true,
         },
       });
 
       return updated;
     });
 
-    // Emitir evento de discovery si el board tiene communityId
-    if (result.communityId) {
+    // Emitir evento de discovery si el board es público
+    if (result.isPrivate === false) {
       const socketUrl = `${process.env.SOCKET_SERVER_URL}/emit-to-room`;
-      const roomName = `discovery:community:${result.communityId}`;
+      const roomName = `discovery:board:${result.id}`;
 
       // Fire-and-forget - no bloquear la respuesta
       fetch(socketUrl, {
@@ -107,7 +107,7 @@ export async function POST(
         body: JSON.stringify({
           room: roomName,
           event: "discovery:board-bumped",
-          data: { communityId: result.communityId, boardId: result.id },
+          data: { boardId: result.id },
         }),
         signal: AbortSignal.timeout(3000),
       }).catch((err) => {

@@ -67,27 +67,11 @@ export function patchBoardProfiles(
     return { ...m, profile: nextProfile };
   });
 
-  const nextSlots = board.slots.map((s) => {
-    const pid = s.member?.profile?.id;
-    if (pid !== profileId || !s.member?.profile) return s;
-    const nextProfile = applyPatch(s.member.profile as any, patch);
-    if (nextProfile === s.member.profile) return s;
-    changed = true;
-    return {
-      ...s,
-      member: {
-        ...s.member,
-        profile: nextProfile,
-      },
-    };
-  });
-
   if (!changed) return board;
 
   return {
     ...board,
     members: nextMembers,
-    slots: nextSlots,
   };
 }
 

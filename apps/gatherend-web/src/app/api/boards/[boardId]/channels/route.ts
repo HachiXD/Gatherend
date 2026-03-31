@@ -7,6 +7,55 @@ import { revalidatePath } from "next/cache";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
 
+async function notifyChannelCreated(
+  boardId: string,
+  channel: {
+    id: string;
+    name: string;
+    type: ChannelType;
+    position: number;
+    boardId: string;
+    imageAssetId: string | null;
+    profileId: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  },
+) {
+  try {
+    const socketUrl =
+      process.env.SOCKET_SERVER_URL || process.env.NEXT_PUBLIC_SOCKET_URL;
+    const secret = process.env.INTERNAL_API_SECRET;
+    if (!socketUrl || !secret) return;
+
+    await fetch(`${socketUrl}/emit-to-room`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Internal-Secret": secret,
+      },
+      body: JSON.stringify({
+        room: `board:${boardId}`,
+        event: "board:channel-created",
+        data: {
+          boardId,
+          channel: {
+            ...channel,
+            createdAt: channel.createdAt.toISOString(),
+            updatedAt: channel.updatedAt.toISOString(),
+            imageAsset: null,
+            channelMemberCount: 0,
+            isJoined: false,
+          },
+          timestamp: Date.now(),
+        },
+      }),
+      signal: AbortSignal.timeout(3000),
+    });
+  } catch (error) {
+    console.error("[NOTIFY_CHANNEL_CREATED]", error);
+  }
+}
+
 // UUID validation regex
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -33,14 +82,14 @@ export async function POST(
     }
 
     // Parse body with error handling
-    let body: { name?: unknown; type?: unknown; categoryId?: unknown };
+    let body: { name?: unknown; type?: unknown; imageAssetId?: unknown };
     try {
       body = await req.json();
     } catch {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const { name, type, categoryId } = body;
+    const { name, type, imageAssetId } = body;
 
     // Validar name
     if (!name || typeof name !== "string" || name.trim().length === 0) {
@@ -57,11 +106,11 @@ export async function POST(
       );
     }
 
-    // Validar categoryId si se proporciona
-    if (categoryId) {
-      if (typeof categoryId !== "string" || !UUID_REGEX.test(categoryId)) {
+    // Validar imageAssetId si se proporciona
+    if (imageAssetId !== undefined && imageAssetId !== null) {
+      if (typeof imageAssetId !== "string" || !UUID_REGEX.test(imageAssetId)) {
         return NextResponse.json(
-          { error: "Invalid category ID" },
+          { error: "Invalid image asset ID" },
           { status: 400 },
         );
       }
@@ -76,18 +125,10 @@ export async function POST(
       );
     }
 
-    // No permitir crear canales tipo MAIN vía API
-    if (type === ChannelType.MAIN) {
-      return NextResponse.json(
-        { error: "Cannot create MAIN channel type" },
-        { status: 400 },
-      );
-    }
-
     // Ejecutar verificación de permisos y creación en transacción
     const channel = await db.$transaction(async (tx) => {
-      // Verificar permisos, categoría (si existe) y contar canales en paralelo
-      const [member, category, channelCount] = await Promise.all([
+      // Verificar permisos y contar canales en paralelo
+      const [member, channelCount] = await Promise.all([
         tx.member.findFirst({
           where: {
             boardId,
@@ -96,11 +137,6 @@ export async function POST(
           },
           select: { role: true },
         }),
-        categoryId
-          ? tx.category.findFirst({
-              where: { id: categoryId as string, boardId },
-            })
-          : Promise.resolve(null),
         tx.channel.count({ where: { boardId } }),
       ]);
 
@@ -113,16 +149,8 @@ export async function POST(
         throw new Error("MAX_CHANNELS");
       }
 
-      // Si hay categoryId, verificar que existe
-      if (categoryId && !category) {
-        throw new Error("CATEGORY_NOT_FOUND");
-      }
-
-      // Determinar posición según si es root o dentro de categoría
-      const parentId = (categoryId as string | undefined) || null;
-
       const firstChannel = await tx.channel.findFirst({
-        where: { boardId, parentId },
+        where: { boardId },
         orderBy: { position: "asc" },
       });
 
@@ -135,15 +163,17 @@ export async function POST(
           name: (name as string).trim(),
           type: type as ChannelType,
           boardId,
-          parentId,
           position: newPosition,
           profileId: profile.id,
+          imageAssetId: (imageAssetId as string | null) ?? null,
         },
       });
     });
 
     // Invalidar cache del layout para forzar re-render
     revalidatePath(`/boards/${boardId}`);
+
+    void notifyChannelCreated(boardId, channel);
 
     return NextResponse.json(channel);
   } catch (error) {
@@ -153,11 +183,6 @@ export async function POST(
         return NextResponse.json(
           { error: "Insufficient permissions" },
           { status: 403 },
-        );
-      if (error.message === "CATEGORY_NOT_FOUND")
-        return NextResponse.json(
-          { error: "Category not found" },
-          { status: 404 },
         );
       if (error.message === "MAX_CHANNELS")
         return NextResponse.json(

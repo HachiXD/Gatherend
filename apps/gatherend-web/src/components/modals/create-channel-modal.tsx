@@ -30,10 +30,17 @@ import { Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SlashSVG } from "@/lib/slash";
 import { useTranslation } from "@/i18n";
+import { FileUpload } from "@/components/file-upload";
+import { getStoredUploadAssetId } from "@/lib/upload-values";
 import type {
   BoardWithData,
   BoardChannel,
 } from "@/components/providers/board-provider";
+
+const PANEL_SHELL =
+  "border border-theme-border bg-theme-bg-secondary/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.28),inset_0_-1px_0_rgba(0,0,0,0.28)]";
+const SECTION_KICKER =
+  "text-[11px] -my-1 font-bold uppercase tracking-[0.08em] text-theme-text-subtle";
 
 export const CreateChannelModal = () => {
   const { isOpen, onClose, type, data } = useModal();
@@ -41,7 +48,7 @@ export const CreateChannelModal = () => {
   const { t } = useTranslation();
 
   const isModalOpen = isOpen && type === "createChannel";
-  const { board, boardId: dataBoardId, categoryId } = data;
+  const { board, boardId: dataBoardId } = data;
 
   // Usar boardId del data (preferir boardId directo sobre board.id)
   const boardId = dataBoardId || board?.id;
@@ -51,6 +58,7 @@ export const CreateChannelModal = () => {
       message: t.modals.createChannel.nameRequired,
     }),
     type: z.nativeEnum(ChannelType),
+    imageUpload: z.string().optional(),
   });
 
   const form = useForm({
@@ -58,6 +66,7 @@ export const CreateChannelModal = () => {
     defaultValues: {
       name: "",
       type: ChannelType.TEXT,
+      imageUpload: "",
     },
   });
 
@@ -65,8 +74,9 @@ export const CreateChannelModal = () => {
   const createChannelMutation = useMutation({
     mutationFn: async (values: z.infer<typeof formSchema>) => {
       const response = await axios.post(`/api/boards/${boardId}/channels`, {
-        ...values,
-        categoryId: categoryId ?? null,
+        name: values.name,
+        type: values.type,
+        imageAssetId: getStoredUploadAssetId(values.imageUpload),
       });
 
       return response.data as BoardChannel;
@@ -74,49 +84,33 @@ export const CreateChannelModal = () => {
     onMutate: async (values) => {
       if (!boardId) return;
 
-      // Cancelar queries en progreso
       await queryClient.cancelQueries({ queryKey: ["board", boardId] });
 
-      // Snapshot del estado anterior
       const previousBoard = queryClient.getQueryData<BoardWithData>([
         "board",
         boardId,
       ]);
 
-      // Crear canal optimista
       const tempId = `temp-${Date.now()}`;
       const optimisticChannel: BoardChannel = {
         id: tempId,
         name: values.name,
         type: values.type,
         boardId: boardId,
-        parentId: categoryId ?? null,
-        position: 999, // Se corregirá cuando la API responda
+        position: 999,
+        imageAsset: null,
+        channelMemberCount: 0,
+        isJoined: true,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
 
-      // Actualizar cache optimísticamente
       queryClient.setQueryData<BoardWithData>(["board", boardId], (old) => {
         if (!old) return old;
-
-        if (categoryId) {
-          // Agregar a categoría
-          return {
-            ...old,
-            categories: old.categories.map((cat) =>
-              cat.id === categoryId
-                ? { ...cat, channels: [...cat.channels, optimisticChannel] }
-                : cat,
-            ),
-          };
-        } else {
-          // Agregar como canal root
-          return {
-            ...old,
-            channels: [...old.channels, optimisticChannel],
-          };
-        }
+        return {
+          ...old,
+          channels: [...old.channels, optimisticChannel],
+        };
       });
 
       return { previousBoard, tempId };
@@ -124,34 +118,14 @@ export const CreateChannelModal = () => {
     onSuccess: (newChannel, _variables, context) => {
       if (!boardId) return;
 
-      // Reemplazar el canal optimista con el real
       queryClient.setQueryData<BoardWithData>(["board", boardId], (old) => {
         if (!old || !context?.tempId) return old;
-
-        if (newChannel.parentId) {
-          // Está en una categoría
-          return {
-            ...old,
-            categories: old.categories.map((cat) =>
-              cat.id === newChannel.parentId
-                ? {
-                    ...cat,
-                    channels: cat.channels.map((ch) =>
-                      ch.id === context.tempId ? newChannel : ch,
-                    ),
-                  }
-                : cat,
-            ),
-          };
-        } else {
-          // Es un canal root
-          return {
-            ...old,
-            channels: old.channels.map((ch) =>
-              ch.id === context.tempId ? newChannel : ch,
-            ),
-          };
-        }
+        return {
+          ...old,
+          channels: old.channels.map((ch) =>
+            ch.id === context.tempId ? newChannel : ch,
+          ),
+        };
       });
 
       toast.success(t.modals.createChannel.success);
@@ -162,7 +136,6 @@ export const CreateChannelModal = () => {
       console.error(error);
       toast.error(t.modals.createChannel.error);
 
-      // Rollback al estado anterior
       if (context?.previousBoard && boardId) {
         queryClient.setQueryData(["board", boardId], context.previousBoard);
       }
@@ -225,6 +198,31 @@ export const CreateChannelModal = () => {
                     </FormItem>
                   )}
                 />
+                <div className={cn("p-3", PANEL_SHELL)}>
+                  <div className="uppercase text-[15px] font-bold text-theme-text-subtle mb-2">
+                    Imagen (opcional)
+                  </div>
+                  <div className="flex items-center justify-center text-center">
+                    <FormField
+                      control={form.control}
+                      name="imageUpload"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <FileUpload
+                              endpoint="boardImage"
+                              value={field.value || ""}
+                              onChange={field.onChange}
+                              uploadButtonClassName="rounded-none border-theme-border-subtle bg-theme-bg-cancel-button text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+                              label="Sube una imagen para este room"
+                            />
+                          </FormControl>
+                          <FormMessage className="-mt-1 text-[11px] leading-tight" />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
                 <FormField
                   control={form.control}
                   name="type"

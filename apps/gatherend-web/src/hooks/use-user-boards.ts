@@ -1,7 +1,6 @@
 "use client";
 
 import { QueryClient, useQuery } from "@tanstack/react-query";
-import { ChannelType } from "@prisma/client";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 import type { BoardWithData } from "@/components/providers/board-provider";
 
@@ -10,7 +9,6 @@ export interface UserBoard {
   name: string;
   imageAsset: ClientUploadedAsset | null;
   channels: { id: string }[];
-  mainChannelId: string | null;
 }
 
 interface PartialUserBoardInput {
@@ -52,7 +50,6 @@ export function upsertUserBoardFromJoin(
     name: input.name,
     imageAsset: input.imageAsset,
     channels: input.targetChannelId ? [{ id: input.targetChannelId }] : [],
-    mainChannelId: input.targetChannelId ?? null,
   };
 
   queryClient.setQueryData<UserBoard[]>(["user-boards"], (old) =>
@@ -64,20 +61,13 @@ export function syncUserBoardFromBoardData(
   queryClient: QueryClient,
   board: BoardWithData,
 ): void {
-  const allChannels = [
-    ...board.channels,
-    ...board.categories.flatMap((category) => category.channels),
-  ];
-
-  const mainChannel =
-    allChannels.find((channel) => channel.type === ChannelType.MAIN) ?? null;
+  const allChannels = board.channels;
 
   const nextBoard: UserBoard = {
     id: board.id,
     name: board.name,
     imageAsset: board.imageAsset,
     channels: allChannels.map((channel) => ({ id: channel.id })),
-    mainChannelId: mainChannel?.id ?? null,
   };
 
   queryClient.setQueryData<UserBoard[]>(["user-boards"], (old) =>

@@ -1,15 +1,15 @@
 /**
- * Cron endpoint to update community rankings
+ * Cron endpoint to update board rankings
  *
  * Called every 1 minute by external cron service (Railway cron, Vercel cron, etc.)
  *
  * This updates:
- * - memberCount: Total explicit community memberships
- * - feedBoardCount: Boards currently in discovery feed (within 48h window + has vacant slots)
- * - rankingScore: LN(memberCount + 1) + feedBoardCount * 0.5 + recentPostCount7d * 0.2
+ * - memberCount: Total members of the board (from Member table)
  * - recentPostCount7d: Non-deleted posts created in the last 7 days
+ * - rankingScore: LN(memberCount + 1) + recentPostCount7d * 0.2
  * - rankedAt: Timestamp of last update
  *
+ * Only public boards (isPrivate = false) are ranked.
  * After update, invalidates Redis cache so fresh data is served.
  *
  * SECURITY:
@@ -20,7 +20,7 @@
 
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { communityFeedCache } from "@/lib/redis";
+import { boardFeedCache } from "@/lib/redis";
 import { logger } from "@/lib/logger";
 
 // No cachear requests
@@ -28,9 +28,6 @@ export const dynamic = "force-dynamic";
 
 // Verify cron secret to prevent unauthorized calls
 const CRON_SECRET = process.env.CRON_SECRET;
-
-// Must match the value in /api/discovery/communities/[communityId]/boards
-const MAX_AGE_HOURS = 48.0;
 
 // Max execution time before we log a warning (in ms)
 const SLOW_QUERY_THRESHOLD_MS = 5000;
@@ -63,58 +60,42 @@ export async function POST(req: Request) {
 
     const startTime = Date.now();
 
-    // Window start for feed visibility (same as boards endpoint)
-    const windowStart = new Date(Date.now() - MAX_AGE_HOURS * 60 * 60 * 1000);
     const postsWindowStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-    // Update all community rankings in a single query
+    // Update all public board rankings in a single query
     const result = await db.$executeRaw`
-      WITH community_stats AS (
-        SELECT 
-          c.id,
-          -- Count explicit community memberships
+      WITH board_stats AS (
+        SELECT
+          b.id,
+          -- Count board members
           COALESCE((
             SELECT COUNT(*)
-            FROM "CommunityMember" cm
-            WHERE cm."communityId" = c.id
+            FROM "Member" m
+            WHERE m."boardId" = b.id
           ), 0)::INTEGER as member_count,
-          -- Count boards currently in discovery feed:
-          -- 1. Within 48h window (createdAt or refreshedAt)
-          -- 2. Has at least one vacant discovery slot
-          COALESCE((
-            SELECT COUNT(DISTINCT b.id)
-            FROM "Board" b
-            WHERE b."communityId" = c.id
-              AND (b."createdAt" >= ${windowStart} OR b."refreshedAt" >= ${windowStart})
-              AND EXISTS (
-                SELECT 1 FROM "Slot" s
-                WHERE s."boardId" = b.id
-                  AND s.mode = 'BY_DISCOVERY'
-                  AND s."memberId" IS NULL
-                )
-          ), 0)::INTEGER as feed_board_count,
+          -- Count non-deleted posts in the last 7 days
           COALESCE((
             SELECT COUNT(*)
             FROM "CommunityPost" p
-            WHERE p."communityId" = c.id
+            WHERE p."boardId" = b.id
               AND p.deleted = false
               AND p."createdAt" >= ${postsWindowStart}
           ), 0)::INTEGER as recent_post_count_7d
-        FROM "Community" c
+        FROM "Board" b
+        WHERE b."isPrivate" = false
       )
-      UPDATE "Community" c
-      SET 
-        "memberCount" = cs.member_count,
-        "feedBoardCount" = cs.feed_board_count,
-        "recentPostCount7d" = cs.recent_post_count_7d,
-        "rankingScore" = LN(cs.member_count + 1) + cs.feed_board_count * 0.5 + cs.recent_post_count_7d * 0.2,
+      UPDATE "Board" b
+      SET
+        "memberCount" = bs.member_count,
+        "recentPostCount7d" = bs.recent_post_count_7d,
+        "rankingScore" = LN(bs.member_count + 1) + bs.recent_post_count_7d * 0.2,
         "rankedAt" = CURRENT_TIMESTAMP
-      FROM community_stats cs
-      WHERE c.id = cs.id
+      FROM board_stats bs
+      WHERE b.id = bs.id
     `;
 
     // Invalidate Redis cache
-    await communityFeedCache.invalidateAll();
+    await boardFeedCache.invalidateAll();
 
     const duration = Date.now() - startTime;
 
@@ -165,6 +146,5 @@ export async function GET(req: Request) {
   return NextResponse.json({
     success: true,
     message: "Cron endpoint healthy. Use POST to trigger update.",
-    maxAgeHours: MAX_AGE_HOURS,
   });
 }

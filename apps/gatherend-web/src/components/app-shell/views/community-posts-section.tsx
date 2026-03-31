@@ -40,7 +40,8 @@ import { getUsernameFormatClasses } from "@/lib/username-format";
 import { cn } from "@/lib/utils";
 import { ActionTooltip } from "@/components/action-tooltip";
 import { useModal } from "@/hooks/use-modal-store";
-import { useCommunityOverview } from "@/hooks/discovery/use-community-overview";
+import { useCurrentMemberRole } from "@/hooks/use-board-data";
+import { MemberRole } from "@prisma/client";
 import { getOptimizedStaticUiImageUrl } from "@/lib/ui-image-optimizer";
 import { ImagePlus, X } from "lucide-react";
 import {
@@ -801,9 +802,11 @@ function CommunityPostsSectionInner({
     [],
   );
   const expandedCommentsOrderRef = useRef<string[]>([]);
-  const { community } = useCommunityOverview(communityId, {
-    enabled: !!communityId,
-  });
+  const role = useCurrentMemberRole(profile.id);
+  const canDeleteAnyPost =
+    role === MemberRole.OWNER ||
+    role === MemberRole.ADMIN ||
+    role === MemberRole.MODERATOR;
   const {
     allPosts,
     pageSlots,
@@ -1067,8 +1070,7 @@ function CommunityPostsSectionInner({
                         post.author.badgeSticker?.asset?.url || null;
                       const postImageUrl = post.imageAsset?.url || null;
                       const isOwnPost = post.author.id === profile.id;
-                      const canDeletePost =
-                        isOwnPost || Boolean(community?.canDeleteAnyPost);
+                      const canDeletePost = isOwnPost || canDeleteAnyPost;
                       const isEditing = editingPostId === post.id;
                       const isReplying = replyingToPostId === post.id;
                       const latestCommentIds = new Set(
@@ -1199,7 +1201,7 @@ function CommunityPostsSectionInner({
                                   <>
                                     {post.title ? (
                                       <>
-                                        {/* Con título: fila 1 = badge+timestamp, fila 2 = título */}
+                                        {/* Con t├¡tulo: fila 1 = badge+timestamp, fila 2 = t├¡tulo */}
                                         <div className="mb-0 flex flex-wrap items-center gap-1">
                                           {(post.author.badge ||
                                             authorBadgeStickerUrl) && (
@@ -1249,7 +1251,7 @@ function CommunityPostsSectionInner({
                                       </>
                                     ) : (
                                       <>
-                                        {/* Sin título: badge+timestamp en fila 1 como siempre */}
+                                        {/* Sin t├¡tulo: badge+timestamp en fila 1 como siempre */}
                                         <div className="mb-0 flex flex-wrap items-center gap-1">
                                           {(post.author.badge ||
                                             authorBadgeStickerUrl) && (
@@ -1577,9 +1579,7 @@ function CommunityPostsSectionInner({
                                             onDelete={
                                               (comment.author.id ===
                                                 profile.id ||
-                                                Boolean(
-                                                  community?.canDeleteAnyPost,
-                                                )) &&
+                                                canDeleteAnyPost) &&
                                               !comment.deleted
                                                 ? (commentId) =>
                                                     onOpen(

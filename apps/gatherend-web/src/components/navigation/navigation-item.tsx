@@ -10,11 +10,10 @@ import { useMentionStore } from "@/hooks/use-mention-store";
 import { useNavigationStore } from "@/hooks/use-navigation-store";
 import { getLastChannelForBoard } from "@/contexts/board-switch-context";
 import { AtSign } from "lucide-react";
-import type { BoardWithData } from "@/components/providers/board-provider";
 import { fetchWithRetry } from "@/lib/fetch-with-retry";
 import { getOptimizedStaticUiImageUrl } from "@/lib/ui-image-optimizer";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
-import { ChannelType } from "@prisma/client";
+import type { BoardWithData } from "@/components/providers/board-provider";
 
 const STORAGE_DOMAIN = process.env.NEXT_PUBLIC_STORAGE_DOMAIN || "";
 
@@ -24,7 +23,6 @@ interface NavigationItemProps {
   imageAsset?: ClientUploadedAsset | null;
   name: string;
   channelIds: string[];
-  mainChannelId?: string | null;
   /** Si este board está activo. Pasado como prop desde NavigationSidebar
    *  para evitar que cada item se suscriba al contexto completo.
    *  Cuando isActive cambia, solo 2 items re-renderizan (el anterior y el nuevo activo).
@@ -47,7 +45,6 @@ const NavigationItemComponent = ({
   imageAsset: _imageAsset,
   name,
   channelIds,
-  mainChannelId = null,
   isActive = false,
 }: NavigationItemProps) => {
   const router = useRouter();
@@ -179,14 +176,8 @@ const NavigationItemComponent = ({
   // Helper para obtener el primer canal de un board
   const getFirstChannelFromBoard = useCallback(
     (board: BoardWithData): string | null => {
-      const allChannels = [
-        ...board.channels,
-        ...board.categories.flatMap((cat) => cat.channels),
-      ];
+      const allChannels = [...board.channels];
       if (allChannels.length === 0) return null;
-      // Prioridad: canal MAIN > primer canal por posición
-      const mainChannel = allChannels.find((c) => c.type === ChannelType.MAIN);
-      if (mainChannel) return mainChannel.id;
       const sortedChannels = [...allChannels].sort(
         (a, b) => a.position - b.position,
       );
@@ -238,7 +229,7 @@ const NavigationItemComponent = ({
     }
 
     // 3. No hay cache - URL optimista inmediata, pero mantener UI actual hasta tener datos.
-    pushOptimisticBoardUrl(id, lastChannelId ?? mainChannelId);
+    pushOptimisticBoardUrl(id, lastChannelId ?? null);
     setIsNavigating(true);
     try {
       const response = await fetchWithRetry(`/api/boards/${id}`, {
@@ -270,7 +261,6 @@ const NavigationItemComponent = ({
     isNavigationReady,
     router,
     id,
-    mainChannelId,
     queryClient,
     getFirstChannelFromBoard,
     pushOptimisticBoardUrl,

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { ChannelType } from "@prisma/client";
 import {
   useBoardSwitchNavigation,
   useBoardSwitchRouting,
@@ -13,8 +12,7 @@ import type { BoardWithData } from "@/components/providers/board-provider";
 /**
  * Selecciona el canal objetivo para redirección basado en prioridades:
  * 1. Último canal visitado (desde localStorage)
- * 2. Canal MAIN si existe
- * 3. Primer canal por posición
+ * 2. Primer canal por posición
  *
  * @param board - Board data
  * @param lastChannelId - Último canal visitado
@@ -24,10 +22,7 @@ function selectTargetChannel(
   board: BoardWithData,
   lastChannelId: string | null,
 ): string | null {
-  const allChannels = [
-    ...board.channels,
-    ...board.categories.flatMap((cat) => cat.channels),
-  ];
+  const allChannels = [...board.channels];
 
   if (allChannels.length === 0) return null;
 
@@ -37,11 +32,7 @@ function selectTargetChannel(
     if (found) return found.id;
   }
 
-  // Prioridad 2: Canal MAIN
-  const mainChannel = allChannels.find((c) => c.type === ChannelType.MAIN);
-  if (mainChannel) return mainChannel.id;
-
-  // Prioridad 3: Primer canal por posición
+  // Prioridad 2: Primer canal por posición
   const sortedChannels = [...allChannels].sort(
     (a, b) => a.position - b.position,
   );
@@ -61,8 +52,7 @@ interface UseChannelRedirectionResult {
  *
  * Prioridad de redirección:
  * 1. Último channel visitado (desde localStorage) si aún existe
- * 2. Canal MAIN si existe
- * 3. Primer canal por posición
+ * 2. Primer canal por posición
  */
 export function useChannelRedirection(): UseChannelRedirectionResult {
   const {

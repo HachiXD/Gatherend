@@ -169,26 +169,6 @@ export async function POST(req: Request) {
           { status: 400 },
         );
       }
-    } else if (targetType === "COMMUNITY") {
-      const community = await db.community.findUnique({
-        where: { id: targetId },
-        select: { id: true, createdById: true },
-      });
-      if (!community) {
-        return NextResponse.json(
-          { error: "Community not found" },
-          { status: 404 },
-        );
-      }
-
-      resolvedTargetOwnerId = community.createdById || null;
-
-      if (community.createdById === profile.id) {
-        return NextResponse.json(
-          { error: "You cannot report your own community" },
-          { status: 400 },
-        );
-      }
     } else if (targetType === "COMMUNITY_POST") {
       const post = await db.communityPost.findUnique({
         where: { id: targetId },

@@ -12,7 +12,6 @@ import { PinnedMessagesModal } from "@/components/modals/pinned-messages-modal";
 import { ReportMessageModal } from "@/components/modals/report-message-modal";
 import { ReportBoardModal } from "@/components/modals/report-board-modal";
 import { ReportProfileModal } from "@/components/modals/report-profile-modal";
-import { ReportCommunityModal } from "@/components/modals/report-community-modal";
 import { ReportCommunityPostModal } from "@/components/modals/report-community-post-modal";
 import { DeleteCommunityPostModal } from "@/components/modals/delete-community-post-modal";
 import { DeleteCommunityPostCommentModal } from "@/components/modals/delete-community-post-comment-modal";
@@ -38,7 +37,6 @@ export const ModalProvider = () => {
       <ReportMessageModal />
       <ReportBoardModal />
       <ReportProfileModal />
-      <ReportCommunityModal />
       <ReportCommunityPostModal />
       <DeleteCommunityPostModal />
       <DeleteCommunityPostCommentModal />

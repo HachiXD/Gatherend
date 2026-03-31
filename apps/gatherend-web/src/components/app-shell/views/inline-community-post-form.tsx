@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/file-upload";
 import { useUpload } from "@/hooks/use-upload";
 import { communityPostsKey } from "@/hooks/discovery/posts-feed/use-community-posts-feed";
-import { communityOverviewKey } from "@/hooks/discovery/use-community-overview";
+import type { BoardWithData } from "@/components/providers/board-provider";
+
 import { getStoredUploadAssetId } from "@/lib/upload-values";
 
 interface InlineCommunityPostFormProps {
@@ -114,20 +115,20 @@ export function InlineCommunityPostForm({
       setIsSubmitting(true);
 
       await axios.post("/api/posts", {
-        communityId,
+        boardId: communityId,
         title: trimmedTitle,
         content: trimmedContent,
         imageAssetId: imageAssetId ?? null,
       });
 
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: communityPostsKey(communityId),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: communityOverviewKey(communityId),
-        }),
-      ]);
+      queryClient.setQueryData<BoardWithData>(["board", communityId], (old) => {
+        if (!old) return old;
+        return { ...old, recentPostCount7d: old.recentPostCount7d + 1 };
+      });
+
+      await queryClient.invalidateQueries({
+        queryKey: communityPostsKey(communityId),
+      });
 
       toast.success("Post publicado");
       setTitle("");

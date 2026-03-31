@@ -18,28 +18,28 @@ function getPayloadId(payload: unknown, key: string): string | null {
  * Register discovery feed socket event handlers
  */
 export function registerDiscoveryHandlers(io: Server, socket: Socket) {
-  // SUBSCRIBE - User subscribes to new boards in a community
+  // SUBSCRIBE - User subscribes to a board's discovery feed
 
   socket.on("discovery:subscribe", (payload?: unknown) => {
     try {
-      const communityId = getPayloadId(payload, "communityId");
-      if (!communityId) return;
+      const boardId = getPayloadId(payload, "boardId");
+      if (!boardId) return;
 
-      const roomName = `discovery:community:${communityId}`;
+      const roomName = `discovery:board:${boardId}`;
       socket.join(roomName);
     } catch (error) {
       logger.error(`Error in discovery:subscribe for ${socket.id}:`, error);
     }
   });
 
-  // UNSUBSCRIBE - User unsubscribes from a community
+  // UNSUBSCRIBE - User unsubscribes from a board's discovery feed
 
   socket.on("discovery:unsubscribe", (payload?: unknown) => {
     try {
-      const communityId = getPayloadId(payload, "communityId");
-      if (!communityId) return;
+      const boardId = getPayloadId(payload, "boardId");
+      if (!boardId) return;
 
-      const roomName = `discovery:community:${communityId}`;
+      const roomName = `discovery:board:${boardId}`;
       socket.leave(roomName);
     } catch (error) {
       logger.error(`Error in discovery:unsubscribe for ${socket.id}:`, error);

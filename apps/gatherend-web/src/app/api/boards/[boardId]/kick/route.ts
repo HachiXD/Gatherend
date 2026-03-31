@@ -175,21 +175,12 @@ export async function POST(
         throw new Error("INSUFFICIENT_PERMISSIONS");
       }
 
-      // 4. Liberar slot
-      const slot = await tx.slot.findFirst({
-        where: { boardId, memberId: target.id },
-      });
-
-      if (!slot) {
-        console.error(
-          `[KICK] Inconsistent state: Member ${target.id} has no slot in board ${boardId}`,
-        );
-        throw new Error("INTERNAL_ERROR");
-      }
-
-      await tx.slot.update({
-        where: { id: slot.id },
-        data: { memberId: null },
+      // 4. Eliminar membresías de canales y member
+      await tx.channelMember.deleteMany({
+        where: {
+          profileId: targetProfileId,
+          channel: { boardId },
+        },
       });
 
       await tx.member.delete({
@@ -242,8 +233,6 @@ export async function POST(
           { error: "Insufficient permissions" },
           { status: 403 },
         );
-      if (error.message === "INTERNAL_ERROR")
-        return NextResponse.json({ error: "Internal Error" }, { status: 500 });
     }
 
     console.error("[KICK_MEMBER]", error);

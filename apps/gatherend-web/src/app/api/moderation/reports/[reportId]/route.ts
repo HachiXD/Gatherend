@@ -77,27 +77,6 @@ export async function GET(
       }
     }
 
-    if (report.targetType === ReportTargetType.COMMUNITY) {
-      const community = await db.community.findUnique({
-        where: { id: report.targetId },
-        select: {
-          id: true,
-          name: true,
-          createdBy: {
-            select: moderationProfileSelect,
-          },
-        },
-      });
-
-      if (community) {
-        additionalContext.community = {
-          id: community.id,
-          name: community.name,
-          createdBy: serializeModerationProfile(community.createdBy),
-        };
-      }
-    }
-
     if (report.targetType === ReportTargetType.COMMUNITY_POST) {
       const post = await db.communityPost.findUnique({
         where: { id: report.targetId },
@@ -106,7 +85,7 @@ export async function GET(
           content: true,
           deleted: true,
           createdAt: true,
-          community: {
+          board: {
             select: {
               id: true,
               name: true,
@@ -124,7 +103,7 @@ export async function GET(
           content: post.content,
           deleted: post.deleted,
           createdAt: post.createdAt.toISOString(),
-          community: post.community,
+          board: post.board,
           author: serializeModerationProfile(post.author),
         };
       }
@@ -143,7 +122,7 @@ export async function GET(
             select: {
               id: true,
               content: true,
-              community: {
+              board: {
                 select: {
                   id: true,
                   name: true,
@@ -176,7 +155,7 @@ export async function GET(
           post: {
             id: comment.post.id,
             content: comment.post.content,
-            community: comment.post.community,
+            board: comment.post.board,
           },
           author: serializeModerationProfile(comment.author),
           replyToComment: comment.replyToComment

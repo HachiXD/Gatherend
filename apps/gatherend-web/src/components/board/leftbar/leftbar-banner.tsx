@@ -15,7 +15,6 @@ import { useOverlayStore } from "@/hooks/use-overlay-store";
 import { FEATURES } from "@/lib/features";
 import { BoardWithMembersWithProfiles } from "../../../../types";
 import { getBoardImageUrl, isDicebearUrl } from "@/lib/avatar-utils";
-import { logger } from "@/lib/logger";
 import { useTranslation } from "@/i18n";
 import { getOptimizedStaticUiImageUrl } from "@/lib/ui-image-optimizer";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
@@ -124,7 +123,7 @@ export const LeftbarBanner = ({
   );
 
   return (
-    <div className="relative w-full h-[140px] border border-t-theme-border-primary border-t-2 overflow-hidden">
+    <div className="relative w-full h-[110px] border border-t-theme-border-primary border-t-2 overflow-hidden">
       {/* Imagen de fondo - cover para Dicebear (avatars), fill para imágenes subidas */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
@@ -142,7 +141,7 @@ export const LeftbarBanner = ({
       {/*<div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-transparent" />*/}
 
       {/* Header superpuesto con degradado negro en la parte inferior */}
-      <div className="absolute bottom-0 left-0 right-0 px-2 py-3 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
+      <div className="absolute bottom-0 left-0 right-0 px-2 py-3 bg-linear-to-t from-black/90 via-black/60 to-transparent">
         <h2 className="text-md font-semibold text-white truncate drop-shadow-lg">
           {boardName}
         </h2>
@@ -171,10 +170,10 @@ export const LeftbarBanner = ({
                 </DropdownMenuItem>
               )}
               {isModerator && (
-                 <DropdownMenuItem
-                   onClick={() =>
-                     onOpenOverlay("boardSettings", {
-                       boardId,
+                <DropdownMenuItem
+                  onClick={() =>
+                    onOpenOverlay("boardSettings", {
+                      boardId,
                       currentProfileId,
                     })
                   }

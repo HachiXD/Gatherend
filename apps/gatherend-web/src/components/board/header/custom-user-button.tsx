@@ -1,12 +1,11 @@
 "use client";
 
 import { useMemo, useState, useEffect, useRef } from "react";
-import { User, Palette, Users, SquarePen } from "lucide-react";
+import { User, Palette, SquarePen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useOverlayStore } from "@/hooks/use-overlay-store";
 import { useProfile } from "@/components/app-shell/providers/profile-provider";
 import { ThemeModal } from "@/components/modals/theme-modal";
-import { MyCommunitiesModal } from "@/components/modals/my-communities-modal";
 import type { ThemeConfig } from "@/lib/theme/types";
 import { useTranslation } from "@/i18n";
 import { getOptimizedStaticUiImageUrl } from "@/lib/ui-image-optimizer";
@@ -17,7 +16,6 @@ export function CustomUserButton() {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
-  const [isCommunitiesModalOpen, setIsCommunitiesModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { onOpen: onOpenOverlay } = useOverlayStore();
 
@@ -99,11 +97,6 @@ export function CustomUserButton() {
   const handleThemeClick = () => {
     setIsOpen(false);
     setIsThemeModalOpen(true);
-  };
-
-  const handleCommunitiesClick = () => {
-    setIsOpen(false);
-    setIsCommunitiesModalOpen(true);
   };
 
   // Parse themeConfig from profile (Json field from Prisma)
@@ -202,13 +195,6 @@ export function CustomUserButton() {
               <Palette className="w-4 h-4" />
               {t.userMenu.myTheme}
             </button>
-            <button
-              onClick={handleCommunitiesClick}
-              className={cn(menuRowClass, "flex items-center gap-2")}
-            >
-              <Users className="w-4 h-4" />
-              {t.userMenu.myCommunities}
-            </button>
           </div>
         </div>
       )}
@@ -220,11 +206,6 @@ export function CustomUserButton() {
         currentThemeConfig={themeConfig}
       />
 
-      {/* My Communities Modal */}
-      <MyCommunitiesModal
-        isOpen={isCommunitiesModalOpen}
-        onClose={() => setIsCommunitiesModalOpen(false)}
-      />
     </div>
   );
 }
