@@ -3,6 +3,7 @@ import { LeftbarBanner } from "./leftbar-banner";
 import { MemberRole } from "@prisma/client";
 import type { BoardWithData } from "@/components/providers/board-provider";
 import { VoiceControlBar } from "@/components/voice-control-bar";
+import { useBoardAccent } from "@/hooks/use-board-accent";
 import {
   Users,
   MessagesSquare,
@@ -55,6 +56,8 @@ export const BoardLeftbar = ({
   const isForum = useBoardNavigationStore(
     useCallback((state) => state.isForum, []),
   );
+
+  const accentVars = useBoardAccent(board.imageAsset?.url);
   const isRules = useBoardNavigationStore(
     useCallback((state) => state.isRules, []),
   );
@@ -87,7 +90,10 @@ export const BoardLeftbar = ({
   }, [switchToMembers, board.id]);
 
   return (
-    <div className="flex flex-col h-full w-full text-primary">
+    <div
+      className="flex flex-col h-full w-full text-primary"
+      style={accentVars ? { ...accentVars, backgroundColor: accentVars["--leftbar-bg"] } as React.CSSProperties : undefined}
+    >
       {/* Banner con imagen del board y dropdown menu */}
       <LeftbarBanner
         imageAsset={board.imageAsset}
@@ -105,7 +111,7 @@ export const BoardLeftbar = ({
           <button
             onClick={handleRules}
             className={cn(
-              "flex h-16 flex-1 cursor-pointer flex-col rounded-none border overflow-hidden text-[16px] font-medium transition shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_1px_0_0_rgba(255,255,255,0.14),inset_-1px_0_0_rgba(0,0,0,0.40),inset_0_-1px_0_rgba(0,0,0,0.55)]",
+              "flex h-12 flex-1 cursor-pointer flex-col rounded-none border overflow-hidden text-[16px] font-medium transition shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_1px_0_0_rgba(255,255,255,0.14),inset_-1px_0_0_rgba(0,0,0,0.40),inset_0_-1px_0_rgba(0,0,0,0.55)]",
               isRules
                 ? "border-theme-channel-type-active-border bg-theme-channel-type-active-border text-theme-channel-type-active-text"
                 : "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border",
@@ -115,13 +121,13 @@ export const BoardLeftbar = ({
               Reglas
             </span>
             <div className="flex flex-1 items-center justify-center bg-black/15">
-              <ScrollText className="h-6 w-6 mb-1" />
+              <ScrollText className="h-4 w-4" />
             </div>
           </button>
           <button
             onClick={handleForum}
             className={cn(
-              "flex h-16 flex-1 cursor-pointer flex-col rounded-none border overflow-hidden text-[16px] font-medium transition shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_1px_0_0_rgba(255,255,255,0.14),inset_-1px_0_0_rgba(0,0,0,0.40),inset_0_-1px_0_rgba(0,0,0,0.55)]",
+              "flex h-12 flex-1 cursor-pointer flex-col rounded-none border overflow-hidden text-[16px] font-medium transition shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_1px_0_0_rgba(255,255,255,0.14),inset_-1px_0_0_rgba(0,0,0,0.40),inset_0_-1px_0_rgba(0,0,0,0.55)]",
               isForum
                 ? "border-theme-channel-type-active-border bg-theme-channel-type-active-border text-theme-channel-type-active-text"
                 : "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border",
@@ -131,13 +137,13 @@ export const BoardLeftbar = ({
               Foro
             </span>
             <div className="flex flex-1 items-center justify-center bg-black/15">
-              <MessageSquare className="h-6 w-6 mb-1" />
+              <MessageSquare className="h-4 w-4" />
             </div>
           </button>
           <button
             onClick={handleMembers}
             className={cn(
-              "flex h-16 flex-1 cursor-pointer flex-col rounded-none border overflow-hidden text-[16px] font-medium transition shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_1px_0_0_rgba(255,255,255,0.14),inset_-1px_0_0_rgba(0,0,0,0.40),inset_0_-1px_0_rgba(0,0,0,0.55)]",
+              "flex h-12 flex-1 cursor-pointer flex-col rounded-none border overflow-hidden text-[16px] font-medium transition shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_1px_0_0_rgba(255,255,255,0.14),inset_-1px_0_0_rgba(0,0,0,0.40),inset_0_-1px_0_rgba(0,0,0,0.55)]",
               isMembers
                 ? "border-theme-channel-type-active-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
                 : "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border",
@@ -147,14 +153,14 @@ export const BoardLeftbar = ({
               Miembros
             </span>
             <div className="flex flex-1 items-center justify-center bg-black/15">
-              <Users className="h-6 w-6 mb-1" />
+              <Users className="h-4 w-4 " />
             </div>
           </button>
         </div>
 
         {/* Stats */}
-        <div className="border border-theme-border bg-theme-bg-overlay-primary/78 px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.26)]">
-          <div className="grid grid-cols-2 gap-x-2 gap-y-3">
+        <div className=" bg-transparent px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+          <div className="grid grid-cols-2 gap-x-2 gap-y-2">
             <div>
               <p className="mb-0.5 text-[11px] font-bold uppercase tracking-wide text-theme-text-subtle">
                 Miembros

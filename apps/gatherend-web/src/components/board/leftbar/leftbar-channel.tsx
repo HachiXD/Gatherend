@@ -139,7 +139,7 @@ const LeftbarChannelComponent = ({
             : undefined
         }
         className={cn(
-          "group relative flex w-full min-w-0 max-w-full cursor-pointer items-center overflow-hidden rounded-none px-0 h-13 text-left transition",
+          "group relative  flex w-full min-w-0 max-w-full cursor-pointer items-center overflow-hidden rounded-none px-0 h-12 text-left transition",
           channelImageUrl
             ? [
                 "bg-cover bg-center bg-no-repeat",
@@ -167,10 +167,10 @@ const LeftbarChannelComponent = ({
         )}
 
         {/* CONTENIDO: ICONO + NOMBRsE */}
-        <div className="relative flex flex-1 ml-1 min-w-0 overflow-hidden items-center">
+        <div className=" relative flex flex-1 ml-1 min-w-0 overflow-hidden items-center">
           <div className="flex w-full min-w-0 items-center">
             {/* NOMBRE + CONTADOR */}
-            <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <div className="flex min-w-0 flex-1 flex-col gap-0">
               <div className="flex min-w-0 items-center">
                 {/* ICON */}
                 {isText ? (

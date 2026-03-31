@@ -139,7 +139,7 @@ export const DirectMessageItem = memo(function DirectMessageItemComponent({
           onClick={onClick}
           disabled={isPending || isHiding}
           className={cn(
-            "group flex items-center gap-x-2 w-full cursor-pointer transition mb-1 py-1 px-2 rounded-none relative",
+            "group flex items-center gap-x-2 w-full cursor-pointer transition mb-1 ml-1 py-1.5 px-2 rounded-none relative",
             "border border-transparent hover:border-theme-border hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_-1px_0_rgba(0,0,0,0.38)]",
             "hover:bg-theme-channel-hover",
             isActive &&
