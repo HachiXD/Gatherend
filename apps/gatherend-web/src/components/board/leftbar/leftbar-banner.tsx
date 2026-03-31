@@ -123,7 +123,7 @@ export const LeftbarBanner = ({
   );
 
   return (
-    <div className="relative w-full h-[110px] border border-t-theme-border-primary border-t-2 overflow-hidden">
+    <div className="relative w-full h-[140px] border border-t-theme-border-primary border-t-2 overflow-hidden">
       {/* Imagen de fondo - cover para Dicebear (avatars), fill para imágenes subidas */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
