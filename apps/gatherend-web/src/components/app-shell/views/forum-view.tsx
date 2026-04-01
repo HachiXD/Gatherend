@@ -84,7 +84,7 @@ function ForumViewInner() {
               {/* Badge estilo chat-header */}
               <div className="flex min-w-0 max-w-[min(52vw,420px)] items-center justify-center gap-2 bg-(--community-header-btn-bg) px-3 py-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]">
                 <p className="min-w-0 truncate text-center text-[16px] font-semibold text-theme-text-subtle">
-                  {`Foro de ${board.name}`}
+                  {board ? `Foro de ${board.name}` : "Foro"}
                 </p>
               </div>
 
