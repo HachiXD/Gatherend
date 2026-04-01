@@ -346,8 +346,9 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
           <div className="-mt-3 -mb-2.5 flex flex-col items-start gap-8 md:flex-row">
             <div className="md:self-center">
               <AvatarSection
+                profileId={user.id}
                 imagePreview={imagePreview}
-                username={user.username}
+                usernameColor={extendedUser.usernameColor}
                 uploading={uploading}
                 isSaving={isSaving}
                 onUploadClick={handleUploadClick}

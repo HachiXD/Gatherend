@@ -119,6 +119,7 @@ export const BansTab = ({ boardId }: BansTabProps) => {
               <div key={ban.id} className={BAN_ROW_CLASS}>
                 <UserAvatar
                   src={ban.profile.avatarAsset?.url || ""}
+                  profileId={ban.profile.id}
                   showStatus={false}
                 />
                 <div className="min-w-0 flex-1">

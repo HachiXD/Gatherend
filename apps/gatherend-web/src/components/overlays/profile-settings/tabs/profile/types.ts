@@ -50,8 +50,9 @@ export interface WithTranslations {
 
 export interface AvatarSectionProps
   extends ProfileSectionProps, WithTranslations {
+  profileId: string;
   imagePreview: string;
-  username: string;
+  usernameColor?: UsernameColor;
   uploading: boolean;
   onUploadClick: () => void;
 }

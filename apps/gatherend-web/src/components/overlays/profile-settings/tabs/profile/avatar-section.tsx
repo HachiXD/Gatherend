@@ -2,12 +2,13 @@
 
 import { memo } from "react";
 import { Pencil } from "lucide-react";
-import Image from "next/image";
+import { UserAvatar } from "@/components/user-avatar";
 import type { AvatarSectionProps } from "./types";
 
 export const AvatarSection = memo(function AvatarSection({
+  profileId,
   imagePreview,
-  username,
+  usernameColor,
   uploading,
   isSaving,
   onUploadClick,
@@ -17,20 +18,15 @@ export const AvatarSection = memo(function AvatarSection({
     <div className="shrink-0 mx-auto md:mx-0">
       <div className="relative w-32 h-32 mx-auto group">
         {/* Avatar Image */}
-        <div className="w-full h-full rounded-full overflow-hidden bg-zinc-700 flex items-center justify-center ring-4 ring-theme-bg-primary shadow-lg">
-          {imagePreview ? (
-            <Image
-              src={imagePreview}
-              alt="Profile avatar"
-              width={128}
-              height={128}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="text-theme-text-tertiary text-4xl font-bold">
-              {username.charAt(0).toUpperCase()}
-            </div>
-          )}
+        <div className="w-full h-full rounded-full overflow-hidden ring-4 ring-theme-bg-primary shadow-lg">
+          <UserAvatar
+            src={imagePreview || undefined}
+            profileId={profileId}
+            usernameColor={usernameColor}
+            showStatus={false}
+            className="h-32 w-32"
+            animationMode="never"
+          />
         </div>
 
         {/* Plus Button Overlay */}

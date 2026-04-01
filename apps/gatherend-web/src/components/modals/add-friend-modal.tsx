@@ -251,6 +251,7 @@ export const AddFriendModal = () => {
                     >
                       <UserAvatar
                         src={request.requester.avatarAsset?.url || undefined}
+                        profileId={request.requester.id}
                         showStatus={false}
                         className="h-8 w-8 shrink-0"
                       />

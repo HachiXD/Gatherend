@@ -100,6 +100,7 @@ function MembersViewInner() {
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                   <UserAvatar
                     src={member.profile.avatarAsset?.url ?? ""}
+                    profileId={member.profile.id}
                     showStatus={false}
                   />
                   <div className="min-w-0 flex-1">

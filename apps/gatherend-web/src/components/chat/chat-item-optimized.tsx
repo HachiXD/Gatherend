@@ -1117,6 +1117,7 @@ const ChatItemOptimizedComponent = ({
               ) : (
                 <UserAvatar
                   src={authorProfile?.imageUrl || undefined}
+                  profileId={authorProfile?.id}
                   showStatus={false}
                   className="h-10 w-10"
                 />

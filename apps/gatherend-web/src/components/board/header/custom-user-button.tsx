@@ -1,14 +1,14 @@
 "use client";
 
-import { useMemo, useState, useEffect, useRef } from "react";
-import { User, Palette, SquarePen } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Palette, SquarePen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useOverlayStore } from "@/hooks/use-overlay-store";
 import { useProfile } from "@/components/app-shell/providers/profile-provider";
 import { ThemeModal } from "@/components/modals/theme-modal";
 import type { ThemeConfig } from "@/lib/theme/types";
 import { useTranslation } from "@/i18n";
-import { getOptimizedStaticUiImageUrl } from "@/lib/ui-image-optimizer";
+import { UserAvatar } from "@/components/user-avatar";
 
 export function CustomUserButton() {
   // Obtener perfil desde el contexto (React Query - se actualiza automáticamente)
@@ -40,54 +40,14 @@ export function CustomUserButton() {
   }, [isOpen]);
 
   // Usar datos del profile (fuente de verdad para SPA client-side)
-  const avatarUrl = profile.avatarAsset?.url || "";
   const userName = profile.username || "User";
   const discriminator = profile.discriminator || null;
-  const [avatarFailed, setAvatarFailed] = useState(false);
-  const [forceOriginalImage, setForceOriginalImage] = useState(false);
   const menuPanelShadow =
     "shadow-[0_10px_24px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.1),inset_1px_0_0_rgba(255,255,255,0.08),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]";
   const menuRowClass =
     "h-8 w-full cursor-pointer rounded-none border border-transparent px-3 py-2 text-left text-sm text-theme-text-secondary hover:border-theme-border hover:bg-theme-bg-secondary/30 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.28)] focus:border-theme-border focus:bg-theme-bg-secondary/30 focus:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.28)]";
   const identityPlateClass =
     "border border-theme-border bg-theme-bg-secondary/25 px-2.5 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.24)]";
-
-  useEffect(() => {
-    setAvatarFailed(false);
-    setForceOriginalImage(false);
-  }, [avatarUrl]);
-
-  const displayImageUrl32 = useMemo(() => {
-    if (!avatarUrl) return "";
-    if (forceOriginalImage) return avatarUrl;
-    return getOptimizedStaticUiImageUrl(avatarUrl, {
-      w: 32,
-      h: 32,
-      q: 82,
-      resize: "fill",
-      gravity: "sm",
-    });
-  }, [forceOriginalImage, avatarUrl]);
-
-  const displayImageUrl40 = useMemo(() => {
-    if (!avatarUrl) return "";
-    if (forceOriginalImage) return avatarUrl;
-    return getOptimizedStaticUiImageUrl(avatarUrl, {
-      w: 40,
-      h: 40,
-      q: 82,
-      resize: "fill",
-      gravity: "sm",
-    });
-  }, [forceOriginalImage, avatarUrl]);
-
-  const handleAvatarError = () => {
-    if (!forceOriginalImage && avatarUrl) {
-      setForceOriginalImage(true);
-      return;
-    }
-    setAvatarFailed(true);
-  };
 
   const handleProfileClick = () => {
     setIsOpen(false);
@@ -111,25 +71,19 @@ export function CustomUserButton() {
         className={cn(
           "relative flex items-center justify-center",
           "w-8 h-8 rounded-full overflow-hidden",
-          "bg-zinc-700",
           "hover:opacity-80 transition-opacity",
           "focus:outline-none focus:ring-2 cursor-pointer focus:ring-theme-accent-custom-user-button focus:ring-offset-2 focus:ring-offset-theme-bg-primary",
         )}
         aria-label={t.userMenu.userMenuLabel}
       >
-        {avatarUrl && displayImageUrl32 && !avatarFailed ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={displayImageUrl32}
-            alt={userName}
-            className="w-full h-full object-cover"
-            loading="eager"
-            decoding="async"
-            onError={handleAvatarError}
-          />
-        ) : (
-          <User className="w-4 h-4 text-theme-text-secondary" />
-        )}
+        <UserAvatar
+          src={profile.avatarAsset?.url || undefined}
+          profileId={profile.id}
+          usernameColor={profile.usernameColor}
+          showStatus={false}
+          className="h-8 w-8"
+          animationMode="never"
+        />
       </button>
 
       {/* Dropdown Menu */}
@@ -148,21 +102,14 @@ export function CustomUserButton() {
           {/* User Info Section */}
           <div className="border-b border-theme-border px-3 py-3">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-theme-border bg-theme-bg-secondary/40 ">
-                {avatarUrl && displayImageUrl40 && !avatarFailed ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={displayImageUrl40}
-                    alt={userName}
-                    className="w-full h-full object-cover"
-                    loading="eager"
-                    decoding="async"
-                    onError={handleAvatarError}
-                  />
-                ) : (
-                  <User className="w-5 h-5 text-theme-text-secondary" />
-                )}
-              </div>
+              <UserAvatar
+                src={profile.avatarAsset?.url || undefined}
+                profileId={profile.id}
+                usernameColor={profile.usernameColor}
+                showStatus={false}
+                className="h-10 w-10 shrink-0"
+                animationMode="never"
+              />
               <div className={cn("min-w-0 flex-1", identityPlateClass)}>
                 <p className="truncate border-b border-theme-border pb-0.5 text-sm font-semibold text-theme-text-primary">
                   {userName}

@@ -17,7 +17,7 @@ import {
   VoiceParticipant,
 } from "@/hooks/use-voice-participants-store";
 import { useVoiceStore } from "@/hooks/use-voice-store";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/user-avatar";
 import { useShallow } from "zustand/react/shallow";
 import {
   MicOff,
@@ -170,22 +170,17 @@ function ParticipantCard({
           <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent" />
         </div>
       ) : (
-        <Avatar
+        <UserAvatar
+          src={participant.avatarUrl ?? undefined}
+          profileId={participant.profileId}
+          usernameColor={participant.usernameColor}
+          showStatus={false}
+          animationMode="never"
           className={cn(
             isSpeaking && "ring-2 ring-green-500",
             isExpanded ? "w-32 h-32" : "w-16 h-16",
           )}
-        >
-          <AvatarImage src={participant.avatarUrl ?? undefined} />
-          <AvatarFallback
-            className={cn(
-              "bg-theme-bg-quaternary text-theme-text-light",
-              isExpanded ? "text-4xl" : "text-xl",
-            )}
-          >
-            {participant.username?.charAt(0)?.toUpperCase() || "?"}
-          </AvatarFallback>
-        </Avatar>
+        />
       )}
 
       {/* Expand/Minimize button */}
