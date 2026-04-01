@@ -206,7 +206,7 @@ export const es: TranslationKeys = {
     searchUsers: "Buscar usuarios",
     selectUser: "Selecciona un usuario para enviar mensaje",
     // Rightbar
-    social: "Social",
+    social: "Mensajes Directos",
     addFriend: "Agregar Amigo",
     noActiveConversations: "No tienes conversaciones activas",
     noMessagesYet: "Aún no hay mensajes",

@@ -206,7 +206,7 @@ export const en: TranslationKeys = {
     searchUsers: "Search users",
     selectUser: "Select a user to message",
     // Rightbar
-    social: "Social",
+    social: "Direct Messages",
     addFriend: "Add Friend",
     noActiveConversations: "You don't have any active conversations",
     noMessagesYet: "No messages yet",
@@ -274,8 +274,7 @@ export const en: TranslationKeys = {
     postContentPlaceholder: "Write your post...",
     escToCancelCtrlEnterToSave: "Esc to cancel • Ctrl/Cmd+Enter to save",
     escToCancelCtrlEnterToSend: "Esc to cancel • Ctrl/Cmd+Enter to send",
-    escToCancelCtrlEnterToPublish:
-      "Esc to cancel • Ctrl/Cmd+Enter to publish",
+    escToCancelCtrlEnterToPublish: "Esc to cancel • Ctrl/Cmd+Enter to publish",
     replyToOriginalPoster: "OP",
     deletedComment: "Deleted comment",
     deletedCommentInline: "deleted comment",

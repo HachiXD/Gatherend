@@ -79,12 +79,12 @@ function MembersViewInner() {
         <div className="sticky top-0 z-20 shrink-0 border-b border-theme-border transition-colors duration-300">
           <div className="px-0 pt-2.5 pb-2.5" style={headerButtonStyles}>
             <div className="ml-3 mr-3 flex items-center gap-2">
-              <div className="flex min-w-20 items-center justify-center gap-2 bg-(--community-header-btn-bg) px-3 py-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]">
-                <p className="text-center text-[16px] font-semibold text-theme-text-subtle">
-                  [Miembros]
+              <div className="flex min-w-0 max-w-[min(52vw,420px)] items-center justify-center gap-2 bg-(--community-header-btn-bg) px-3 py-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]">
+                <p className="min-w-0 truncate text-center text-[16px] font-semibold text-theme-text-subtle">
+                  {`Miembros de ${board.name}`}
                 </p>
               </div>
-              <span className="ml-1 text-[13px] text-(--community-header-btn-muted)">
+              <span className="ml-1 shrink-0 text-[13px] text-(--community-header-btn-muted)">
                 {sortedMembers.length}{" "}
                 {sortedMembers.length === 1 ? "miembro" : "miembros"}
               </span>

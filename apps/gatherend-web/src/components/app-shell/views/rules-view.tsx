@@ -469,13 +469,13 @@ function RulesViewInner() {
             <div className="px-0 pt-2 pb-2" style={headerButtonStyles}>
               <div className="ml-3 mr-3 flex items-center gap-2">
                 {/* Badge */}
-                <div className="flex min-w-20 items-center justify-center gap-2 bg-(--community-header-btn-bg) px-3 py-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]">
-                  <p className="text-center text-[16px] font-semibold text-theme-text-subtle">
-                    [Reglas]
+                <div className="flex min-w-0 max-w-[min(52vw,420px)] items-center justify-center gap-2 bg-(--community-header-btn-bg) px-3 py-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]">
+                  <p className="min-w-0 truncate text-center text-[16px] font-semibold text-theme-text-subtle">
+                    {`Reglas de ${board.name}`}
                   </p>
                 </div>
 
-                <div className="ml-auto flex items-center gap-2">
+                <div className="ml-auto flex shrink-0 items-center gap-2">
                   {canEdit && !rules && mode === "view" && (
                     <button
                       type="button"

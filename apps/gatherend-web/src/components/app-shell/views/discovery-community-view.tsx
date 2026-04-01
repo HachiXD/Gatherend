@@ -167,96 +167,117 @@ export const DiscoveryCommunityView = memo(function DiscoveryCommunityView() {
   return (
     <div
       ref={isSearching ? searchContainerRef : containerRef}
-      className="h-full w-full flex flex-col px-6 py-4 overflow-y-auto scrollbar-chat"
+      className="h-full w-full flex flex-col overflow-y-auto scrollbar-chat"
     >
-      {/* Search bar */}
-      <SearchBar query={searchQuery} setQuery={setSearchQuery} />
+      <div className="sticky top-0 z-20 shrink-0 border-b border-theme-border bg-theme-bg-secondary transition-colors duration-300">
+        <div className="px-0 pt-2 pb-2">
+          <div className="ml-3 mr-3 flex items-center gap-2">
+            <div className="flex min-w-0 items-center justify-center gap-2 border border-theme-border bg-theme-bg-tertiary px-3 py-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_0_-1px_0_rgba(0,0,0,0.2)]">
+              <p className="min-w-0 truncate text-center text-[16px] font-semibold text-theme-text-subtle">
+                Feed de boards
+              </p>
+            </div>
+            <div className="ml-auto flex max-w-[min(56vw,480px)] shrink items-center justify-center border border-theme-border bg-theme-bg-tertiary px-3 py-0.5 text-right shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_0_-1px_0_rgba(0,0,0,0.2)]">
+              <p className="min-w-0 truncate text-[13px] font-medium text-theme-text-muted">
+                Clickea cualquiera de los boards para unirte a esa comunidad!
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
 
-      {/* Content */}
-      {isLoading && !isSearching ? (
-        <CommunitiesSkeleton />
-      ) : error && !isSearching ? (
-        <div className="text-center py-8 text-destructive">Error: {error}</div>
-      ) : isSearching ? (
-        // Search results (server-side)
-        isSearchLoading ? (
-          <SearchSkeleton />
-        ) : searchError ? (
+      <div className="px-6 py-4">
+        {/* Search bar */}
+        <SearchBar query={searchQuery} setQuery={setSearchQuery} />
+
+        {/* Content */}
+        {isLoading && !isSearching ? (
+          <CommunitiesSkeleton />
+        ) : error && !isSearching ? (
           <div className="text-center py-8 text-destructive">
-            Error: {searchError}
+            Error: {error}
           </div>
-        ) : searchResults.length > 0 ? (
-          <div className="flex flex-col gap-6 pb-10">
-            {searchResults.map((community) => (
-              <CommunityCard
-                key={community.id}
-                id={community.id}
-                name={community.name}
-                imageAsset={community.imageAsset}
-                memberCount={community.memberCount || 0}
-                recentPostCount7d={community.recentPostCount7d || 0}
-                onExplore={handleExplore}
-              />
-            ))}
-            {/* Loading more indicator */}
-            {isSearchLoading && searchResults.length > 0 && (
-              <div className="py-4 text-center text-theme-text-muted">
-                Cargando más...
-              </div>
-            )}
-          </div>
+        ) : isSearching ? (
+          // Search results (server-side)
+          isSearchLoading ? (
+            <SearchSkeleton />
+          ) : searchError ? (
+            <div className="text-center py-8 text-destructive">
+              Error: {searchError}
+            </div>
+          ) : searchResults.length > 0 ? (
+            <div className="flex flex-col gap-6 pb-10">
+              {searchResults.map((community) => (
+                <CommunityCard
+                  key={community.id}
+                  id={community.id}
+                  name={community.name}
+                  imageAsset={community.imageAsset}
+                  memberCount={community.memberCount || 0}
+                  recentPostCount7d={community.recentPostCount7d || 0}
+                  onExplore={handleExplore}
+                />
+              ))}
+              {/* Loading more indicator */}
+              {isSearchLoading && searchResults.length > 0 && (
+                <div className="py-4 text-center text-theme-text-muted">
+                  Cargando más...
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-theme-text-muted">
+              No se encontraron boards para &quot;{searchQuery}&quot;
+            </div>
+          )
         ) : (
-          <div className="text-center py-8 text-theme-text-muted">
-            No se encontraron boards para &quot;{searchQuery}&quot;
-          </div>
-        )
-      ) : (
-        // Virtualized feed
-        <>
-          {pageSlots.map((slot, index) => {
-            const isLast = index === pageSlots.length - 1;
-            const marginBottom = isLast ? 0 : PAGE_GAP;
+          // Virtualized feed
+          <>
+            {pageSlots.map((slot, index) => {
+              const isLast = index === pageSlots.length - 1;
+              const marginBottom = isLast ? 0 : PAGE_GAP;
 
-            if (slot.type === "virtualized") {
-              // Placeholder for virtualized pages
+              if (slot.type === "virtualized") {
+                // Placeholder for virtualized pages
+                return (
+                  <div
+                    key={`placeholder-${slot.pageIndex}`}
+                    style={{ height: slot.height, marginBottom }}
+                    className="shrink-0"
+                  />
+                );
+              }
+
+              // Rendered page
               return (
                 <div
-                  key={`placeholder-${slot.pageIndex}`}
-                  style={{ height: slot.height, marginBottom }}
-                  className="shrink-0"
-                />
+                  key={`page-${slot.pageIndex}`}
+                  style={{ marginBottom }}
+                  className="flex flex-col gap-6"
+                >
+                  {slot.page.items.map((community) => (
+                    <CommunityCard
+                      key={community.id}
+                      id={community.id}
+                      name={community.name}
+                      imageAsset={community.imageAsset}
+                      memberCount={community.memberCount || 0}
+                      recentPostCount7d={community.recentPostCount7d || 0}
+                      onExplore={handleExplore}
+                    />
+                  ))}
+                </div>
               );
-            }
+            })}
 
-            // Rendered page
-            return (
-              <div
-                key={`page-${slot.pageIndex}`}
-                style={{ marginBottom }}
-                className="flex flex-col gap-6"
-              >
-                {slot.page.items.map((community) => (
-                  <CommunityCard
-                    key={community.id}
-                    id={community.id}
-                    name={community.name}
-                    imageAsset={community.imageAsset}
-                    memberCount={community.memberCount || 0}
-                    recentPostCount7d={community.recentPostCount7d || 0}
-                    onExplore={handleExplore}
-                  />
-                ))}
-              </div>
-            );
-          })}
+            {/* Sentinel for infinite scroll - triggers when viewport bottom touches this point */}
+            <div ref={bottomSentinelRef} className="h-1 shrink-0" />
 
-          {/* Sentinel for infinite scroll - triggers when viewport bottom touches this point */}
-          <div ref={bottomSentinelRef} className="h-1 shrink-0" />
-
-          {/* Bottom skeleton for loading more */}
-          {(isFetchingNextPage || hasNextPage) && <FeedBottomSkeleton />}
-        </>
-      )}
+            {/* Bottom skeleton for loading more */}
+            {(isFetchingNextPage || hasNextPage) && <FeedBottomSkeleton />}
+          </>
+        )}
+      </div>
     </div>
   );
 });
