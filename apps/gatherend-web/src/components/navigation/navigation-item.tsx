@@ -118,19 +118,21 @@ const NavigationItemComponent = ({
       <div className="relative">
         <div
           className={cn(
-            "relative flex h-12 w-13 cursor-pointer items-center justify-center border border-theme-border-secondary/70 bg-theme-bg-tertiary/70 p-px shadow-[inset_0_5px_0_rgba(255,255,255,0.22),inset_5px_0_0_rgba(255,255,255,0.14),inset_-5px_0_0_rgba(0,0,0,0.40),inset_0_-5px_0_rgba(0,0,0,0.55)] transition-all",
-            "hover:border-theme-border hover:ring-2 hover:ring-theme-border-accent-active-channel",
-            "group-data-[active=true]/item:border-theme-border group-data-[active=true]/item:ring-2 group-data-[active=true]/item:ring-theme-border-accent-active-channel",
-            "group-data-[navigating=true]/item:animate-pulse group-data-[navigating=true]/item:opacity-70",
-          )}
-        >
-          <div className="relative h-9.5 w-10.5 overflow-hidden bg-theme-bg-tertiary">
+              "relative flex h-12 w-13 rounded-2xl cursor-pointer items-center justify-center overflow-hidden border border-theme-border-secondary/70 bg-theme-bg-tertiary/70 transition-all",
+              displayImageUrl
+                ? "shadow-[0_-1px_0_rgba(255,255,255,0.22),-1px_0_0_rgba(255,255,255,0.14),1px_0_0_rgba(0,0,0,0.40),0_1px_0_rgba(0,0,0,0.55)]"
+                : "shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_1px_0_0_rgba(255,255,255,0.14),inset_-1px_0_0_rgba(0,0,0,0.40),inset_0_-1px_0_rgba(0,0,0,0.55)]",
+              "hover:border-theme-border hover:ring-2 hover:ring-theme-border-accent-active-channel",
+              "group-data-[active=true]/item:border-theme-border group-data-[active=true]/item:ring-2 group-data-[active=true]/item:ring-theme-border-accent-active-channel",
+              "group-data-[navigating=true]/item:animate-pulse group-data-[navigating=true]/item:opacity-70",
+            )}
+          >
             {displayImageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={displayImageUrl}
                 alt={name}
-                className="absolute inset-0 h-full w-full object-cover"
+                className="absolute inset-0 h-full w-full object-cover rounded-2xl"
                 loading="eager"
                 decoding="async"
                 crossOrigin={isGatherendCdnUrl ? "anonymous" : undefined}
@@ -141,8 +143,15 @@ const NavigationItemComponent = ({
                 {fallbackLabel}
               </div>
             )}
+            {/* Indicador de unreads - dentro del contenedor rounded para recortar overflow */}
+            <div
+              className={cn(
+                "absolute bottom-0 left-1/2 h-1.5 w-3/4 -translate-x-1/2 border-t border-x border-black/30 rounded-t-sm bg-theme-unread-bg",
+                "group-data-[active=true]/item:border-theme-border-accent-active-channel",
+                "hidden group-data-[unreads=true]/item:block group-data-[mentions=true]/item:hidden",
+              )}
+            />
           </div>
-        </div>
 
         {/* Indicador de mención - siempre renderizado, oculto via CSS */}
         <div
@@ -158,16 +167,6 @@ const NavigationItemComponent = ({
             strokeWidth={3}
           />
         </div>
-
-        {/* Indicador de unreads - siempre renderizado, oculto via CSS */}
-        <div
-          className={cn(
-            "absolute bottom-0 left-1/2 h-1.5 w-3/4 -translate-x-1/2 border-t border-x border-black/30 rounded-t-sm bg-theme-unread-bg",
-            "group-data-[active=true]/item:border-theme-border-accent-active-channel",
-            // Mostrar solo si: tiene unreads Y NO tiene menciones
-            "hidden group-data-[unreads=true]/item:block group-data-[mentions=true]/item:hidden",
-          )}
-        />
       </div>
     ),
     [displayImageUrl, fallbackLabel, isGatherendCdnUrl, name], // Solo dependencias que REALMENTE cambian el contenido

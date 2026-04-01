@@ -22,7 +22,6 @@ import { X } from "lucide-react";
 import { useUpload } from "@/hooks/use-upload";
 import { toast } from "sonner";
 import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
-import { BoardMember } from "@/components/providers/board-provider";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "@/i18n";
 import {
@@ -35,6 +34,7 @@ import type {
   ClientAttachmentAsset,
   ClientSticker,
 } from "@/types/uploaded-assets";
+import type { MentionableChannelMember } from "@/hooks/use-channel-mentionable-members";
 
 interface ChatInputProps {
   apiUrl: string;
@@ -737,7 +737,7 @@ const ChatInputComponent = ({
 
   // Handle mention selection
   const handleMentionSelect = (
-    member: BoardMember,
+    member: MentionableChannelMember,
     startIndex: number,
     endIndex: number,
   ) => {
@@ -871,6 +871,8 @@ const ChatInputComponent = ({
           {/* Mention Autocomplete - Only for channels */}
           {type === "channel" && (
             <MentionAutocomplete
+              boardId={query.boardId}
+              channelId={roomId}
               inputValue={content}
               cursorPosition={cursorPosition}
               onSelect={handleMentionSelect}

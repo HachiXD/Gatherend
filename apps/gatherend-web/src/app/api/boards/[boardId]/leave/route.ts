@@ -118,6 +118,22 @@ async function handleLeaveBoard(
         },
       });
 
+      await tx.channelReadState.deleteMany({
+        where: {
+          profileId: profile.id,
+          channel: { boardId },
+        },
+      });
+
+      await tx.mention.deleteMany({
+        where: {
+          profileId: profile.id,
+          message: {
+            channel: { boardId },
+          },
+        },
+      });
+
       await tx.member.delete({
         where: { id: member.id },
       });

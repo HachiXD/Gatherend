@@ -6,6 +6,15 @@ interface UnreadCountRow {
   unreadCount: bigint;
 }
 
+interface SidebarChannelStateRow {
+  channelId: string;
+  boardId: string;
+  lastMessageSeq: number;
+  lastReadSeq: number;
+  unreadCount: bigint;
+  hasUnreadMention: boolean;
+}
+
 /**
  * Obtiene el estado de lectura de todos los canales de un board para un usuario
  *
@@ -14,12 +23,17 @@ interface UnreadCountRow {
  */
 export async function getBoardUnreadCounts(profileId: string, boardId: string) {
   try {
-    // Single query with LEFT JOIN - O(1) instead of O(2)
     const results = await db.$queryRaw<UnreadCountRow[]>`
       SELECT 
         c.id as "channelId",
-        COALESCE(rs."unreadCount", 0) as "unreadCount"
+        GREATEST(
+          c."lastMessageSeq" - COALESCE(rs."lastReadSeq", c."lastMessageSeq"),
+          0
+        ) as "unreadCount"
       FROM "Channel" c
+      INNER JOIN "Member" m
+        ON m."boardId" = c."boardId"
+       AND m."profileId" = ${profileId}
       LEFT JOIN "ChannelReadState" rs 
         ON rs."channelId" = c.id 
         AND rs."profileId" = ${profileId}
@@ -67,6 +81,15 @@ export async function getChannelReadState(
  */
 export async function markChannelAsRead(profileId: string, channelId: string) {
   try {
+    const channel = await db.channel.findUnique({
+      where: { id: channelId },
+      select: { lastMessageSeq: true },
+    });
+
+    if (!channel) {
+      throw new Error("CHANNEL_NOT_FOUND");
+    }
+
     return await db.channelReadState.upsert({
       where: {
         profileId_channelId: {
@@ -78,10 +101,12 @@ export async function markChannelAsRead(profileId: string, channelId: string) {
         profileId,
         channelId,
         lastReadAt: new Date(),
+        lastReadSeq: channel.lastMessageSeq,
         unreadCount: 0,
       },
       update: {
         lastReadAt: new Date(),
+        lastReadSeq: channel.lastMessageSeq,
         unreadCount: 0,
       },
     });
@@ -98,40 +123,52 @@ export async function markChannelAsRead(profileId: string, channelId: string) {
  * Optimizado: Una sola query SQL en lugar de N queries individuales.
  * Esto evita el problema de connection pool exhaustion con boards grandes.
  */
-export async function incrementUnreadForChannel(
-  channelId: string,
-  boardId: string,
-  excludeProfileId: string,
-) {
-  try {
-    // Single efficient query using INSERT ... ON CONFLICT (upsert)
-    // This replaces: 1 query to get members + N queries to upsert
-    await db.$executeRaw`
-      INSERT INTO "ChannelReadState" ("id", "profileId", "channelId", "unreadCount", "lastReadAt", "createdAt", "updatedAt")
-      SELECT 
-        gen_random_uuid(),
-        m."profileId", 
-        ${channelId}, 
-        1,
-        NOW(),
-        NOW(),
-        NOW()
-      FROM "Member" m
-      WHERE m."boardId" = ${boardId}
-        AND m."profileId" != ${excludeProfileId}
-      ON CONFLICT ("profileId", "channelId")
-      DO UPDATE SET 
-        "unreadCount" = "ChannelReadState"."unreadCount" + 1,
-        "updatedAt" = NOW()
-    `;
-  } catch (error) {
-    // Log but don't throw - this is a background operation that shouldn't fail the main request
-    logger.error("[incrementUnreadForChannel] Database error:", error);
-  }
-}
-
 interface MentionChannelRow {
   channelId: string;
+}
+
+export async function getSidebarChannelStates(profileId: string) {
+  try {
+    const results = await db.$queryRaw<SidebarChannelStateRow[]>`
+      SELECT
+        c.id as "channelId",
+        c."boardId" as "boardId",
+        c."lastMessageSeq" as "lastMessageSeq",
+        COALESCE(rs."lastReadSeq", c."lastMessageSeq") as "lastReadSeq",
+        GREATEST(
+          c."lastMessageSeq" - COALESCE(rs."lastReadSeq", c."lastMessageSeq"),
+          0
+        ) as "unreadCount",
+        EXISTS (
+          SELECT 1
+          FROM "Mention" mn
+          INNER JOIN "Message" m ON m.id = mn."messageId"
+          WHERE mn."profileId" = ${profileId}
+            AND mn.read = false
+            AND m."channelId" = c.id
+        ) as "hasUnreadMention"
+      FROM "Channel" c
+      INNER JOIN "Member" board_member
+        ON board_member."boardId" = c."boardId"
+       AND board_member."profileId" = ${profileId}
+      LEFT JOIN "ChannelReadState" rs
+        ON rs."channelId" = c.id
+       AND rs."profileId" = ${profileId}
+      ORDER BY c."boardId" ASC, c."position" ASC
+    `;
+
+    return results.map((row) => ({
+      channelId: row.channelId,
+      boardId: row.boardId,
+      lastMessageSeq: Number(row.lastMessageSeq),
+      lastReadSeq: Number(row.lastReadSeq),
+      unreadCount: Number(row.unreadCount),
+      hasUnreadMention: row.hasUnreadMention === true,
+    }));
+  } catch (error) {
+    logger.error("[getSidebarChannelStates] Database error:", error);
+    throw error;
+  }
 }
 
 /**

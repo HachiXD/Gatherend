@@ -25,22 +25,60 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useModal } from "@/hooks/use-modal-store";
-import { ChannelType } from "@prisma/client";
+import { ChannelType, MemberRole } from "@prisma/client";
 import { Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SlashSVG } from "@/lib/slash";
 import { useTranslation } from "@/i18n";
 import { FileUpload } from "@/components/file-upload";
-import { getStoredUploadAssetId } from "@/lib/upload-values";
+import {
+  getStoredUploadAssetId,
+  parseStoredUploadValue,
+} from "@/lib/upload-values";
 import type {
   BoardWithData,
   BoardChannel,
 } from "@/components/providers/board-provider";
+import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 const PANEL_SHELL =
   "border border-theme-border bg-theme-bg-secondary/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.28),inset_0_-1px_0_rgba(0,0,0,0.28)]";
-const SECTION_KICKER =
-  "text-[11px] -my-1 font-bold uppercase tracking-[0.08em] text-theme-text-subtle";
+
+function getOptimisticChannelImageAsset(
+  value: string | null | undefined,
+): ClientUploadedAsset | null {
+  const upload = parseStoredUploadValue(value);
+  if (!upload) {
+    return null;
+  }
+
+  return {
+    id: upload.assetId,
+    url: upload.url,
+    width: upload.width ?? null,
+    height: upload.height ?? null,
+    dominantColor: null,
+  };
+}
+
+function getOptimisticChannelMemberCount(
+  board: BoardWithData | undefined,
+) {
+  const autoJoinedProfileIds = new Set<string>();
+
+  board?.members.forEach((member) => {
+    if (
+      member.profileId &&
+      (member.role === MemberRole.OWNER ||
+        member.role === MemberRole.ADMIN ||
+        member.role === MemberRole.MODERATOR)
+    ) {
+      autoJoinedProfileIds.add(member.profileId);
+    }
+  });
+
+  return autoJoinedProfileIds.size;
+}
 
 export const CreateChannelModal = () => {
   const { isOpen, onClose, type, data } = useModal();
@@ -92,14 +130,20 @@ export const CreateChannelModal = () => {
       ]);
 
       const tempId = `temp-${Date.now()}`;
+      const optimisticImageAsset = getOptimisticChannelImageAsset(
+        values.imageUpload,
+      );
+      const optimisticMemberCount = previousBoard
+        ? getOptimisticChannelMemberCount(previousBoard)
+        : 1;
       const optimisticChannel: BoardChannel = {
         id: tempId,
         name: values.name,
         type: values.type,
         boardId: boardId,
         position: 999,
-        imageAsset: null,
-        channelMemberCount: 0,
+        imageAsset: optimisticImageAsset,
+        channelMemberCount: optimisticMemberCount,
         isJoined: true,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -122,9 +166,12 @@ export const CreateChannelModal = () => {
         if (!old || !context?.tempId) return old;
         return {
           ...old,
-          channels: old.channels.map((ch) =>
-            ch.id === context.tempId ? newChannel : ch,
-          ),
+          channels: [
+            ...old.channels.filter(
+              (ch) => ch.id !== context.tempId && ch.id !== newChannel.id,
+            ),
+            newChannel,
+          ],
         };
       });
 
@@ -210,7 +257,7 @@ export const CreateChannelModal = () => {
                         <FormItem>
                           <FormControl>
                             <FileUpload
-                              endpoint="boardImage"
+                              endpoint="channelImage"
                               value={field.value || ""}
                               onChange={field.onChange}
                               uploadButtonClassName="rounded-none border-theme-border-subtle bg-theme-bg-cancel-button text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"

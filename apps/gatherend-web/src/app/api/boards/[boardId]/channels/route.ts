@@ -1,25 +1,75 @@
 // app/api/boards/[boardId]/channels/route.ts
 
 import { db } from "@/lib/db";
-import { MemberRole, ChannelType } from "@prisma/client";
+import {
+  AssetContext,
+  AssetVisibility,
+  MemberRole,
+  ChannelType,
+  type Prisma,
+} from "@prisma/client";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
+import {
+  UUID_REGEX,
+  findOwnedUploadedAsset,
+  serializeUploadedAsset,
+  uploadedAssetSummarySelect,
+} from "@/lib/uploaded-assets";
+import {
+  reserveChannelMessageSeqRange,
+  upsertBoardReadStatesForChannel,
+} from "@/lib/channels/read-state";
+
+const getBoardChannelSelect = (profileId: string) =>
+  ({
+    id: true,
+    name: true,
+    type: true,
+    position: true,
+    boardId: true,
+    createdAt: true,
+    updatedAt: true,
+    imageAsset: {
+      select: uploadedAssetSummarySelect,
+    },
+    _count: {
+      select: { channelMembers: true },
+    },
+    channelMembers: {
+      where: { profileId },
+      select: { id: true },
+      take: 1,
+    },
+  }) satisfies Prisma.ChannelSelect;
+
+type RawBoardChannel = Prisma.ChannelGetPayload<{
+  select: ReturnType<typeof getBoardChannelSelect>;
+}>;
+
+type SerializedBoardChannel = ReturnType<typeof serializeBoardChannel>;
+
+function serializeBoardChannel(channel: RawBoardChannel) {
+  return {
+    id: channel.id,
+    name: channel.name,
+    type: channel.type,
+    position: channel.position,
+    boardId: channel.boardId,
+    imageAsset: serializeUploadedAsset(channel.imageAsset),
+    channelMemberCount: channel._count.channelMembers,
+    isJoined: channel.channelMembers.length > 0,
+    createdAt: channel.createdAt,
+    updatedAt: channel.updatedAt,
+  };
+}
 
 async function notifyChannelCreated(
   boardId: string,
-  channel: {
-    id: string;
-    name: string;
-    type: ChannelType;
-    position: number;
-    boardId: string;
-    imageAssetId: string | null;
-    profileId: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-  },
+  channel: SerializedBoardChannel,
+  autoJoinedProfileIds: string[],
 ) {
   try {
     const socketUrl =
@@ -39,13 +89,17 @@ async function notifyChannelCreated(
         data: {
           boardId,
           channel: {
-            ...channel,
+            id: channel.id,
+            name: channel.name,
+            type: channel.type,
+            position: channel.position,
+            boardId: channel.boardId,
+            imageAsset: channel.imageAsset,
+            channelMemberCount: channel.channelMemberCount,
             createdAt: channel.createdAt.toISOString(),
             updatedAt: channel.updatedAt.toISOString(),
-            imageAsset: null,
-            channelMemberCount: 0,
-            isJoined: false,
           },
+          autoJoinedProfileIds,
           timestamp: Date.now(),
         },
       }),
@@ -55,10 +109,6 @@ async function notifyChannelCreated(
     console.error("[NOTIFY_CHANNEL_CREATED]", error);
   }
 }
-
-// UUID validation regex
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function POST(
   req: Request,
@@ -106,14 +156,30 @@ export async function POST(
       );
     }
 
-    // Validar imageAssetId si se proporciona
-    if (imageAssetId !== undefined && imageAssetId !== null) {
+    let resolvedImageAssetId: string | null = null;
+    if (imageAssetId !== undefined && imageAssetId !== null && imageAssetId !== "") {
       if (typeof imageAssetId !== "string" || !UUID_REGEX.test(imageAssetId)) {
         return NextResponse.json(
           { error: "Invalid image asset ID" },
           { status: 400 },
         );
       }
+
+      const imageAsset = await findOwnedUploadedAsset(
+        imageAssetId,
+        profile.id,
+        AssetContext.CHANNEL_IMAGE,
+        AssetVisibility.PUBLIC,
+      );
+
+      if (!imageAsset) {
+        return NextResponse.json(
+          { error: "Channel image asset not found" },
+          { status: 400 },
+        );
+      }
+
+      resolvedImageAssetId = imageAsset.id;
     }
 
     // Validar type
@@ -126,7 +192,7 @@ export async function POST(
     }
 
     // Ejecutar verificación de permisos y creación en transacción
-    const channel = await db.$transaction(async (tx) => {
+    const result = await db.$transaction(async (tx) => {
       // Verificar permisos y contar canales en paralelo
       const [member, channelCount] = await Promise.all([
         tx.member.findFirst({
@@ -149,33 +215,121 @@ export async function POST(
         throw new Error("MAX_CHANNELS");
       }
 
-      const firstChannel = await tx.channel.findFirst({
-        where: { boardId },
-        orderBy: { position: "asc" },
-      });
+      const [firstChannel, autoJoinMembers] = await Promise.all([
+        tx.channel.findFirst({
+          where: { boardId },
+          orderBy: { position: "asc" },
+        }),
+        tx.member.findMany({
+          where: {
+            boardId,
+            OR: [
+              {
+                role: {
+                  in: [
+                    MemberRole.OWNER,
+                    MemberRole.ADMIN,
+                    MemberRole.MODERATOR,
+                  ],
+                },
+              },
+              { profileId: profile.id },
+            ],
+          },
+          select: {
+            id: true,
+            profileId: true,
+          },
+        }),
+      ]);
 
       const firstPos = firstChannel?.position ?? 1000;
       const newPosition = firstPos - 1000;
+      const uniqueAutoJoinMembers = Array.from(
+        new Map(
+          autoJoinMembers.map((boardMember) => [
+            boardMember.profileId,
+            boardMember,
+          ]),
+        ).values(),
+      );
 
       // Crear canal
-      return tx.channel.create({
+      const createdChannel = await tx.channel.create({
         data: {
           name: (name as string).trim(),
           type: type as ChannelType,
           boardId,
           position: newPosition,
           profileId: profile.id,
-          imageAssetId: (imageAssetId as string | null) ?? null,
+          imageAssetId: resolvedImageAssetId,
         },
+        select: { id: true },
       });
+
+      if (uniqueAutoJoinMembers.length > 0) {
+        await tx.channelMember.createMany({
+          data: uniqueAutoJoinMembers.map((boardMember) => ({
+            channelId: createdChannel.id,
+            profileId: boardMember.profileId,
+          })),
+          skipDuplicates: true,
+        });
+
+        const welcomeStartSeq = await reserveChannelMessageSeqRange(
+          tx,
+          createdChannel.id,
+          uniqueAutoJoinMembers.length,
+        );
+
+        await tx.message.createMany({
+          data: uniqueAutoJoinMembers.map((boardMember, index) => ({
+            channelId: createdChannel.id,
+            seq: welcomeStartSeq + index,
+            type: "WELCOME",
+            content: "",
+            memberId: boardMember.id,
+            messageSenderId: boardMember.profileId,
+          })),
+        });
+      }
+
+      const finalChannelState = await tx.channel.findUniqueOrThrow({
+        where: { id: createdChannel.id },
+        select: { lastMessageSeq: true },
+      });
+
+      await upsertBoardReadStatesForChannel(tx, {
+        boardId,
+        channelId: createdChannel.id,
+        lastReadSeq: finalChannelState.lastMessageSeq,
+      });
+
+      const hydratedChannel = await tx.channel.findUniqueOrThrow({
+        where: { id: createdChannel.id },
+        select: getBoardChannelSelect(profile.id),
+      });
+
+      return {
+        channel: hydratedChannel,
+        autoJoinedProfileIds: uniqueAutoJoinMembers.map(
+          (boardMember) => boardMember.profileId,
+        ),
+      };
     });
 
     // Invalidar cache del layout para forzar re-render
     revalidatePath(`/boards/${boardId}`);
 
-    void notifyChannelCreated(boardId, channel);
+    const serializedChannel = serializeBoardChannel(result.channel);
 
-    return NextResponse.json(channel);
+    void notifyChannelCreated(
+      boardId,
+      serializedChannel,
+      result.autoJoinedProfileIds,
+    );
+
+    return NextResponse.json(serializedChannel);
   } catch (error) {
     // Manejar errores personalizados lanzados desde la transacción
     if (error instanceof Error) {

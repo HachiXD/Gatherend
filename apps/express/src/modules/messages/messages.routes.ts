@@ -2,21 +2,20 @@ import { Router } from "express";
 import {
   messageSelectFields,
   serializeMessageRecord,
-  createMessage,
   getPaginatedMessages,
   getMessagesByIds,
   getMessage,
   updateMessageContent,
   hardDeleteMessage,
   extractMentionIdentifiers,
-  resolveProfileIds,
+  resolveMentionedChannelMemberProfileIds,
   createMentions,
+  reserveChannelMessageSeqRange,
 } from "./messages.service.js";
 import {
   verifyMemberInBoardCached,
   findChannelCached,
 } from "../../lib/cache.js";
-import { incrementUnreadForChannel } from "../channel-read-state/channel-read-state.service.js";
 import {
   AssetContext,
   AssetVisibility,
@@ -38,7 +37,6 @@ const MAX_BATCH_MESSAGE_IDS = 200;
 // POST → Enviar Mensaje
 
 router.post("/", async (req, res) => {
-  const startTime = Date.now();
   try {
     const profileId = req.profile?.id;
     const { boardId, channelId } = req.query;
@@ -103,15 +101,29 @@ router.post("/", async (req, res) => {
       type = MessageType.IMAGE;
     }
 
-    const message = await createMessage({
-      content: content || "",
-      attachmentAssetId: resolvedAttachmentAssetId,
-      stickerId,
-      channelId: channelId as string,
-      memberId: member.id,
-      messageSenderId: profileId,
-      type,
-      replyToId,
+    const message = await db.$transaction(async (tx) => {
+      const reservedSeq = await reserveChannelMessageSeqRange(
+        tx,
+        channelId as string,
+        1,
+      );
+
+      return serializeMessageRecord(
+        await tx.message.create({
+          data: {
+            content: content || "",
+            attachmentAssetId: resolvedAttachmentAssetId,
+            stickerId,
+            channelId: channelId as string,
+            seq: reservedSeq,
+            memberId: member.id,
+            messageSenderId: profileId,
+            type,
+            replyToId,
+          },
+          select: messageSelectFields,
+        }),
+      );
     });
 
     // Usar el profile que ya viene del cache de member verification (evita query extra)
@@ -120,7 +132,12 @@ router.post("/", async (req, res) => {
     // Procesar menciones si hay contenido
     if (content) {
       const mentionIdentifiers = extractMentionIdentifiers(content);
-      const mentionedProfileIds = await resolveProfileIds(mentionIdentifiers);
+      const mentionedProfileIds =
+        await resolveMentionedChannelMemberProfileIds(
+          channelId as string,
+          mentionIdentifiers,
+          member.profileId,
+        );
 
       if (mentionedProfileIds.length > 0) {
         // Crear las menciones en la base de datos
@@ -134,6 +151,7 @@ router.post("/", async (req, res) => {
               messageId: message.id,
               channelId,
               boardId,
+              messageSeq: message.seq,
               sender: senderProfile,
               content: content.substring(0, 100), // Preview del mensaje
             });
@@ -159,23 +177,14 @@ router.post("/", async (req, res) => {
     req.io.to(roomName).emit(eventKey, messageWithTempId);
 
     // Emitir evento global al board para notificaciones de usuarios en otros canales
-    req.io.to(`board-messages:${boardId}`).emit("global:channel:message", {
+    req.io.to(`board-messages:${boardId}`).emit("global:channel:activity", {
       channelId,
       boardId,
-      messageTimestamp: Date.now(), // timestamp para comparar con lastAck en cliente
-      member: {
-        ...member,
-        profile: senderProfile,
-      },
+      messageSeq: message.seq,
+      senderProfileId: member.profileId,
     });
 
     // Incrementar el contador de no leídos en la base de datos para todos los miembros
-    await incrementUnreadForChannel(
-      channelId as string,
-      boardId as string,
-      member.profileId,
-    );
-
     return res.json(messageWithTempId);
   } catch (err) {
     logger.error("[MESSAGE_POST]", err);

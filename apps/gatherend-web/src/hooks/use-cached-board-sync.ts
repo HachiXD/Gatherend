@@ -47,7 +47,11 @@ interface MemberRoleChangedPayload {
 
 interface ChannelCreatedPayload {
   boardId: string;
-  channel: BoardChannel & { createdAt: string; updatedAt: string };
+  channel: Omit<BoardChannel, "isJoined" | "createdAt" | "updatedAt"> & {
+    createdAt: string;
+    updatedAt: string;
+  };
+  autoJoinedProfileIds: string[];
   timestamp: number;
 }
 
@@ -59,7 +63,13 @@ interface ChannelDeletedPayload {
 
 interface ChannelUpdatedPayload {
   boardId: string;
-  channel: { id: string; name?: string; type?: string; updatedAt?: string };
+  channel: {
+    id: string;
+    name?: string;
+    type?: string;
+    imageAsset?: ClientUploadedAsset | null;
+    updatedAt?: string;
+  };
   timestamp: number;
 }
 
@@ -84,7 +94,7 @@ function getCachedBoardIds(queryClient: ReturnType<typeof useQueryClient>): Set<
   return cachedBoardIds;
 }
 
-export function useCachedBoardSync(): void {
+export function useCachedBoardSync(currentProfileId?: string): void {
   const { socket } = useSocketClient();
   const reconnectVersion = useSocketRecoveryVersion();
   const queryClient = useQueryClient();
@@ -154,6 +164,9 @@ export function useCachedBoardSync(): void {
         if (old.channels.some((ch) => ch.id === payload.channel.id)) return old;
         const newChannel: BoardChannel = {
           ...payload.channel,
+          isJoined:
+            currentProfileId !== undefined &&
+            payload.autoJoinedProfileIds.includes(currentProfileId),
           createdAt: new Date(payload.channel.createdAt),
           updatedAt: new Date(payload.channel.updatedAt),
         };
@@ -179,6 +192,9 @@ export function useCachedBoardSync(): void {
                   ...ch,
                   ...(payload.channel.name !== undefined && { name: payload.channel.name }),
                   ...(payload.channel.type !== undefined && { type: payload.channel.type as BoardChannel["type"] }),
+                  ...(payload.channel.imageAsset !== undefined && {
+                    imageAsset: payload.channel.imageAsset,
+                  }),
                   ...(payload.channel.updatedAt !== undefined && { updatedAt: new Date(payload.channel.updatedAt) }),
                 }
               : ch,
@@ -223,7 +239,7 @@ export function useCachedBoardSync(): void {
       });
       observedBoardIdsRef.current.clear();
     };
-  }, [socket, queryClient]);
+  }, [socket, queryClient, currentProfileId]);
 
   useEffect(() => {
     if (reconnectVersion === 0) return;

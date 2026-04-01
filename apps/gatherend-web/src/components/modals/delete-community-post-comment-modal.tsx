@@ -11,10 +11,12 @@ import {
 import { useModal } from "@/hooks/use-modal-store";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { useTranslation } from "@/i18n";
 
 export const DeleteCommunityPostCommentModal = () => {
   const { isOpen, onClose, type, data } = useModal();
   const [isLoading, setIsLoading] = useState(false);
+  const { t } = useTranslation();
 
   const isModalOpen = isOpen && type === "deleteCommunityPostComment";
   const { onDeleteCommunityPostCommentConfirm } = data;
@@ -43,16 +45,16 @@ export const DeleteCommunityPostCommentModal = () => {
       <DialogContent className="max-w-[420px]! overflow-hidden rounded-none border border-theme-border bg-theme-bg-modal p-0 text-theme-text-subtle">
         <DialogHeader className="px-6 pt-2">
           <DialogTitle className="text-center text-2xl font-bold">
-            Delete Comment
+            {t.modals.deleteCommunityPostComment.title}
           </DialogTitle>
           <DialogDescription className="text-center -mt-2 text-[15px] text-theme-text-subtle">
-            This will remove the comment from the post thread.
+            {t.modals.deleteCommunityPostComment.description}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 px-6 pb-4 -mt-2.5">
           <div className="flex h-7 items-center justify-center border border-theme-border bg-theme-bg-edit-form/60 px-3">
             <p className="text-center text-[14px] leading-none text-theme-text-tertiary">
-              This comment will be deleted permanently.
+              {t.modals.deleteCommunityPostComment.willBeDeleted}
             </p>
           </div>
         </div>
@@ -65,7 +67,7 @@ export const DeleteCommunityPostCommentModal = () => {
               onClick={handleClose}
               className="h-6 cursor-pointer rounded-none bg-theme-bg-cancel-button px-3 text-[14px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
             >
-              Cancel
+              {t.common.cancel}
             </Button>
             <Button
               type="button"
@@ -73,7 +75,7 @@ export const DeleteCommunityPostCommentModal = () => {
               onClick={onClick}
               className="h-6 cursor-pointer rounded-none border border-red-500/60 bg-red-500/80 px-3 text-[14px] text-theme-text-light hover:bg-red-600 hover:text-theme-text-light disabled:cursor-not-allowed disabled:opacity-70"
             >
-              Delete
+              {t.common.delete}
             </Button>
           </div>
         </DialogFooter>

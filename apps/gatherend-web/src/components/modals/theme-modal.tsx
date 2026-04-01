@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { X, Plus, RotateCcw, Sun, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -18,25 +18,20 @@ import {
   type GradientColorStop,
 } from "@/components/ui/gradient-slider";
 import {
-  generatePaletteFromBase,
-  generateLightPaletteFromBase,
-  applyThemeToDOM,
-  applyGradientToDOM,
-  applyTransparencyToBackgrounds,
   isValidHexColor,
   clampGradientColor,
 } from "@/lib/theme/utils";
 import {
-  buildThemeGradientStopsCss,
   normalizeThemeGradientColorStops,
 } from "@/lib/theme/gradient-stops";
 import { DEFAULT_BASE_COLOR, THEME_PRESETS } from "@/lib/theme/presets";
-import type { GradientConfig, ThemeConfig, ThemeMode } from "@/lib/theme/types";
+import type { ThemeConfig, ThemeMode } from "@/lib/theme/types";
 import { toast } from "sonner";
 import axios from "axios";
 import { useQueryClient } from "@tanstack/react-query";
 import { Profile } from "@prisma/client";
 import { useTranslation } from "@/i18n";
+import { useThemePreviewStore } from "@/stores/theme-preview-store";
 
 interface ThemeModalProps {
   isOpen: boolean;
@@ -132,21 +127,6 @@ function normalizeGradientColors(
   });
 }
 
-// Helper para generar CSS del gradiente con posiciones
-function generateGradientPreviewCSS(
-  colors: GradientColorStop[],
-  angle: number,
-  type: "linear" | "radial",
-): string {
-  const stops = buildThemeGradientStopsCss(colors);
-  if (!stops) return "transparent";
-
-  if (type === "radial") {
-    return `radial-gradient(circle at center, ${stops})`;
-  }
-  return `linear-gradient(${angle}deg, ${stops})`;
-}
-
 function interpolateHexColor(
   color1: string,
   color2: string,
@@ -236,6 +216,12 @@ export function ThemeModal({
   currentThemeConfig,
 }: ThemeModalProps) {
   const queryClient = useQueryClient();
+  const setPreviewConfig = useThemePreviewStore(
+    (state) => state.setPreviewConfig,
+  );
+  const clearPreviewConfig = useThemePreviewStore(
+    (state) => state.clearPreviewConfig,
+  );
   const [isSaving, setIsSaving] = useState(false);
   const { t } = useTranslation();
 
@@ -264,13 +250,9 @@ export function ThemeModal({
     currentThemeConfig?.gradient?.type || "linear",
   );
 
-  // Store original config to revert on cancel
-  const originalConfigRef = useRef<ThemeConfig | null>(currentThemeConfig);
-
   // Sync state when modal opens with new config
   useEffect(() => {
     if (isOpen) {
-      originalConfigRef.current = currentThemeConfig;
       setBaseColor(currentThemeConfig?.baseColor || DEFAULT_BASE_COLOR);
       setThemeMode(currentThemeConfig?.mode || "dark");
       setUseGradient(!!currentThemeConfig?.gradient);
@@ -288,42 +270,43 @@ export function ThemeModal({
     }
   }, [isOpen, currentThemeConfig]);
 
-  // Apply theme preview in real-time
-  const applyPreview = useCallback(() => {
-    let colors =
-      themeMode === "light"
-        ? generateLightPaletteFromBase(baseColor)
-        : generatePaletteFromBase(baseColor);
+  useEffect(() => {
+    if (!isOpen) {
+      clearPreviewConfig();
+      return;
+    }
 
-    // Si hay degradado activo, aplicar transparencia a los fondos
+    const previewConfig: ThemeConfig = {
+      baseColor: baseColor !== DEFAULT_BASE_COLOR ? baseColor : undefined,
+      mode: themeMode !== "dark" ? themeMode : undefined,
+    };
+
     if (useGradient && gradientColors.length >= 2) {
-      colors = applyTransparencyToBackgrounds(colors);
-      const gradient: GradientConfig = {
+      previewConfig.gradient = {
         colors: stripEditableGradientColors(gradientColors),
         angle: clampGradientAngle(gradientAngle),
         type: gradientType,
       };
-      applyGradientToDOM(gradient);
-    } else {
-      applyGradientToDOM(null);
     }
 
-    applyThemeToDOM(colors);
+    setPreviewConfig(previewConfig);
   }, [
     baseColor,
+    clearPreviewConfig,
+    gradientAngle,
+    gradientColors,
+    gradientType,
+    isOpen,
+    setPreviewConfig,
     themeMode,
     useGradient,
-    gradientColors,
-    gradientAngle,
-    gradientType,
   ]);
 
-  // Apply preview whenever settings change
   useEffect(() => {
-    if (isOpen) {
-      applyPreview();
-    }
-  }, [isOpen, applyPreview]);
+    return () => {
+      clearPreviewConfig();
+    };
+  }, [clearPreviewConfig]);
 
   // Re-clamp gradient colors when theme mode changes
   useEffect(() => {
@@ -343,30 +326,8 @@ export function ThemeModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [themeMode]);
 
-  // Revert to original theme
-  const revertToOriginal = useCallback(() => {
-    const originalBase =
-      originalConfigRef.current?.baseColor || DEFAULT_BASE_COLOR;
-    const originalMode = originalConfigRef.current?.mode || "dark";
-    const originalGradient = originalConfigRef.current?.gradient;
-
-    let colors =
-      originalMode === "light"
-        ? generateLightPaletteFromBase(originalBase)
-        : generatePaletteFromBase(originalBase);
-
-    // Si había degradado, aplicar transparencia
-    if (originalGradient) {
-      colors = applyTransparencyToBackgrounds(colors);
-    }
-
-    applyThemeToDOM(colors);
-    applyGradientToDOM(originalGradient || null);
-  }, []);
-
-  // Handle cancel - revert changes
   const handleCancel = () => {
-    revertToOriginal();
+    clearPreviewConfig();
     onClose();
   };
 
@@ -404,26 +365,8 @@ export function ThemeModal({
           oldProfile ? { ...oldProfile, ...serverProfile } : serverProfile,
       );
 
-      // Re-apply theme to DOM to ensure it persists after modal closes
-      let colors =
-        themeMode === "light"
-          ? generateLightPaletteFromBase(baseColor)
-          : generatePaletteFromBase(baseColor);
-
-      if (useGradient && gradientColors.length >= 2) {
-        colors = applyTransparencyToBackgrounds(colors);
-        applyGradientToDOM({
-          colors: stripEditableGradientColors(gradientColors),
-          angle: clampGradientAngle(gradientAngle),
-          type: gradientType,
-        });
-      } else {
-        applyGradientToDOM(null);
-      }
-
-      applyThemeToDOM(colors);
-
       toast.success(t.modals.theme.saveSuccess);
+      clearPreviewConfig();
       onClose();
     } catch (error) {
       console.error("Error saving theme:", error);
@@ -501,7 +444,7 @@ export function ThemeModal({
   };
 
   // Update gradient color (clamped to mode lightness range)
-  const updateGradientColor = (editorId: string, color: string) => {
+  const updateGradientColor = useCallback((editorId: string, color: string) => {
     const newColors = normalizeEditableGradientColors(
       gradientColors.map((stop) =>
         stop.editorId === editorId
@@ -514,7 +457,7 @@ export function ThemeModal({
     );
     // Aplicar clamp según el modo del tema
     setGradientColors(newColors);
-  };
+  }, [gradientColors, themeMode]);
 
   // Handle gradient colors change from slider (with clamping)
   const handleGradientColorsChange = (

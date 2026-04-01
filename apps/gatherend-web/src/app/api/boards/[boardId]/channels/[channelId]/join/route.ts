@@ -4,6 +4,10 @@ import { Prisma } from "@prisma/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
 import { serializeProfileSummary } from "@/lib/uploaded-assets";
+import {
+  reserveChannelMessageSeqRange,
+  upsertChannelReadState,
+} from "@/lib/channels/read-state";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -102,9 +106,12 @@ export async function POST(
         data: { channelId, profileId: profile.id },
       });
 
-      return tx.message.create({
+      const seq = await reserveChannelMessageSeqRange(tx, channelId, 1);
+
+      const message = await tx.message.create({
         data: {
           channelId,
+          seq,
           type: "WELCOME",
           content: "",
           memberId: member.id,
@@ -129,6 +136,14 @@ export async function POST(
           },
         },
       });
+
+      await upsertChannelReadState(tx, {
+        profileId: profile.id,
+        channelId,
+        lastReadSeq: seq,
+      });
+
+      return message;
     });
 
     notifyWelcomeMessage(channelId, serializeWelcomeMessagePayload(welcomeMessage));

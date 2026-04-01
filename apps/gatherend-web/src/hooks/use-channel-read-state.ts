@@ -8,161 +8,92 @@ import {
 import { useSocketRecoveryVersion } from "@/components/providers/socket-provider";
 import { getExpressAuthHeaders } from "@/lib/express-fetch";
 
-/**
- * Hook para cargar el estado de lectura inicial de todos los boards del usuario
- * y marcar canales/conversaciones como leídos cuando el usuario los visita.
- *
- * También carga el estado de unreads de conversaciones (DMs) desde el servidor.
- */
 export function useChannelReadState(
   profileId: string | undefined,
   boardIds: string[],
 ) {
   const {
-    initializeFromServer,
-    replaceFromServer,
+    initializeChannelStateFromServer,
+    replaceChannelStateFromServer,
     initializeDmFromServer,
     replaceDmFromServer,
     clearUnread,
     clearDmUnread,
     setViewingRoom,
     setLastAck,
-  } =
-    useUnreadStore();
+  } = useUnreadStore();
   const {
     initializeFromServer: initializeMentions,
     replaceFromServer: replaceMentionsFromServer,
     clearMention,
-  } =
-    useMentionStore();
+  } = useMentionStore();
   const getToken = useTokenGetter();
   const tokenReady = useTokenReady();
   const reconnectVersion = useSocketRecoveryVersion();
-  const loadedRef = useRef<Set<string>>(new Set());
   const conversationsLoadedRef = useRef(false);
-  const channelUnreadSnapshotRef = useRef<Record<string, number>>({});
   const conversationUnreadSnapshotRef = useRef<Record<string, number>>({});
-  const mentionsSnapshotRef = useRef<string[]>([]);
 
-  // Estabilizar boardIds para evitar renders infinitos
   const stableBoardIds = useMemo(() => boardIds.join(","), [boardIds]);
 
-  // Cargar estado inicial de todos los boards
   useEffect(() => {
     if (!profileId || !stableBoardIds || !tokenReady) return;
 
-    const boardIdArray = stableBoardIds.split(",").filter(Boolean);
-    const shouldReload = reconnectVersion > 0;
-
-    const loadAllBoardStates = async () => {
+    const loadSidebarState = async () => {
       const socketUrl =
         process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
 
-      // Cargar solo los boards que no hemos cargado aún
-      const boardsToLoad = shouldReload
-        ? boardIdArray
-        : boardIdArray.filter((id) => !loadedRef.current.has(id));
+      try {
+        const token = await getToken();
+        const authHeaders = getExpressAuthHeaders(profileId, token);
 
-      if (boardsToLoad.length === 0) return;
-
-      // Get fresh token for auth
-      const token = await getToken();
-
-      // Procesar en lotes pequeños para evitar rate limiting
-      const BATCH_SIZE = 3;
-      const allCounts: Record<string, number> = {};
-      const allMentions: string[] = [];
-
-      for (let i = 0; i < boardsToLoad.length; i += BATCH_SIZE) {
-        const batch = boardsToLoad.slice(i, i + BATCH_SIZE);
-
-        // Cargar estado de lectura y menciones para este lote en paralelo
-        const batchResults = await Promise.all(
-          batch.map(async (boardId) => {
-            try {
-              const authHeaders = getExpressAuthHeaders(profileId, token);
-              // Hacer ambas requests para este board
-              const [stateRes, mentionsRes] = await Promise.all([
-                fetch(`${socketUrl}/channel-read-state/board/${boardId}`, {
-                  credentials: "include",
-                  headers: authHeaders,
-                }),
-                fetch(
-                  `${socketUrl}/channel-read-state/board/${boardId}/mentions`,
-                  {
-                    credentials: "include",
-                    headers: authHeaders,
-                  },
-                ),
-              ]);
-
-              const counts = stateRes.ok ? await stateRes.json() : {};
-              const mentions = mentionsRes.ok ? await mentionsRes.json() : [];
-
-              loadedRef.current.add(boardId);
-              return { counts, mentions };
-            } catch (error) {
-              console.error(
-                `[channel-read-state] Error loading board ${boardId}:`,
-                error,
-              );
-              return { counts: {}, mentions: [] };
-            }
-          }),
-        );
-
-        // Acumular resultados
-        batchResults.forEach(({ counts, mentions }) => {
-          Object.assign(allCounts, counts);
-          allMentions.push(...mentions);
+        const res = await fetch(`${socketUrl}/channel-read-state/sidebar`, {
+          credentials: "include",
+          headers: authHeaders,
         });
 
-        if (!shouldReload) {
-          // In the initial load, merge incrementally so the UI updates incrementally
-          channelUnreadSnapshotRef.current = {
-            ...channelUnreadSnapshotRef.current,
-            ...allCounts,
-          };
-          mentionsSnapshotRef.current = [
-            ...new Set([...mentionsSnapshotRef.current, ...allMentions]),
-          ];
-          if (Object.keys(allCounts).length > 0) {
-            initializeFromServer(allCounts);
-          }
-          if (allMentions.length > 0) {
-            initializeMentions(allMentions);
-          }
+        if (!res.ok) {
+          return;
         }
 
-        // Pequeña pausa entre lotes para no saturar el rate limit
-        if (i + BATCH_SIZE < boardsToLoad.length) {
-          await new Promise((resolve) => setTimeout(resolve, 100));
-        }
-      }
+        const data = (await res.json()) as {
+          channels?: Array<{
+            channelId: string;
+            unreadCount: number;
+            lastReadSeq: number;
+            hasUnreadMention: boolean;
+          }>;
+        };
 
-      // Replace just when all batches are complete to avoid flashes
-      if (shouldReload) {
-        channelUnreadSnapshotRef.current = allCounts;
-        mentionsSnapshotRef.current = allMentions;
-        replaceFromServer(allCounts);
-        replaceMentionsFromServer(allMentions);
+        const channels = Array.isArray(data.channels) ? data.channels : [];
+        const mentionChannelIds = channels
+          .filter((channel) => channel.hasUnreadMention)
+          .map((channel) => channel.channelId);
+
+        if (reconnectVersion > 0) {
+          replaceChannelStateFromServer(channels);
+          replaceMentionsFromServer(mentionChannelIds);
+        } else {
+          initializeChannelStateFromServer(channels);
+          initializeMentions(mentionChannelIds);
+        }
+      } catch (error) {
+        console.error("[channel-read-state] Error loading sidebar state:", error);
       }
     };
 
-    loadAllBoardStates();
+    loadSidebarState();
   }, [
     profileId,
     stableBoardIds,
     tokenReady,
     reconnectVersion,
     getToken,
-    initializeFromServer,
+    initializeChannelStateFromServer,
     initializeMentions,
-    replaceFromServer,
+    replaceChannelStateFromServer,
     replaceMentionsFromServer,
   ]);
 
-  // Cargar unreads de conversaciones (DMs) solo una vez
   useEffect(() => {
     if (!profileId || !tokenReady) return;
     if (reconnectVersion === 0 && conversationsLoadedRef.current) return;
@@ -172,7 +103,6 @@ export function useChannelReadState(
         process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
 
       try {
-        // Get fresh token for auth
         const token = await getToken();
         const authHeaders = getExpressAuthHeaders(profileId, token);
 
@@ -207,33 +137,41 @@ export function useChannelReadState(
     };
 
     loadConversationUnreads();
-  }, [profileId, tokenReady, reconnectVersion, getToken, initializeDmFromServer, replaceDmFromServer]);
+  }, [
+    profileId,
+    tokenReady,
+    reconnectVersion,
+    getToken,
+    initializeDmFromServer,
+    replaceDmFromServer,
+  ]);
 
-  // Función para marcar un canal como leído
   const markAsRead = useCallback(
     async (roomId: string, isConversation = false) => {
       if (!profileId) return;
 
-      // Establecer que estamos viendo este room (previene race conditions)
       setViewingRoom(roomId);
 
-      // Limpiar inmediatamente en el store local
-      clearUnread(roomId);
-      if (isConversation) clearDmUnread(roomId);
-      clearMention(roomId);
+      if (isConversation) {
+        clearDmUnread(roomId);
+        setLastAck(roomId);
+      } else {
+        const unreadState = useUnreadStore.getState();
+        const estimatedLatestSeq =
+          (unreadState.lastAck[roomId] || 0) + (unreadState.unreads[roomId] || 0);
+        clearUnread(roomId);
+        setLastAck(roomId, estimatedLatestSeq);
+      }
 
-      // Actualizar lastAck
-      setLastAck(roomId);
+      clearMention(roomId);
 
       try {
         const socketUrl =
           process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
 
-        // Get fresh token for auth
         const token = await getToken();
         const authHeaders = getExpressAuthHeaders(profileId, token);
 
-        // Usar el endpoint correcto según el tipo
         const endpoint = isConversation
           ? `${socketUrl}/conversation-read-state/${roomId}/read`
           : `${socketUrl}/channel-read-state/${roomId}/read`;
@@ -258,7 +196,6 @@ export function useChannelReadState(
     ],
   );
 
-  // Función para limpiar viewingRoom cuando el usuario sale
   const clearViewingRoom = useCallback(() => {
     setViewingRoom(null);
   }, [setViewingRoom]);

@@ -1,4 +1,4 @@
-import { MessageType } from "@prisma/client";
+import { MessageType, type Prisma } from "@prisma/client";
 import { db } from "../../lib/db.js";
 import { logger } from "../../lib/logger.js";
 import {
@@ -14,6 +14,7 @@ export const messageSelectFields = {
   id: true,
   content: true,
   type: true,
+  seq: true,
   attachmentAssetId: true,
   messageSenderId: true,
   channelId: true,
@@ -128,8 +129,10 @@ export function extractMentionIdentifiers(content: string): string[] {
   return [...new Set(identifiers)];
 }
 
-export async function resolveProfileIds(
+export async function resolveMentionedChannelMemberProfileIds(
+  channelId: string,
   identifiers: string[],
+  excludeProfileId: string,
 ): Promise<string[]> {
   if (identifiers.length === 0) return [];
 
@@ -147,16 +150,22 @@ export async function resolveProfileIds(
 
     if (conditions.length === 0) return [];
 
-    const profiles = await db.profile.findMany({
+    const profiles = await db.channelMember.findMany({
       where: {
-        OR: conditions,
+        channelId,
+        profileId: {
+          not: excludeProfileId,
+        },
+        profile: {
+          OR: conditions,
+        },
       },
-      select: { id: true },
+      select: { profileId: true },
     });
 
-    return profiles.map((p) => p.id);
+    return profiles.map((p) => p.profileId);
   } catch (error) {
-    logger.error("[resolveProfileIds] Database error:", error);
+    logger.error("[resolveMentionedChannelMemberProfileIds] Database error:", error);
     return [];
   }
 }
@@ -178,6 +187,30 @@ export async function createMentions(messageId: string, profileIds: string[]) {
     logger.error("[createMentions] Database error:", error);
     return { count: 0 };
   }
+}
+
+export async function reserveChannelMessageSeqRange(
+  client: Prisma.TransactionClient | typeof db,
+  channelId: string,
+  count: number,
+) {
+  if (count <= 0) {
+    return 0;
+  }
+
+  const channel = await client.channel.update({
+    where: { id: channelId },
+    data: {
+      lastMessageSeq: {
+        increment: count,
+      },
+    },
+    select: {
+      lastMessageSeq: true,
+    },
+  });
+
+  return channel.lastMessageSeq - count + 1;
 }
 
 export async function verifyMemberInBoard(profileId: string, boardId: string) {
@@ -202,6 +235,7 @@ export async function createMessage({
   channelId,
   memberId,
   messageSenderId,
+  seq,
   stickerId,
   type,
   replyToId,
@@ -211,6 +245,7 @@ export async function createMessage({
   channelId: string;
   memberId: string;
   messageSenderId: string;
+  seq: number;
   stickerId?: string | null;
   type: MessageType;
   replyToId?: string | null;
@@ -220,6 +255,7 @@ export async function createMessage({
       content,
       attachmentAssetId,
       channelId,
+      seq,
       memberId,
       messageSenderId,
       stickerId,

@@ -11,6 +11,7 @@ import { RulesView } from "./views/rules-view";
 import { MembersView } from "./views/members-view";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ViewLoadingFallback, ViewErrorFallback } from "./views/view-fallbacks";
+
 // Instancia estable de loading fallback — evita recrear JSX en cada render
 const LOADING_FALLBACK = <ViewLoadingFallback />;
 

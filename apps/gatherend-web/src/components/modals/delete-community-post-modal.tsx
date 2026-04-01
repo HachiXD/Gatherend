@@ -83,7 +83,7 @@ export const DeleteCommunityPostModal = () => {
               onClick={handleClose}
               className="h-6.5 cursor-pointer rounded-none bg-theme-bg-cancel-button px-3 text-[14px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
             >
-              Cancel
+              {t.common.cancel}
             </Button>
             <Button
               type="button"
@@ -91,7 +91,7 @@ export const DeleteCommunityPostModal = () => {
               onClick={onClick}
               className="h-6.5 cursor-pointer rounded-none border border-red-500/60 bg-red-500/80 px-3 text-[14px] text-theme-text-light hover:bg-red-600 hover:text-theme-text-light disabled:cursor-not-allowed disabled:opacity-70"
             >
-              Delete
+              {t.common.delete}
             </Button>
           </div>
         </DialogFooter>

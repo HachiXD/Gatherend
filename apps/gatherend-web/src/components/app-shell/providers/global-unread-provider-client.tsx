@@ -35,7 +35,7 @@ export const GlobalUnreadProvider = ({
   boardIds,
   children,
 }: GlobalUnreadProviderProps) => {
-  useCachedBoardSync();
+  useCachedBoardSync(currentProfileId);
   useCachedBoardBansSync();
 
   // Escuchar mensajes nuevos en todos los boards

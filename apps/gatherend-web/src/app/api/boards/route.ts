@@ -2,7 +2,6 @@ import { v4 as uuidv4 } from "uuid";
 import {
   AssetContext,
   AssetVisibility,
-  ChannelType,
   Languages,
   MemberRole,
 } from "@prisma/client";
@@ -18,6 +17,12 @@ import {
   serializeUploadedAsset,
   uploadedAssetSummarySelect,
 } from "@/lib/uploaded-assets";
+import {
+  ensurePublicBoardNameAvailable,
+  isPublicBoardNameUniqueConstraintError,
+  PUBLIC_BOARD_NAME_CONFLICT_ERROR,
+} from "@/lib/boards/public-name";
+import { createDefaultBoardChannelsForOwner } from "@/lib/boards/default-channels";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -192,6 +197,11 @@ export async function POST(req: Request) {
     }
 
     const board = await db.$transaction(async (tx) => {
+      await ensurePublicBoardNameAvailable(tx, {
+        name: name.trim(),
+        isPrivate: resolvedIsPrivate,
+      });
+
       const newBoard = await tx.board.create({
         data: {
           name: name.trim(),
@@ -205,30 +215,25 @@ export async function POST(req: Request) {
           profileId: profile.id,
           inviteCode: uuidv4(),
           refreshedAt: new Date(),
-          members: {
-            create: {
-              profileId: profile.id,
-              role: MemberRole.OWNER,
-            },
-          },
-          channels: {
-            createMany: {
-              data: [
-                {
-                  name: "Main",
-                  type: ChannelType.TEXT,
-                  profileId: profile.id,
-                },
-                {
-                  name: "VR",
-                  type: ChannelType.VOICE,
-                  profileId: profile.id,
-                },
-              ],
-            },
-          },
         },
         select: { id: true },
+      });
+
+      const ownerMember = await tx.member.create({
+        data: {
+          boardId: newBoard.id,
+          profileId: profile.id,
+          role: MemberRole.OWNER,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      await createDefaultBoardChannelsForOwner(tx, {
+        boardId: newBoard.id,
+        ownerMemberId: ownerMember.id,
+        ownerProfileId: profile.id,
       });
 
       return tx.board.findUnique({
@@ -246,7 +251,11 @@ export async function POST(req: Request) {
             select: uploadedAssetSummarySelect,
           },
           members: true,
-          channels: true,
+          channels: {
+            orderBy: {
+              position: "asc",
+            },
+          },
         },
       });
     });
@@ -262,6 +271,17 @@ export async function POST(req: Request) {
       imageAsset: serializeUploadedAsset(board.imageAsset),
     });
   } catch (error) {
+    if (
+      (error instanceof Error &&
+        error.message === PUBLIC_BOARD_NAME_CONFLICT_ERROR) ||
+      isPublicBoardNameUniqueConstraintError(error)
+    ) {
+      return NextResponse.json(
+        { error: "A public board with this name already exists" },
+        { status: 409 },
+      );
+    }
+
     console.error("[BOARD_CREATE_POST]", error);
     return NextResponse.json({ error: "Internal Error" }, { status: 500 });
   }

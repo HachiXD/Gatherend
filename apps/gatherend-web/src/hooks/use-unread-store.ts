@@ -1,30 +1,72 @@
 import { create } from "zustand";
 
-// Tracks the in-flight POST /read requests so the server-sync functions don't restore channels being marked as read
 const pendingReads = new Set<string>();
 export const addPendingRead = (roomId: string) => pendingReads.add(roomId);
 export const removePendingRead = (roomId: string) => pendingReads.delete(roomId);
+
+interface ChannelSidebarState {
+  channelId: string;
+  unreadCount: number;
+  lastReadSeq: number;
+}
 
 interface UnreadState {
   unreads: Record<string, number>;
   dmUnreads: Record<string, number>;
   lastAck: Record<string, number>;
   viewingRoom: string | null;
-  addUnread: (roomId: string, messageTimestamp?: number) => void;
+  addUnread: (roomId: string, messageMarker?: number) => void;
   addDmUnread: (roomId: string, messageTimestamp?: number) => void;
   clearUnread: (roomId: string) => void;
   clearDmUnread: (roomId: string) => void;
   clearBoardUnreads: (channelIds: string[]) => void;
-  hasBoardUnreads: (boardId: string, channelIds: string[]) => boolean;
+  hasBoardUnreads: (_boardId: string, channelIds: string[]) => boolean;
   getUnreadCount: (roomId: string) => number;
   initializeFromServer: (unreadCounts: Record<string, number>) => void;
   replaceFromServer: (unreadCounts: Record<string, number>) => void;
   initializeDmFromServer: (unreadCounts: Record<string, number>) => void;
   replaceDmFromServer: (unreadCounts: Record<string, number>) => void;
+  initializeChannelStateFromServer: (states: ChannelSidebarState[]) => void;
+  replaceChannelStateFromServer: (states: ChannelSidebarState[]) => void;
   setUnreadCount: (roomId: string, count: number) => void;
   setViewingRoom: (roomId: string | null) => void;
-  setLastAck: (roomId: string, timestamp?: number) => void;
-  shouldMarkUnread: (roomId: string, messageTimestamp?: number) => boolean;
+  setLastAck: (roomId: string, marker?: number) => void;
+  shouldMarkUnread: (roomId: string, messageMarker?: number) => boolean;
+}
+
+function buildChannelState(
+  state: Pick<UnreadState, "lastAck" | "viewingRoom" | "unreads">,
+  channelStates: ChannelSidebarState[],
+  replace: boolean,
+) {
+  const nextUnreads = replace ? {} : { ...state.unreads };
+  const nextLastAck = { ...state.lastAck };
+
+  for (const channelState of channelStates) {
+    if (
+      state.viewingRoom === channelState.channelId ||
+      pendingReads.has(channelState.channelId)
+    ) {
+      nextLastAck[channelState.channelId] = Math.max(
+        nextLastAck[channelState.channelId] || 0,
+        channelState.lastReadSeq,
+      );
+      continue;
+    }
+
+    if (channelState.unreadCount > 0) {
+      nextUnreads[channelState.channelId] = channelState.unreadCount;
+    } else {
+      delete nextUnreads[channelState.channelId];
+    }
+
+    nextLastAck[channelState.channelId] = channelState.lastReadSeq;
+  }
+
+  return {
+    unreads: nextUnreads,
+    lastAck: nextLastAck,
+  };
 }
 
 export const useUnreadStore = create<UnreadState>((set, get) => ({
@@ -33,23 +75,23 @@ export const useUnreadStore = create<UnreadState>((set, get) => ({
   lastAck: {},
   viewingRoom: null,
 
-  // Verifica si debería marcar como unread (anti-race condition)
-  shouldMarkUnread: (roomId, messageTimestamp) => {
+  shouldMarkUnread: (roomId, messageMarker) => {
     const state = get();
     const lastAck = state.lastAck[roomId] || 0;
     const isViewing = state.viewingRoom === roomId;
-    const msgTime = messageTimestamp || Date.now();
+    const marker = messageMarker || 0;
 
-    // No marcar si está viendo el room o si el mensaje es anterior al último ack
-    return !isViewing && msgTime > lastAck;
+    return !isViewing && marker > lastAck;
   },
 
-  addUnread: (roomId, messageTimestamp) =>
+  addUnread: (roomId, messageMarker) =>
     set((state) => {
       const lastAck = state.lastAck[roomId] || 0;
       const isViewing = state.viewingRoom === roomId;
-      const msgTime = messageTimestamp || Date.now();
-      if (isViewing || msgTime <= lastAck) return state;
+      const marker = messageMarker || 0;
+
+      if (isViewing || marker <= lastAck) return state;
+
       return {
         unreads: {
           ...state.unreads,
@@ -63,7 +105,9 @@ export const useUnreadStore = create<UnreadState>((set, get) => ({
       const lastAck = state.lastAck[roomId] || 0;
       const isViewing = state.viewingRoom === roomId;
       const msgTime = messageTimestamp || Date.now();
+
       if (isViewing || msgTime <= lastAck) return state;
+
       return {
         dmUnreads: {
           ...state.dmUnreads,
@@ -76,26 +120,14 @@ export const useUnreadStore = create<UnreadState>((set, get) => ({
     set((state) => {
       const newUnreads: Record<string, number> = { ...state.unreads };
       delete newUnreads[roomId];
-      return {
-        unreads: newUnreads,
-        lastAck: {
-          ...state.lastAck,
-          [roomId]: Date.now(),
-        },
-      };
+      return { unreads: newUnreads };
     }),
 
   clearDmUnread: (roomId) =>
     set((state) => {
       const newDmUnreads: Record<string, number> = { ...state.dmUnreads };
       delete newDmUnreads[roomId];
-      return {
-        dmUnreads: newDmUnreads,
-        lastAck: {
-          ...state.lastAck,
-          [roomId]: Date.now(),
-        },
-      };
+      return { dmUnreads: newDmUnreads };
     }),
 
   clearBoardUnreads: (channelIds) =>
@@ -109,13 +141,11 @@ export const useUnreadStore = create<UnreadState>((set, get) => ({
       return { unreads: newUnreads, dmUnreads: newDmUnreads };
     }),
 
-  // Verifica si un board tiene unreads en cualquiera de sus canales
-  hasBoardUnreads: (boardId, channelIds) => {
+  hasBoardUnreads: (_boardId, channelIds) => {
     const state = get();
     return channelIds.some((channelId) => state.unreads[channelId] > 0);
   },
 
-  // Obtiene el contador de unreads para un canal/conversación
   getUnreadCount: (roomId) => {
     const state = get();
     return state.unreads[roomId] || 0;
@@ -161,7 +191,12 @@ export const useUnreadStore = create<UnreadState>((set, get) => ({
       return { dmUnreads: filtered };
     }),
 
-  // Establece el contador de unreads para un canal/conversación específico
+  initializeChannelStateFromServer: (states) =>
+    set((state) => buildChannelState(state, states, false)),
+
+  replaceChannelStateFromServer: (states) =>
+    set((state) => buildChannelState(state, states, true)),
+
   setUnreadCount: (roomId, count) =>
     set((state) => {
       if (count === 0) {
@@ -177,28 +212,13 @@ export const useUnreadStore = create<UnreadState>((set, get) => ({
       };
     }),
 
-  // Establece el room que el usuario está viendo actualmente
-  setViewingRoom: (roomId) =>
-    set((state) => {
-      // Si estamos saliendo de un room (roomId es null o diferente), actualizar lastAck del room anterior
-      if (state.viewingRoom && state.viewingRoom !== roomId) {
-        return {
-          viewingRoom: roomId,
-          lastAck: {
-            ...state.lastAck,
-            [state.viewingRoom]: Date.now(),
-          },
-        };
-      }
-      return { viewingRoom: roomId };
-    }),
+  setViewingRoom: (roomId) => set(() => ({ viewingRoom: roomId })),
 
-  // Establece el timestamp de última lectura para un room
-  setLastAck: (roomId, timestamp) =>
+  setLastAck: (roomId, marker) =>
     set((state) => ({
       lastAck: {
         ...state.lastAck,
-        [roomId]: timestamp || Date.now(),
+        [roomId]: marker || Date.now(),
       },
     })),
 }));

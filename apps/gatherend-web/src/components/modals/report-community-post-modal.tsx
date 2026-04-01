@@ -179,13 +179,16 @@ export const ReportCommunityPostModal = () => {
   const previewAuthorUsername = isCommentModal
     ? reportCommunityPostCommentAuthorUsername
     : reportCommunityPostAuthorUsername;
+  const resolvedPreviewAuthor = previewAuthorUsername || t.modals.report.unknownAuthor;
   const previewContent = previewSourceContent?.trim()
     ? previewSourceContent.length > 140
       ? `${previewSourceContent.substring(0, 140)}...`
       : previewSourceContent
     : previewSourceImageUrl
-      ? `Image-only ${isCommentModal ? "comment" : "post"}`
-      : "No content";
+      ? isCommentModal
+        ? t.modals.report.imageOnlyComment
+        : t.modals.report.imageOnlyPost
+      : t.modals.report.noContent;
 
   return (
     <Dialog open={isModalOpen} onOpenChange={handleClose}>
@@ -196,14 +199,19 @@ export const ReportCommunityPostModal = () => {
         <DialogHeader className="bg-theme-bg-secondary/20 px-6 pb-2 pt-2">
           <div className="flex items-center justify-center gap-2">
             <DialogTitle className="text-[17px] font-bold">
-              {isCommentModal ? "Report Comment" : "Report Post"}
+              {isCommentModal
+                ? t.modals.report.reportCommunityPostComment
+                : t.modals.report.reportCommunityPost}
             </DialogTitle>
           </div>
           <DialogDescription className="text-center text-[13px] -mt-1 text-theme-text-tertiary">
-            Report this community {isCommentModal ? "comment" : "post"} by{" "}
-            <span className="font-semibold text-theme-text-subtle">
-              {previewAuthorUsername || "Unknown"}
-            </span>
+            {isCommentModal
+              ? t.modals.report.reportCommunityPostCommentDescription(
+                  resolvedPreviewAuthor,
+                )
+              : t.modals.report.reportCommunityPostDescription(
+                  resolvedPreviewAuthor,
+                )}
           </DialogDescription>
         </DialogHeader>
 
@@ -211,7 +219,9 @@ export const ReportCommunityPostModal = () => {
           {/* Post / Comment Preview */}
           <div>
             <p className="mb-1 text-[11px] text-theme-text-tertiary">
-              {isCommentModal ? "Comment preview" : "Post preview"}
+              {isCommentModal
+                ? t.modals.report.commentPreview
+                : t.modals.report.postPreview}
             </p>
             <div className="overflow-hidden border border-theme-border bg-theme-bg-secondary/20 px-3 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.28),inset_0_-1px_0_rgba(0,0,0,0.28)]">
               <p className="truncate text-[13px] font-semibold text-theme-text-subtle">

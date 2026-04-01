@@ -21,7 +21,6 @@ import { useTranslation } from "@/i18n";
 import { cn as _cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LeftbarClient } from "@/components/board/leftbar/board-leftbar-client";
-import { useBoardAccent } from "@/hooks/use-board-accent";
 
 /**
  *
@@ -58,7 +57,7 @@ function BoardRightbarClientInner() {
       <Separator className="bg-theme-border-primary rounded-md mt-0 mb-2" />
 
       {/* Direct Messages - independiente del board, memoizado */}
-      <div className="h-[49%] shrink-0 flex flex-col min-h-0">
+      <div className="h-[47%] shrink-0 flex flex-col min-h-0">
         <DirectMessagesSectionClient profileId={profile.id} />
       </div>
 
@@ -98,20 +97,16 @@ const ChannelsSectionClient = memo(function ChannelsSectionClient() {
   const { board, showSkeleton } = useBoardDataWithStaleness();
   const profile = useProfile();
   const role = useCurrentMemberRole(profile.id);
-  const accentVars = useBoardAccent(board?.imageAsset?.url);
 
   if (showSkeleton || !board) {
     return <ChannelsSkeleton />;
   }
 
   return (
-    <div
-      className="flex flex-col flex-1 min-h-0"
-      style={accentVars ? { ...accentVars, backgroundColor: accentVars["--leftbar-bg"] } as React.CSSProperties : undefined}
-    >
+    <div className="flex flex-col flex-1 min-h-0">
       <div className="px-3 pt-2 pb-1 shrink-0">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-theme-text-tertiary">
-          {t.board.channels}
+          {t.board.boardChats(board.name)}
         </h2>
       </div>
       <ScrollArea className="flex-1 min-h-0 px-1">

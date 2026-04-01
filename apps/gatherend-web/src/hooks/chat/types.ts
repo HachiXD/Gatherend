@@ -35,6 +35,7 @@ export interface ChannelMessage {
   id: string;
   content: string;
   type?: string;
+  seq?: number;
   attachmentAssetId: string | null;
   attachmentAsset: ClientAttachmentAsset | null;
   deleted: boolean;

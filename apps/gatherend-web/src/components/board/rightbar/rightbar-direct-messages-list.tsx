@@ -73,7 +73,7 @@ export const DirectMessages = ({
     <div
       onScroll={handleScroll}
       className={cn(
-        "flex flex-col flex-1 min-h-0 overflow-y-auto pr-3 -mt-0.5 space-y-2",
+        "flex flex-col flex-1 min-h-0 overflow-y-auto pr-3 -mt-1.5 space-y-2",
         isScrollbarVisible ? "scrollbar-navigation" : "scrollbar-hidden",
       )}
     >

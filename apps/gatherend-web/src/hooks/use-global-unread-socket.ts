@@ -21,13 +21,11 @@ interface UseGlobalUnreadSocketProps {
 // Tipos para payloads de socket
 type ProfileInfo = ClientProfileSummary;
 
-interface ChannelMessagePayload {
+interface ChannelActivityPayload {
   channelId: string;
-  messageTimestamp?: number; // timestamp del mensaje para comparar con lastAck
-  messageSender?: ProfileInfo | null;
-  member?: {
-    profile?: ProfileInfo;
-  };
+  boardId: string;
+  messageSeq: number;
+  senderProfileId: string;
 }
 
 interface DirectMessagePayload {
@@ -114,18 +112,15 @@ export const useGlobalUnreadSocket = ({
 
 
     // Handler para mensajes de canales
-    const handleChannelMessage = (payload: ChannelMessagePayload) => {
-      const { channelId, member, messageTimestamp } = payload;
-      const messageSender = payload.messageSender ?? member?.profile ?? null;
-      const isOwnMessage = messageSender?.id === currentProfileId;
+    const handleChannelMessage = (payload: ChannelActivityPayload) => {
+      const { channelId, messageSeq, senderProfileId } = payload;
+      const isOwnMessage = senderProfileId === currentProfileId;
 
       // Usar ref para obtener el valor más actualizado (evita stale closure)
       const currentViewingRoom = viewingRoomRef.current;
       const currentLastAck = lastAckRef.current[channelId] || 0;
-      const msgTime = messageTimestamp || Date.now();
-
       const isViewingThisRoom = currentViewingRoom === channelId;
-      const isAfterLastAck = msgTime > currentLastAck;
+      const isAfterLastAck = messageSeq > currentLastAck;
       const isTrackedChannel = useChatRoomLifecycleStore
         .getState()
         .isTracked("channel", channelId);
@@ -144,7 +139,7 @@ export const useGlobalUnreadSocket = ({
           return;
         }
 
-        addUnread(channelId, msgTime);
+        addUnread(channelId, messageSeq);
 
         // Marcar el chat query como stale sin refetch inmediato (debounced).
         // Esto evita trabajo repetido en bursts de mensajes.
@@ -247,7 +242,7 @@ export const useGlobalUnreadSocket = ({
       }
     };
 
-    socket.on("global:channel:message", handleChannelMessage);
+    socket.on("global:channel:activity", handleChannelMessage);
     socket.on("global:conversation:message", handleDirectMessage);
 
     return () => {
@@ -256,9 +251,9 @@ export const useGlobalUnreadSocket = ({
       timers.forEach((t) => clearTimeout(t));
       timers.clear();
 
-      socket.off("global:channel:message", handleChannelMessage);
+      socket.off("global:channel:activity", handleChannelMessage);
       socket.off("global:conversation:message", handleDirectMessage);
     };
-  }, [socket, currentProfileId, boardIdList, addUnread, queryClient]);
+  }, [socket, currentProfileId, boardIdList, addUnread, addDmUnread, queryClient]);
 };
 

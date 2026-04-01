@@ -57,7 +57,7 @@ export const BoardLeftbar = ({
     useCallback((state) => state.isForum, []),
   );
 
-  const accentVars = useBoardAccent(board.imageAsset?.url);
+  const accentVars = useBoardAccent(board.imageAsset?.dominantColor);
   const isRules = useBoardNavigationStore(
     useCallback((state) => state.isRules, []),
   );
@@ -92,7 +92,14 @@ export const BoardLeftbar = ({
   return (
     <div
       className="flex flex-col h-full w-full text-primary"
-      style={accentVars ? { ...accentVars, backgroundColor: accentVars["--leftbar-bg"] } as React.CSSProperties : undefined}
+      style={
+        accentVars
+          ? ({
+              ...accentVars,
+              backgroundColor: accentVars["--leftbar-bg"],
+            } as React.CSSProperties)
+          : undefined
+      }
     >
       {/* Banner con imagen del board y dropdown menu */}
       <LeftbarBanner
@@ -145,7 +152,7 @@ export const BoardLeftbar = ({
             className={cn(
               "flex h-12 flex-1 cursor-pointer flex-col rounded-none border overflow-hidden text-[16px] font-medium transition shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_1px_0_0_rgba(255,255,255,0.14),inset_-1px_0_0_rgba(0,0,0,0.40),inset_0_-1px_0_rgba(0,0,0,0.55)]",
               isMembers
-                ? "border-theme-channel-type-active-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
+                ? "border-theme-channel-type-active-border bg-theme-channel-type-active-border text-theme-channel-type-active-text"
                 : "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border",
             )}
           >

@@ -10,6 +10,7 @@ import { FileUpload } from "@/components/file-upload";
 import { useUpload } from "@/hooks/use-upload";
 import { communityPostsKey } from "@/hooks/discovery/posts-feed/use-community-posts-feed";
 import type { BoardWithData } from "@/components/providers/board-provider";
+import { useTranslation } from "@/i18n";
 
 import { getStoredUploadAssetId } from "@/lib/upload-values";
 
@@ -27,6 +28,7 @@ export function InlineCommunityPostForm({
   onCancel,
   onSuccess,
 }: InlineCommunityPostFormProps) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const titleRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -38,7 +40,7 @@ export function InlineCommunityPostForm({
 
   const { startUpload } = useUpload("community_post_image", {
     onModerationBlock: (reason) => toast.error(reason),
-    onUploadError: (error) => toast.error(`Error al subir imagen: ${error}`),
+    onUploadError: (error) => toast.error(t.posts.uploadImageError(error)),
   });
 
   useEffect(() => {
@@ -102,7 +104,7 @@ export function InlineCommunityPostForm({
       }
     } catch (err) {
       console.error("Paste upload failed:", err);
-      toast.error("No se pudo subir la imagen pegada");
+      toast.error(t.posts.pasteImageUploadError);
     } finally {
       setIsPastingImage(false);
     }
@@ -130,14 +132,14 @@ export function InlineCommunityPostForm({
         queryKey: communityPostsKey(communityId),
       });
 
-      toast.success("Post publicado");
+      toast.success(t.posts.publishSuccess);
       setTitle("");
       setContent("");
       setImageUpload("");
       onSuccess?.();
     } catch (error) {
       console.error(error);
-      toast.error("No se pudo publicar el post");
+      toast.error(t.posts.publishError);
     } finally {
       setIsSubmitting(false);
     }
@@ -174,11 +176,10 @@ export function InlineCommunityPostForm({
   return (
     <div className="border border-theme-border/40 p-3">
       <div className="flex items-stretch gap-3">
-        {/* Left: image upload + buttons at bottom */}
-        <div className="flex shrink-0 flex-col mt-6.5">
+        <div className="mt-6.5 flex shrink-0 flex-col">
           <FileUpload
             endpoint="communityPostImage"
-            label="Subir imagen"
+            label={t.posts.uploadImage}
             value={imageUpload}
             onChange={(value) => setImageUpload(value ?? "")}
             uploadButtonClassName={uploadBtnClass}
@@ -195,7 +196,7 @@ export function InlineCommunityPostForm({
               disabled={isSubmitting}
               className={cancelBtnClass}
             >
-              Cancelar
+              {t.common.cancel}
             </Button>
             <Button
               type="button"
@@ -204,13 +205,12 @@ export function InlineCommunityPostForm({
               onClick={() => void handleSubmit()}
               className={publishBtnClass}
             >
-              {isSubmitting ? "Publicando..." : "Publicar"}
+              {isSubmitting ? t.posts.publishing : t.posts.publish}
             </Button>
           </div>
         </div>
 
-        {/* Right: title input + textarea + hint row */}
-        <div className="flex min-w-0 flex-1 flex-col gap-y-1.5 -mb-1">
+        <div className="-mb-1 flex min-w-0 flex-1 flex-col gap-y-1.5">
           <input
             ref={titleRef}
             type="text"
@@ -218,7 +218,7 @@ export function InlineCommunityPostForm({
             onChange={(event) => setTitle(event.target.value.slice(0, 200))}
             disabled={isSubmitting}
             className="h-8 w-full shrink-0 border border-theme-border-subtle bg-transparent px-3 text-[14px] leading-5 text-theme-text-light outline-none focus:border-theme-border-accent"
-            placeholder="Título del post..."
+            placeholder={t.posts.postTitlePlaceholder}
           />
           <textarea
             ref={textareaRef}
@@ -230,12 +230,14 @@ export function InlineCommunityPostForm({
             onPaste={(e) => void handlePaste(e)}
             className="scrollbar-ultra-thin min-h-[182px] w-full flex-1 resize-none border border-theme-border-subtle bg-transparent px-3 py-2 text-[14px] leading-5 text-theme-text-light outline-none focus:border-theme-border-accent"
             placeholder={
-              isPastingImage ? "Subiendo imagen..." : "Escribe tu post..."
+              isPastingImage
+                ? t.posts.uploadingImage
+                : t.posts.postContentPlaceholder
             }
           />
           <div className="flex items-center justify-between gap-x-2">
             <span className="text-[11px] text-theme-text-muted">
-              Esc para cancelar &bull; Ctrl/Cmd+Enter para publicar
+              {t.posts.escToCancelCtrlEnterToPublish}
             </span>
             <span className="text-[11px] text-theme-text-tertiary">
               {content.length}/2000

@@ -2,15 +2,13 @@
 
 import {
   memo,
-  type CSSProperties,
   useCallback,
   useMemo,
   useRef,
   useState,
 } from "react";
 import { Edit, Plus, Trash2 } from "lucide-react";
-import { useColorExtraction } from "@/hooks/use-color-extraction";
-import { getNeverAnimatedImageUrl } from "@/lib/media-static";
+import { useCommunityHeaderStyle } from "@/hooks/use-community-header-style";
 import { useBoardData, useCurrentMemberRole } from "@/hooks/use-board-data";
 import { useProfile } from "@/components/app-shell/providers/profile-provider";
 import { useCurrentBoardId } from "@/contexts/board-switch-context";
@@ -25,10 +23,10 @@ import {
   getStoredUploadAssetId,
 } from "@/lib/upload-values";
 import { parsePostContent } from "@/lib/parse-post-formatting";
-import { useTheme } from "next-themes";
 import { getOptimizedStaticUiImageUrl } from "@/lib/ui-image-optimizer";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useEffectiveThemeMode } from "@/hooks/use-effective-theme-config";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -49,28 +47,6 @@ interface ClientBoardRules {
 
 interface BoardRulesResponse {
   rules: ClientBoardRules | null;
-}
-
-// ─── Color helpers (same as forum-view) ───────────────────────────────────────
-
-function parseRgbColor(color: string): [number, number, number] | null {
-  const m =
-    color.match(/^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/i) ??
-    color.match(
-      /^rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*[0-9.]+\s*\)$/i,
-    );
-  if (!m) return null;
-  return m.slice(1, 4).map(Number) as [number, number, number];
-}
-
-function isVeryDarkColor(color: string): boolean {
-  const rgb = parseRgbColor(color);
-  if (!rgb) return false;
-  const [r, g, b] = rgb.map((v) => v / 255);
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  const l = (max + min) / 2;
-  return l <= 0.24;
 }
 
 // ─── Inline image (always below text) ─────────────────────────────────────────
@@ -396,8 +372,7 @@ function RulesViewInner() {
   const profile = useProfile();
   const role = useCurrentMemberRole(profile.id);
   const queryClient = useQueryClient();
-  const { resolvedTheme } = useTheme();
-  const themeMode = resolvedTheme === "light" ? "light" : "dark";
+  const themeMode = useEffectiveThemeMode();
 
   const canEdit =
     role === MemberRole.OWNER || role === MemberRole.ADMIN;
@@ -428,33 +403,8 @@ function RulesViewInner() {
 
   // ── Header colors (same logic as forum-view) ───────────────────────────────
 
-  const bannerImageUrl = board?.imageAsset?.url
-    ? getNeverAnimatedImageUrl(board.imageAsset.url, { w: 2048, h: 512, q: 82 })
-    : undefined;
-
-  const precomputedColor = board?.imageAsset?.dominantColor ?? null;
-  const { dominantColor: extractedColor } = useColorExtraction({
-    imageUrl: precomputedColor ? null : bannerImageUrl,
-  });
-  const dominantColor = precomputedColor ?? extractedColor;
-  const headerBg = dominantColor ?? "var(--theme-bg-secondary)";
-  const useLightVariant = isVeryDarkColor(headerBg);
-
-  const headerButtonStyles = useMemo(
-    () =>
-      ({
-        backgroundColor: headerBg,
-        "--community-header-btn-bg": useLightVariant
-          ? `color-mix(in srgb, ${headerBg} 82%, white)`
-          : `color-mix(in srgb, ${headerBg} 72%, black)`,
-        "--community-header-btn-hover": useLightVariant
-          ? `color-mix(in srgb, ${headerBg} 68%, white)`
-          : `color-mix(in srgb, ${headerBg} 58%, black)`,
-        "--community-header-btn-text": `color-mix(in srgb, white 88%, ${headerBg} 12%)`,
-        "--community-header-btn-muted": `color-mix(in srgb, white 68%, ${headerBg} 32%)`,
-        "--community-header-btn-ring": `color-mix(in srgb, white 28%, ${headerBg} 72%)`,
-      }) as CSSProperties,
-    [headerBg, useLightVariant],
+  const headerButtonStyles = useCommunityHeaderStyle(
+    board?.imageAsset?.dominantColor ?? null,
   );
 
   // ── Handlers ──────────────────────────────────────────────────────────────

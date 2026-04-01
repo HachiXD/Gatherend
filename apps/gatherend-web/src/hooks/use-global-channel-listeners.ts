@@ -187,7 +187,10 @@ export function useGlobalChannelListeners({
       const isViewingThisRoom = unreadState.viewingRoom === channelId;
 
       if (!isOwnMessage && !isViewingThisRoom) {
-        unreadState.addUnread(channelId);
+        unreadState.addUnread(
+          channelId,
+          typeof message.seq === "number" ? message.seq : undefined,
+        );
       }
     };
 

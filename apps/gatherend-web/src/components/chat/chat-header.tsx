@@ -1,6 +1,6 @@
 "use client";
 
-import { memo } from "react";
+import { memo, type CSSProperties } from "react";
 import { SocketIndicator } from "@/components/socket-indicator";
 import { ChatVideoButton } from "./chat-video-button";
 import { PinnedMessagesButton } from "./pinned-messages-button";
@@ -18,6 +18,7 @@ interface ChatHeaderProps {
   name: string;
   type: "channel" | "conversation";
   avatarUrl?: string;
+  style?: CSSProperties;
   profileId?: string; // Para mostrar el status en conversaciones
   channelType?: ChannelType;
   channelId?: string;
@@ -32,6 +33,7 @@ const ChatHeaderComponent = ({
   channelType,
   channelId,
   conversationId,
+  style,
 }: ChatHeaderProps) => {
   const {
     isConnected: isVoiceConnected,
@@ -50,7 +52,7 @@ const ChatHeaderComponent = ({
     (isVoiceConnected || isVoiceConnecting);
 
   return (
-    <div className="hidden h-9 shrink-0 items-center bg-theme-bg-quaternary px-3 md:flex">
+    <div className="hidden h-12 shrink-0 items-center bg-theme-bg-quaternary px-3 md:flex border-b border-theme-border" style={style}>
       {/* MobileToggle removido - sidebars disponibles en layout SPA */}
       <ChatHeaderClient
         boardId={boardId}

@@ -14,6 +14,7 @@ import {
   useBoardMembersMap,
 } from "@/hooks/use-board-data";
 import { useQueryClient } from "@tanstack/react-query";
+import { useCommunityHeaderStyle } from "@/hooks/use-community-header-style";
 
 interface ChannelViewProps {
   /** ID del canal (desde CenterContentRouter via BoardSwitchContext) */
@@ -47,6 +48,10 @@ export function ChannelView({ channelId, boardId }: ChannelViewProps) {
 
   const resolvedChannelId = channel?.id ?? "";
   const resolvedBoardId = board?.id ?? "";
+
+  const headerStyle = useCommunityHeaderStyle(
+    board?.imageAsset?.dominantColor ?? null,
+  );
 
   const socketQuery = useMemo(
     () => ({
@@ -95,6 +100,7 @@ export function ChannelView({ channelId, boardId }: ChannelViewProps) {
         type="channel"
         channelType={channel.type}
         channelId={channel.id}
+        style={headerStyle}
       />
       {channel.type === ChannelType.TEXT && (
         <>

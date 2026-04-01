@@ -1,11 +1,64 @@
 // app/api/boards/[boardId]/channels/[channelId]/route.ts
 
 import { db } from "@/lib/db";
-import { MemberRole, ChannelType } from "@prisma/client";
+import {
+  AssetContext,
+  AssetVisibility,
+  MemberRole,
+  ChannelType,
+  type Prisma,
+} from "@prisma/client";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
+import {
+  UUID_REGEX,
+  findOwnedUploadedAsset,
+  serializeUploadedAsset,
+  uploadedAssetSummarySelect,
+} from "@/lib/uploaded-assets";
+
+const getBoardChannelSelect = (profileId: string) =>
+  ({
+    id: true,
+    name: true,
+    type: true,
+    position: true,
+    boardId: true,
+    createdAt: true,
+    updatedAt: true,
+    imageAsset: {
+      select: uploadedAssetSummarySelect,
+    },
+    _count: {
+      select: { channelMembers: true },
+    },
+    channelMembers: {
+      where: { profileId },
+      select: { id: true },
+      take: 1,
+    },
+  }) satisfies Prisma.ChannelSelect;
+
+type RawBoardChannel = Prisma.ChannelGetPayload<{
+  select: ReturnType<typeof getBoardChannelSelect>;
+}>;
+
+function serializeBoardChannel(channel: RawBoardChannel) {
+  return {
+    id: channel.id,
+    name: channel.name,
+    type: channel.type,
+    position: channel.position,
+    boardId: channel.boardId,
+    imageAsset: serializeUploadedAsset(channel.imageAsset),
+    channelMemberCount: channel._count.channelMembers,
+    isJoined: channel.channelMembers.length > 0,
+    createdAt: channel.createdAt,
+    updatedAt: channel.updatedAt,
+  };
+}
 
 async function notifyChannelEvent(
   boardId: string,
@@ -35,10 +88,6 @@ async function notifyChannelEvent(
     console.error(`[${event.toUpperCase()}]`, error);
   }
 }
-
-// UUID validation regex
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // DELETE - Eliminar un canal
 
@@ -174,14 +223,14 @@ export async function PATCH(
     }
 
     // Parse body with error handling
-    let body: { name?: unknown; type?: unknown };
+    let body: { name?: unknown; type?: unknown; imageAssetId?: unknown };
     try {
       body = await req.json();
     } catch {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const { name, type } = body;
+    const { name, type, imageAssetId } = body;
 
     // Validar name si se proporciona
     if (name !== undefined) {
@@ -206,6 +255,37 @@ export async function PATCH(
         { error: "Invalid channel type" },
         { status: 400 },
       );
+    }
+
+    let resolvedImageAssetId: string | null | undefined = undefined;
+    if (imageAssetId !== undefined) {
+      if (imageAssetId === null || imageAssetId === "") {
+        resolvedImageAssetId = null;
+      } else if (
+        typeof imageAssetId !== "string" ||
+        !UUID_REGEX.test(imageAssetId)
+      ) {
+        return NextResponse.json(
+          { error: "Invalid image asset ID" },
+          { status: 400 },
+        );
+      } else {
+        const imageAsset = await findOwnedUploadedAsset(
+          imageAssetId,
+          profile.id,
+          AssetContext.CHANNEL_IMAGE,
+          AssetVisibility.PUBLIC,
+        );
+
+        if (!imageAsset) {
+          return NextResponse.json(
+            { error: "Channel image asset not found" },
+            { status: 400 },
+          );
+        }
+
+        resolvedImageAssetId = imageAsset.id;
+      }
     }
 
     // Ejecutar verificación de permisos y actualización en transacción
@@ -256,23 +336,30 @@ export async function PATCH(
         data: {
           ...(name !== undefined && { name: (name as string).trim() }),
           ...(isTypeChange && { type: type as ChannelType }),
+          ...(resolvedImageAssetId !== undefined && {
+            imageAssetId: resolvedImageAssetId,
+          }),
         },
+        select: getBoardChannelSelect(profile.id),
       });
     });
 
     // Invalidar cache del layout para forzar re-render
     revalidatePath(`/boards/${boardId}`);
 
+    const serializedChannel = serializeBoardChannel(updatedChannel);
+
     void notifyChannelEvent(boardId, "board:channel-updated", {
       channel: {
-        id: updatedChannel.id,
-        name: updatedChannel.name,
-        type: updatedChannel.type,
-        updatedAt: updatedChannel.updatedAt.toISOString(),
+        id: serializedChannel.id,
+        name: serializedChannel.name,
+        type: serializedChannel.type,
+        imageAsset: serializedChannel.imageAsset,
+        updatedAt: serializedChannel.updatedAt.toISOString(),
       },
     });
 
-    return NextResponse.json(updatedChannel);
+    return NextResponse.json(serializedChannel);
   } catch (error) {
     // Manejar errores personalizados lanzados desde la transacción
     if (error instanceof Error) {

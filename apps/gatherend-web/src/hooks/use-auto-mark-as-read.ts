@@ -80,13 +80,15 @@ export function useAutoMarkAsRead(
 
     if (isConversation) {
       clearDmUnread(roomId);
+      setLastAck(roomId);
     } else {
+      const unreadState = useUnreadStore.getState();
+      const estimatedLatestSeq =
+        (unreadState.lastAck[roomId] || 0) + (unreadState.unreads[roomId] || 0);
       clearUnread(roomId);
+      setLastAck(roomId, estimatedLatestSeq);
     }
     clearMention(roomId);
-
-    // Actualizar lastAck para evitar race conditions con mensajes entrantes
-    setLastAck(roomId);
 
     // Marcar en el servidor (async, no bloqueante)
     markAsReadOnServer(roomId, isConversation);

@@ -44,6 +44,7 @@ import { useCurrentMemberRole } from "@/hooks/use-board-data";
 import { MemberRole } from "@prisma/client";
 import { getOptimizedStaticUiImageUrl } from "@/lib/ui-image-optimizer";
 import { ImagePlus, X } from "lucide-react";
+import { useTranslation } from "@/i18n";
 import {
   CommunityPostCommentItem,
   type CommunityPostCommentItemData,
@@ -78,8 +79,8 @@ async function fetchCommunityPostComments(
   return response.json();
 }
 
-function formatPostDate(value: string) {
-  return new Intl.DateTimeFormat("es-ES", {
+function formatPostDate(value: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
@@ -128,6 +129,7 @@ function PostImageAttachment({
   imageHeight?: number | null;
   noFloat?: boolean;
 }) {
+  const { t } = useTranslation();
   const displaySize = getPostImageDisplaySize(imageWidth, imageHeight);
   const [isOpen, setIsOpen] = useState(false);
   const [forceOriginalInline, setForceOriginalInline] = useState(false);
@@ -187,7 +189,9 @@ function PostImageAttachment({
           className="max-w-none gap-0 rounded-none border-0 bg-transparent p-0 shadow-none sm:max-w-none"
           overlayClassName="bg-black/70"
         >
-          <DialogTitle className="sr-only">Vista previa de imagen</DialogTitle>
+          <DialogTitle className="sr-only">
+            {t.posts.imagePreviewTitle}
+          </DialogTitle>
           <div className="fixed inset-0 flex items-center justify-center p-4">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -320,6 +324,7 @@ function CommunityPostEditForm({
   hasImage: boolean;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [draft, setDraft] = useState(content);
@@ -416,7 +421,7 @@ function CommunityPostEditForm({
         disabled={isSaving}
         rows={Math.max(3, Math.min(10, draft.split("\n").length + 1))}
         className="min-h-[88px] w-full resize-none rounded-md border border-theme-border-subtle bg-transparent px-3 py-2 text-[12px] leading-5 text-theme-text-light outline-none focus:border-theme-border-accent"
-        placeholder="Edit post content"
+        placeholder={t.posts.editPostPlaceholder}
       />
       <div className="mt-2 flex items-center gap-x-2">
         <Button
@@ -426,7 +431,7 @@ function CommunityPostEditForm({
           onClick={onCancel}
           className="h-7 cursor-pointer bg-theme-bg-cancel-button px-3 text-[13px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
         >
-          Cancel
+          {t.common.cancel}
         </Button>
         <Button
           type="button"
@@ -435,10 +440,10 @@ function CommunityPostEditForm({
           onClick={() => void handleSubmit()}
           className="h-7 cursor-pointer bg-theme-tab-button-bg px-3 text-[13px] text-theme-text-light hover:bg-theme-tab-button-hover"
         >
-          Save
+          {t.common.save}
         </Button>
         <span className="ml-1 text-[11px] text-theme-text-muted">
-          Esc to cancel • Ctrl/Cmd+Enter to save
+          {t.posts.escToCancelCtrlEnterToSave}
         </span>
       </div>
     </div>
@@ -456,6 +461,7 @@ function CommunityPostCommentComposer({
   replyToCommentId?: string | null;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -603,7 +609,7 @@ function CommunityPostCommentComposer({
         disabled={isSubmitting}
         rows={3}
         className="min-h-[88px] w-full resize-none border border-theme-border-subtle bg-transparent px-3 py-2 text-[12px] leading-5 text-theme-text-light outline-none focus:border-theme-border-accent"
-        placeholder="Write a comment..."
+        placeholder={t.posts.writeCommentPlaceholder}
       />
 
       {imageAsset && (
@@ -611,7 +617,7 @@ function CommunityPostCommentComposer({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={imageAsset.url}
-            alt="comment attachment"
+            alt={t.posts.commentAttachmentAlt}
             className="max-h-[96px] max-w-[96px] object-contain"
             loading="lazy"
             decoding="async"
@@ -620,7 +626,7 @@ function CommunityPostCommentComposer({
             type="button"
             onClick={() => setImageAsset(null)}
             className="cursor-pointer text-theme-text-tertiary transition hover:text-theme-text-light"
-            aria-label="Remove image"
+            aria-label={t.posts.removeImage}
           >
             <X className="h-4 w-4" />
           </button>
@@ -644,7 +650,7 @@ function CommunityPostCommentComposer({
           className="h-7 cursor-pointer rounded-none bg-theme-bg-cancel-button px-3 text-[12px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
         >
           <ImagePlus className="mr-1 h-4 w-4" />
-          Attach image
+          {t.posts.attachImage}
         </Button>
         <Button
           type="button"
@@ -653,10 +659,10 @@ function CommunityPostCommentComposer({
           onClick={() => void handleSubmit()}
           className="h-7 cursor-pointer rounded-none bg-theme-tab-button-bg px-3 text-[12px] text-theme-text-light hover:bg-theme-tab-button-hover"
         >
-          Send
+          {t.posts.sendComment}
         </Button>
         <span className="ml-1 text-[11px] text-theme-text-muted">
-          Esc to cancel • Ctrl/Cmd+Enter to send
+          {t.posts.escToCancelCtrlEnterToSend}
         </span>
       </div>
     </div>
@@ -674,6 +680,7 @@ function CommunityPostCommentEditForm({
   onCancel: () => void;
   onSaved: (updatedComment: CommunityPostCommentItemData) => void;
 }) {
+  const { t } = useTranslation();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [draft, setDraft] = useState(comment.content);
   const [isSaving, setIsSaving] = useState(false);
@@ -744,7 +751,7 @@ function CommunityPostCommentEditForm({
         disabled={isSaving}
         rows={Math.max(3, Math.min(8, draft.split("\n").length + 1))}
         className="min-h-[88px] w-full resize-none border border-theme-border-subtle bg-transparent px-3 py-2 text-[12px] leading-5 text-theme-text-light outline-none focus:border-theme-border-accent"
-        placeholder="Edit comment"
+        placeholder={t.posts.editCommentPlaceholder}
       />
       <div className="mt-2 flex items-center gap-x-2">
         <Button
@@ -754,7 +761,7 @@ function CommunityPostCommentEditForm({
           onClick={onCancel}
           className="h-7 cursor-pointer bg-theme-bg-cancel-button px-3 text-[13px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
         >
-          Cancel
+          {t.common.cancel}
         </Button>
         <Button
           type="button"
@@ -763,10 +770,10 @@ function CommunityPostCommentEditForm({
           onClick={() => void handleSubmit()}
           className="h-7 cursor-pointer bg-theme-tab-button-bg px-3 text-[13px] text-theme-text-light hover:bg-theme-tab-button-hover"
         >
-          Save
+          {t.common.save}
         </Button>
         <span className="ml-1 text-[11px] text-theme-text-muted">
-          Esc to cancel • Ctrl/Cmd+Enter to save
+          {t.posts.escToCancelCtrlEnterToSave}
         </span>
       </div>
     </div>
@@ -781,6 +788,7 @@ function CommunityPostsSectionInner({
   scrollContainerRef,
 }: CommunityPostsSectionProps) {
   const profile = useProfile();
+  const { t, locale } = useTranslation();
   const queryClient = useQueryClient();
   const onOpen = useModal(useCallback((state) => state.onOpen, []));
   const { resolvedTheme } = useTheme();
@@ -865,7 +873,7 @@ function CommunityPostsSectionInner({
         onClick={handleRefresh}
         disabled={isRefreshing}
         className="inline-flex h-6.5 cursor-pointer items-center gap-2 border-0 bg-[var(--community-header-btn-bg)] px-3 text-[13px] font-semibold text-[var(--community-header-btn-text)] hover:bg-[var(--community-header-btn-hover)] focus-visible:ring-2 focus-visible:ring-[var(--community-header-btn-ring)] focus-visible:outline-none disabled:opacity-50 rounded-none"
-        title="Refrescar posts"
+        title={t.posts.refreshPosts}
       >
         <RefreshCw
           className={`h-4 w-4 text-[var(--community-header-btn-muted)] ${
@@ -873,11 +881,11 @@ function CommunityPostsSectionInner({
           }`}
         />
         <span className="text-[var(--community-header-btn-text)]">
-          Refrescar
+          {t.discovery.refresh}
         </span>
       </button>
     ),
-    [handleRefresh, isRefreshing],
+    [handleRefresh, isRefreshing, t.discovery.refresh, t.posts.refreshPosts],
   );
 
   useEffect(() => {
@@ -1038,11 +1046,11 @@ function CommunityPostsSectionInner({
           <DiscoverySkeleton />
         ) : error ? (
           <div className="py-8 text-center text-destructive">
-            Error: {error}
+            {t.common.error}: {String(error)}
           </div>
         ) : allPosts.length === 0 ? (
           <div className="py-8 text-center text-theme-text-muted">
-            No hay posts en esta comunidad.
+            {t.posts.noPostsInCommunity}
           </div>
         ) : (
           <>
@@ -1115,19 +1123,19 @@ function CommunityPostsSectionInner({
                             {!isEditing && (
                               <div className="absolute right-1 top-0.5 z-10 hidden items-center gap-x-2 rounded-none border border-theme-toolbar-border bg-theme-toolbar-bg p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)] group-hover:flex hover:flex">
                                 {isOwnPost && (
-                                  <ActionTooltip label="Edit post">
+                                  <ActionTooltip label={t.posts.editPost}>
                                     <button
                                       type="button"
                                       onClick={() => setEditingPostId(post.id)}
                                       className="cursor-pointer"
-                                      aria-label="Edit post"
+                                      aria-label={t.posts.editPost}
                                     >
                                       <Edit className="h-5 w-5 text-theme-toolbar-icon transition hover:text-theme-text-light" />
                                     </button>
                                   </ActionTooltip>
                                 )}
                                 {canDeletePost && (
-                                  <ActionTooltip label="Delete post">
+                                  <ActionTooltip label={t.posts.deletePost}>
                                     <button
                                       type="button"
                                       onClick={() =>
@@ -1138,14 +1146,14 @@ function CommunityPostsSectionInner({
                                         })
                                       }
                                       className="cursor-pointer"
-                                      aria-label="Delete post"
+                                      aria-label={t.posts.deletePost}
                                     >
                                       <Trash className="h-5 w-5 text-theme-toolbar-icon transition hover:text-theme-text-light" />
                                     </button>
                                   </ActionTooltip>
                                 )}
                                 {!isOwnPost && (
-                                  <ActionTooltip label="Report post">
+                                  <ActionTooltip label={t.posts.reportPost}>
                                     <button
                                       type="button"
                                       onClick={() =>
@@ -1165,7 +1173,7 @@ function CommunityPostsSectionInner({
                                         })
                                       }
                                       className="cursor-pointer"
-                                      aria-label="Report post"
+                                      aria-label={t.posts.reportPost}
                                     >
                                       <Siren className="h-5 w-5 text-theme-toolbar-icon transition hover:text-theme-text-light" />
                                     </button>
@@ -1230,18 +1238,18 @@ function CommunityPostsSectionInner({
                                             </>
                                           )}
                                           <span className="pt-2.5 text-[11px] text-theme-text-tertiary">
-                                            {formatPostDate(post.createdAt)}
+                                            {formatPostDate(post.createdAt, locale)}
                                           </span>
                                           {post.pinnedAt && (
                                             <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[11px] font-medium leading-none text-theme-text-subtle">
                                               <Pin className="h-3 w-3" />
-                                              Fijado
+                                              {t.posts.pinned}
                                             </span>
                                           )}
                                           {post.lockedAt && (
                                             <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[11px] font-medium leading-none text-theme-text-subtle">
                                               <Lock className="h-3 w-3" />
-                                              Cerrado
+                                              {t.posts.closed}
                                             </span>
                                           )}
                                         </div>
@@ -1280,18 +1288,18 @@ function CommunityPostsSectionInner({
                                             </>
                                           )}
                                           <span className="pt-2.5 text-[11px] text-theme-text-tertiary">
-                                            {formatPostDate(post.createdAt)}
+                                            {formatPostDate(post.createdAt, locale)}
                                           </span>
                                           {post.pinnedAt && (
                                             <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[11px] font-medium leading-none text-theme-text-subtle">
                                               <Pin className="h-3 w-3" />
-                                              Fijado
+                                              {t.posts.pinned}
                                             </span>
                                           )}
                                           {post.lockedAt && (
                                             <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[11px] font-medium leading-none text-theme-text-subtle">
                                               <Lock className="h-3 w-3" />
-                                              Cerrado
+                                              {t.posts.closed}
                                             </span>
                                           )}
                                         </div>
@@ -1465,7 +1473,7 @@ function CommunityPostsSectionInner({
                                       }}
                                       className="cursor-pointer text-[14px] text-theme-text-tertiary transition hover:underline"
                                     >
-                                      Reply
+                                      {t.chat.reply}
                                     </button>
                                     {omittedCount > 0 && (
                                       <button
@@ -1478,10 +1486,12 @@ function CommunityPostsSectionInner({
                                         className="cursor-pointer text-[14px] text-theme-text-tertiary transition hover:underline"
                                       >
                                         {isExpandedCommentsLoading
-                                          ? "Loading comments..."
+                                          ? t.posts.loadingComments
                                           : isOmittedExpanded
-                                            ? "Hide omitted comments"
-                                            : `Expand ${omittedCount} omitted comments`}
+                                            ? t.posts.hideOmittedComments
+                                            : t.posts.expandOmittedComments(
+                                                omittedCount,
+                                              )}
                                       </button>
                                     )}
                                   </div>

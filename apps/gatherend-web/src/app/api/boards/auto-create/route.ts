@@ -4,10 +4,11 @@ import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/db";
 import { hash } from "@/lib/hash";
-import { MemberRole, ChannelType, Prisma } from "@prisma/client";
+import { MemberRole, Prisma } from "@prisma/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
 import { moderateDescription } from "@/lib/text-moderation";
+import { createDefaultBoardChannelsForOwner } from "@/lib/boards/default-channels";
 
 const IDEMPOTENCY_EXPIRATION_HOURS = 24;
 const IDEMPOTENCY_STATUS_PENDING = 0;
@@ -211,35 +212,38 @@ export async function POST(req: Request) {
           isPrivate: true,
           languages: profile.languages.length ? profile.languages : ["EN"],
           refreshedAt: new Date(),
-
-          members: {
-            create: {
-              profileId: profile.id,
-              role: MemberRole.OWNER,
-            },
-          },
-
-          channels: {
-            createMany: {
-              data: [
-                {
-                  name: "Main",
-                  type: ChannelType.TEXT,
-                  profileId: profile.id,
-                },
-                {
-                  name: "VR",
-                  type: ChannelType.VOICE,
-                  profileId: profile.id,
-                },
-              ],
-            },
-          },
         },
-        include: { members: true },
+        select: { id: true },
       });
 
-      return { board: newBoard, created: true };
+      const ownerMember = await tx.member.create({
+        data: {
+          boardId: newBoard.id,
+          profileId: profile.id,
+          role: MemberRole.OWNER,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      await createDefaultBoardChannelsForOwner(tx, {
+        boardId: newBoard.id,
+        ownerMemberId: ownerMember.id,
+        ownerProfileId: profile.id,
+      });
+
+      const hydratedBoard = await tx.board.findUniqueOrThrow({
+        where: { id: newBoard.id },
+        include: {
+          members: true,
+          channels: {
+            orderBy: { position: "asc" },
+          },
+        },
+      });
+
+      return { board: hydratedBoard, created: true };
     });
 
     const json = JSON.stringify(result.board);

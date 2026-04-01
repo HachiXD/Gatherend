@@ -183,6 +183,22 @@ export async function POST(
         },
       });
 
+      await tx.channelReadState.deleteMany({
+        where: {
+          profileId: targetProfileId,
+          channel: { boardId },
+        },
+      });
+
+      await tx.mention.deleteMany({
+        where: {
+          profileId: targetProfileId,
+          message: {
+            channel: { boardId },
+          },
+        },
+      });
+
       await tx.member.delete({
         where: { id: target.id },
       });

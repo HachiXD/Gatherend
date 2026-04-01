@@ -110,6 +110,7 @@ export type TranslationKeys = {
     invite: string;
     members: string;
     channels: string;
+    boardChats: (boardName: string) => string;
     textChannels: string;
     voiceChannels: string;
     createChannel: string;
@@ -264,6 +265,46 @@ export type TranslationKeys = {
     join: string;
     noBoardsFoundMatching: string;
     somethingWentWrong: string;
+  };
+
+  posts: {
+    imagePreviewTitle: string;
+    refreshPosts: string;
+    noPostsInCommunity: string;
+    pinned: string;
+    closed: string;
+    editPost: string;
+    deletePost: string;
+    reportPost: string;
+    editPostPlaceholder: string;
+    editCommentPlaceholder: string;
+    writeCommentPlaceholder: string;
+    attachImage: string;
+    removeImage: string;
+    commentAttachmentAlt: string;
+    commentImageAlt: string;
+    sendComment: string;
+    publish: string;
+    publishing: string;
+    uploadImage: string;
+    uploadingImage: string;
+    postTitlePlaceholder: string;
+    postContentPlaceholder: string;
+    escToCancelCtrlEnterToSave: string;
+    escToCancelCtrlEnterToSend: string;
+    escToCancelCtrlEnterToPublish: string;
+    replyToOriginalPoster: string;
+    deletedComment: string;
+    deletedCommentInline: string;
+    openCommentActions: string;
+    reportComment: string;
+    loadingComments: string;
+    hideOmittedComments: string;
+    expandOmittedComments: (count: number) => string;
+    publishSuccess: string;
+    publishError: string;
+    pasteImageUploadError: string;
+    uploadImageError: (error: string) => string;
   };
 
   // Voice/Media
@@ -511,6 +552,11 @@ export type TranslationKeys = {
       description: string;
       willBeDeleted: string;
     };
+    deleteCommunityPostComment: {
+      title: string;
+      description: string;
+      willBeDeleted: string;
+    };
     createCategory: {
       title: string;
       nameLabel: string;
@@ -608,10 +654,14 @@ export type TranslationKeys = {
       reportUser: string;
       reportMessage: string;
       reportCommunity: string;
+      reportCommunityPost: string;
+      reportCommunityPostComment: string;
       reportBoardDescription: string;
       reportUserDescription: string;
       reportMessageDescription: string;
       reportCommunityDescription: string;
+      reportCommunityPostDescription: (author: string) => string;
+      reportCommunityPostCommentDescription: (author: string) => string;
       selectCategory: string;
       whyReporting: string;
       additionalDetails: string;
@@ -626,6 +676,12 @@ export type TranslationKeys = {
       messagePreview: string;
       userBeingReported: string;
       communityPreview: string;
+      postPreview: string;
+      commentPreview: string;
+      imageOnlyPost: string;
+      imageOnlyComment: string;
+      noContent: string;
+      unknownAuthor: string;
       categories: {
         childSafety: string;
         childSafetyDescription: string;

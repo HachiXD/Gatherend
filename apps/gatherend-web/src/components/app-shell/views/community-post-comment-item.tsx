@@ -18,6 +18,7 @@ import {
 import { getOptimizedStaticUiImageUrl } from "@/lib/ui-image-optimizer";
 import { getUsernameFormatClasses } from "@/lib/username-format";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/i18n";
 import type {
   ClientProfileSummary,
   ClientUploadedAsset,
@@ -60,20 +61,26 @@ interface CommunityPostCommentItemProps {
   onDelete?: (commentId: string) => void;
 }
 
-function formatCommentDate(value: string) {
-  return new Intl.DateTimeFormat("es-ES", {
+function formatCommentDate(value: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
 }
 
-function getReplyingToLabel(comment: CommunityPostCommentItemData) {
+function getReplyingToLabel(
+  comment: CommunityPostCommentItemData,
+  labels: {
+    replyToOriginalPoster: string;
+    deletedCommentInline: string;
+  },
+) {
   if (!comment.replyToCommentId || !comment.replyToComment) {
-    return "OP";
+    return labels.replyToOriginalPoster;
   }
 
   const sourceText = comment.replyToComment.deleted
-    ? "comentario eliminado"
+    ? labels.deletedCommentInline
     : comment.replyToComment.content.trim();
   const preview = sourceText.slice(0, 20);
   const suffix = sourceText.length <= 20 ? "" : "...";
@@ -91,6 +98,7 @@ function CommunityPostCommentItemInner({
   onDelete,
 }: CommunityPostCommentItemProps) {
   const { resolvedTheme } = useTheme();
+  const { t, locale } = useTranslation();
   const authorAvatarUrl = comment.author.avatarAsset?.url || "";
   const authorBadgeStickerUrl = comment.author.badgeSticker?.asset?.url || null;
   const commentImageUrl = comment.imageAsset?.url || null;
@@ -149,7 +157,7 @@ function CommunityPostCommentItemInner({
         )}
         <span className="text-[11px] text-theme-text-tertiary">
           <span className="inline-block pt-2">
-            {formatCommentDate(comment.createdAt)}
+            {formatCommentDate(comment.createdAt, locale)}
           </span>
         </span>
         {comment.replyToCommentId && comment.replyToComment && (
@@ -158,7 +166,11 @@ function CommunityPostCommentItemInner({
               |
             </span>
             <span className="inline-block pt-2 text-[11px] text-theme-text-tertiary">
-              Replying to {getReplyingToLabel(comment)}
+              {t.chat.replyingTo}{" "}
+              {getReplyingToLabel(comment, {
+                replyToOriginalPoster: t.posts.replyToOriginalPoster,
+                deletedCommentInline: t.posts.deletedCommentInline,
+              })}
             </span>
           </>
         )}
@@ -183,7 +195,7 @@ function CommunityPostCommentItemInner({
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={renderedCommentImageUrl || undefined}
-                alt={comment.content || "comment image"}
+                alt={comment.content || t.posts.commentImageAlt}
                 className="max-h-[120px] max-w-[120px] border border-theme-border object-contain"
                 loading="lazy"
                 decoding="async"
@@ -247,7 +259,7 @@ function CommunityPostCommentItemInner({
             </span>
             {"\u00A0"}
             <span className={cn(comment.deleted && "italic")}>
-              {comment.deleted ? "Comentario eliminado" : comment.content}
+              {comment.deleted ? t.posts.deletedComment : comment.content}
             </span>
           </div>
 
@@ -258,7 +270,7 @@ function CommunityPostCommentItemInner({
                 onClick={() => onReply?.(comment.id)}
                 className="cursor-pointer text-[14px] text-theme-text-tertiary transition hover:underline"
               >
-                Reply
+                {t.chat.reply}
               </button>
               {(onReport || onEdit || onDelete) && (
                 <DropdownMenu>
@@ -266,7 +278,7 @@ function CommunityPostCommentItemInner({
                     <button
                       type="button"
                       className="cursor-pointer text-[14px] leading-none text-theme-text-tertiary transition hover:underline"
-                      aria-label="Open comment actions"
+                      aria-label={t.posts.openCommentActions}
                     >
                       ...
                     </button>
@@ -281,7 +293,7 @@ function CommunityPostCommentItemInner({
                         onClick={() => onReport(comment.id)}
                         className="cursor-pointer"
                       >
-                        Report
+                        {t.posts.reportComment}
                       </DropdownMenuItem>
                     )}
                     {onEdit && (
@@ -289,7 +301,7 @@ function CommunityPostCommentItemInner({
                         onClick={() => onEdit(comment.id)}
                         className="cursor-pointer"
                       >
-                        Edit
+                        {t.common.edit}
                       </DropdownMenuItem>
                     )}
                     {onDelete && (
@@ -297,7 +309,7 @@ function CommunityPostCommentItemInner({
                         onClick={() => onDelete(comment.id)}
                         className="cursor-pointer"
                       >
-                        Delete
+                        {t.common.delete}
                       </DropdownMenuItem>
                     )}
                   </DropdownMenuContent>

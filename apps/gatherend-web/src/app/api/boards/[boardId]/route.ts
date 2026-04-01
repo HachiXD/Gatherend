@@ -12,6 +12,11 @@ import {
   uploadedAssetSummarySelect,
 } from "@/lib/uploaded-assets";
 import {
+  ensurePublicBoardNameAvailable,
+  isPublicBoardNameUniqueConstraintError,
+  PUBLIC_BOARD_NAME_CONFLICT_ERROR,
+} from "@/lib/boards/public-name";
+import {
   expressChannelCache,
   expressMemberCache,
   expressVoiceChannelsCache,
@@ -462,10 +467,28 @@ export async function PATCH(
         throw new Error("FORBIDDEN");
       }
 
-      const boardExists = await tx.board.findUnique({ where: { id: boardId }, select: { id: true } });
+      const boardExists = await tx.board.findUnique({
+        where: { id: boardId },
+        select: {
+          id: true,
+          name: true,
+          isPrivate: true,
+        },
+      });
       if (!boardExists) {
         throw new Error("NOT_FOUND");
       }
+
+      const nextName =
+        name !== undefined ? (name as string).trim() : boardExists.name;
+      const nextIsPrivate =
+        isPrivate !== undefined ? (isPrivate as boolean) : boardExists.isPrivate;
+
+      await ensurePublicBoardNameAvailable(tx, {
+        name: nextName,
+        isPrivate: nextIsPrivate,
+        excludeBoardId: boardId,
+      });
 
       return tx.board.update({
         where: { id: boardId },
@@ -524,6 +547,19 @@ export async function PATCH(
         );
       }
 
+      if (error.message === PUBLIC_BOARD_NAME_CONFLICT_ERROR) {
+        return NextResponse.json(
+          { error: "A public board with this name already exists" },
+          { status: 409 },
+        );
+      }
+    }
+
+    if (isPublicBoardNameUniqueConstraintError(error)) {
+      return NextResponse.json(
+        { error: "A public board with this name already exists" },
+        { status: 409 },
+      );
     }
 
     console.error("[BOARD_ID_PATCH]", error);

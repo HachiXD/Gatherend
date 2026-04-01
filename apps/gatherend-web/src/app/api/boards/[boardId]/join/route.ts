@@ -5,6 +5,7 @@ import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
 import { expressMemberCache } from "@/lib/redis";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
+import { createReadStatesForBoardJoin } from "@/lib/channels/read-state";
 // UUID validation regex
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -198,6 +199,11 @@ export async function POST(
           profileId: profile.id,
           role: MemberRole.GUEST,
         },
+      });
+
+      await createReadStatesForBoardJoin(tx, {
+        boardId,
+        profileId: profile.id,
       });
 
       const targetChannel = await tx.channel.findFirst({

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  getSidebarChannelStates,
   getBoardUnreadCounts,
   markChannelAsRead,
   getBoardUnreadMentions,
@@ -15,6 +16,27 @@ const router = Router();
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/**
+ * GET /api/channel-read-state/sidebar
+ * Obtiene el estado agregado de sidebar para todos los canales accesibles.
+ */
+router.get("/sidebar", async (req, res) => {
+  try {
+    const profileId = req.profile?.id;
+
+    if (!profileId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const channels = await getSidebarChannelStates(profileId);
+
+    return res.json({ channels });
+  } catch (error) {
+    logger.error("[CHANNEL_READ_STATE_GET_SIDEBAR]", error);
+    return res.status(500).json({ error: "Internal Error" });
+  }
+});
 
 /**
  * GET /api/channel-read-state/board/:boardId

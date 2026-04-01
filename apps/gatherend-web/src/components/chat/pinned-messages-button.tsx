@@ -40,14 +40,17 @@ export const PinnedMessagesButton = ({
     });
   };
 
+  const isConversation = type === "conversation";
+
   const buttonEl = (
     <button
       type="button"
       onMouseEnter={enableTooltipsOnce}
       onClick={handleOpenPinnedMessages}
-      className="flex h-7 w-7 cursor-pointer items-center justify-center border border-theme-border bg-theme-bg-secondary/40 text-theme-text-tertiary transition hover:text-theme-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]"
+      className={`flex ${isConversation ? "h-8 w-8 bg-theme-bg-secondary/40" : "h-7 w-7"} cursor-pointer items-center justify-center border border-theme-border text-theme-text-tertiary transition hover:text-theme-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]`}
+      style={isConversation ? undefined : { backgroundColor: "var(--community-header-btn-bg)" }}
     >
-      <Pin className="h-4.5 w-4.5" />
+      <Pin className={isConversation ? "h-5 w-5" : "h-4.5 w-4.5"} />
     </button>
   );
 

@@ -31,15 +31,51 @@ import { Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SlashSVG } from "@/lib/slash";
 import { FileUpload } from "@/components/file-upload";
-import { getStoredUploadAssetId } from "@/lib/upload-values";
+import {
+  getStoredUploadAssetId,
+  parseStoredUploadValue,
+} from "@/lib/upload-values";
 import type {
   BoardWithData,
   BoardChannel,
 } from "@/components/providers/board-provider";
 import { useTranslation } from "@/i18n";
+import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 const PANEL_SHELL =
   "border border-theme-border bg-theme-bg-secondary/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.28),inset_0_-1px_0_rgba(0,0,0,0.28)]";
+
+function getOptimisticChannelImageAsset(
+  value: string | null | undefined,
+): ClientUploadedAsset | null {
+  const upload = parseStoredUploadValue(value);
+  if (!upload) {
+    return null;
+  }
+
+  return {
+    id: upload.assetId,
+    url: upload.url,
+    width: upload.width ?? null,
+    height: upload.height ?? null,
+    dominantColor: null,
+  };
+}
+
+function getStoredUploadValueFromAsset(
+  asset: ClientUploadedAsset | null | undefined,
+): string {
+  if (!asset?.id || !asset.url) {
+    return "";
+  }
+
+  return JSON.stringify({
+    assetId: asset.id,
+    url: asset.url,
+    width: asset.width ?? undefined,
+    height: asset.height ?? undefined,
+  });
+}
 
 const formSchema = z.object({
   name: z.string().min(1, {
@@ -55,7 +91,8 @@ export const EditChannelModal = () => {
   const { t } = useTranslation();
 
   const isModalOpen = isOpen && type === "editChannel";
-  const { channel, board, boardId: dataBoardId } = data;
+  const { channel: rawChannel, board, boardId: dataBoardId } = data;
+  const channel = rawChannel as BoardChannel | undefined;
 
   // Usar boardId del data (preferir boardId directo sobre board.id)
   const boardId = dataBoardId || board?.id;
@@ -76,7 +113,7 @@ export const EditChannelModal = () => {
       form.reset({
         name: channel.name || "",
         type: channel.type || ChannelType.TEXT,
-        imageUpload: "",
+        imageUpload: getStoredUploadValueFromAsset(channel.imageAsset),
       });
 
       // Posicionar cursor al final del texto
@@ -93,7 +130,9 @@ export const EditChannelModal = () => {
   //  MUTATION con TanStack Query  //
   const editChannelMutation = useMutation({
     mutationFn: async (values: z.infer<typeof formSchema>) => {
-      const payload: Partial<z.infer<typeof formSchema>> & { imageAssetId?: string | null } = {
+      const payload: Partial<z.infer<typeof formSchema>> & {
+        imageAssetId?: string | null;
+      } = {
         name: values.name,
       };
 
@@ -102,7 +141,7 @@ export const EditChannelModal = () => {
       }
 
       const assetId = getStoredUploadAssetId(values.imageUpload);
-      if (assetId !== undefined) {
+      if (assetId !== (channel?.imageAsset?.id ?? null)) {
         payload.imageAssetId = assetId;
       }
 
@@ -115,24 +154,34 @@ export const EditChannelModal = () => {
     onMutate: async (values) => {
       if (!boardId || !channel?.id) return;
 
-      // Cancelar queries en progreso
       await queryClient.cancelQueries({ queryKey: ["board", boardId] });
 
-      // Snapshot del estado anterior
       const previousBoard = queryClient.getQueryData<BoardWithData>([
         "board",
         boardId,
       ]);
 
-      // Actualizar cache optimísticamente
+      const nextImageAssetId = getStoredUploadAssetId(values.imageUpload);
+      const imageWasChanged =
+        nextImageAssetId !== (channel.imageAsset?.id ?? null);
+      const optimisticImageAsset = imageWasChanged
+        ? getOptimisticChannelImageAsset(values.imageUpload)
+        : channel.imageAsset;
+
       queryClient.setQueryData<BoardWithData>(["board", boardId], (old) => {
         if (!old) return old;
 
         return {
           ...old,
-          // Actualizar en root channels
           channels: old.channels.map((ch) =>
-            ch.id === channel.id ? { ...ch, ...values } : ch,
+            ch.id === channel.id
+              ? {
+                  ...ch,
+                  name: values.name,
+                  type: values.type,
+                  imageAsset: optimisticImageAsset,
+                }
+              : ch,
           ),
         };
       });
@@ -242,7 +291,7 @@ export const EditChannelModal = () => {
                         <FormItem>
                           <FormControl>
                             <FileUpload
-                              endpoint="boardImage"
+                              endpoint="channelImage"
                               value={field.value || ""}
                               onChange={field.onChange}
                               uploadButtonClassName="rounded-none border-theme-border-subtle bg-theme-bg-cancel-button text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
@@ -257,56 +306,56 @@ export const EditChannelModal = () => {
                 </div>
 
                 <FormField
-                    control={form.control}
-                    name="type"
-                    render={({ field }) => (
-                      <FormItem>
-                        <span
-                          id="edit-channel-type-label"
-                          className="block uppercase text-[15px] font-bold text-theme-text-subtle -mt-1"
+                  control={form.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <span
+                        id="edit-channel-type-label"
+                        className="block uppercase text-[15px] font-bold text-theme-text-subtle -mt-1"
+                      >
+                        {t.modals.editChannel.typeLabel}
+                      </span>
+                      <FormControl>
+                        <div
+                          className="flex justify-center gap-3 -mt-1.5"
+                          role="group"
+                          aria-labelledby="edit-channel-type-label"
                         >
-                          {t.modals.editChannel.typeLabel}
-                        </span>
-                        <FormControl>
-                          <div
-                            className="flex justify-center gap-3 -mt-1.5"
-                            role="group"
-                            aria-labelledby="edit-channel-type-label"
+                          <button
+                            type="button"
+                            disabled={isLoading}
+                            onClick={() => field.onChange(ChannelType.TEXT)}
+                            className={cn(
+                              "flex h-8 w-32 cursor-pointer items-center justify-center gap-1.5 rounded-none border px-3 text-[14px] transition",
+                              field.value === ChannelType.TEXT
+                                ? "border-theme-channel-type-active-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
+                                : "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border",
+                            )}
                           >
-                            <button
-                              type="button"
-                              disabled={isLoading}
-                              onClick={() => field.onChange(ChannelType.TEXT)}
-                              className={cn(
-                                "flex h-8 w-32 cursor-pointer items-center justify-center gap-1.5 rounded-none border px-3 text-[14px] transition",
-                                field.value === ChannelType.TEXT
-                                  ? "border-theme-channel-type-active-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
-                                  : "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border",
-                              )}
-                            >
-                              <SlashSVG className="h-5 w-5 -mr-1.5" />
-                              <span>{t.modals.editChannel.text}</span>
-                            </button>
-                            <button
-                              type="button"
-                              disabled={isLoading}
-                              onClick={() => field.onChange(ChannelType.VOICE)}
-                              className={cn(
-                                "flex h-8 w-32 cursor-pointer items-center justify-center gap-1.5 rounded-none border px-3 text-[14px] transition",
-                                field.value === ChannelType.VOICE
-                                  ? "border-theme-channel-type-active-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
-                                  : "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border",
-                              )}
-                            >
-                              <Mic className="h-5 w-5 -mr-1" />
-                              <span>{t.modals.editChannel.voice}</span>
-                            </button>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                            <SlashSVG className="h-5 w-5 -mr-1.5" />
+                            <span>{t.modals.editChannel.text}</span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isLoading}
+                            onClick={() => field.onChange(ChannelType.VOICE)}
+                            className={cn(
+                              "flex h-8 w-32 cursor-pointer items-center justify-center gap-1.5 rounded-none border px-3 text-[14px] transition",
+                              field.value === ChannelType.VOICE
+                                ? "border-theme-channel-type-active-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
+                                : "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border",
+                            )}
+                          >
+                            <Mic className="h-5 w-5 -mr-1" />
+                            <span>{t.modals.editChannel.voice}</span>
+                          </button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             </div>
 

@@ -1,21 +1,31 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { useBoardMembers } from "@/hooks/use-board-members";
-import { BoardMember } from "@/components/providers/board-provider";
+import {
+  useChannelMentionableMembers,
+  type MentionableChannelMember,
+} from "@/hooks/use-channel-mentionable-members";
 import { UserAvatar } from "@/components/user-avatar";
 import { cn } from "@/lib/utils";
 
 interface MentionAutocompleteProps {
+  boardId: string;
+  channelId: string;
   inputValue: string;
   cursorPosition: number;
-  onSelect: (member: BoardMember, startIndex: number, endIndex: number) => void;
+  onSelect: (
+    member: MentionableChannelMember,
+    startIndex: number,
+    endIndex: number,
+  ) => void;
   inputRef: React.RefObject<HTMLTextAreaElement | null>;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
 }
 
 export const MentionAutocomplete = ({
+  boardId,
+  channelId,
   inputValue,
   cursorPosition,
   onSelect,
@@ -23,7 +33,29 @@ export const MentionAutocomplete = ({
   isOpen,
   setIsOpen,
 }: MentionAutocompleteProps) => {
-  const { members } = useBoardMembers();
+  const hasMentionTrigger = useMemo(() => {
+    const textBeforeCursor = inputValue.substring(0, cursorPosition);
+    const lastAtIndex = textBeforeCursor.lastIndexOf("@");
+
+    if (lastAtIndex === -1) {
+      return false;
+    }
+
+    const charBeforeAt =
+      lastAtIndex > 0 ? textBeforeCursor[lastAtIndex - 1] : " ";
+    if (charBeforeAt !== " " && charBeforeAt !== "\n" && lastAtIndex !== 0) {
+      return false;
+    }
+
+    const textAfterAt = textBeforeCursor.substring(lastAtIndex + 1);
+    return !textAfterAt.includes(" ") && !textAfterAt.includes("\n");
+  }, [inputValue, cursorPosition]);
+
+  const { data: members = [] } = useChannelMentionableMembers(
+    boardId,
+    channelId,
+    hasMentionTrigger,
+  );
   const [selectedIndex, setSelectedIndex] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -36,7 +68,7 @@ export const MentionAutocomplete = ({
       return {
         shouldOpen: false,
         mentionStart: -1,
-        filtered: [] as BoardMember[],
+        filtered: [] as MentionableChannelMember[],
       };
     }
 
@@ -47,7 +79,7 @@ export const MentionAutocomplete = ({
       return {
         shouldOpen: false,
         mentionStart: -1,
-        filtered: [] as BoardMember[],
+        filtered: [] as MentionableChannelMember[],
       };
     }
 
@@ -59,7 +91,7 @@ export const MentionAutocomplete = ({
       return {
         shouldOpen: false,
         mentionStart: -1,
-        filtered: [] as BoardMember[],
+        filtered: [] as MentionableChannelMember[],
       };
     }
 
@@ -82,14 +114,14 @@ export const MentionAutocomplete = ({
     }
   }, [mentionState.shouldOpen, isOpen, setIsOpen]);
 
-  // Reset selected index cuando cambian los resultados
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [mentionState.filtered.length]);
+  const normalizedSelectedIndex =
+    mentionState.filtered.length === 0
+      ? 0
+      : Math.min(selectedIndex, mentionState.filtered.length - 1);
 
   // Handler para seleccionar un miembro
   const handleSelect = useCallback(
-    (member: BoardMember) => {
+    (member: MentionableChannelMember) => {
       onSelect(member, mentionState.mentionStart, cursorPosition);
       setIsOpen(false);
     },
@@ -118,7 +150,7 @@ export const MentionAutocomplete = ({
         case "Enter":
           e.preventDefault();
           e.stopPropagation();
-          handleSelect(mentionState.filtered[selectedIndex]);
+          handleSelect(mentionState.filtered[normalizedSelectedIndex]);
           break;
         case "Escape":
           e.preventDefault();
@@ -126,7 +158,13 @@ export const MentionAutocomplete = ({
           break;
       }
     },
-    [isOpen, mentionState.filtered, selectedIndex, setIsOpen, handleSelect]
+    [
+      isOpen,
+      mentionState.filtered,
+      normalizedSelectedIndex,
+      setIsOpen,
+      handleSelect,
+    ]
   );
 
   // Agregar listener de teclado al input
@@ -145,13 +183,13 @@ export const MentionAutocomplete = ({
     if (listRef.current && mentionState.filtered.length > 0) {
       const container = listRef.current.querySelector(".mention-list");
       const selectedElement = container?.children[
-        selectedIndex + 1
+        normalizedSelectedIndex + 1
       ] as HTMLElement; // +1 porque el primer hijo es el header
       if (selectedElement) {
         selectedElement.scrollIntoView({ block: "nearest" });
       }
     }
-  }, [selectedIndex, mentionState.filtered.length]);
+  }, [normalizedSelectedIndex, mentionState.filtered.length]);
 
   if (!isOpen || mentionState.filtered.length === 0) return null;
 
@@ -168,12 +206,12 @@ export const MentionAutocomplete = ({
         </p>
         {mentionState.filtered.map((member, index) => (
           <button
-            key={member.id}
+            key={member.profileId}
             type="button"
             onClick={() => handleSelect(member)}
             className={cn(
               "w-full flex cursor-pointer items-center gap-2 px-2 py-1.5 rounded text-left transition-colors",
-              index === selectedIndex
+              index === normalizedSelectedIndex
                 ? "bg-theme-accent-primary/20"
                 : "hover:bg-theme-channel-hover"
             )}
