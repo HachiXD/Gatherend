@@ -36,6 +36,42 @@ async function notifyWelcomeMessage(channelId: string, message: object) {
   }
 }
 
+async function notifyChannelMembershipChanged(
+  boardId: string,
+  channelId: string,
+  profileId: string,
+  channelMemberCount: number,
+) {
+  try {
+    const socketUrl =
+      process.env.SOCKET_SERVER_URL || process.env.NEXT_PUBLIC_SOCKET_URL;
+    const secret = process.env.INTERNAL_API_SECRET;
+    if (!socketUrl || !secret) return;
+    await fetch(`${socketUrl}/emit-to-room`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Internal-Secret": secret,
+      },
+      body: JSON.stringify({
+        room: `board:${boardId}`,
+        event: "board:channel-membership-changed",
+        data: {
+          boardId,
+          channelId,
+          profileId,
+          action: "joined",
+          channelMemberCount,
+          timestamp: Date.now(),
+        },
+      }),
+      signal: AbortSignal.timeout(3000),
+    });
+  } catch (error) {
+    console.error("[NOTIFY_CHANNEL_MEMBERSHIP_CHANGED]", error);
+  }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function serializeWelcomeMessagePayload(message: any) {
   return {
@@ -101,7 +137,7 @@ export async function POST(
       );
     }
 
-    const welcomeMessage = await db.$transaction(async (tx) => {
+    const result = await db.$transaction(async (tx) => {
       await tx.channelMember.create({
         data: { channelId, profileId: profile.id },
       });
@@ -143,10 +179,33 @@ export async function POST(
         lastReadSeq: seq,
       });
 
-      return message;
+      const hydratedChannel = await tx.channel.findUniqueOrThrow({
+        where: { id: channelId },
+        select: {
+          _count: {
+            select: {
+              channelMembers: true,
+            },
+          },
+        },
+      });
+
+      return {
+        message,
+        channelMemberCount: hydratedChannel._count.channelMembers,
+      };
     });
 
-    notifyWelcomeMessage(channelId, serializeWelcomeMessagePayload(welcomeMessage));
+    void notifyWelcomeMessage(
+      channelId,
+      serializeWelcomeMessagePayload(result.message),
+    );
+    void notifyChannelMembershipChanged(
+      boardId,
+      channelId,
+      profile.id,
+      result.channelMemberCount,
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {

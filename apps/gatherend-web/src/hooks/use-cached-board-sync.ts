@@ -73,6 +73,15 @@ interface ChannelUpdatedPayload {
   timestamp: number;
 }
 
+interface ChannelMembershipChangedPayload {
+  boardId: string;
+  channelId: string;
+  profileId: string;
+  action: "joined";
+  channelMemberCount: number;
+  timestamp: number;
+}
+
 function getCachedBoardIds(queryClient: ReturnType<typeof useQueryClient>): Set<string> {
   const cachedBoardIds = new Set<string>();
 
@@ -203,6 +212,53 @@ export function useCachedBoardSync(currentProfileId?: string): void {
       });
     };
 
+    const handleChannelMembershipChanged = (
+      payload: ChannelMembershipChangedPayload,
+    ) => {
+      queryClient.setQueryData<BoardWithData>(
+        ["board", payload.boardId],
+        (old) => {
+          if (!old) return old;
+
+          let changed = false;
+
+          const nextChannels = old.channels.map((channel) => {
+            if (channel.id !== payload.channelId) {
+              return channel;
+            }
+
+            const nextIsJoined =
+              payload.action === "joined" &&
+              currentProfileId !== undefined &&
+              payload.profileId === currentProfileId
+                ? true
+                : channel.isJoined;
+
+            if (
+              channel.channelMemberCount === payload.channelMemberCount &&
+              channel.isJoined === nextIsJoined
+            ) {
+              return channel;
+            }
+
+            changed = true;
+            return {
+              ...channel,
+              channelMemberCount: payload.channelMemberCount,
+              isJoined: nextIsJoined,
+            };
+          });
+
+          if (!changed) return old;
+
+          return {
+            ...old,
+            channels: nextChannels,
+          };
+        },
+      );
+    };
+
     const handleConnect = () => {
       rejoinBoardRooms(socket);
       syncObservedRooms();
@@ -223,6 +279,10 @@ export function useCachedBoardSync(currentProfileId?: string): void {
     socket.on("board:channel-created", handleChannelCreated);
     socket.on("board:channel-deleted", handleChannelDeleted);
     socket.on("board:channel-updated", handleChannelUpdated);
+    socket.on(
+      "board:channel-membership-changed",
+      handleChannelMembershipChanged,
+    );
 
     return () => {
       unsubscribeQueryCache();
@@ -233,6 +293,10 @@ export function useCachedBoardSync(currentProfileId?: string): void {
       socket.off("board:channel-created", handleChannelCreated);
       socket.off("board:channel-deleted", handleChannelDeleted);
       socket.off("board:channel-updated", handleChannelUpdated);
+      socket.off(
+        "board:channel-membership-changed",
+        handleChannelMembershipChanged,
+      );
 
       observedBoardIdsRef.current.forEach((boardId) => {
         releaseBoardRoom(socket, boardId);
