@@ -8,11 +8,12 @@ import {
 } from "@/contexts/board-switch-context";
 import { useCurrentBoardData } from "@/hooks/use-board-data";
 import type { BoardWithData } from "@/components/providers/board-provider";
+import { resolveInitialChannelId } from "@/lib/boards/resolve-initial-channel";
 
 /**
  * Selecciona el canal objetivo para redirección basado en prioridades:
  * 1. Último canal visitado (desde localStorage)
- * 2. Primer canal por posición
+ * 2. Primer canal TEXT por posición
  *
  * @param board - Board data
  * @param lastChannelId - Último canal visitado
@@ -22,21 +23,7 @@ function selectTargetChannel(
   board: BoardWithData,
   lastChannelId: string | null,
 ): string | null {
-  const allChannels = [...board.channels];
-
-  if (allChannels.length === 0) return null;
-
-  // Prioridad 1: Último canal visitado
-  if (lastChannelId) {
-    const found = allChannels.find((c) => c.id === lastChannelId);
-    if (found) return found.id;
-  }
-
-  // Prioridad 2: Primer canal por posición
-  const sortedChannels = [...allChannels].sort(
-    (a, b) => a.position - b.position,
-  );
-  return sortedChannels[0]?.id ?? null;
+  return resolveInitialChannelId(board.channels, lastChannelId);
 }
 
 interface UseChannelRedirectionResult {
@@ -52,7 +39,7 @@ interface UseChannelRedirectionResult {
  *
  * Prioridad de redirección:
  * 1. Último channel visitado (desde localStorage) si aún existe
- * 2. Primer canal por posición
+ * 2. Primer canal TEXT por posición
  */
 export function useChannelRedirection(): UseChannelRedirectionResult {
   const {

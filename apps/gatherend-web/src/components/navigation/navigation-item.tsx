@@ -12,6 +12,7 @@ import { getLastChannelForBoard } from "@/contexts/board-switch-context";
 import { AtSign } from "lucide-react";
 import { fetchWithRetry } from "@/lib/fetch-with-retry";
 import { getOptimizedStaticUiImageUrl } from "@/lib/ui-image-optimizer";
+import { resolveInitialChannelId } from "@/lib/boards/resolve-initial-channel";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 import type { BoardWithData } from "@/components/providers/board-provider";
 
@@ -172,15 +173,13 @@ const NavigationItemComponent = ({
     [displayImageUrl, fallbackLabel, isGatherendCdnUrl, name], // Solo dependencias que REALMENTE cambian el contenido
   );
 
-  // Helper para obtener el primer canal de un board
-  const getFirstChannelFromBoard = useCallback(
+  // Helper para resolver el canal inicial para navegación normal de miembros
+  const getInitialChannelFromBoard = useCallback(
     (board: BoardWithData): string | null => {
-      const allChannels = [...board.channels];
-      if (allChannels.length === 0) return null;
-      const sortedChannels = [...allChannels].sort(
-        (a, b) => a.position - b.position,
+      return resolveInitialChannelId(
+        board.channels,
+        getLastChannelForBoard(board.id),
       );
-      return sortedChannels[0]?.id || null;
     },
     [],
   );
@@ -220,7 +219,7 @@ const NavigationItemComponent = ({
     // 2. Verificar si hay board en cache de React Query (sin localStorage)
     const cachedBoard = queryClient.getQueryData<BoardWithData>(["board", id]);
     if (cachedBoard) {
-      const channelId = lastChannelId || getFirstChannelFromBoard(cachedBoard);
+      const channelId = getInitialChannelFromBoard(cachedBoard);
       if (channelId) {
         switchBoard(id, channelId);
         return;
@@ -241,7 +240,7 @@ const NavigationItemComponent = ({
         const board: BoardWithData = await response.json();
         // Guardar en cache para que los componentes tengan datos al instante
         queryClient.setQueryData(["board", id], board);
-        const channelId = getFirstChannelFromBoard(board);
+        const channelId = getInitialChannelFromBoard(board);
         if (channelId) {
           switchBoard(id, channelId, { history: "replace" });
         } else {
@@ -261,7 +260,7 @@ const NavigationItemComponent = ({
     router,
     id,
     queryClient,
-    getFirstChannelFromBoard,
+    getInitialChannelFromBoard,
     pushOptimisticBoardUrl,
   ]);
 

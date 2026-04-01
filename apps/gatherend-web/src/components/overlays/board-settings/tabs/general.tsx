@@ -25,7 +25,10 @@ import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/file-upload";
 import { Textarea } from "@/components/ui/textarea";
 import { getBoardImageUrl } from "@/lib/avatar-utils";
-import { parseStoredUploadValue } from "@/lib/upload-values";
+import {
+  getStoredUploadAssetId,
+  getStoredUploadValueFromAsset,
+} from "@/lib/upload-values";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 interface GeneralTabProps {
@@ -76,7 +79,7 @@ export const GeneralTab = ({ board }: GeneralTabProps) => {
     defaultValues: {
       name: board.name,
       description: board.description || "",
-      imageUpload: "",
+      imageUpload: getStoredUploadValueFromAsset(board.imageAsset),
     },
   });
 
@@ -121,28 +124,34 @@ export const GeneralTab = ({ board }: GeneralTabProps) => {
       setIsSaving(true);
 
       // Actualizar información básica del board
-      const imageUpload = parseStoredUploadValue(values.imageUpload);
-      const imageAssetId = imageUpload?.assetId ?? null;
-
-      await axios.patch(`/api/boards/${board.id}`, {
+      const currentImageAssetId = board.imageAsset?.id ?? null;
+      const nextImageAssetId = getStoredUploadAssetId(values.imageUpload);
+      const imageWasChanged = nextImageAssetId !== currentImageAssetId;
+      const payload: {
+        name: string;
+        description?: string;
+        imageAssetId?: string | null;
+      } = {
         name: values.name,
-        imageAssetId,
         description: values.description,
-      });
+      };
+
+      if (imageWasChanged) {
+        payload.imageAssetId = nextImageAssetId;
+      }
+
+      const response = await axios.patch(`/api/boards/${board.id}`, payload);
+      const updatedBoard = response.data as Board & {
+        imageAsset?: ClientUploadedAsset | null;
+      };
 
       updateBoard({
-        name: values.name,
-        imageAssetId,
-        imageAsset: imageAssetId
-          ? {
-              id: imageAssetId,
-              width: null,
-              height: null,
-              dominantColor: null,
-              url: imageUpload?.url ?? boardImagePreviewUrl,
-            }
-          : null,
-        description: values.description || null,
+        name: updatedBoard.name,
+        description: updatedBoard.description || null,
+        ...(imageWasChanged && {
+          imageAssetId: nextImageAssetId,
+          imageAsset: updatedBoard.imageAsset ?? null,
+        }),
       });
 
       invalidateBoard();

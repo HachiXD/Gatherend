@@ -1,3 +1,5 @@
+import type { ClientUploadedAsset } from "@/types/uploaded-assets";
+
 export interface StoredUploadValue {
   assetId: string;
   url: string;
@@ -44,4 +46,19 @@ export function getStoredUploadAssetId(
   value: string | null | undefined,
 ): string | null {
   return parseStoredUploadValue(value)?.assetId ?? null;
+}
+
+export function getStoredUploadValueFromAsset(
+  asset: ClientUploadedAsset | null | undefined,
+): string {
+  if (!asset?.id || !asset.url) {
+    return "";
+  }
+
+  return JSON.stringify({
+    assetId: asset.id,
+    url: asset.url,
+    width: asset.width ?? undefined,
+    height: asset.height ?? undefined,
+  });
 }

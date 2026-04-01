@@ -33,6 +33,7 @@ import { SlashSVG } from "@/lib/slash";
 import { FileUpload } from "@/components/file-upload";
 import {
   getStoredUploadAssetId,
+  getStoredUploadValueFromAsset,
   parseStoredUploadValue,
 } from "@/lib/upload-values";
 import type {
@@ -60,21 +61,6 @@ function getOptimisticChannelImageAsset(
     height: upload.height ?? null,
     dominantColor: null,
   };
-}
-
-function getStoredUploadValueFromAsset(
-  asset: ClientUploadedAsset | null | undefined,
-): string {
-  if (!asset?.id || !asset.url) {
-    return "";
-  }
-
-  return JSON.stringify({
-    assetId: asset.id,
-    url: asset.url,
-    width: asset.width ?? undefined,
-    height: asset.height ?? undefined,
-  });
 }
 
 const formSchema = z.object({

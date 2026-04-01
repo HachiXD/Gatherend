@@ -2,7 +2,6 @@ import { AssetContext, AssetVisibility, MemberRole, Prisma } from "@prisma/clien
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/require-auth";
-import { moderateDescription } from "@/lib/text-moderation";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import {
   UUID_REGEX,
@@ -164,30 +163,6 @@ export async function POST(
       resolvedImageAssetId = imageAsset.id;
     }
 
-    const titleModeration = moderateDescription(trimmedTitle);
-    if (!titleModeration.allowed) {
-      return NextResponse.json(
-        {
-          error: "MODERATION_BLOCKED",
-          message: titleModeration.message || "Title contains prohibited content",
-          reason: titleModeration.reason,
-        },
-        { status: 400 },
-      );
-    }
-
-    const contentModeration = moderateDescription(trimmedContent);
-    if (!contentModeration.allowed) {
-      return NextResponse.json(
-        {
-          error: "MODERATION_BLOCKED",
-          message: contentModeration.message || "Content contains prohibited content",
-          reason: contentModeration.reason,
-        },
-        { status: 400 },
-      );
-    }
-
     const rules = await db.$transaction(async (tx) => {
       const member = await tx.member.findFirst({
         where: {
@@ -344,34 +319,6 @@ export async function PATCH(
         }
 
         resolvedImageAssetId = imageAsset.id;
-      }
-    }
-
-    if (trimmedTitle !== undefined) {
-      const titleModeration = moderateDescription(trimmedTitle);
-      if (!titleModeration.allowed) {
-        return NextResponse.json(
-          {
-            error: "MODERATION_BLOCKED",
-            message: titleModeration.message || "Title contains prohibited content",
-            reason: titleModeration.reason,
-          },
-          { status: 400 },
-        );
-      }
-    }
-
-    if (trimmedContent !== undefined) {
-      const contentModeration = moderateDescription(trimmedContent);
-      if (!contentModeration.allowed) {
-        return NextResponse.json(
-          {
-            error: "MODERATION_BLOCKED",
-            message: contentModeration.message || "Content contains prohibited content",
-            reason: contentModeration.reason,
-          },
-          { status: 400 },
-        );
       }
     }
 
