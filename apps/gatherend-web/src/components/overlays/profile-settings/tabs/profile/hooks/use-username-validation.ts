@@ -71,10 +71,21 @@ export function useUsernameValidation({
         });
 
         if (!response.ok) {
+          let errorMessage = `Server error: ${response.status}`;
+
+          try {
+            const errorData = (await response.json()) as { error?: string };
+            if (errorData.error) {
+              errorMessage = errorData.error;
+            }
+          } catch {
+            // Keep fallback message when error body is missing/invalid
+          }
+
           setStatus({
             checking: false,
             valid: false,
-            message: `Server error: ${response.status}`,
+            message: errorMessage,
           });
           return;
         }

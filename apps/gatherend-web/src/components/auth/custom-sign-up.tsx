@@ -100,7 +100,7 @@ export const CustomSignUp = () => {
         name: buildDefaultName(email.trim()),
         email: email.trim(),
         password,
-        callbackURL: "/boards",
+        callbackURL: "/sign-in?verified=1",
       });
 
       const resultError = (result as { error?: { message?: string } }).error;

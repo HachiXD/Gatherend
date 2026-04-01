@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { sanitizeUsername, MAX_DISCRIMINATORS } from "@/lib/username";
+import {
+  normalizeUsername,
+  validateUsername,
+  MAX_DISCRIMINATORS,
+} from "@/lib/username";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 /**
@@ -33,16 +37,21 @@ export async function POST(req: Request) {
       );
     }
 
-    const sanitized = sanitizeUsername(username);
+    const normalizedUsername = normalizeUsername(username);
+    const validationError = validateUsername(normalizedUsername);
 
-    if (sanitized.length < 2) {
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 });
+    }
+
+    if (normalizedUsername.length < 2) {
       return NextResponse.json(
         { error: "Username must be at least 2 characters" },
         { status: 400 },
       );
     }
 
-    if (sanitized.length > 20) {
+    if (normalizedUsername.length > 20) {
       return NextResponse.json(
         { error: "Username must be at most 20 characters" },
         { status: 400 },
@@ -52,7 +61,7 @@ export async function POST(req: Request) {
     // Contar cuántos discriminators ya están usados para este username
     const usedCount = await db.profile.count({
       where: {
-        username: { equals: sanitized, mode: "insensitive" },
+        username: { equals: normalizedUsername, mode: "insensitive" },
       },
     });
 
@@ -60,7 +69,7 @@ export async function POST(req: Request) {
     if (usedCount >= MAX_DISCRIMINATORS) {
       return NextResponse.json({
         available: false,
-        sanitized,
+        sanitized: normalizedUsername,
         error:
           "This username is no longer available. Please choose a different one.",
       });
@@ -69,7 +78,7 @@ export async function POST(req: Request) {
     // Username disponible
     return NextResponse.json({
       available: true,
-      sanitized,
+      sanitized: normalizedUsername,
       message: "Username is available. A unique identifier will be assigned.",
     });
   } catch (error) {

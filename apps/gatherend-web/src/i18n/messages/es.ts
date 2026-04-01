@@ -818,6 +818,8 @@ export const es: TranslationKeys = {
     noPasswordAccount: "Sin contraseña configurada",
     noPasswordAccountDesc: "Esta cuenta no tiene una contraseña configurada.",
     clickToCreatePassword: "Haz clic aquí para crear una contraseña",
+    emailVerifiedSuccess:
+      "Correo verificado con éxito. Vuelve a iniciar sesión con tus credenciales.",
     emailNotVerifiedYet: "Tu correo aún no está verificado.",
     verificationEmailResent:
       "Enviamos un nuevo enlace de verificación a tu bandeja. Revisa tu correo y haz clic en el enlace, luego intenta iniciar sesión de nuevo.",

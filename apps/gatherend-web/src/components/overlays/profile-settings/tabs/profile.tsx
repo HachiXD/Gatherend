@@ -12,7 +12,7 @@ import type { ClientProfile } from "@/hooks/use-current-profile";
 import { useUpload } from "@/hooks/use-upload";
 import { useQueryClient } from "@tanstack/react-query";
 import { useInvalidateProfileCard } from "@/hooks/use-profile-card";
-import { useUpdateCachedProfiles } from "@/hooks/use-update-cached-profiles";
+import { applyProfilePatchToAllCaches } from "@/hooks/profile-patch-utils";
 import { useTranslation, localeToLanguage, languageToLocale } from "@/i18n";
 import { Button } from "@/components/ui/button";
 
@@ -43,7 +43,7 @@ const schema = z.object({
   username: z
     .string()
     .min(2, { message: "Username must be at least 2 characters" })
-    .max(32, { message: "Username must be at most 32 characters" }),
+    .max(20, { message: "Username must be at most 20 characters" }),
   avatarAssetId: z.string().optional().nullable(),
   badge: z
     .string()
@@ -73,7 +73,6 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
   const params = useParams();
   const queryClient = useQueryClient();
   const { invalidateProfileCard } = useInvalidateProfileCard();
-  const { updateCachedProfiles } = useUpdateCachedProfiles();
   const { locale, setLocale, t } = useTranslation();
   const panelShellClass =
     "border border-theme-border bg-theme-bg-overlay-primary/78 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.26)] sm:px-5 sm:py-5";
@@ -251,9 +250,8 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
             oldProfile ? { ...oldProfile, ...serverProfile } : serverProfile,
         );
 
-        // Update cached profiles in all chat messages
-        // This ensures changes like username color, format, etc. are reflected immediately
-        updateCachedProfiles(user.id, {
+        // Patch all relevant client caches, including the live chat window store.
+        applyProfilePatchToAllCaches(queryClient, user.id, {
           username: serverProfile.username,
           discriminator: serverProfile.discriminator,
           avatarAsset: serverProfile.avatarAsset,
@@ -292,7 +290,6 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
       usernameFormat,
       queryClient,
       invalidateProfileCard,
-      updateCachedProfiles,
       user.id,
       params?.boardId,
       t.profile.updateSuccess,

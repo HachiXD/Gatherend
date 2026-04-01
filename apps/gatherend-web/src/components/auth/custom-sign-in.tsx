@@ -35,7 +35,11 @@ function extractErrorMessage(err: unknown, fallback: string): string {
   return fallback;
 }
 
-export const CustomSignIn = () => {
+export const CustomSignIn = ({
+  showEmailVerifiedMessage = false,
+}: {
+  showEmailVerifiedMessage?: boolean;
+}) => {
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -85,6 +89,7 @@ export const CustomSignIn = () => {
         email: email.trim(),
         password,
         rememberMe: true,
+        callbackURL: "/sign-in?verified=1",
       });
 
       const resultError = (result as { error?: { message?: string; code?: string; status?: number } }).error;
@@ -147,6 +152,12 @@ export const CustomSignIn = () => {
           <h1 className="text-2xl font-bold text-white">{t.auth.welcomeBack}</h1>
           <p className="text-sm text-zinc-400 mt-2">{t.auth.signInToContinue}</p>
         </div>
+
+        {showEmailVerifiedMessage && step === "credentials" && (
+          <div className="mb-4 rounded-md bg-emerald-900/30 border border-emerald-700/40 p-3 text-sm text-emerald-300">
+            {t.auth.emailVerifiedSuccess}
+          </div>
+        )}
 
         {step === "verification" && (
           <div className="space-y-4 text-center">

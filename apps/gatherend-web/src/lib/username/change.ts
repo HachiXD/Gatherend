@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
-import { sanitizeUsername } from "./sanitize";
+import { normalizeUsername, validateUsername } from "./sanitize";
 import {
   isDiscriminatorAvailable,
   generateUniqueDiscriminator,
@@ -32,27 +32,32 @@ export async function changeUsername(
     throw new Error("Profile not found");
   }
 
-  const sanitized = sanitizeUsername(newUsername);
-  if (sanitized.length < 2 || sanitized.length > 20) {
+  const normalizedUsername = normalizeUsername(newUsername);
+  const validationError = validateUsername(normalizedUsername);
+  if (validationError) {
+    throw new Error(validationError);
+  }
+
+  if (normalizedUsername.length < 2 || normalizedUsername.length > 20) {
     throw new Error("Username must be between 2 and 20 characters");
   }
 
   // Verificar si podemos mantener el discriminator actual
   const canKeep = await isDiscriminatorAvailable(
-    sanitized,
+    normalizedUsername,
     profile.discriminator,
   );
 
   if (canKeep) {
     // Sin conflicto: mantener discriminator
     await db.profile.update({
-      where: { id: profileId },
-      data: { username: sanitized },
-    });
+        where: { id: profileId },
+        data: { username: normalizedUsername },
+      });
 
     await db.user.update({
       where: { id: profile.userId },
-      data: { name: sanitized },
+      data: { name: normalizedUsername },
       select: { id: true },
     });
 
@@ -60,27 +65,28 @@ export async function changeUsername(
       "[USERNAME_CHANGE] Kept discriminator:",
       profile.discriminator,
       "for new username:",
-      sanitized,
+      normalizedUsername,
     );
 
     return {
-      username: sanitized,
+      username: normalizedUsername,
       discriminator: profile.discriminator,
       discriminatorChanged: false,
     };
   }
 
   // Hay conflicto: generar nuevo discriminator
-  const newDiscriminator = await generateUniqueDiscriminator(sanitized);
+  const newDiscriminator =
+    await generateUniqueDiscriminator(normalizedUsername);
 
   await db.profile.update({
     where: { id: profileId },
-    data: { username: sanitized, discriminator: newDiscriminator },
+    data: { username: normalizedUsername, discriminator: newDiscriminator },
   });
 
   await db.user.update({
     where: { id: profile.userId },
-    data: { name: sanitized },
+    data: { name: normalizedUsername },
     select: { id: true },
   });
 
@@ -90,11 +96,11 @@ export async function changeUsername(
     "to",
     newDiscriminator,
     "for username:",
-    sanitized,
+    normalizedUsername,
   );
 
   return {
-    username: sanitized,
+    username: normalizedUsername,
     discriminator: newDiscriminator,
     discriminatorChanged: true,
   };

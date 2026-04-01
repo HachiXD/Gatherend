@@ -12,8 +12,12 @@ export {
   generateUniqueDiscriminator,
 } from "./discriminator";
 
-// Username sanitization
-export { sanitizeUsername } from "./sanitize";
+// Username sanitization and validation
+export {
+  normalizeUsername,
+  sanitizeUsername,
+  validateUsername,
+} from "./sanitize";
 
 // Username formatting and parsing
 export { formatFullUsername, parseFullUsername } from "./format";

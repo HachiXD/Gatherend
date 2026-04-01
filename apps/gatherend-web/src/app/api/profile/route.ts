@@ -13,7 +13,8 @@ import { v4 as uuidv4 } from "uuid";
 import {
   changeUsername,
   generateUniqueDiscriminator,
-  sanitizeUsername,
+  normalizeUsername,
+  validateUsername,
   MAX_DISCRIMINATORS,
 } from "@/lib/username";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
@@ -210,16 +211,21 @@ export async function PATCH(req: Request) {
         );
       }
 
-      const sanitizedUsername = sanitizeUsername(username);
+      const normalizedUsername = normalizeUsername(username);
+      const validationError = validateUsername(normalizedUsername);
 
-      if (sanitizedUsername.length < 2) {
+      if (validationError) {
+        return NextResponse.json({ error: validationError }, { status: 400 });
+      }
+
+      if (normalizedUsername.length < 2) {
         return NextResponse.json(
           { error: "Username must be at least 2 characters" },
           { status: 400 },
         );
       }
 
-      if (sanitizedUsername.length > 20) {
+      if (normalizedUsername.length > 20) {
         return NextResponse.json(
           { error: "Username must be at most 20 characters" },
           { status: 400 },
@@ -229,7 +235,7 @@ export async function PATCH(req: Request) {
       const usedCount = await db.profile.count({
         where: {
           id: { not: profile.id },
-          username: { equals: sanitizedUsername, mode: "insensitive" },
+          username: { equals: normalizedUsername, mode: "insensitive" },
         },
       });
 
@@ -243,7 +249,7 @@ export async function PATCH(req: Request) {
         );
       }
 
-      resolvedUsername = sanitizedUsername;
+      resolvedUsername = normalizedUsername;
     }
 
     if (usernameColor !== undefined && usernameColor !== null) {
