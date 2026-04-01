@@ -1,14 +1,14 @@
 import { create } from "zustand";
 
 interface PresenceState {
-  onlineUsers: Set<string>; // Set de profileIds que estÃ¡n online
+  onlineUsers: Set<string>; // Set de profileIds que están online
   setUserOnline: (profileId: string) => void;
   setUserOffline: (profileId: string) => void;
   isOnline: (profileId: string) => boolean;
   setPresence: (presenceMap: Record<string, boolean>) => void;
-  // Nuevo: Marcar mÃºltiples usuarios online a la vez (merge, no replace)
+  // Nuevo: Marcar múltiples usuarios online a la vez (merge, no replace)
   mergePresence: (presenceMap: Record<string, boolean>) => void;
-  // Nuevo: Limpiar todo el estado (Ãºtil en logout)
+  // Nuevo: Limpiar todo el estado (Util en logout)
   clearPresence: () => void;
 }
 
@@ -60,7 +60,7 @@ export const usePresenceStore = create<PresenceState>((set, get) => ({
   },
 
   // mergePresence: actualiza el estado sin borrar usuarios existentes
-  // Esto es importante cuando mÃºltiples componentes usan usePresence con diferentes listas
+  // Esto es importante cuando múltiples componentes usan usePresence con diferentes listas
   mergePresence: (presenceMap: Record<string, boolean>) => {
     const current = get().onlineUsers;
     let next: Set<string> | null = null;
@@ -88,4 +88,3 @@ export const usePresenceStore = create<PresenceState>((set, get) => ({
     set({ onlineUsers: new Set<string>() });
   },
 }));
-

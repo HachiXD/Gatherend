@@ -270,10 +270,12 @@ export const es: TranslationKeys = {
     publishing: "Publicando...",
     uploadImage: "Subir imagen",
     uploadingImage: "Subiendo imagen...",
-    postTitlePlaceholder: "TÃ­tulo del post...",
+    postTitlePlaceholder: "Tí­tulo del post...",
     postContentPlaceholder: "Escribe tu post...",
-    escToCancelCtrlEnterToSave: "Esc para cancelar • Ctrl/Cmd+Enter para guardar",
-    escToCancelCtrlEnterToSend: "Esc para cancelar • Ctrl/Cmd+Enter para enviar",
+    escToCancelCtrlEnterToSave:
+      "Esc para cancelar • Ctrl/Cmd+Enter para guardar",
+    escToCancelCtrlEnterToSend:
+      "Esc para cancelar • Ctrl/Cmd+Enter para enviar",
     escToCancelCtrlEnterToPublish:
       "Esc para cancelar • Ctrl/Cmd+Enter para publicar",
     replyToOriginalPoster: "OP",
@@ -544,8 +546,8 @@ export const es: TranslationKeys = {
     },
     deleteCommunityPostComment: {
       title: "Eliminar comentario",
-      description: "Esto eliminarÃ¡ el comentario del hilo del post.",
-      willBeDeleted: "Este comentario se eliminarÃ¡ permanentemente.",
+      description: "Esto eliminará el comentario del hilo del post.",
+      willBeDeleted: "Este comentario se eliminará permanentemente.",
     },
     createCategory: {
       title: "Crear categoría",

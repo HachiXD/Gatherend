@@ -186,9 +186,7 @@ export function GradientSlider<
 
       if (position <= sortedColors[0].position) {
         newColor = sortedColors[0].color;
-      } else if (
-        position >= sortedColors[sortedColors.length - 1].position
-      ) {
+      } else if (position >= sortedColors[sortedColors.length - 1].position) {
         newColor = sortedColors[sortedColors.length - 1].color;
       } else {
         for (let i = 0; i < sortedColors.length - 1; i++) {
@@ -268,7 +266,10 @@ export function GradientSlider<
           )}
           onClick={handleTrackClick}
         >
-          <div className="absolute inset-0" style={{ background: gradientCSS }} />
+          <div
+            className="absolute inset-0"
+            style={{ background: gradientCSS }}
+          />
 
           {colors.map((stop, index) => {
             const colorId = resolveColorId(stop, index);
@@ -306,7 +307,7 @@ export function GradientSlider<
         {!allowAdd
           ? "Arrastra los colores para mover"
           : colors.length < maxColors
-            ? "Click en la barra para aÃ±adir â€¢ Arrastra para mover"
+            ? "Click en la barra para añadir y arrastra para mover"
             : "Arrastra los colores para mover"}
       </p>
     </div>
