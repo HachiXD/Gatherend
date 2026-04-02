@@ -71,9 +71,9 @@
     "typescript": "^5"
   },
   "overrides": {
-    "effect": "3.18.4",
-    "@effect/core": "3.18.4",
-    "@effect/io": "3.18.4",
-    "@effect/data": "3.18.4"
+    "effect": "3.20.0",
+    "@effect/core": "3.20.0",
+    "@effect/io": "3.20.0",
+    "@effect/data": "3.20.0"
   }
 }
