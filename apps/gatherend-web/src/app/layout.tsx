@@ -18,20 +18,20 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.SITE_URL || "http://localhost:3000"),
-  title: "Gatherend — Small communities",
-  description: "Meet new friends through small groups of 3–49 people.",
+  title: "Gatherend — Communities for everyone",
+  description: "Meet new friends through the boards.",
   icons: {
     icon: "/GATHEREND_SQUARE_RELLENADO.svg",
   },
   openGraph: {
-    title: "Gatherend — Small communities",
-    description: "Meet new friends through small groups and big communities.",
+    title: "Gatherend — Communities for everyone",
+    description: "Meet new friends through the boards.",
     images: [
       {
         url: "/portadaFINAL.webp",
         width: 1200,
         height: 630,
-        alt: "Gatherend — Small communities",
+        alt: "Gatherend — Communities for everyone",
       },
     ],
     type: "website",
@@ -39,8 +39,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Gatherend — Small communities",
-    description: "Meet new friends through small groups and big communities.",
+    title: "Gatherend — Communities for everyone",
+    description: "Meet new friends through the boards.",
     images: ["/portadaFINAL.webp"],
   },
 };
