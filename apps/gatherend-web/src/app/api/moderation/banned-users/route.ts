@@ -3,6 +3,11 @@ import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin-auth";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import {
+  buildDateCursor,
+  getSafeCursorLimit,
+  parseDateCursor,
+} from "@/lib/platform-moderation";
+import {
   moderationProfileWithUserIdSelect,
   serializeModerationProfile,
 } from "@/lib/moderation-serialization";
@@ -11,8 +16,7 @@ export const dynamic = "force-dynamic";
 
 // Get all banned users
 export async function GET(req: Request) {
-  // Rate limiting
-  const rateLimitResponse = await checkRateLimit(RATE_LIMITS.api);
+  const rateLimitResponse = await checkRateLimit(RATE_LIMITS.moderationRead);
   if (rateLimitResponse) return rateLimitResponse;
 
   const admin = await requireAdmin();
@@ -20,18 +24,27 @@ export async function GET(req: Request) {
 
   try {
     const { searchParams } = new URL(req.url);
+    const cursor = parseDateCursor(searchParams.get("cursor"));
+    const limit = getSafeCursorLimit(searchParams.get("limit"));
 
-    // Validate and sanitize pagination params
-    const pageParam = parseInt(searchParams.get("page") || "1", 10);
-    const limitParam = parseInt(searchParams.get("limit") || "20", 10);
-    const page = Number.isNaN(pageParam) || pageParam < 1 ? 1 : pageParam;
-    const limit = Number.isNaN(limitParam)
-      ? 20
-      : Math.min(Math.max(limitParam, 1), 100);
+    const where = {
+      banned: true,
+      bannedAt: { not: null },
+      ...(cursor
+        ? {
+            OR: [
+              { bannedAt: { lt: cursor.createdAt } },
+              {
+                AND: [{ bannedAt: cursor.createdAt }, { id: { lt: cursor.id } }],
+              },
+            ],
+          }
+        : {}),
+    };
 
     const [bannedUsers, total] = await Promise.all([
       db.profile.findMany({
-        where: { banned: true },
+        where,
         select: {
           ...moderationProfileWithUserIdSelect,
           banned: true,
@@ -45,18 +58,39 @@ export async function GET(req: Request) {
             },
           },
         },
-        orderBy: { bannedAt: "desc" },
-        skip: (page - 1) * limit,
-        take: limit,
+        orderBy: [{ bannedAt: "desc" }, { id: "desc" }],
+        take: limit + 1,
       }),
-      db.profile.count({ where: { banned: true } }),
+      db.profile.count({
+        where: {
+          banned: true,
+          bannedAt: { not: null },
+        },
+      }),
     ]);
+
+    const hasMore = bannedUsers.length > limit;
+    const items = hasMore ? bannedUsers.slice(0, limit) : bannedUsers;
+    const lastItem = items.length > 0 ? items[items.length - 1] : null;
+    const nextCursor =
+      hasMore && lastItem?.bannedAt
+        ? buildDateCursor({
+            createdAt: lastItem.bannedAt,
+            id: lastItem.id,
+          })
+        : null;
+
+    const serializedItems = items.map(serializeModerationProfile);
 
     return NextResponse.json(
       {
-        bannedUsers: bannedUsers.map(serializeModerationProfile),
+        items: serializedItems,
+        bannedUsers: serializedItems,
+        nextCursor,
+        hasMore,
+        total,
         pagination: {
-          page,
+          page: 1,
           limit,
           total,
           totalPages: Math.ceil(total / limit),
@@ -70,6 +104,10 @@ export async function GET(req: Request) {
       },
     );
   } catch (error) {
+    if (error instanceof Error && error.message === "INVALID_CURSOR") {
+      return NextResponse.json({ error: "Invalid cursor" }, { status: 400 });
+    }
+
     console.error("[MODERATION_BANNED_USERS]", error);
     return NextResponse.json(
       { error: "Internal server error" },

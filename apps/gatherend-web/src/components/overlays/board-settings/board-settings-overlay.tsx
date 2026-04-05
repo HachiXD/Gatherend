@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { GeneralTab } from "@/components/overlays/board-settings/tabs/general";
 import { MembersTab } from "@/components/overlays/board-settings/tabs/members";
 import { BansTab } from "@/components/overlays/board-settings/tabs/bans";
+import { ModerationHistoryTab } from "@/components/overlays/board-settings/tabs/moderation-history";
 import { DangerZoneTab } from "@/components/overlays/board-settings/tabs/danger-zone";
 import { SettingsSidebar } from "@/components/overlays/board-settings/sidebar";
 import { useBoardData } from "@/hooks/use-board-data";
@@ -23,9 +24,9 @@ export const BoardSettingsOverlay = ({
   currentProfileId,
   onClose,
 }: BoardSettingsOverlayProps) => {
-  const [tab, setTab] = useState<"general" | "members" | "bans" | "danger">(
-    "general",
-  );
+  const [tab, setTab] = useState<
+    "general" | "members" | "bans" | "history" | "danger"
+  >("general");
   const {
     data: board,
     isLoading,
@@ -44,6 +45,7 @@ export const BoardSettingsOverlay = ({
     currentRole === "ADMIN" ||
     currentRole === "MODERATOR";
   const canViewBans = currentRole === "OWNER" || currentRole === "ADMIN";
+  const canViewHistory = currentRole === "OWNER" || currentRole === "ADMIN";
   const canSeeDangerZone = currentMember?.role === "OWNER";
 
   useEffect(() => {
@@ -65,12 +67,21 @@ export const BoardSettingsOverlay = ({
       setTab(canViewMembers ? "members" : "general");
     } else if (tab === "bans" && !canViewBans) {
       setTab(canViewMembers ? "members" : "general");
+    } else if (tab === "history" && !canViewHistory) {
+      setTab(canViewMembers ? "members" : "general");
     } else if (tab === "general" && !canViewGeneral) {
       setTab(canViewMembers ? "members" : "general");
     } else if (tab === "members" && !canViewMembers) {
       setTab("general");
     }
-  }, [canSeeDangerZone, canViewBans, canViewGeneral, canViewMembers, tab]);
+  }, [
+    canSeeDangerZone,
+    canViewBans,
+    canViewGeneral,
+    canViewHistory,
+    canViewMembers,
+    tab,
+  ]);
 
   if (typeof document === "undefined") {
     return null;
@@ -95,6 +106,7 @@ export const BoardSettingsOverlay = ({
           showGeneralTab={canViewGeneral}
           showMembersTab={canViewMembers}
           showBansTab={canViewBans}
+          showHistoryTab={canViewHistory}
           showDangerTab={canSeeDangerZone}
         />
 
@@ -117,6 +129,9 @@ export const BoardSettingsOverlay = ({
           )}
           {board && tab === "bans" && canViewBans && (
             <BansTab boardId={board.id} />
+          )}
+          {board && tab === "history" && canViewHistory && (
+            <ModerationHistoryTab boardId={board.id} />
           )}
           {board && tab === "danger" && canSeeDangerZone && (
             <DangerZoneTab board={board} />

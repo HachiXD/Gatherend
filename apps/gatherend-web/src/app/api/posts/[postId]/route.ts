@@ -1,6 +1,16 @@
 import { AssetContext, AssetVisibility } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import {
+  canCreatePostWithImage,
+  canCreateTextPost,
+  canSendLinks,
+  containsExternalLinks,
+} from "@/lib/domain";
+import {
+  createAccessDeniedResponse,
+  getProfileReputationScore,
+} from "@/lib/domain-access";
 import { requireAuth } from "@/lib/require-auth";
 import { moderateDescription } from "@/lib/text-moderation";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
@@ -28,6 +38,7 @@ export async function PATCH(
     const auth = await requireAuth();
     if (!auth.success) return auth.response;
     const profile = auth.profile;
+    const reputationScore = getProfileReputationScore(profile.reputationScore);
 
     const { postId } = await context.params;
 
@@ -126,6 +137,7 @@ export async function PATCH(
         where: { id: postId },
         select: {
           id: true,
+          boardId: true,
           content: true,
           deleted: true,
           authorProfileId: true,
@@ -141,6 +153,23 @@ export async function PATCH(
         throw new Error("FORBIDDEN");
       }
 
+      const member = await tx.member.findUnique({
+        where: {
+          boardId_profileId: {
+            boardId: existingPost.boardId,
+            profileId: profile.id,
+          },
+        },
+        select: {
+          id: true,
+          level: true,
+        },
+      });
+
+      if (!member) {
+        throw new Error("NOT_A_MEMBER");
+      }
+
       const nextContent =
         content !== undefined ? trimmedContent : existingPost.content;
       const nextImageAssetId =
@@ -150,6 +179,37 @@ export async function PATCH(
 
       if (!nextContent && !nextImageAssetId) {
         throw new Error("POST_EMPTY");
+      }
+
+      const accessDecision = nextImageAssetId
+        ? canCreatePostWithImage({
+            level: member.level,
+            reputationScore,
+          })
+        : canCreateTextPost({
+            level: member.level,
+            reputationScore,
+          });
+
+      if (!accessDecision.allowed) {
+        throw new Error(
+          JSON.stringify({
+            type: "ACCESS_DENIED",
+            decision: accessDecision,
+          }),
+        );
+      }
+
+      if (nextContent && containsExternalLinks(nextContent)) {
+        const linksDecision = canSendLinks(reputationScore);
+        if (!linksDecision.allowed) {
+          throw new Error(
+            JSON.stringify({
+              type: "ACCESS_DENIED",
+              decision: linksDecision,
+            }),
+          );
+        }
       }
 
       return tx.communityPost.update({
@@ -228,6 +288,23 @@ export async function PATCH(
           { error: "Post must include content or an image" },
           { status: 400 },
         );
+      }
+
+      if (error.message === "NOT_A_MEMBER") {
+        return NextResponse.json({ error: "Not a member" }, { status: 403 });
+      }
+
+      try {
+        const parsed = JSON.parse(error.message) as {
+          type?: string;
+          decision?: Parameters<typeof createAccessDeniedResponse>[0];
+        };
+
+        if (parsed.type === "ACCESS_DENIED" && parsed.decision) {
+          return createAccessDeniedResponse(parsed.decision);
+        }
+      } catch {
+        // noop
       }
     }
 

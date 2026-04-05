@@ -1,6 +1,10 @@
-import { MemberRole, AssetContext, AssetVisibility } from "@prisma/client";
+import {
+  MemberRole,
+  AssetContext,
+  AssetVisibility,
+  BoardWarningStatus,
+} from "@prisma/client";
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/require-auth";
 import { moderateDescription } from "@/lib/text-moderation";
@@ -17,66 +21,14 @@ import {
   PUBLIC_BOARD_NAME_CONFLICT_ERROR,
 } from "@/lib/boards/public-name";
 import {
-  expressChannelCache,
-  expressMemberCache,
-  expressVoiceChannelsCache,
-} from "@/lib/redis";
+  deleteBoardAndCollectState,
+  invalidateDeletedBoardState,
+  notifyBoardDeleted,
+} from "@/lib/board-deletion";
+import { revalidatePath } from "next/cache";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-
-async function notifyBoardDeleted(
-  boardId: string,
-  memberProfileIds: string[],
-  deletedByProfileId: string,
-) {
-  try {
-    const socketUrl =
-      process.env.SOCKET_SERVER_URL || process.env.NEXT_PUBLIC_SOCKET_URL;
-    const secret = process.env.INTERNAL_API_SECRET;
-
-    if (!socketUrl || !secret) return;
-
-    const payload = {
-      boardId,
-      deletedByProfileId,
-      timestamp: Date.now(),
-    };
-
-    await Promise.allSettled([
-      fetch(`${socketUrl}/emit-to-room`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Internal-Secret": secret,
-        },
-        body: JSON.stringify({
-          room: `board:${boardId}`,
-          event: "board:deleted",
-          data: payload,
-        }),
-        signal: AbortSignal.timeout(3000),
-      }),
-      ...memberProfileIds.map((profileId) =>
-        fetch(`${socketUrl}/emit-to-room`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Internal-Secret": secret,
-          },
-          body: JSON.stringify({
-            room: `profile:${profileId}`,
-            event: "board:deleted",
-            data: payload,
-          }),
-          signal: AbortSignal.timeout(3000),
-        }),
-      ),
-    ]);
-  } catch (error) {
-    console.error("[NOTIFY_BOARD_DELETED]", error);
-  }
-}
 
 export async function GET(
   req: Request,
@@ -157,6 +109,58 @@ export async function GET(
       return NextResponse.json({ error: "Board not found" }, { status: 404 });
     }
 
+    const memberProfileIds = board.members.map((member) => member.profileId);
+
+    const activeWarnings =
+      memberProfileIds.length > 0
+        ? await db.boardWarning.findMany({
+            where: {
+              boardId,
+              status: BoardWarningStatus.ACTIVE,
+              profileId: {
+                in: memberProfileIds,
+              },
+            },
+            select: {
+              id: true,
+              profileId: true,
+              createdAt: true,
+            },
+            orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          })
+        : [];
+
+    const activeWarningCounts =
+      board.members.length > 0
+        ? await db.boardWarning.groupBy({
+            by: ["profileId"],
+            where: {
+              boardId,
+              status: BoardWarningStatus.ACTIVE,
+              profileId: {
+                in: memberProfileIds,
+              },
+            },
+            _count: {
+              _all: true,
+            },
+          })
+        : [];
+
+    const activeWarningCountByProfileId = new Map(
+      activeWarningCounts.map((warningCount) => [
+        warningCount.profileId,
+        warningCount._count._all,
+      ]),
+    );
+    const latestActiveWarningIdByProfileId = new Map<string, string>();
+
+    for (const warning of activeWarnings) {
+      if (!latestActiveWarningIdByProfileId.has(warning.profileId)) {
+        latestActiveWarningIdByProfileId.set(warning.profileId, warning.id);
+      }
+    }
+
     const serializeProfile = <
       T extends {
         avatarAsset: (typeof board.members)[number]["profile"]["avatarAsset"];
@@ -188,6 +192,10 @@ export async function GET(
       })),
       members: board.members.map((member) => ({
         ...member,
+        activeWarningCount:
+          activeWarningCountByProfileId.get(member.profileId) ?? 0,
+        latestActiveWarningId:
+          latestActiveWarningIdByProfileId.get(member.profileId) ?? null,
         profile: serializeProfile(member.profile),
       })),
     });
@@ -239,43 +247,16 @@ export async function DELETE(
         throw new Error("CANNOT_DELETE_LAST_BOARD");
       }
 
-      const boardData = await tx.board.findUnique({
-        where: { id: boardId },
-        select: {
-          members: {
-            select: { profileId: true },
-          },
-          channels: {
-            select: { id: true },
-          },
-        },
-      });
-
-      if (!boardData) {
-        throw new Error("NOT_FOUND");
-      }
-
-      await tx.board.delete({
-        where: { id: boardId },
-      });
-
-      return {
-        memberProfileIds: boardData.members
-          .map((member) => member.profileId)
-          .filter((profileId): profileId is string => !!profileId),
-        channelIds: boardData.channels.map((channel) => channel.id),
-      };
+      return deleteBoardAndCollectState(tx, boardId);
     });
 
-    await Promise.all([
-      expressMemberCache.invalidateMany(boardId, result.memberProfileIds),
-      expressChannelCache.invalidateMany(result.channelIds),
-      expressVoiceChannelsCache.invalidate(boardId),
-    ]);
+    await invalidateDeletedBoardState(
+      boardId,
+      result.memberProfileIds,
+      result.channelIds,
+    );
 
     void notifyBoardDeleted(boardId, result.memberProfileIds, profile.id);
-
-    revalidatePath("/boards");
 
     return NextResponse.json({ success: true, deletedBoardId: boardId });
   } catch (error) {
@@ -479,10 +460,16 @@ export async function PATCH(
         throw new Error("NOT_FOUND");
       }
 
+      if (
+        isPrivate !== undefined &&
+        (isPrivate as boolean) !== boardExists.isPrivate
+      ) {
+        throw new Error("BOARD_PRIVACY_IMMUTABLE");
+      }
+
       const nextName =
         name !== undefined ? (name as string).trim() : boardExists.name;
-      const nextIsPrivate =
-        isPrivate !== undefined ? (isPrivate as boolean) : boardExists.isPrivate;
+      const nextIsPrivate = boardExists.isPrivate;
 
       await ensurePublicBoardNameAvailable(tx, {
         name: nextName,
@@ -500,7 +487,6 @@ export async function PATCH(
           ...(description !== undefined && {
             description: description ? (description as string).trim() : null,
           }),
-          ...(isPrivate !== undefined && { isPrivate: isPrivate as boolean }),
         },
         select: {
           id: true,
@@ -544,6 +530,13 @@ export async function PATCH(
         return NextResponse.json(
           { error: "Only owner or admin can edit board settings" },
           { status: 403 },
+        );
+      }
+
+      if (error.message === "BOARD_PRIVACY_IMMUTABLE") {
+        return NextResponse.json(
+          { error: "Board privacy cannot be changed after creation" },
+          { status: 400 },
         );
       }
 

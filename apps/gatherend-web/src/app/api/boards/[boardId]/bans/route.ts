@@ -4,15 +4,16 @@ import { MemberRole } from "@prisma/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
 import {
-  serializeUploadedAsset,
-  uploadedAssetSummarySelect,
-} from "@/lib/uploaded-assets";
+  buildDateCursor,
+  getSafeCursorLimit,
+  parseDateCursor,
+  UUID_REGEX,
+} from "@/lib/platform-moderation";
+import {
+  moderationProfileSelect,
+  serializeModerationProfile,
+} from "@/lib/moderation-serialization";
 
-// UUID validation regex
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-// No cachear GET requests
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -21,7 +22,6 @@ export async function GET(
   context: { params: Promise<{ boardId: string }> },
 ) {
   try {
-    // Rate limiting
     const rateLimitResponse = await checkRateLimit(RATE_LIMITS.moderationRead);
     if (rateLimitResponse) return rateLimitResponse;
 
@@ -30,62 +30,97 @@ export async function GET(
     const profile = auth.profile;
 
     const params = await context.params;
-
     const boardId = params.boardId;
 
-    // Validate UUID
     if (!boardId || !UUID_REGEX.test(boardId)) {
       return NextResponse.json({ error: "Invalid board ID" }, { status: 400 });
     }
 
-    // Query unificada: obtener board con el member del actor y los bans
-    const board = await db.board.findUnique({
-      where: { id: boardId },
-      include: {
-        members: {
-          where: { profileId: profile.id },
-          select: { role: true },
-          take: 1,
-        },
-        boardBans: {
-          include: {
-            profile: {
-              select: {
-                id: true,
-                username: true,
-                discriminator: true,
-                avatarAsset: {
-                  select: uploadedAssetSummarySelect,
-                },
-              },
-            },
-          },
-          orderBy: { createdAt: "desc" },
-        },
+    const actor = await db.member.findFirst({
+      where: {
+        boardId,
+        profileId: profile.id,
+      },
+      select: {
+        role: true,
       },
     });
 
-    // Validaciones con early return (no hay transacción)
-    const member = board?.members[0];
-
-    if (!member) {
+    if (!actor) {
       return NextResponse.json({ error: "Not a member" }, { status: 403 });
     }
 
-    if (member.role !== MemberRole.OWNER && member.role !== MemberRole.ADMIN) {
+    if (actor.role !== MemberRole.OWNER && actor.role !== MemberRole.ADMIN) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    return NextResponse.json(
-      board.boardBans.map((ban) => ({
-        ...ban,
+    const { searchParams } = new URL(req.url);
+    const cursor = parseDateCursor(searchParams.get("cursor"));
+    const limit = getSafeCursorLimit(searchParams.get("limit"));
+
+    const bans = await db.boardBan.findMany({
+      where: {
+        boardId,
+        ...(cursor
+          ? {
+              OR: [
+                { createdAt: { lt: cursor.createdAt } },
+                {
+                  AND: [{ createdAt: cursor.createdAt }, { id: { lt: cursor.id } }],
+                },
+              ],
+            }
+          : {}),
+      },
+      include: {
         profile: {
-          ...ban.profile,
-          avatarAsset: serializeUploadedAsset(ban.profile.avatarAsset),
+          select: moderationProfileSelect,
         },
-      })),
+        issuedBy: {
+          select: moderationProfileSelect,
+        },
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: limit + 1,
+    });
+
+    const hasMore = bans.length > limit;
+    const items = hasMore ? bans.slice(0, limit) : bans;
+    const lastItem = items.length > 0 ? items[items.length - 1] : null;
+    const nextCursor =
+      hasMore && lastItem
+        ? buildDateCursor({
+            createdAt: lastItem.createdAt,
+            id: lastItem.id,
+          })
+        : null;
+
+    const serializedItems = items.map((ban) => ({
+      ...ban,
+      profile: serializeModerationProfile(ban.profile),
+      issuedBy: serializeModerationProfile(ban.issuedBy),
+      createdAt: ban.createdAt.toISOString(),
+    }));
+
+    return NextResponse.json(
+      {
+        items: serializedItems,
+        bans: serializedItems,
+        nextCursor,
+        hasMore,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+          Pragma: "no-cache",
+        },
+      },
     );
   } catch (error) {
+    if (error instanceof Error && error.message === "INVALID_CURSOR") {
+      return NextResponse.json({ error: "Invalid cursor" }, { status: 400 });
+    }
+
     console.error("[GET_BANS]", error);
     return NextResponse.json({ error: "Internal Error" }, { status: 500 });
   }

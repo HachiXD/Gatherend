@@ -47,4 +47,4 @@ COPY --from=builder /app/apps/express/package.json ./package.json
 
 EXPOSE 3001
 
-CMD ["node", "dist/server.js"]
+CMD ["node", "dist/apps/express/src/server.js"]

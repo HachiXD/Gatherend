@@ -1,0 +1,17 @@
+{
+  "name": "nsfwjs-service",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@tensorflow/tfjs-node": "^4.22.0",
+    "express": "^4.21.2",
+    "multer": "^2.0.2",
+    "nsfwjs": "^4.2.1",
+    "sharp": "^0.34.5"
+  }
+}

@@ -51,6 +51,7 @@ export type ProfileData = {
   username: string;
   discriminator: string | null;
   email: string;
+  reputationScore: number;
   languages: Languages[];
   usernameColor: unknown;
   profileTags: string[];
@@ -82,6 +83,7 @@ const profileSelect = {
   username: true,
   discriminator: true,
   email: true,
+  reputationScore: true,
   languages: true,
   usernameColor: true,
   profileTags: true,
@@ -119,6 +121,7 @@ type ProfileRecord = {
   username: string;
   discriminator: string | null;
   email: string;
+  reputationScore: number;
   languages: Languages[];
   usernameColor: unknown;
   profileTags: string[];

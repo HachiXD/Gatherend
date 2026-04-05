@@ -8,6 +8,11 @@ import {
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
+import { canCreateBoard } from "@/lib/domain";
+import {
+  createAccessDeniedResponse,
+  getProfileReputationScore,
+} from "@/lib/domain-access";
 import { requireAuth } from "@/lib/require-auth";
 import { moderateDescription } from "@/lib/text-moderation";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
@@ -81,6 +86,12 @@ export async function POST(req: Request) {
     const auth = await requireAuth();
     if (!auth.success) return auth.response;
     const profile = auth.profile;
+    const reputationScore = getProfileReputationScore(profile.reputationScore);
+
+    const boardDecision = canCreateBoard(reputationScore);
+    if (!boardDecision.allowed) {
+      return createAccessDeniedResponse(boardDecision);
+    }
 
     let body: unknown;
     try {

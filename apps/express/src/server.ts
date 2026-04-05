@@ -198,8 +198,10 @@ const PORT = process.env.PORT || 3001;
   if (!process.env.IMGPROXY_URL) {
     logger.warn("IMGPROXY_URL not set — image transformations disabled");
   }
-  if (!process.env.NUDENET_URL) {
-    logger.warn("NUDENET_URL not set — content moderation disabled");
+  if (!process.env.CONTENT_MODERATION_URL) {
+    logger.warn(
+      "CONTENT_MODERATION_URL not set — moderated image uploads will be rejected",
+    );
   }
   if (!process.env.ATTACHMENTS_BASE_URL) {
     logger.warn(

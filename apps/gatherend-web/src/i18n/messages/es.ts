@@ -328,6 +328,7 @@ export const es: TranslationKeys = {
         general: "General",
         members: "Miembros",
         bans: "Baneos",
+        history: "Historial de Moderación",
         dangerZone: "Zona de Eliminación",
       },
       general: {
@@ -370,6 +371,13 @@ export const es: TranslationKeys = {
         actions: "Acciones",
         kick: "Expulsar",
         ban: "Banear",
+        warn: "Warnear",
+        removeWarning: "Quitar warning",
+        warnSuccess: "Warning agregado correctamente",
+        warnError: "Error al agregar warning",
+        removeWarningSuccess: "Warning quitado correctamente",
+        removeWarningError: "Error al quitar warning",
+        autoBanTriggered: "auto-ban activado",
         roles: {
           guest: "Invitado",
           moderator: "Moderador",
@@ -386,9 +394,44 @@ export const es: TranslationKeys = {
         emptyTitle: "No hay usuarios baneados",
         emptyDescription: "Los usuarios baneados en este board aparecerán aquí",
         bannedOn: "Baneado el",
+        autoBanLabel: "Auto Ban",
+        manualBanLabel: "Ban Manual",
+        autoBanDescription:
+          "Baneo automático tras 3 warnings, para desbanear quita un warning a este usuario.",
+        manualBanDescription:
+          "Baneo manual ejecutado por {username}, para desbanear ve a Acciones.",
         unban: "Desbanear",
         unbanSuccess: "Usuario desbaneado correctamente",
         unbanError: "Error al desbanear al usuario",
+      },
+
+      history: {
+        title: "Historial de Moderación",
+        loading: "Cargando historial de moderación...",
+        entry: "entrada",
+        entries: "entradas",
+        emptyTitle: "No hay historial de moderación",
+        emptyDescription:
+          "Los warnings, kicks, baneos y acciones automáticas aparecerán aquí.",
+        actions: {
+          warning: "Warning",
+          removeWarning: "Warning Quitado",
+          ban: "Ban",
+          unban: "Unban",
+          kick: "Kick",
+          autoBan: "Auto Ban",
+          autoUnban: "Auto Unban",
+        },
+        descriptions: {
+          warning: "Warning emitido por {username}.",
+          removeWarning: "Warning quitado por {username}.",
+          ban: "Baneo manual ejecutado por {username}.",
+          unban: "Desbaneo manual ejecutado por {username}.",
+          kick: "Miembro expulsado por {username}.",
+          autoBan: "Baneo automático tras alcanzar 3 warnings activos.",
+          autoUnban:
+            "Desbaneo automático tras quitar un warning promovido.",
+        },
       },
 
       dangerZone: {
@@ -475,6 +518,10 @@ export const es: TranslationKeys = {
       publicSeatsDescription: "Unibles solo a través del feed global",
       inviteSeats: "Asientos por invitación",
       inviteSeatsDescription: "Unibles solo mediante invitación",
+      publicOptionLabel: "Público",
+      privateOptionLabel: "Privado",
+      privacyPermanentNotice:
+        "Esta decisión de privacidad es permanente y no podrá cambiarse después de crear el board.",
       success: "Board creado exitosamente!",
       error: "Algo salió mal al crear el board :C.",
       moderationError:
@@ -651,7 +698,8 @@ export const es: TranslationKeys = {
       reportCommunity: "Reportar Comunidad",
       reportCommunityPost: "Reportar post",
       reportCommunityPostComment: "Reportar comentario",
-      reportBoardDescription: "Reportar el board",
+      reportBoardDescription:
+        "Reportar el título, imagen o descripción de este board",
       reportUserDescription:
         "Reportar a este usuario por violar las normas de la comunidad",
       reportMessageDescription:
@@ -685,19 +733,26 @@ export const es: TranslationKeys = {
       unknownAuthor: "Desconocido",
       categories: {
         childSafety: "Seguridad Infantil",
-        childSafetyDescription: "Contenido que involucra menores",
+        childSafetyDescription:
+          "El título, imagen o descripción del board involucra menores",
         sexualContent: "Contenido Sexual",
-        sexualContentDescription: "Contenido sexual inapropiado",
+        sexualContentDescription:
+          "El título, imagen o descripción del board contiene contenido sexual",
         harassment: "Acoso",
-        harassmentDescription: "Acoso o intimidación",
+        harassmentDescription:
+          "El título, imagen o descripción del board es abusivo o dirigido",
         hateSpeech: "Discurso de Odio",
-        hateSpeechDescription: "Contenido discriminatorio u odioso",
+        hateSpeechDescription:
+          "El título, imagen o descripción del board incluye contenido de odio",
         spam: "Spam",
-        spamDescription: "Contenido de spam o estafa",
+        spamDescription:
+          "El título, imagen o descripción del board promueve spam o estafas",
         impersonation: "Suplantación",
-        impersonationDescription: "Hacerse pasar por otra persona",
+        impersonationDescription:
+          "El título, imagen o descripción del board suplanta a otra persona",
         other: "Otro",
-        otherDescription: "Otras violaciones",
+        otherDescription:
+          "Otro problema con el título, imagen o descripción del board",
       },
     },
   },
@@ -735,8 +790,14 @@ export const es: TranslationKeys = {
   moderation: {
     dashboard: "Panel de Moderación",
     reports: "Reportes",
+    history: "Historial",
     bannedUsers: "Usuarios Baneados",
+    userLookup: "Busqueda de Usuario",
+    boardLookup: "Busqueda de Boards",
+    pendingInvestigations: "Investigaciones Pendientes",
+    stats: "Estadisticas",
     warnings: "Advertencias",
+    strikes: "Strikes",
     kick: "Expulsar",
     ban: "Banear",
     unban: "Desbanear",
@@ -748,6 +809,39 @@ export const es: TranslationKeys = {
     permanent: "Permanente",
     moderationLog: "Registro de Moderación",
     noReports: "No hay reportes",
+    reportsSubtitle:
+      "Revisa los reportes sin resolver y gestionarlos desde la cola operativa",
+    reportsQueueEmptyDescription:
+      "Todo al dia. No hay reportes esperando revision.",
+    historySubtitle:
+      "Actividad inmutable de moderacion de plataforma entre advertencias, strikes, baneos y notas",
+    noHistory: "Aun no hay historial de moderacion",
+    historyEmptyDescription:
+      "Las nuevas acciones de moderacion apareceran aqui a medida que ocurran.",
+    warning: "Advertencia",
+    removeWarning: "Quitar advertencia",
+    strike: "Strike",
+    removeStrike: "Quitar strike",
+    clearStrikes: "Limpiar strikes",
+    note: "Nota",
+    autoBan: "Baneo automatico",
+    autoUnban: "Desbaneo automatico",
+    autoBanDescription:
+      "Baneado automaticamente tras alcanzar el umbral de strikes",
+    autoUnbanDescription:
+      "Desbaneado automaticamente tras quedar por debajo del umbral de strikes",
+    unknownAdmin: "Admin desconocido",
+    unknownUser: "Usuario desconocido",
+    warningStatus: "Estado de advertencia",
+    bannedUsersSubtitle: "Usuarios actualmente baneados a nivel plataforma",
+    totalBannedUsers: "Total de usuarios baneados",
+    noBannedUsers: "No hay usuarios baneados",
+    noBannedUsersDescription:
+      "Actualmente no hay cuentas baneadas en la plataforma.",
+    noReasonProvided: "Sin razon indicada",
+    bannedOn: "Baneado el",
+    unbanSuccess: "Usuario desbaneado correctamente",
+    unbanError: "No se pudo desbanear al usuario",
     reportUser: "Reportar Usuario",
     reportMessage: "Reportar Mensaje",
     reportReason: "Razón del Reporte",

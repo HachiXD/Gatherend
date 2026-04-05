@@ -1,13 +1,11 @@
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
-import { MemberRole } from "@prisma/client";
+import { BoardBanSourceType, MemberRole } from "@prisma/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
 import { expressMemberCache } from "@/lib/redis";
-
-// UUID validation regex
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { issueBoardBan } from "@/lib/board-moderation";
+import { UUID_REGEX } from "@/lib/platform-moderation";
 
 async function notifyBoardMembership(
   profileId: string,
@@ -33,14 +31,11 @@ async function notifyBoardMembership(
   }
 }
 
-// Helper para notificar a los miembros restantes y al usuario baneado
 async function notifyMemberBanned(boardId: string, profileId: string) {
   try {
     const socketUrl =
       process.env.SOCKET_SERVER_URL || process.env.NEXT_PUBLIC_SOCKET_URL;
     const secret = process.env.INTERNAL_API_SECRET;
-
-    // Skip if socket URL or secret is not configured
     if (!socketUrl || !secret) return;
 
     const timestamp = Date.now();
@@ -109,7 +104,6 @@ export async function POST(
   context: { params: Promise<{ boardId: string }> },
 ) {
   try {
-    // Rate limiting
     const rateLimitResponse = await checkRateLimit(RATE_LIMITS.moderation);
     if (rateLimitResponse) return rateLimitResponse;
 
@@ -126,15 +120,13 @@ export async function POST(
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const targetProfileId = body.targetProfileId;
-
     const boardId = params.boardId;
+    const targetProfileId = body.targetProfileId;
 
     if (!boardId || typeof targetProfileId !== "string" || !targetProfileId) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
-    // Validate UUIDs
     if (!UUID_REGEX.test(boardId) || !UUID_REGEX.test(targetProfileId)) {
       return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
     }
@@ -146,9 +138,7 @@ export async function POST(
       );
     }
 
-    // Ejecutar toda la lógica dentro de una transacción para consistencia
     await db.$transaction(async (tx) => {
-      // 1. Buscar al actor y al target DENTRO de la transacción
       const [actor, targetMember] = await Promise.all([
         tx.member.findFirst({
           where: { boardId, profileId: profile.id },
@@ -160,7 +150,6 @@ export async function POST(
         }),
       ]);
 
-      // 2. Validaciones de permisos
       if (!actor) {
         throw new Error("NOT_A_MEMBER");
       }
@@ -169,12 +158,10 @@ export async function POST(
         throw new Error("FORBIDDEN");
       }
 
-      // 3. El target debe ser miembro del board para poder banearlo
       if (!targetMember) {
         throw new Error("TARGET_NOT_MEMBER");
       }
 
-      // 4. Reglas de jerarquía
       if (targetMember.role === MemberRole.OWNER) {
         throw new Error("CANNOT_BAN_OWNER");
       }
@@ -186,77 +173,56 @@ export async function POST(
         throw new Error("INSUFFICIENT_PERMISSIONS");
       }
 
-      // 5. Expulsar al miembro
-      await tx.channelMember.deleteMany({
-        where: {
-          profileId: targetProfileId,
-          channel: { boardId },
-        },
-      });
-
-      await tx.channelReadState.deleteMany({
-        where: {
-          profileId: targetProfileId,
-          channel: { boardId },
-        },
-      });
-
-      await tx.mention.deleteMany({
-        where: {
-          profileId: targetProfileId,
-          message: {
-            channel: { boardId },
-          },
-        },
-      });
-
-      await tx.member.delete({
-        where: { id: targetMember.id },
-      });
-
-      // 6. Crear el registro de ban (idempotente)
-      await tx.boardBan.upsert({
-        where: {
-          boardId_profileId: { boardId, profileId: targetProfileId },
-        },
-        update: {},
-        create: { boardId, profileId: targetProfileId },
+      await issueBoardBan(tx, {
+        boardId,
+        profileId: targetProfileId,
+        issuedById: profile.id,
+        sourceType: BoardBanSourceType.MANUAL,
+        memberId: targetMember.id,
       });
     });
 
     await expressMemberCache.invalidate(boardId, targetProfileId);
     expressMemberCache.invalidateBoardIds(targetProfileId);
 
-    // Notificar a los miembros restantes (fire-and-forget)
     notifyBoardMembership(targetProfileId, boardId, "leave");
     notifyMemberBanned(boardId, targetProfileId);
 
     return NextResponse.json({
       success: true,
       bannedProfileId: targetProfileId,
+      sourceType: BoardBanSourceType.MANUAL,
     });
   } catch (error) {
-    // Manejar errores personalizados lanzados desde la transacción
     if (error instanceof Error) {
-      if (error.message === "NOT_A_MEMBER")
+      if (error.message === "NOT_A_MEMBER") {
         return NextResponse.json({ error: "Not a member" }, { status: 403 });
-      if (error.message === "FORBIDDEN")
+      }
+
+      if (error.message === "FORBIDDEN") {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      if (error.message === "TARGET_NOT_MEMBER")
+      }
+
+      if (error.message === "TARGET_NOT_MEMBER") {
         return NextResponse.json(
           { error: "User is not a member of this board" },
           { status: 404 },
         );
-      if (error.message === "CANNOT_BAN_OWNER")
+      }
+
+      if (error.message === "CANNOT_BAN_OWNER") {
         return NextResponse.json(
           { error: "Cannot ban the owner" },
           { status: 403 },
         );
-      if (error.message === "INSUFFICIENT_PERMISSIONS")
+      }
+
+      if (error.message === "INSUFFICIENT_PERMISSIONS") {
         return NextResponse.json(
           { error: "Insufficient permissions" },
           { status: 403 },
         );
+      }
     }
 
     console.error("[BAN_MEMBER]", error);

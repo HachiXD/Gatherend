@@ -137,6 +137,8 @@ export function useCachedBoardSync(currentProfileId?: string): void {
         if (old.members.some((m) => m.profileId === payload.member.profileId)) return old;
         const newMember = {
           ...payload.member,
+          activeWarningCount: 0,
+          latestActiveWarningId: null,
           role: payload.member.role as BoardMember["role"],
           createdAt: new Date(payload.member.createdAt),
           updatedAt: new Date(payload.member.updatedAt),

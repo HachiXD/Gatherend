@@ -2,7 +2,6 @@
  * Redis Cache Service
  *
  * Caching layer for frequently accessed data to reduce DB load.
- * Uses Redis for distributed caching across multiple server instances.
  *
  * Cache Keys (Might be outdated xD):
  * - auth:profile:{userId} → Auth profile data by legacy userId (TTL: 2 min)
@@ -147,22 +146,20 @@ interface CachedMemberProfile {
     height: number | null;
     originalName: string | null;
   } | null;
-  badgeSticker:
-    | {
-        id: string;
-        asset: {
-          id: string;
-          key: string;
-          visibility: string;
-          context: string;
-          mimeType: string;
-          sizeBytes: number | null;
-          width: number | null;
-          height: number | null;
-          originalName: string | null;
-        };
-      }
-    | null;
+  badgeSticker: {
+    id: string;
+    asset: {
+      id: string;
+      key: string;
+      visibility: string;
+      context: string;
+      mimeType: string;
+      sizeBytes: number | null;
+      width: number | null;
+      height: number | null;
+      originalName: string | null;
+    };
+  } | null;
 }
 
 interface CachedMember {
@@ -170,6 +167,8 @@ interface CachedMember {
   role: string;
   profileId: string;
   boardId: string;
+  xp?: number;
+  level?: number;
   profile: CachedMemberProfile;
 }
 
@@ -209,6 +208,8 @@ export async function verifyMemberInBoardCached(
           role: true,
           profileId: true,
           boardId: true,
+          xp: true,
+          level: true,
           profile: {
             select: PROFILE_SELECT,
           },
@@ -465,22 +466,20 @@ interface CachedProfile {
     height: number | null;
     originalName: string | null;
   } | null;
-  badgeSticker:
-    | {
-        id: string;
-        asset: {
-          id: string;
-          key: string;
-          visibility: string;
-          context: string;
-          mimeType: string;
-          sizeBytes: number | null;
-          width: number | null;
-          height: number | null;
-          originalName: string | null;
-        };
-      }
-    | null;
+  badgeSticker: {
+    id: string;
+    asset: {
+      id: string;
+      key: string;
+      visibility: string;
+      context: string;
+      mimeType: string;
+      sizeBytes: number | null;
+      width: number | null;
+      height: number | null;
+      originalName: string | null;
+    };
+  } | null;
 }
 
 /**
@@ -522,6 +521,7 @@ interface CachedAuthProfile {
   userId: string;
   username: string;
   email: string;
+  reputationScore?: number;
   banned: boolean;
   bannedAt: Date | null;
   banReason: string | null;
@@ -560,6 +560,7 @@ export async function getProfileByUserIdCached(
       userId: true,
       username: true,
       email: true,
+      reputationScore: true,
       banned: true,
       bannedAt: true,
       banReason: true,
@@ -620,6 +621,7 @@ export async function getProfileByIdentityCached(input: {
       userId: true,
       username: true,
       email: true,
+      reputationScore: true,
       banned: true,
       bannedAt: true,
       banReason: true,
@@ -699,7 +701,9 @@ export async function invalidateBoardCaches(boardId: string): Promise<void> {
   await invalidateVoiceChannelsCache(boardId);
 }
 
-export async function getProfileBoardIdsCached(profileId: string): Promise<string[]> {
+export async function getProfileBoardIdsCached(
+  profileId: string,
+): Promise<string[]> {
   const cacheKey = `profile:${profileId}:board-ids`;
   const cached = await cacheGet<string[]>(cacheKey);
   if (cached) return cached;

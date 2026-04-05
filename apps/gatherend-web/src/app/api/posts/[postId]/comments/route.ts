@@ -1,6 +1,20 @@
 import { AssetContext, AssetVisibility, Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import {
+  awardMemberXp,
+  canCreateCommentWithImage,
+  canCreateTextComment,
+  canSendLinks,
+  containsExternalLinks,
+  hasMinimumMeaningfulTextLength,
+  MEMBER_XP_REWARDS,
+} from "@/lib/domain";
+import {
+  createAccessDeniedResponse,
+  getProfileReputationScore,
+} from "@/lib/domain-access";
+import { expressMemberCache } from "@/lib/redis";
 import { requireAuth } from "@/lib/require-auth";
 import { moderateDescription } from "@/lib/text-moderation";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
@@ -222,6 +236,7 @@ export async function POST(
     const auth = await requireAuth();
     if (!auth.success) return auth.response;
     const profile = auth.profile;
+    const reputationScore = getProfileReputationScore(profile.reputationScore);
 
     const { postId } = await context.params;
 
@@ -327,11 +342,14 @@ export async function POST(
       }
     }
 
+    let commentBoardId: string | null = null;
+
     const createdComment = await db.$transaction(async (tx) => {
       const post = await tx.communityPost.findUnique({
         where: { id: postId },
         select: {
           id: true,
+          boardId: true,
           deleted: true,
           lockedAt: true,
         },
@@ -343,6 +361,28 @@ export async function POST(
 
       if (post.lockedAt) {
         throw new Error("POST_LOCKED");
+      }
+
+      commentBoardId = post.boardId;
+
+      const member = await tx.member.findUnique({
+        where: {
+          boardId_profileId: {
+            boardId: post.boardId,
+            profileId: profile.id,
+          },
+        },
+        select: {
+          id: true,
+          boardId: true,
+          profileId: true,
+          xp: true,
+          level: true,
+        },
+      });
+
+      if (!member) {
+        throw new Error("NOT_A_MEMBER");
       }
 
       if (resolvedReplyToCommentId) {
@@ -360,10 +400,42 @@ export async function POST(
         }
       }
 
+      const accessDecision = resolvedImageAssetId
+        ? canCreateCommentWithImage({
+            level: member.level,
+            reputationScore,
+          })
+        : canCreateTextComment({
+            level: member.level,
+            reputationScore,
+          });
+
+      if (!accessDecision.allowed) {
+        throw new Error(
+          JSON.stringify({
+            type: "ACCESS_DENIED",
+            decision: accessDecision,
+          }),
+        );
+      }
+
+      if (trimmedContent && containsExternalLinks(trimmedContent)) {
+        const linksDecision = canSendLinks(reputationScore);
+        if (!linksDecision.allowed) {
+          throw new Error(
+            JSON.stringify({
+              type: "ACCESS_DENIED",
+              decision: linksDecision,
+            }),
+          );
+        }
+      }
+
       const comment = await tx.communityPostComment.create({
         data: {
           postId,
           authorProfileId: profile.id,
+          memberId: member.id,
           content: trimmedContent,
           imageAssetId: resolvedImageAssetId,
           replyToCommentId: resolvedReplyToCommentId,
@@ -380,8 +452,40 @@ export async function POST(
         },
       });
 
+      let memberTarget = member;
+
+      if (hasMinimumMeaningfulTextLength(trimmedContent)) {
+        const textReward = await awardMemberXp(tx, {
+          member: memberTarget,
+          delta: MEMBER_XP_REWARDS.commentText,
+          reason: "COMMUNITY_POST_COMMENT_TEXT",
+          sourceType: "COMMUNITY_POST_COMMENT",
+          sourceId: comment.id,
+        });
+
+        memberTarget = {
+          ...memberTarget,
+          xp: textReward.nextXp,
+          level: textReward.nextLevel,
+        };
+      }
+
+      if (resolvedImageAssetId) {
+        await awardMemberXp(tx, {
+          member: memberTarget,
+          delta: MEMBER_XP_REWARDS.commentImage,
+          reason: "COMMUNITY_POST_COMMENT_IMAGE",
+          sourceType: "COMMUNITY_POST_COMMENT",
+          sourceId: comment.id,
+        });
+      }
+
       return comment;
     });
+
+    if (commentBoardId) {
+      await expressMemberCache.invalidate(commentBoardId, profile.id);
+    }
 
     return NextResponse.json(serializeComment(createdComment));
   } catch (error) {
@@ -402,6 +506,23 @@ export async function POST(
           { error: "Reply target comment not found" },
           { status: 404 },
         );
+      }
+
+      if (error.message === "NOT_A_MEMBER") {
+        return NextResponse.json({ error: "Not a member" }, { status: 403 });
+      }
+
+      try {
+        const parsed = JSON.parse(error.message) as {
+          type?: string;
+          decision?: Parameters<typeof createAccessDeniedResponse>[0];
+        };
+
+        if (parsed.type === "ACCESS_DENIED" && parsed.decision) {
+          return createAccessDeniedResponse(parsed.decision);
+        }
+      } catch {
+        // noop
       }
     }
 

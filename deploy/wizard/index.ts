@@ -132,7 +132,7 @@ function parseExistingEnv(): Partial<WizardConfig> {
     cronSecret: vars.CRON_SECRET,
     imgproxyKey: vars.IMGPROXY_KEY,
     imgproxySalt: vars.IMGPROXY_SALT,
-    nudenetApiKey: vars.NUDENET_API_KEY,
+    contentModerationApiKey: vars.CONTENT_MODERATION_API_KEY,
     livekitApiKey: vars.LIVEKIT_API_KEY,
     livekitApiSecret: vars.LIVEKIT_API_SECRET,
     minioRootUser: vars.MINIO_ROOT_USER,

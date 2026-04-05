@@ -23,85 +23,108 @@ model Friendship {
 }
 
 model UploadedAsset {
-  id                         String          @id @default(uuid())
-  key                        String          @unique
-  visibility                 AssetVisibility
-  context                    AssetContext
-  mimeType                   String
-  sizeBytes                  Int?
-  width                      Int?
-  height                     Int?
-  dominantColor              String?
-  originalName               String?
-  ownerProfileId             String?
-  createdAt                  DateTime        @default(now())
-  updatedAt                  DateTime        @updatedAt
-  ownerProfile               Profile?        @relation("UploadedAssetOwner", fields: [ownerProfileId], references: [id], onDelete: SetNull)
-  profileAvatarFor           Profile[]       @relation("ProfileAvatarAsset")
-  profileBannerFor           Profile[]       @relation("ProfileBannerAsset")
-  boardImageFor              Board[]         @relation("BoardImageAsset")
-  communityPostImageFor      CommunityPost[] @relation("CommunityPostImageAsset")
+  id                           String                 @id @default(uuid())
+  key                          String                 @unique
+  visibility                   AssetVisibility
+  context                      AssetContext
+  mimeType                     String
+  sizeBytes                    Int?
+  width                        Int?
+  height                       Int?
+  dominantColor                String?
+  originalName                 String?
+  ownerProfileId               String?
+  boardId                      String?
+  createdAt                    DateTime               @default(now())
+  updatedAt                    DateTime               @updatedAt
+  ownerProfile                 Profile?               @relation("UploadedAssetOwner", fields: [ownerProfileId], references: [id], onDelete: SetNull)
+  boardScope                   Board?                 @relation("UploadedAssetBoardScope", fields: [boardId], references: [id], onDelete: SetNull)
+  profileAvatarFor             Profile[]              @relation("ProfileAvatarAsset")
+  profileBannerFor             Profile[]              @relation("ProfileBannerAsset")
+  boardImageFor                Board[]                @relation("BoardImageAsset")
+  communityPostImageFor        CommunityPost[]        @relation("CommunityPostImageAsset")
   communityPostCommentImageFor CommunityPostComment[] @relation("CommunityPostCommentImageAsset")
-  channelImageFor            Channel[]       @relation("ChannelImageAsset")
-  messageAttachmentFor       Message[]       @relation("MessageAttachmentAsset")
-  directMessageAttachmentFor DirectMessage[] @relation("DirectMessageAttachmentAsset")
-  stickerImageFor            Sticker[]       @relation("StickerImageAsset")
-  boardRulesImageFor         BoardRules[]    @relation("BoardRulesImageAsset")
+  channelImageFor              Channel[]              @relation("ChannelImageAsset")
+  messageAttachmentFor         Message[]              @relation("MessageAttachmentAsset")
+  directMessageAttachmentFor   DirectMessage[]        @relation("DirectMessageAttachmentAsset")
+  stickerImageFor              Sticker[]              @relation("StickerImageAsset")
+  boardRulesImageFor           BoardRules[]           @relation("BoardRulesImageAsset")
 
   @@index([ownerProfileId])
+  @@index([boardId])
   @@index([visibility, context, createdAt(sort: Desc)])
   @@index([context, createdAt(sort: Desc)])
 }
 
 model Profile {
-  id                             String                  @id @default(uuid())
-  avatarAssetId                  String?
-  bannerAssetId                  String?
-  email                          String
-  createdAt                      DateTime                @default(now())
-  updatedAt                      DateTime                @updatedAt
-  languages                      Languages[]             @default([EN])
-  discriminator                  String                  @default("xxx")
-  username                       String
-  userId                         String                  @unique
-  badge                          String?                 @db.VarChar(30)
-  longDescription                String?                 @db.VarChar(200)
-  badgeStickerId                 String?
-  themeConfig                    Json?
-  banReason                      String?
-  banned                         Boolean                 @default(false)
-  bannedAt                       DateTime?
-  falseReports                   Int                     @default(0)
-  reportAccuracy                 Float?
-  validReports                   Int                     @default(0)
-  profileTags                    String[]                @default([])
-  usernameColor                  Json?
-  usernameFormat                 Json?
-  avatarAsset                    UploadedAsset?          @relation("ProfileAvatarAsset", fields: [avatarAssetId], references: [id], onDelete: SetNull)
-  bannerAsset                    UploadedAsset?          @relation("ProfileBannerAsset", fields: [bannerAssetId], references: [id], onDelete: SetNull)
-  badgeSticker                   Sticker?                @relation("ProfileBadgeSticker", fields: [badgeStickerId], references: [id], onDelete: SetNull)
-  boards                         Board[]
-  boardBans                      BoardBan[]
-  channels                       Channel[]
-  communityPosts                 CommunityPost[]
-  communityPostComments          CommunityPostComment[]
-  conversationsInitiated        Conversation[]          @relation("ProfileOne")
-  conversationsReceived         Conversation[]          @relation("ProfileTwo")
-  directMessages                DirectMessage[]
-  receivedFriendRequests        Friendship[]            @relation("FriendReceiver")
-  sentFriendRequests            Friendship[]            @relation("FriendRequester")
-  members                       Member[]
-  boardMessagesSent             Message[]               @relation("BoardMessageSender")
-  mentions                      Mention[]               @relation("MentionedProfile")
-  reactions                     Reaction[]              @relation("ProfileReactions")
-  reportsMade                   Report[]                @relation("ReportsMade")
-  reportsAgainst                Report[]                @relation("ReportsReceived")
-  authIdentities                AuthIdentity[]
-  uploadedAssets                UploadedAsset[]         @relation("UploadedAssetOwner")
-  uploadedStickers              Sticker[]               @relation("StickerUploader")
-  strikes                       Strike[]
-  channelMembers                 ChannelMember[]
-  channelReadStates             ChannelReadState[]
+  id                              String                     @id @default(uuid())
+  avatarAssetId                   String?
+  bannerAssetId                   String?
+  email                           String
+  createdAt                       DateTime                   @default(now())
+  updatedAt                       DateTime                   @updatedAt
+  languages                       Languages[]                @default([EN])
+  discriminator                   String                     @default("xxx")
+  username                        String
+  userId                          String                     @unique
+  badge                           String?                    @db.VarChar(30)
+  longDescription                 String?                    @db.VarChar(200)
+  badgeStickerId                  String?
+  themeConfig                     Json?
+  banReason                       String?
+  banned                          Boolean                    @default(false)
+  bannedAt                        DateTime?
+  banSourceType                   PlatformBanSourceType?
+  falseReports                    Int                        @default(0)
+  reportAccuracy                  Float?
+  validReports                    Int                        @default(0)
+  reputationScore                 Int                        @default(100)
+  reputationUpdatedAt             DateTime?
+  profileTags                     String[]                   @default([])
+  usernameColor                   Json?
+  usernameFormat                  Json?
+  avatarAsset                     UploadedAsset?             @relation("ProfileAvatarAsset", fields: [avatarAssetId], references: [id], onDelete: SetNull)
+  bannerAsset                     UploadedAsset?             @relation("ProfileBannerAsset", fields: [bannerAssetId], references: [id], onDelete: SetNull)
+  badgeSticker                    Sticker?                   @relation("ProfileBadgeSticker", fields: [badgeStickerId], references: [id], onDelete: SetNull)
+  boards                          Board[]
+  boardBans                       BoardBan[]                 @relation("BoardBanTarget")
+  boardBansIssued                 BoardBan[]                 @relation("BoardBanIssuer")
+  boardWarnings                   BoardWarning[]             @relation("BoardWarningTarget")
+  boardWarningsIssued             BoardWarning[]             @relation("BoardWarningIssuer")
+  boardWarningsRemoved            BoardWarning[]             @relation("BoardWarningRemover")
+  channels                        Channel[]
+  communityPosts                  CommunityPost[]
+  communityPostComments           CommunityPostComment[]
+  conversationsInitiated          Conversation[]             @relation("ProfileOne")
+  conversationsReceived           Conversation[]             @relation("ProfileTwo")
+  directMessages                  DirectMessage[]
+  receivedFriendRequests          Friendship[]               @relation("FriendReceiver")
+  sentFriendRequests              Friendship[]               @relation("FriendRequester")
+  members                         Member[]
+  boardMessagesSent               Message[]                  @relation("BoardMessageSender")
+  mentions                        Mention[]                  @relation("MentionedProfile")
+  reactions                       Reaction[]                 @relation("ProfileReactions")
+  reportsMade                     Report[]                   @relation("ReportsMade")
+  reportsAgainst                  Report[]                   @relation("ReportsReceived")
+  authIdentities                  AuthIdentity[]
+  uploadedAssets                  UploadedAsset[]            @relation("UploadedAssetOwner")
+  uploadedStickers                Sticker[]                  @relation("StickerUploader")
+  strikes                         Strike[]
+  platformWarnings                PlatformWarning[]          @relation("PlatformWarningTarget")
+  platformWarningsIssued          PlatformWarning[]          @relation("PlatformWarningIssuer")
+  platformWarningsRemoved         PlatformWarning[]          @relation("PlatformWarningRemover")
+  boardModerationActions          BoardModerationAction[]    @relation("BoardModerationActionTarget")
+  boardModerationActionsIssued    BoardModerationAction[]    @relation("BoardModerationActionIssuer")
+  platformModerationActions       PlatformModerationAction[] @relation("PlatformModerationActionTarget")
+  platformModerationActionsIssued PlatformModerationAction[] @relation("PlatformModerationActionIssuer")
+  boardInvestigationsOpened       BoardInvestigation[]       @relation("BoardInvestigationOpenedBy")
+  boardInvestigationsClosed       BoardInvestigation[]       @relation("BoardInvestigationClosedBy")
+  platformBoardActionsIssued      PlatformBoardAction[]      @relation("PlatformBoardActionIssuer")
+  reputationEvents                ProfileReputationEvent[]
+  memberXpEvents                  MemberXpEvent[]
+  boardRiskEvents                 BoardRiskEvent[]
+  channelMembers                  ChannelMember[]
+  channelReadStates               ChannelReadState[]
 
   @@unique([username, discriminator])
   @@index([username])
@@ -126,26 +149,27 @@ model AuthIdentity {
   @@index([providerUserId])
 }
 
-
-
 model CommunityPost {
-  id              String         @id @default(uuid())
+  id              String                 @id @default(uuid())
   boardId         String
+  memberId        String?
   authorProfileId String
   title           String?
   content         String
   imageAssetId    String?
-  commentCount    Int            @default(0)
-  deleted         Boolean        @default(false)
+  commentCount    Int                    @default(0)
+  deleted         Boolean                @default(false)
   pinnedAt        DateTime?
   lockedAt        DateTime?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  board           Board          @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  author          Profile        @relation(fields: [authorProfileId], references: [id], onDelete: Cascade)
-  imageAsset      UploadedAsset? @relation("CommunityPostImageAsset", fields: [imageAssetId], references: [id], onDelete: SetNull)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  board           Board                  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  member          Member?                @relation("MemberCommunityPosts", fields: [memberId], references: [id], onDelete: SetNull)
+  author          Profile                @relation(fields: [authorProfileId], references: [id], onDelete: Cascade)
+  imageAsset      UploadedAsset?         @relation("CommunityPostImageAsset", fields: [imageAssetId], references: [id], onDelete: SetNull)
   comments        CommunityPostComment[]
 
+  @@index([memberId])
   @@index([authorProfileId])
   @@index([imageAssetId])
   @@index([boardId, deleted, pinnedAt(sort: Desc), createdAt(sort: Desc), id(sort: Desc)])
@@ -153,22 +177,25 @@ model CommunityPost {
 }
 
 model CommunityPostComment {
-  id               String                @id @default(uuid())
+  id               String                 @id @default(uuid())
   postId           String
+  memberId         String?
   authorProfileId  String
   content          String
   imageAssetId     String?
   replyToCommentId String?
-  deleted          Boolean               @default(false)
-  createdAt        DateTime              @default(now())
-  updatedAt        DateTime              @updatedAt
-  post             CommunityPost         @relation(fields: [postId], references: [id], onDelete: Cascade)
-  author           Profile               @relation(fields: [authorProfileId], references: [id], onDelete: Cascade)
-  imageAsset       UploadedAsset?        @relation("CommunityPostCommentImageAsset", fields: [imageAssetId], references: [id], onDelete: SetNull)
-  replyToComment   CommunityPostComment? @relation("CommunityPostCommentReplies", fields: [replyToCommentId], references: [id], onDelete: SetNull)
+  deleted          Boolean                @default(false)
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  post             CommunityPost          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  member           Member?                @relation("MemberCommunityPostComments", fields: [memberId], references: [id], onDelete: SetNull)
+  author           Profile                @relation(fields: [authorProfileId], references: [id], onDelete: Cascade)
+  imageAsset       UploadedAsset?         @relation("CommunityPostCommentImageAsset", fields: [imageAssetId], references: [id], onDelete: SetNull)
+  replyToComment   CommunityPostComment?  @relation("CommunityPostCommentReplies", fields: [replyToCommentId], references: [id], onDelete: SetNull)
   replies          CommunityPostComment[] @relation("CommunityPostCommentReplies")
 
   @@index([postId, deleted, createdAt, id])
+  @@index([memberId])
   @@index([authorProfileId])
   @@index([imageAssetId])
   @@index([replyToCommentId])
@@ -195,13 +222,26 @@ model Board {
   recentPostCount7d     Int                      @default(0)
   rankingScore          Float                    @default(0)
   rankedAt              DateTime                 @default(now())
+  riskPoints            Int                      @default(0)
+  riskLevel             Int                      @default(1)
+  riskUpdatedAt         DateTime?
   imageAsset            UploadedAsset?           @relation("BoardImageAsset", fields: [imageAssetId], references: [id], onDelete: SetNull)
   profile               Profile?                 @relation(fields: [profileId], references: [id])
   boardBans             BoardBan[]
+  boardWarnings         BoardWarning[]
+  moderationActions     BoardModerationAction[]
   channels              Channel[]
   members               Member[]
   posts                 CommunityPost[]
+  reports               Report[]
+  strikes               Strike[]
+  investigations        BoardInvestigation[]
+  platformBoardActions  PlatformBoardAction[]
+  reputationEvents      ProfileReputationEvent[]
+  memberXpEvents        MemberXpEvent[]
+  riskEvents            BoardRiskEvent[]
   rules                 BoardRules?
+  scopedUploadedAssets  UploadedAsset[]             @relation("UploadedAssetBoardScope")
 
   @@index([profileId])
   @@index([refreshedAt])
@@ -212,29 +252,69 @@ model Board {
 }
 
 model BoardBan {
-  id        String   @id @default(uuid())
-  boardId   String
-  profileId String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  id         String                  @id @default(uuid())
+  boardId    String
+  profileId  String
+  issuedById String
+  sourceType BoardBanSourceType      @default(MANUAL)
+  createdAt  DateTime                @default(now())
+  board      Board                   @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  profile    Profile                 @relation("BoardBanTarget", fields: [profileId], references: [id], onDelete: Cascade)
+  issuedBy   Profile                 @relation("BoardBanIssuer", fields: [issuedById], references: [id], onDelete: Cascade)
+  warnings   BoardWarning[]          @relation("BoardWarningPromotedBan")
+  actions    BoardModerationAction[]
 
   @@unique([boardId, profileId])
+  @@index([profileId])
+  @@index([issuedById])
+  @@index([sourceType])
   @@index([boardId, profileId])
 }
 
-model Member {
-  id        String     @id @default(uuid())
-  role      MemberRole @default(GUEST)
-  profileId String
-  boardId   String
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  board     Board      @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  profile   Profile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  messages  Message[]
+model BoardWarning {
+  id              String                  @id @default(uuid())
+  boardId         String
+  profileId       String
+  issuedById      String
+  removedById     String?
+  promotedToBanId String?
+  status          BoardWarningStatus      @default(ACTIVE)
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  removedAt       DateTime?
+  board           Board                   @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  profile         Profile                 @relation("BoardWarningTarget", fields: [profileId], references: [id], onDelete: Cascade)
+  issuedBy        Profile                 @relation("BoardWarningIssuer", fields: [issuedById], references: [id], onDelete: Cascade)
+  removedBy       Profile?                @relation("BoardWarningRemover", fields: [removedById], references: [id], onDelete: SetNull)
+  promotedToBan   BoardBan?               @relation("BoardWarningPromotedBan", fields: [promotedToBanId], references: [id], onDelete: SetNull)
+  actions         BoardModerationAction[]
 
+  @@index([profileId])
+  @@index([issuedById])
+  @@index([removedById])
+  @@index([promotedToBanId])
+  @@index([boardId, profileId])
+  @@index([boardId, profileId, status, createdAt(sort: Desc)])
+}
+
+model Member {
+  id                    String                 @id @default(uuid())
+  role                  MemberRole             @default(GUEST)
+  profileId             String
+  boardId               String
+  xp                    Int                    @default(0)
+  level                 Int                    @default(1)
+  levelUpdatedAt        DateTime?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  board                 Board                  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  profile               Profile                @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  communityPosts        CommunityPost[]        @relation("MemberCommunityPosts")
+  communityPostComments CommunityPostComment[] @relation("MemberCommunityPostComments")
+  messages              Message[]
+  xpEvents              MemberXpEvent[]
+
+  @@unique([boardId, profileId])
   @@index([profileId])
   @@index([boardId])
   @@index([boardId, profileId])
@@ -243,22 +323,23 @@ model Member {
 }
 
 model Channel {
-  id           String             @id @default(uuid())
-  name         String
-  type         ChannelType        @default(TEXT)
-  position     Float              @default(1000)
-  profileId    String?
-  boardId      String
-  imageAssetId String?
-  lastMessageSeq Int              @default(0)
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
-  board        Board              @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  profile      Profile?           @relation(fields: [profileId], references: [id])
-  imageAsset   UploadedAsset?     @relation("ChannelImageAsset", fields: [imageAssetId], references: [id], onDelete: SetNull)
+  id             String             @id @default(uuid())
+  name           String
+  type           ChannelType        @default(TEXT)
+  position       Float              @default(1000)
+  profileId      String?
+  boardId        String
+  imageAssetId   String?
+  lastMessageSeq Int                @default(0)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  board          Board              @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  profile        Profile?           @relation(fields: [profileId], references: [id])
+  imageAsset     UploadedAsset?     @relation("ChannelImageAsset", fields: [imageAssetId], references: [id], onDelete: SetNull)
   channelMembers ChannelMember[]
   readStates     ChannelReadState[]
   messages       Message[]
+  reports        Report[]
 
   @@index([profileId])
   @@index([boardId])
@@ -306,6 +387,7 @@ model Message {
   sticker           Sticker?       @relation("MessageSticker", fields: [stickerId], references: [id])
   reactions         Reaction[]
 
+  @@unique([channelId, seq])
   @@index([channelId])
   @@index([memberId])
   @@index([messageSenderId])
@@ -313,7 +395,6 @@ model Message {
   @@index([stickerId])
   @@index([replyToId])
   @@index([channelId, createdAt(sort: Desc)])
-  @@unique([channelId, seq])
 }
 
 model Reaction {
@@ -356,25 +437,25 @@ model Conversation {
 }
 
 model DirectMessage {
-  id                String         @id @default(uuid())
+  id                String          @id @default(uuid())
   content           String
   attachmentAssetId String?
   conversationId    String
-  deleted           Boolean        @default(false)
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
+  deleted           Boolean         @default(false)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
   senderId          String?
   stickerId         String?
   replyToId         String?
-  pinned            Boolean        @default(false)
+  pinned            Boolean         @default(false)
   pinnedAt          DateTime?
   pinnedById        String?
-  attachmentAsset   UploadedAsset? @relation("DirectMessageAttachmentAsset", fields: [attachmentAssetId], references: [id], onDelete: SetNull)
-  conversation      Conversation   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  replyTo           DirectMessage? @relation("DirectMessageReplies", fields: [replyToId], references: [id])
+  attachmentAsset   UploadedAsset?  @relation("DirectMessageAttachmentAsset", fields: [attachmentAssetId], references: [id], onDelete: SetNull)
+  conversation      Conversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  replyTo           DirectMessage?  @relation("DirectMessageReplies", fields: [replyToId], references: [id])
   replies           DirectMessage[] @relation("DirectMessageReplies")
-  sender            Profile?       @relation(fields: [senderId], references: [id])
-  sticker           Sticker?       @relation("DirectMessageSticker", fields: [stickerId], references: [id])
+  sender            Profile?        @relation(fields: [senderId], references: [id])
+  sticker           Sticker?        @relation("DirectMessageSticker", fields: [stickerId], references: [id])
   reactions         Reaction[]
 
   @@index([senderId])
@@ -386,18 +467,18 @@ model DirectMessage {
 }
 
 model Sticker {
-  id             String          @id @default(uuid())
-  name           String
-  assetId        String
-  category       String
-  createdAt      DateTime        @default(now())
-  isCustom       Boolean         @default(false)
-  uploaderId     String?
-  asset          UploadedAsset   @relation("StickerImageAsset", fields: [assetId], references: [id])
-  directMessages DirectMessage[] @relation("DirectMessageSticker")
-  messages       Message[]       @relation("MessageSticker")
-  uploader       Profile?        @relation("StickerUploader", fields: [uploaderId], references: [id])
-  badgeForProfiles Profile[]     @relation("ProfileBadgeSticker")
+  id               String          @id @default(uuid())
+  name             String
+  assetId          String
+  category         String
+  createdAt        DateTime        @default(now())
+  isCustom         Boolean         @default(false)
+  uploaderId       String?
+  asset            UploadedAsset   @relation("StickerImageAsset", fields: [assetId], references: [id])
+  directMessages   DirectMessage[] @relation("DirectMessageSticker")
+  messages         Message[]       @relation("MessageSticker")
+  uploader         Profile?        @relation("StickerUploader", fields: [uploaderId], references: [id])
+  badgeForProfiles Profile[]       @relation("ProfileBadgeSticker")
 
   @@index([category])
   @@index([assetId])
@@ -452,7 +533,9 @@ model ChannelReadState {
 
 model ModerationCache {
   id         String   @id @default(cuid())
-  hash       String   @unique
+  hash       String
+  engine     String
+  policyVersion String
   blocked    Boolean
   reason     String?
   severity   String?
@@ -463,31 +546,40 @@ model ModerationCache {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  @@unique([hash, engine, policyVersion])
   @@index([hash])
+  @@index([engine, policyVersion])
   @@index([blocked])
   @@index([createdAt])
 }
 
 model Strike {
-  id               String    @id @default(cuid())
-  profileId        String
-  reason           String
-  severity         String
-  contentType      String
-  imageHash        String?
-  appealStatus     String    @default("none")
-  appealedAt       DateTime?
-  appealNotes      String?
-  createdAt        DateTime  @default(now())
-  appealResolvedAt DateTime?
-  appealResolvedBy String?
-  autoDetected     Boolean   @default(false)
-  expiresAt        DateTime?
-  originReportId   String?   @unique
-  snapshot         Json?
-  originReport     Report?   @relation("ReportStrike", fields: [originReportId], references: [id])
-  profile          Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  id                String                     @id @default(cuid())
+  profileId         String
+  boardId           String?
+  sourceType        StrikeSourceType           @default(DIRECT)
+  reason            String
+  severity          String
+  contentType       String
+  imageHash         String?
+  appealStatus      String                     @default("none")
+  appealedAt        DateTime?
+  appealNotes       String?
+  createdAt         DateTime                   @default(now())
+  appealResolvedAt  DateTime?
+  appealResolvedBy  String?
+  autoDetected      Boolean                    @default(false)
+  autoBanTriggered  Boolean                    @default(false)
+  expiresAt         DateTime?
+  originReportId    String?                    @unique
+  snapshot          Json?
+  board             Board?                     @relation(fields: [boardId], references: [id], onDelete: SetNull)
+  originReport      Report?                    @relation("ReportStrike", fields: [originReportId], references: [id])
+  profile           Profile                    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  promotedWarnings  PlatformWarning[]          @relation("PlatformWarningPromotedStrike")
+  moderationActions PlatformModerationAction[]
 
+  @@index([boardId])
   @@index([profileId])
   @@index([severity])
   @@index([createdAt])
@@ -496,26 +588,38 @@ model Strike {
 }
 
 model Report {
-  id              String           @id @default(cuid())
-  reporterId      String
-  targetId        String
-  description     String?
-  priority        String           @default("medium")
-  resolution      String?
-  resolvedAt      DateTime?
-  createdAt       DateTime         @default(now())
-  actionTaken     String?
-  resolvedById    String?
-  snapshot        Json
-  targetOwnerId   String?
-  targetType      ReportTargetType
-  category        ReportCategory
-  status          ReportStatus     @default(PENDING)
-  reporter        Profile          @relation("ReportsMade", fields: [reporterId], references: [id], onDelete: Cascade)
-  targetOwner     Profile?         @relation("ReportsReceived", fields: [targetOwnerId], references: [id])
-  resultingStrike Strike?          @relation("ReportStrike")
+  id                String                     @id @default(cuid())
+  reporterId        String
+  targetId          String
+  boardId           String?
+  channelId         String?
+  description       String?
+  priority          String                     @default("medium")
+  resolution        String?
+  resolvedAt        DateTime?
+  createdAt         DateTime                   @default(now())
+  actionTaken       String?
+  resolvedById      String?
+  snapshot          Json
+  targetOwnerId     String?
+  targetType        ReportTargetType
+  category          ReportCategory
+  status            ReportStatus               @default(PENDING)
+  board             Board?                     @relation(fields: [boardId], references: [id], onDelete: SetNull)
+  channel           Channel?                   @relation(fields: [channelId], references: [id], onDelete: SetNull)
+  reporter          Profile                    @relation("ReportsMade", fields: [reporterId], references: [id], onDelete: Cascade)
+  targetOwner       Profile?                   @relation("ReportsReceived", fields: [targetOwnerId], references: [id])
+  platformWarnings  PlatformWarning[]
+  moderationActions PlatformModerationAction[]
+  reputationEvents  ProfileReputationEvent[]
+  riskEvents        BoardRiskEvent[]
+  resultingStrike   Strike?                    @relation("ReportStrike")
+  sourceInvestigations BoardInvestigation[]    @relation("BoardInvestigationSourceReport")
+  platformBoardActions PlatformBoardAction[]   @relation("PlatformBoardActionSourceReport")
 
   @@unique([reporterId, targetType, targetId])
+  @@index([boardId])
+  @@index([channelId])
   @@index([status])
   @@index([priority])
   @@index([reporterId])
@@ -523,6 +627,186 @@ model Report {
   @@index([targetType, targetId])
   @@index([createdAt])
   @@index([category])
+}
+
+model PlatformWarning {
+  id                 String                     @id @default(uuid())
+  profileId          String
+  issuedById         String
+  removedById        String?
+  reportId           String?
+  promotedToStrikeId String?
+  reason             String
+  notes              String?
+  status             PlatformWarningStatus      @default(ACTIVE)
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+  removedAt          DateTime?
+  profile            Profile                    @relation("PlatformWarningTarget", fields: [profileId], references: [id], onDelete: Cascade)
+  issuedBy           Profile                    @relation("PlatformWarningIssuer", fields: [issuedById], references: [id], onDelete: Cascade)
+  removedBy          Profile?                   @relation("PlatformWarningRemover", fields: [removedById], references: [id], onDelete: SetNull)
+  report             Report?                    @relation(fields: [reportId], references: [id], onDelete: SetNull)
+  promotedToStrike   Strike?                    @relation("PlatformWarningPromotedStrike", fields: [promotedToStrikeId], references: [id], onDelete: SetNull)
+  actions            PlatformModerationAction[]
+
+  @@index([profileId, status, createdAt(sort: Desc)])
+  @@index([issuedById])
+  @@index([removedById])
+  @@index([reportId])
+  @@index([promotedToStrikeId])
+}
+
+model BoardModerationAction {
+  id         String                    @id @default(cuid())
+  boardId    String
+  profileId  String
+  issuedById String
+  actionType BoardModerationActionType
+  warningId  String?
+  banId      String?
+  createdAt  DateTime                  @default(now())
+  board      Board                     @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  profile    Profile                   @relation("BoardModerationActionTarget", fields: [profileId], references: [id], onDelete: Cascade)
+  issuedBy   Profile                   @relation("BoardModerationActionIssuer", fields: [issuedById], references: [id], onDelete: Cascade)
+  warning    BoardWarning?             @relation(fields: [warningId], references: [id], onDelete: SetNull)
+  ban        BoardBan?                 @relation(fields: [banId], references: [id], onDelete: SetNull)
+
+  @@index([boardId, createdAt(sort: Desc)])
+  @@index([profileId, createdAt(sort: Desc)])
+  @@index([issuedById, createdAt(sort: Desc)])
+  @@index([actionType])
+  @@index([warningId])
+  @@index([banId])
+}
+
+model PlatformModerationAction {
+  id         String                       @id @default(cuid())
+  profileId  String
+  issuedById String
+  actionType PlatformModerationActionType
+  reportId   String?
+  warningId  String?
+  strikeId   String?
+  notes      String?
+  createdAt  DateTime                     @default(now())
+  profile    Profile                      @relation("PlatformModerationActionTarget", fields: [profileId], references: [id], onDelete: Cascade)
+  issuedBy   Profile                      @relation("PlatformModerationActionIssuer", fields: [issuedById], references: [id], onDelete: Cascade)
+  report     Report?                      @relation(fields: [reportId], references: [id], onDelete: SetNull)
+  warning    PlatformWarning?             @relation(fields: [warningId], references: [id], onDelete: SetNull)
+  strike     Strike?                      @relation(fields: [strikeId], references: [id], onDelete: SetNull)
+
+  @@index([profileId, createdAt(sort: Desc)])
+  @@index([issuedById, createdAt(sort: Desc)])
+  @@index([actionType])
+  @@index([reportId])
+  @@index([warningId])
+  @@index([strikeId])
+}
+
+model BoardInvestigation {
+  id            String                   @id @default(cuid())
+  boardId       String?
+  sourceReportId String
+  openedById    String
+  closedById    String?
+  status        BoardInvestigationStatus @default(OPEN)
+  notes         String?
+  boardSnapshot Json
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  closedAt      DateTime?
+  board         Board?                   @relation(fields: [boardId], references: [id], onDelete: SetNull)
+  sourceReport  Report                   @relation("BoardInvestigationSourceReport", fields: [sourceReportId], references: [id], onDelete: Cascade)
+  openedBy      Profile                  @relation("BoardInvestigationOpenedBy", fields: [openedById], references: [id], onDelete: Cascade)
+  closedBy      Profile?                 @relation("BoardInvestigationClosedBy", fields: [closedById], references: [id], onDelete: SetNull)
+  actions       PlatformBoardAction[]
+
+  @@index([boardId, status, createdAt(sort: Desc)])
+  @@index([sourceReportId])
+  @@index([openedById, createdAt(sort: Desc)])
+  @@index([closedById, createdAt(sort: Desc)])
+  @@index([status, createdAt(sort: Desc)])
+}
+
+model PlatformBoardAction {
+  id              String                  @id @default(cuid())
+  boardId         String?
+  issuedById      String
+  investigationId String?
+  sourceReportId  String?
+  actionType      PlatformBoardActionType
+  notes           String?
+  boardSnapshot   Json
+  createdAt       DateTime                @default(now())
+  board           Board?                  @relation(fields: [boardId], references: [id], onDelete: SetNull)
+  issuedBy        Profile                 @relation("PlatformBoardActionIssuer", fields: [issuedById], references: [id], onDelete: Cascade)
+  investigation   BoardInvestigation?     @relation(fields: [investigationId], references: [id], onDelete: SetNull)
+  sourceReport    Report?                 @relation("PlatformBoardActionSourceReport", fields: [sourceReportId], references: [id], onDelete: SetNull)
+
+  @@index([boardId, createdAt(sort: Desc)])
+  @@index([issuedById, createdAt(sort: Desc)])
+  @@index([investigationId, createdAt(sort: Desc)])
+  @@index([sourceReportId, createdAt(sort: Desc)])
+  @@index([actionType, createdAt(sort: Desc)])
+}
+
+model ProfileReputationEvent {
+  id         String   @id @default(cuid())
+  profileId  String
+  delta      Int
+  reason     String
+  sourceType String?
+  sourceId   String?
+  boardId    String?
+  reportId   String?
+  createdAt  DateTime @default(now())
+  board      Board?   @relation(fields: [boardId], references: [id], onDelete: SetNull)
+  profile    Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  report     Report?  @relation(fields: [reportId], references: [id], onDelete: SetNull)
+
+  @@index([profileId, createdAt(sort: Desc)])
+  @@index([reason])
+  @@index([boardId])
+  @@index([reportId])
+}
+
+model MemberXpEvent {
+  id         String   @id @default(cuid())
+  memberId   String
+  profileId  String
+  boardId    String
+  delta      Int
+  reason     String
+  sourceType String?
+  sourceId   String?
+  createdAt  DateTime @default(now())
+  board      Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  member     Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  profile    Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, createdAt(sort: Desc)])
+  @@index([profileId, boardId, createdAt(sort: Desc)])
+  @@index([boardId, createdAt(sort: Desc)])
+  @@index([reason])
+}
+
+model BoardRiskEvent {
+  id         String   @id @default(cuid())
+  boardId    String
+  delta      Int
+  reason     String
+  sourceType String?
+  sourceId   String?
+  profileId  String?
+  reportId   String?
+  createdAt  DateTime @default(now())
+  board      Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  profile    Profile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  report     Report?  @relation(fields: [reportId], references: [id], onDelete: SetNull)
+
+  @@index([boardId, createdAt(sort: Desc)])
+  @@index([reason])
+  @@index([reportId])
 }
 
 enum FriendshipStatus {
@@ -579,6 +863,67 @@ enum ReportStatus {
   REVIEWING
   ACTION_TAKEN
   DISMISSED
+}
+
+enum BoardModerationActionType {
+  WARNING
+  UNWARNING
+  REMOVE_WARNING
+  BAN
+  UNBAN
+  AUTO_BAN
+  AUTO_UNBAN
+  KICK
+}
+
+enum BoardWarningStatus {
+  ACTIVE
+  PROMOTED
+  REMOVED
+}
+
+enum BoardBanSourceType {
+  MANUAL
+  WARNING_THRESHOLD
+}
+
+enum PlatformModerationActionType {
+  WARNING
+  UNWARNING
+  REMOVE_WARNING
+  BAN
+  UNBAN
+  AUTO_BAN
+  AUTO_UNBAN
+  STRIKE
+  REMOVE_STRIKE
+  CLEAR_STRIKES
+  NOTE
+}
+
+enum PlatformWarningStatus {
+  ACTIVE
+  PROMOTED
+  REMOVED
+}
+
+enum StrikeSourceType {
+  DIRECT
+  WARNING_ESCALATION
+}
+
+enum PlatformBanSourceType {
+  MANUAL
+  AUTO_STRIKE_THRESHOLD
+}
+
+enum BoardInvestigationStatus {
+  OPEN
+  CLOSED
+}
+
+enum PlatformBoardActionType {
+  DELETE
 }
 
 enum MemberRole {

@@ -3,6 +3,11 @@
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/db";
+import { canCreateBoard } from "@/lib/domain";
+import {
+  createAccessDeniedResponse,
+  getProfileReputationScore,
+} from "@/lib/domain-access";
 import { hash } from "@/lib/hash";
 import { MemberRole, Prisma } from "@prisma/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
@@ -38,6 +43,12 @@ export async function POST(req: Request) {
     const auth = await requireAuth();
     if (!auth.success) return auth.response;
     const profile = auth.profile;
+    const reputationScore = getProfileReputationScore(profile.reputationScore);
+
+    const boardDecision = canCreateBoard(reputationScore);
+    if (!boardDecision.allowed) {
+      return createAccessDeniedResponse(boardDecision);
+    }
 
     // 1. Idempotency key from header
     const idempotencyKey = req.headers.get("Idempotency-Key");

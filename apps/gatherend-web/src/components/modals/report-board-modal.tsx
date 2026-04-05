@@ -160,6 +160,15 @@ export const ReportBoardModal = () => {
               {t.modals.report.boardPreview}
             </p>
             <div className="overflow-hidden border border-theme-border bg-theme-bg-secondary/20 px-3 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.28),inset_0_-1px_0_rgba(0,0,0,0.28)]">
+              {reportBoardImageUrl ? (
+                <div className="mb-2 overflow-hidden border border-theme-border-subtle">
+                  <img
+                    src={reportBoardImageUrl}
+                    alt=""
+                    className="h-24 w-full object-cover"
+                  />
+                </div>
+              ) : null}
               <p className="truncate text-[13px] font-semibold text-theme-text-subtle">
                 {reportBoardName}
               </p>

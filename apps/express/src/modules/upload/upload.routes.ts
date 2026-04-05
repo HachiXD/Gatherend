@@ -29,6 +29,8 @@ const router = express.Router();
 
 const MAX_IMAGE_PIXELS = 60_000_000; // decompression bomb guard
 const MAX_IMAGE_DIMENSION = 8192;
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -66,7 +68,7 @@ interface UploadResponse {
   };
 }
 
-const MODERATED_CONTEXTS: ModerationContext[] = [
+const ALWAYS_MODERATED_CONTEXTS: ModerationContext[] = [
   "board_image",
   "channel_image",
   "community_post_image",
@@ -77,8 +79,8 @@ const MODERATED_CONTEXTS: ModerationContext[] = [
   "sticker",
 ];
 
-function requiresModeration(context: ModerationContext): boolean {
-  return MODERATED_CONTEXTS.includes(context);
+function requiresAlwaysOnModeration(context: ModerationContext): boolean {
+  return ALWAYS_MODERATED_CONTEXTS.includes(context);
 }
 
 const CONTEXT_TO_ASSET_CONTEXT: Record<ModerationContext, AssetContext> = {
@@ -100,6 +102,7 @@ router.post("/", upload.single("image"), async (req, res) => {
   try {
     const profileId = req.profile?.id;
     const context = req.body.context as ModerationContext;
+    const boardIdRaw = req.body.boardId;
     const file = req.file;
 
     if (!profileId) {
@@ -158,8 +161,49 @@ router.post("/", upload.single("image"), async (req, res) => {
     }
 
     let moderationResult: ModerationResponse | null = null;
+    let scopedBoardId: string | null = null;
+    let shouldModerateUpload = requiresAlwaysOnModeration(context);
 
-    if (requiresModeration(context) && sniffed.kind === "image") {
+    if (context === "message_attachment") {
+      if (typeof boardIdRaw !== "string" || !UUID_REGEX.test(boardIdRaw)) {
+        return res.status(400).json({
+          success: false,
+          error: "message_attachment uploads require a valid boardId",
+        } as UploadResponse);
+      }
+
+      const board = await db.board.findFirst({
+        where: {
+          id: boardIdRaw,
+          members: {
+            some: {
+              profileId,
+            },
+          },
+        },
+        select: {
+          id: true,
+          isPrivate: true,
+        },
+      });
+
+      if (!board) {
+        return res.status(404).json({
+          success: false,
+          error: "Board not found",
+        } as UploadResponse);
+      }
+
+      scopedBoardId = board.id;
+      shouldModerateUpload = !board.isPrivate;
+    } else if (context === "dm_attachment" && boardIdRaw !== undefined) {
+      return res.status(400).json({
+        success: false,
+        error: "dm_attachment uploads cannot include boardId",
+      } as UploadResponse);
+    }
+
+    if (shouldModerateUpload && sniffed.kind === "image") {
       if (context === "sticker") {
         moderationResult = await moderateSticker({
           buffer: file.buffer,
@@ -175,6 +219,15 @@ router.post("/", upload.single("image"), async (req, res) => {
       }
 
       if (!moderationResult.allowed) {
+        if (moderationResult.failureKind === "service_error") {
+          return res.status(503).json({
+            success: false,
+            error:
+              moderationResult.userMessage ||
+              "Image moderation is currently unavailable. Please try again later.",
+          } as UploadResponse);
+        }
+
         return res.status(400).json({
           success: false,
           error: moderationResult.userMessage || "Content not allowed",
@@ -288,6 +341,7 @@ router.post("/", upload.single("image"), async (req, res) => {
         dominantColor,
         originalName: file.originalname || null,
         ownerProfileId: profileId,
+        boardId: context === "message_attachment" ? scopedBoardId : null,
       },
       select: {
         id: true,

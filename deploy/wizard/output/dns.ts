@@ -76,7 +76,7 @@ export function showDnsRecords(config: WizardConfig): void {
         type,
         name: `moderation.${d}`,
         value: ip,
-        note: "NudeNet (content moderation)",
+        note: "Content moderation service",
       });
     }
 

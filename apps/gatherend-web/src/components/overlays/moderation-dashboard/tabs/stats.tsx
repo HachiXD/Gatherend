@@ -1,413 +1,289 @@
 "use client";
 
-import {
-  Loader2,
-  RefreshCw,
-  TrendingUp,
-  Flag,
-  AlertTriangle,
-  Ban,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+import { AlertTriangle, Ban, Flag, Loader2, RefreshCw, ScrollText } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import type { ClientUploadedAsset } from "@/types/uploaded-assets";
+import { Button } from "@/components/ui/button";
+import { UserAvatar } from "@/components/user-avatar";
+import { useTranslation } from "@/i18n";
+import { cn } from "@/lib/utils";
+import { fetchStats } from "../lib";
 
-interface ModerationProfile {
-  id: string;
-  username: string;
-  discriminator: string | null;
-  avatarAsset: ClientUploadedAsset | null;
+const HEADER_PANEL_SHELL =
+  "border border-theme-border bg-theme-bg-overlay-primary/78 px-4 pt-4 pb-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.26)] sm:px-5 sm:py-5";
+const PANEL_CLASS =
+  "border border-theme-border bg-theme-bg-overlay-primary/50 p-4";
+const ROW_CLASS =
+  "flex min-h-10 items-center gap-3 rounded-none border border-theme-border-subtle bg-theme-bg-edit-form/50 px-3 py-1";
+const actionButtonClass =
+  "h-6.5 min-w-[120px] cursor-pointer rounded-none bg-theme-tab-button-bg px-3 text-[14px] text-theme-text-light transition hover:bg-theme-tab-button-hover";
+const metaBadgeClass =
+  "inline-flex items-center rounded-none border border-theme-border bg-theme-bg-secondary/35 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.05em] text-theme-text-muted";
+
+function StatCard({
+  label,
+  value,
+  helper,
+  accentClass,
+}: {
+  label: string;
+  value: string | number;
+  helper?: string;
+  accentClass?: string;
+}) {
+  return (
+    <div className={PANEL_CLASS}>
+      <p className="text-xs uppercase tracking-[0.08em] text-theme-text-muted">
+        {label}
+      </p>
+      <p className={cn("mt-2 text-2xl font-bold text-theme-text-primary", accentClass)}>
+        {value}
+      </p>
+      {helper && <p className="mt-1 text-[11px] text-theme-text-muted">{helper}</p>}
+    </div>
+  );
 }
-
-interface ModerationStats {
-  overview: {
-    pendingReports: number;
-    reviewingReports: number;
-    actionTakenReports: number;
-    dismissedReports: number;
-    totalReports: number;
-    totalStrikes: number;
-    activeStrikes: number;
-    bannedUsers: number;
-    reportsToday: number;
-    reportsThisWeek: number;
-  };
-  breakdown: {
-    byCategory: Array<{ category: string; count: number }>;
-    byType: Array<{ type: string; count: number }>;
-  };
-  recentReports: Array<{
-    id: string;
-    targetType: string;
-    category: string;
-    status: string;
-    createdAt: string;
-    reporter: {
-      username: string;
-      discriminator: string;
-    };
-  }>;
-  topReporters: Array<{
-    id: string;
-    username: string;
-    discriminator: string | null;
-    avatarAsset: ClientUploadedAsset | null;
-    validReports: number;
-    falseReports: number;
-    reportAccuracy: number | null;
-  }>;
-  mostReportedUsers: Array<ModerationProfile & {
-    userId: string;
-    banned: boolean;
-    _count: {
-      reportsAgainst: number;
-      strikes: number;
-    };
-  }>;
-}
-
-const fetchStats = async (): Promise<ModerationStats> => {
-  const res = await fetch("/api/moderation/stats");
-  if (!res.ok) throw new Error("Failed to fetch stats");
-  return res.json();
-};
 
 export const StatsTab = () => {
-  const {
-    data: stats,
-    isLoading,
-    refetch,
-    isFetching,
-  } = useQuery({
+  const { t } = useTranslation();
+  const { data: stats, isLoading, isFetching, refetch } = useQuery({
     queryKey: ["moderation", "stats"],
     queryFn: fetchStats,
-    staleTime: 30000, // 30 seconds
+    staleTime: 30_000,
   });
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-theme-text-subtle" />
+        <Loader2 className="h-6 w-6 animate-spin text-theme-text-tertiary" />
+      </div>
+    );
+  }
+
+  if (!stats) {
+    return (
+      <div className="flex flex-col items-center justify-center py-1 text-center">
+        <ScrollText className="mb-3 h-12 w-12 text-theme-text-muted" />
+        <p className="text-md font-medium text-theme-text-tertiary">No moderation stats yet</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-theme-text-primary">
-            Statistics
-          </h1>
-          <p className="text-sm text-theme-text-subtle mt-1">
-            Moderation overview and metrics
-          </p>
-        </div>
-
-        <button
-          onClick={() => refetch()}
-          disabled={isFetching}
-          className="p-2 rounded-md hover:bg-theme-bg-tab-hover transition disabled:opacity-50"
-        >
-          <RefreshCw
-            className={`w-4 h-4 text-theme-text-subtle ${
-              isFetching ? "animate-spin" : ""
-            }`}
-          />
-        </button>
-      </div>
-
-      {/* Overview Cards */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="p-5 rounded-lg bg-theme-bg-secondary border border-theme-border-primary">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-theme-text-subtle">
-              Pending Reports
-            </span>
-            {(stats?.overview.pendingReports ?? 0) > 0 && (
-              <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/10 text-yellow-400">
-                Needs Attention
-              </span>
-            )}
-          </div>
-          <p className="text-3xl font-bold text-theme-text-primary">
-            {stats?.overview.pendingReports ?? 0}
-          </p>
-          <p className="text-xs text-theme-text-tertiary mt-1">
-            {stats?.overview.reviewingReports ?? 0} reviewing
-          </p>
-        </div>
-
-        <div className="p-5 rounded-lg bg-theme-bg-secondary border border-theme-border-primary">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-theme-text-subtle">
-              Reports This Week
-            </span>
-            <TrendingUp className="w-4 h-4 text-blue-400" />
-          </div>
-          <p className="text-3xl font-bold text-theme-text-primary">
-            {stats?.overview.reportsThisWeek ?? 0}
-          </p>
-          <p className="text-xs text-theme-text-tertiary mt-1">
-            {stats?.overview.reportsToday ?? 0} today
-          </p>
-        </div>
-
-        <div className="p-5 rounded-lg bg-theme-bg-secondary border border-theme-border-primary">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-theme-text-subtle">
-              Active Strikes
-            </span>
-            <AlertTriangle className="w-4 h-4 text-yellow-400" />
-          </div>
-          <p className="text-3xl font-bold text-theme-text-primary">
-            {stats?.overview.activeStrikes ?? 0}
-          </p>
-          <p className="text-xs text-theme-text-tertiary mt-1">
-            {stats?.overview.totalStrikes ?? 0} total
-          </p>
-        </div>
-
-        <div className="p-5 rounded-lg bg-theme-bg-secondary border border-theme-border-primary">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-theme-text-subtle">Banned Users</span>
-            <Ban className="w-4 h-4 text-red-400" />
-          </div>
-          <p className="text-3xl font-bold text-red-400">
-            {stats?.overview.bannedUsers ?? 0}
-          </p>
-        </div>
-      </div>
-
-      {/* Report Resolution Stats */}
-      <div className="p-5 rounded-lg bg-theme-bg-secondary border border-theme-border-primary">
-        <h3 className="text-sm font-medium text-theme-text-primary mb-4">
-          Report Resolution
-        </h3>
-        <div className="grid grid-cols-4 gap-3">
-          <div className="text-center p-3 rounded bg-yellow-500/10">
-            <p className="text-lg font-bold text-yellow-400">
-              {stats?.overview.pendingReports ?? 0}
-            </p>
-            <p className="text-xs text-theme-text-tertiary">Pending</p>
-          </div>
-          <div className="text-center p-3 rounded bg-blue-500/10">
-            <p className="text-lg font-bold text-blue-400">
-              {stats?.overview.reviewingReports ?? 0}
-            </p>
-            <p className="text-xs text-theme-text-tertiary">Reviewing</p>
-          </div>
-          <div className="text-center p-3 rounded bg-green-500/10">
-            <p className="text-lg font-bold text-green-400">
-              {stats?.overview.actionTakenReports ?? 0}
-            </p>
-            <p className="text-xs text-theme-text-tertiary">Action Taken</p>
-          </div>
-          <div className="text-center p-3 rounded bg-gray-500/10">
-            <p className="text-lg font-bold text-gray-400">
-              {stats?.overview.dismissedReports ?? 0}
-            </p>
-            <p className="text-xs text-theme-text-tertiary">Dismissed</p>
+      <div className={HEADER_PANEL_SHELL}>
+        <div className="-mb-3 -mt-3 border-b border-theme-border pb-0.5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-2xl font-bold text-theme-text-primary">
+                {t.moderation.stats}
+              </h2>
+              <p className="-mt-1 text-sm text-theme-text-tertiary">
+                Snapshot of unresolved work, enforcement, and recent moderation activity.
+              </p>
+            </div>
+            <button
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className="cursor-pointer rounded-none border border-theme-border bg-theme-bg-secondary/35 p-2 text-theme-text-subtle transition hover:text-theme-text-light disabled:opacity-50"
+            >
+              <RefreshCw className={cn("h-4 w-4", isFetching && "animate-spin")} />
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Reports by Category & Type */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="p-5 rounded-lg bg-theme-bg-secondary border border-theme-border-primary">
-          <h3 className="text-sm font-medium text-theme-text-primary mb-4">
-            Reports by Category
-          </h3>
-          <div className="space-y-3">
-            {!stats?.breakdown.byCategory?.length ? (
-              <p className="text-sm text-theme-text-tertiary">No data yet</p>
-            ) : (
-              stats.breakdown.byCategory.map((item) => (
-                <div
-                  key={item.category}
-                  className="flex items-center justify-between"
-                >
-                  <span className="text-sm text-theme-text-subtle capitalize">
-                    {item.category.replace(/_/g, " ").toLowerCase()}
-                  </span>
-                  <span className="text-sm font-medium text-theme-text-primary">
-                    {item.count}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        <div className="p-5 rounded-lg bg-theme-bg-secondary border border-theme-border-primary">
-          <h3 className="text-sm font-medium text-theme-text-primary mb-4">
-            Reports by Type
-          </h3>
-          <div className="space-y-3">
-            {!stats?.breakdown.byType?.length ? (
-              <p className="text-sm text-theme-text-tertiary">No data yet</p>
-            ) : (
-              stats.breakdown.byType.map((item) => (
-                <div
-                  key={item.type}
-                  className="flex items-center justify-between"
-                >
-                  <span className="text-sm text-theme-text-subtle">
-                    {item.type}
-                  </span>
-                  <span className="text-sm font-medium text-theme-text-primary">
-                    {item.count}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          label="Pending reports"
+          value={stats.overview.pendingReports}
+          helper={`${stats.overview.reviewingReports} reviewing`}
+        />
+        <StatCard
+          label="Reports this week"
+          value={stats.overview.reportsThisWeek}
+          helper={`${stats.overview.reportsToday} today`}
+        />
+        <StatCard
+          label="Active warnings"
+          value={stats.overview.activeWarnings}
+          helper={`${stats.overview.promotedWarnings} promoted • ${stats.overview.removedWarnings} removed`}
+        />
+        <StatCard
+          label="Banned users"
+          value={stats.overview.bannedUsers}
+          helper={`${stats.overview.autoBannedUsers} auto-bans`}
+          accentClass="text-red-400"
+        />
       </div>
 
-      {/* Most Reported Users */}
-      <div className="p-5 rounded-lg bg-theme-bg-secondary border border-theme-border-primary">
-        <h3 className="text-sm font-medium text-theme-text-primary mb-4">
-          Most Reported Users
-        </h3>
-        {!stats?.mostReportedUsers?.length ? (
-          <p className="text-sm text-theme-text-tertiary">No data yet</p>
-        ) : (
-          <div className="space-y-2">
-            {stats.mostReportedUsers.slice(0, 5).map((user) => (
-              <div
-                key={user.id}
-                className="flex items-center justify-between p-3 rounded bg-theme-bg-tertiary"
-              >
-                <div className="flex items-center gap-3">
-                  <img
-                    src={user.avatarAsset?.url || undefined}
-                    alt=""
-                    className={cn(
-                      "w-8 h-8 rounded-full",
-                      user.banned && "opacity-50 grayscale"
-                    )}
-                  />
-                  <div>
-                    <p className="text-sm text-theme-text-primary">
-                      @{user.username}/{user.discriminator}
-                      {user.banned && (
-                        <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400">
-                          BANNED
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-xs text-theme-text-tertiary">
-                      {user._count.strikes} strikes
-                    </p>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <StatCard
+          label="Active strikes"
+          value={stats.overview.activeStrikes}
+          helper={`${stats.overview.directStrikes} direct • ${stats.overview.warningEscalationStrikes} warning escalation`}
+        />
+        <StatCard
+          label="Total reports"
+          value={stats.overview.totalReports}
+          helper={`${stats.overview.actionTakenReports} action taken • ${stats.overview.dismissedReports} dismissed`}
+        />
+        <StatCard
+          label="Actions this week"
+          value={stats.overview.actionsThisWeek}
+          helper="All platform moderation actions"
+        />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className={PANEL_CLASS}>
+          <div className="mb-3 flex items-center gap-2">
+            <Flag className="h-4 w-4 text-theme-text-tertiary" />
+            <h3 className="text-sm font-semibold uppercase tracking-[0.08em] text-theme-text-muted">
+              Recent reports
+            </h3>
+          </div>
+          {!stats.recentReports.length ? (
+            <p className="text-sm text-theme-text-muted">No recent reports.</p>
+          ) : (
+            <div className="space-y-3">
+              {stats.recentReports.map((report) => (
+                <div key={report.id} className={ROW_CLASS}>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-theme-text-primary">
+                      <span className={metaBadgeClass}>{report.targetType}</span>
+                      <span
+                        className={cn(
+                          "text-[11px] font-medium uppercase tracking-[0.05em]",
+                          report.status === "PENDING"
+                            ? "text-yellow-400"
+                            : report.status === "REVIEWING"
+                              ? "text-blue-400"
+                              : "text-theme-text-tertiary",
+                        )}
+                      >
+                        {report.status}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] text-theme-text-muted">
+                      <span>{report.category.replace(/_/g, " ").toLowerCase()}</span>
+                      <span>@{report.reporter?.username || "unknown"}</span>
+                      <span>{new Date(report.createdAt).toLocaleString()}</span>
+                    </div>
                   </div>
                 </div>
-                <span className="text-sm font-medium text-red-400">
-                  {user._count.reportsAgainst} reports
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+        </div>
 
-      {/* Top Reporters */}
-      <div className="p-5 rounded-lg bg-theme-bg-secondary border border-theme-border-primary">
-        <h3 className="text-sm font-medium text-theme-text-primary mb-4">
-          Top Reporters
-        </h3>
-        {!stats?.topReporters?.length ? (
-          <p className="text-sm text-theme-text-tertiary">No data yet</p>
-        ) : (
-          <div className="space-y-2">
-            {stats.topReporters.slice(0, 5).map((reporter) => (
-              <div
-                key={reporter.id}
-                className="flex items-center justify-between p-3 rounded bg-theme-bg-tertiary"
-              >
-                <div className="flex items-center gap-3">
-                  <img
-                    src={reporter.avatarAsset?.url || undefined}
-                    alt=""
-                    className="w-8 h-8 rounded-full"
-                  />
-                  <div>
-                    <p className="text-sm text-theme-text-primary">
-                      @{reporter.username}/{reporter.discriminator}
-                    </p>
-                    <p className="text-xs text-theme-text-tertiary">
-                      {reporter.validReports} valid / {reporter.falseReports}{" "}
-                      false
-                    </p>
+        <div className={PANEL_CLASS}>
+          <div className="mb-3 flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-theme-text-tertiary" />
+            <h3 className="text-sm font-semibold uppercase tracking-[0.08em] text-theme-text-muted">
+              Recent actions
+            </h3>
+          </div>
+          {!stats.recentActions.length ? (
+            <p className="text-sm text-theme-text-muted">No recent actions.</p>
+          ) : (
+            <div className="space-y-3">
+              {stats.recentActions.map((action) => (
+                <div key={action.id} className={ROW_CLASS}>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-theme-text-primary">
+                      <span className={metaBadgeClass}>{action.actionType}</span>
+                      <span className="truncate">
+                        @{action.profile?.username || "unknown user"}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] text-theme-text-muted">
+                      <span>By @{action.issuedBy?.username || "unknown"}</span>
+                      <span>{new Date(action.createdAt).toLocaleString()}</span>
+                    </div>
                   </div>
                 </div>
-                <span
-                  className={cn(
-                    "text-sm font-medium",
-                    reporter.reportAccuracy !== null &&
-                      reporter.reportAccuracy >= 0.8
-                      ? "text-green-400"
-                      : reporter.reportAccuracy !== null &&
-                        reporter.reportAccuracy < 0.5
-                      ? "text-red-400"
-                      : "text-theme-text-primary"
-                  )}
-                >
-                  {reporter.reportAccuracy !== null
-                    ? `${Math.round(reporter.reportAccuracy * 100)}%`
-                    : "N/A"}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Recent Reports */}
-      <div className="p-5 rounded-lg bg-theme-bg-secondary border border-theme-border-primary">
-        <h3 className="text-sm font-medium text-theme-text-primary mb-4 flex items-center gap-2">
-          <Flag className="w-4 h-4" />
-          Recent Reports
-        </h3>
-        {!stats?.recentReports?.length ? (
-          <p className="text-sm text-theme-text-tertiary">No recent reports</p>
-        ) : (
-          <div className="space-y-2">
-            {stats.recentReports.map((report) => (
-              <div
-                key={report.id}
-                className="flex items-center justify-between p-3 rounded bg-theme-bg-tertiary"
-              >
-                <div>
-                  <p className="text-sm text-theme-text-primary capitalize">
-                    {report.category.replace(/_/g, " ").toLowerCase()} (
-                    {report.targetType})
-                  </p>
-                  <p className="text-xs text-theme-text-tertiary">
-                    by @{report.reporter.username}#
-                    {report.reporter.discriminator} •{" "}
-                    {new Date(report.createdAt).toLocaleString()}
-                  </p>
-                </div>
-                <span
-                  className={cn(
-                    "text-xs px-2 py-0.5 rounded",
-                    report.status === "PENDING"
-                      ? "bg-yellow-500/10 text-yellow-400"
-                      : report.status === "REVIEWING"
-                      ? "bg-blue-500/10 text-blue-400"
-                      : report.status === "ACTION_TAKEN"
-                      ? "bg-red-500/10 text-red-400"
-                      : "bg-gray-500/10 text-gray-400"
-                  )}
-                >
-                  {report.status}
-                </span>
-              </div>
-            ))}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className={PANEL_CLASS}>
+          <div className="mb-3 flex items-center gap-2">
+            <Ban className="h-4 w-4 text-theme-text-tertiary" />
+            <h3 className="text-sm font-semibold uppercase tracking-[0.08em] text-theme-text-muted">
+              Most reported users
+            </h3>
           </div>
-        )}
+          {!stats.mostReportedUsers.length ? (
+            <p className="text-sm text-theme-text-muted">No data yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {stats.mostReportedUsers.slice(0, 5).map((user) => (
+                <div key={user.id} className={ROW_CLASS}>
+                  <UserAvatar
+                    src={user.avatarAsset?.url || ""}
+                    profileId={user.id}
+                    showStatus={false}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-theme-text-primary">
+                      <span className="truncate">
+                        @{user.username}
+                        {user.discriminator ? `/${user.discriminator}` : ""}
+                      </span>
+                      {user.banned && <span className={metaBadgeClass}>{t.moderation.ban}</span>}
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] text-theme-text-muted">
+                      <span>{user._count?.reportsAgainst ?? 0} reports</span>
+                      <span>{user._count?.strikes ?? 0} strikes</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className={PANEL_CLASS}>
+          <div className="mb-3 flex items-center gap-2">
+            <Button className={cn(actionButtonClass, "pointer-events-none h-7 min-w-0 px-2 text-[12px]")}>
+              Top Reporters
+            </Button>
+          </div>
+          {!stats.topReporters.length ? (
+            <p className="text-sm text-theme-text-muted">No data yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {stats.topReporters.slice(0, 5).map((reporter) => (
+                <div key={reporter.id} className={ROW_CLASS}>
+                  <UserAvatar
+                    src={reporter.avatarAsset?.url || ""}
+                    profileId={reporter.id}
+                    showStatus={false}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-semibold text-theme-text-primary">
+                      @{reporter.username}
+                      {reporter.discriminator ? `/${reporter.discriminator}` : ""}
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] text-theme-text-muted">
+                      <span>{reporter.validReports ?? 0} valid</span>
+                      <span>{reporter.falseReports ?? 0} false</span>
+                      <span>
+                        {reporter.reportAccuracy !== null &&
+                        reporter.reportAccuracy !== undefined
+                          ? `${Math.round(reporter.reportAccuracy * 100)}% accuracy`
+                          : "No accuracy data"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

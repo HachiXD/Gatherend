@@ -29,7 +29,7 @@ export interface WizardConfig {
   livekitApiKey?: string;
   livekitApiSecret?: string;
   livekitServerIp?: string;
-  nudenetApiKey?: string;
+  contentModerationApiKey?: string;
   imgproxyKey?: string;
   imgproxySalt?: string;
   minioRootUser?: string;
@@ -74,7 +74,7 @@ export const ALL_MODULES: {
     value: "moderation",
     name: "Content Moderation",
     description:
-      "NudeNet (~1GB of disk space, detects explicit sexual content)",
+      "NSFWJS service (detects explicit sexual content including hentai)",
   },
   {
     value: "minio",

@@ -33,6 +33,7 @@ const profileResponseSelect = {
   username: true,
   discriminator: true,
   email: true,
+  reputationScore: true,
   languages: true,
   badge: true,
   longDescription: true,

@@ -170,6 +170,8 @@ const ChatInputComponent = ({
   // Determine upload context based on chat type
   const uploadContext =
     type === "conversation" ? "dm_attachment" : "message_attachment";
+  const boardIdForUpload =
+    type === "channel" && typeof query.boardId === "string" ? query.boardId : null;
   const uploadOptions = useMemo(
     () => ({
       onModerationBlock: (reason: string) => {
@@ -565,7 +567,15 @@ const ChatInputComponent = ({
 
     setIsUploading(true);
     try {
-      const res = await startUpload([file]);
+      if (type === "channel" && !boardIdForUpload) {
+        toast.error(t.chat.uploadFailed || "Upload failed");
+        return;
+      }
+
+      const res = await startUpload(
+        [file],
+        boardIdForUpload ? { boardId: boardIdForUpload } : undefined,
+      );
       const uploaded = res?.[0];
       if (uploaded) {
         setFilePreview({

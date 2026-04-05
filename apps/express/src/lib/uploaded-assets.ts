@@ -13,6 +13,7 @@ export const uploadedAssetSelect = {
   key: true,
   visibility: true,
   context: true,
+  boardId: true,
   mimeType: true,
   sizeBytes: true,
   width: true,
@@ -57,6 +58,7 @@ type UploadedAssetSummary = Pick<
   | "key"
   | "visibility"
   | "context"
+  | "boardId"
   | "mimeType"
   | "sizeBytes"
   | "width"
@@ -146,8 +148,9 @@ export async function findOwnedUploadedAsset(input: {
   ownerProfileId: string;
   context: AssetContext;
   visibility: AssetVisibility;
+  boardId?: string | null;
 }) {
-  const { assetId, ownerProfileId, context, visibility } = input;
+  const { assetId, ownerProfileId, context, visibility, boardId } = input;
 
   return db.uploadedAsset.findFirst({
     where: {
@@ -155,6 +158,7 @@ export async function findOwnedUploadedAsset(input: {
       ownerProfileId,
       context,
       visibility,
+      ...(boardId !== undefined ? { boardId } : {}),
     },
     select: uploadedAssetSelect,
   });

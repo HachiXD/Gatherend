@@ -76,8 +76,8 @@ export async function getImageMetadata(buffer: Buffer): Promise<ImageMetadata> {
 }
 
 /**
- * Extract first frame from animated images (GIF, WebP)
- * Used for moderating animated stickers
+ * Extract the first frame from animated images (GIF, WebP, AVIF, etc).
+ * Moderation uses a single representative frame for all animated formats.
  */
 export async function extractFirstFrame(buffer: Buffer): Promise<Buffer> {
   const metadata = await sharp(buffer).metadata();
@@ -93,27 +93,50 @@ export async function extractFirstFrame(buffer: Buffer): Promise<Buffer> {
 }
 
 /**
- * Resize image for Rekognition (max 5MB, but we'll use smaller for speed)
- * Rekognition works fine with smaller images
+ * Prepare a single still image for moderation inference.
+ * - Normalizes orientation
+ * - Extracts the first frame for animated formats
+ * - Resizes to maxDimension while preserving aspect ratio
+ * - Converts to PNG when alpha is present, JPEG otherwise
  */
-export async function prepareForRekognition(buffer: Buffer): Promise<Buffer> {
-  const metadata = await sharp(buffer).metadata();
-  const maxDimension = 1024; // Good balance of quality vs speed
+export async function prepareForModeration(
+  buffer: Buffer,
+  options: { maxDimension?: number } = {},
+): Promise<{
+  buffer: Buffer;
+  format: "jpeg" | "png";
+  animated: boolean;
+}> {
+  const maxDimension = options.maxDimension ?? 1024;
+  const metadata = await sharp(buffer, { animated: true }).metadata();
+  const animated = (metadata.pages || 1) > 1;
 
-  // Only resize if larger than max dimension
+  let pipeline = animated ? sharp(buffer, { page: 0 }) : sharp(buffer);
+  pipeline = pipeline.rotate();
+
   if (
     (metadata.width || 0) > maxDimension ||
     (metadata.height || 0) > maxDimension
   ) {
-    return sharp(buffer)
-      .resize(maxDimension, maxDimension, {
-        fit: "inside",
-        withoutEnlargement: true,
-      })
-      .toBuffer();
+    pipeline = pipeline.resize(maxDimension, maxDimension, {
+      fit: "inside",
+      withoutEnlargement: true,
+    });
   }
 
-  return buffer;
+  if (metadata.hasAlpha) {
+    return {
+      buffer: await pipeline.png().toBuffer(),
+      format: "png",
+      animated,
+    };
+  }
+
+  return {
+    buffer: await pipeline.jpeg({ quality: 90, mozjpeg: true }).toBuffer(),
+    format: "jpeg",
+    animated,
+  };
 }
 
 /**

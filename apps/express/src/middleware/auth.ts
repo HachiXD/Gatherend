@@ -21,6 +21,7 @@ declare global {
         userId: string;
         username: string;
         email: string;
+        reputationScore?: number;
         banned?: boolean;
         bannedAt?: Date | null;
         banReason?: string | null;
@@ -59,6 +60,7 @@ async function tryBetterAuth(req: Request): Promise<{
           userId: true,
           username: true,
           email: true,
+          reputationScore: true,
           banned: true,
           bannedAt: true,
           banReason: true,
@@ -112,6 +114,7 @@ export const authenticateRequest = async (
           userId: true,
           username: true,
           email: true,
+          reputationScore: true,
           banned: true,
           bannedAt: true,
           banReason: true,
@@ -164,6 +167,7 @@ export const optionalAuth = async (
           userId: true,
           username: true,
           email: true,
+          reputationScore: true,
         },
       });
 

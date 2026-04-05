@@ -325,6 +325,7 @@ export const en: TranslationKeys = {
         general: "General",
         members: "Members",
         bans: "Bans",
+        history: "Moderation History",
         dangerZone: "Deletion Zone",
       },
       general: {
@@ -367,6 +368,13 @@ export const en: TranslationKeys = {
         actions: "Actions",
         kick: "Kick",
         ban: "Ban",
+        warn: "Warn",
+        removeWarning: "Remove Warning",
+        warnSuccess: "Warning added successfully",
+        warnError: "Failed to add warning",
+        removeWarningSuccess: "Warning removed successfully",
+        removeWarningError: "Failed to remove warning",
+        autoBanTriggered: "auto-ban triggered",
         roles: {
           guest: "Guest",
           moderator: "Moderator",
@@ -383,9 +391,44 @@ export const en: TranslationKeys = {
         emptyTitle: "No banned users",
         emptyDescription: "Users banned from this board will appear here",
         bannedOn: "Banned on",
+        autoBanLabel: "Auto Ban",
+        manualBanLabel: "Manual Ban",
+        autoBanDescription:
+          "Automatic ban after 3 warnings. To unban this user, remove one warning.",
+        manualBanDescription:
+          "Manual ban executed by {username}. To unban, go to Actions.",
         unban: "Unban",
         unbanSuccess: "User unbanned successfully",
         unbanError: "Failed to unban user",
+      },
+
+      history: {
+        title: "Moderation History",
+        loading: "Loading moderation history...",
+        entry: "entry",
+        entries: "entries",
+        emptyTitle: "No moderation history",
+        emptyDescription:
+          "Warnings, kicks, bans and automatic actions will appear here.",
+        actions: {
+          warning: "Warning",
+          removeWarning: "Warning Removed",
+          ban: "Ban",
+          unban: "Unban",
+          kick: "Kick",
+          autoBan: "Auto Ban",
+          autoUnban: "Auto Unban",
+        },
+        descriptions: {
+          warning: "Warning issued by {username}.",
+          removeWarning: "Warning removed by {username}.",
+          ban: "Manual ban executed by {username}.",
+          unban: "Manual unban executed by {username}.",
+          kick: "Member kicked by {username}.",
+          autoBan: "Automatic ban after reaching 3 active warnings.",
+          autoUnban:
+            "Automatic unban after a promoted warning was removed.",
+        },
       },
 
       dangerZone: {
@@ -470,6 +513,10 @@ export const en: TranslationKeys = {
       publicSeatsDescription: "Joinable only through the global feed",
       inviteSeats: "Invite seats",
       inviteSeatsDescription: "Joinable only through an invitation",
+      publicOptionLabel: "Public",
+      privateOptionLabel: "Private",
+      privacyPermanentNotice:
+        "This privacy choice is permanent and cannot be changed after the board is created.",
       success: "Board created successfully!",
       error: "Something went wrong creating the board.",
       moderationError: "Please modify your board name or description.",
@@ -644,7 +691,8 @@ export const en: TranslationKeys = {
       reportCommunity: "Report Community",
       reportCommunityPost: "Report Post",
       reportCommunityPostComment: "Report Comment",
-      reportBoardDescription: "Report the board",
+      reportBoardDescription:
+        "Report the title, image, or description of this board",
       reportUserDescription:
         "Report this user for violating community guidelines",
       reportMessageDescription:
@@ -677,19 +725,26 @@ export const en: TranslationKeys = {
       unknownAuthor: "Unknown",
       categories: {
         childSafety: "Child Safety",
-        childSafetyDescription: "Content involving minors",
+        childSafetyDescription:
+          "The board title, image, or description involves minors",
         sexualContent: "Sexual Content",
-        sexualContentDescription: "Inappropriate sexual content",
+        sexualContentDescription:
+          "The board title, image, or description contains sexual content",
         harassment: "Harassment",
-        harassmentDescription: "Bullying or harassment",
+        harassmentDescription:
+          "The board title, image, or description is abusive or targeted",
         hateSpeech: "Hate Speech",
-        hateSpeechDescription: "Discriminatory or hateful content",
+        hateSpeechDescription:
+          "The board title, image, or description includes hateful content",
         spam: "Spam",
-        spamDescription: "Spam or scam content",
+        spamDescription:
+          "The board title, image, or description promotes spam or scams",
         impersonation: "Impersonation",
-        impersonationDescription: "Pretending to be someone else",
+        impersonationDescription:
+          "The board title, image, or description impersonates someone else",
         other: "Other",
-        otherDescription: "Other violations",
+        otherDescription:
+          "Another issue with the board title, image, or description",
       },
     },
   },
@@ -727,8 +782,14 @@ export const en: TranslationKeys = {
   moderation: {
     dashboard: "Moderation Dashboard",
     reports: "Reports",
+    history: "History",
     bannedUsers: "Banned Users",
+    userLookup: "User Lookup",
+    boardLookup: "Board Lookup",
+    pendingInvestigations: "Pending Investigations",
+    stats: "Stats",
     warnings: "Warnings",
+    strikes: "Strikes",
     kick: "Kick",
     ban: "Ban",
     unban: "Unban",
@@ -740,9 +801,35 @@ export const en: TranslationKeys = {
     permanent: "Permanent",
     moderationLog: "Moderation Log",
     noReports: "No reports",
+    reportsSubtitle: "Review unresolved reports and resolve them from the queue",
+    reportsQueueEmptyDescription: "All caught up. There are no reports waiting for review.",
     reportUser: "Report User",
     reportMessage: "Report Message",
     reportReason: "Report Reason",
+    historySubtitle: "Immutable platform moderation activity across warnings, strikes, bans, and notes",
+    noHistory: "No moderation history yet",
+    historyEmptyDescription: "New moderation activity will appear here as actions are taken.",
+    warning: "Warning",
+    removeWarning: "Remove warning",
+    strike: "Strike",
+    removeStrike: "Remove strike",
+    clearStrikes: "Clear strikes",
+    note: "Note",
+    autoBan: "Auto ban",
+    autoUnban: "Auto unban",
+    autoBanDescription: "Automatically banned after reaching the strike threshold",
+    autoUnbanDescription: "Automatically unbanned after dropping below the strike threshold",
+    unknownAdmin: "Unknown admin",
+    unknownUser: "Unknown user",
+    warningStatus: "Warning status",
+    bannedUsersSubtitle: "Users currently banned at the platform level",
+    totalBannedUsers: "Total banned users",
+    noBannedUsers: "No banned users",
+    noBannedUsersDescription: "No accounts are currently banned on the platform.",
+    noReasonProvided: "No reason provided",
+    bannedOn: "Banned on",
+    unbanSuccess: "User unbanned successfully",
+    unbanError: "Failed to unban user",
   },
 
   time: {

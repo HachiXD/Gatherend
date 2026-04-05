@@ -25,12 +25,12 @@ export function generateMainEnv(config: WizardConfig): string {
         : `https://img.${d}`;
   }
 
-  // nudenet URL
-  let nudenetUrl = "";
+  // content moderation URL
+  let contentModerationUrl = "";
   if (moderationServer) {
-    nudenetUrl =
+    contentModerationUrl =
       moderationServer.id === mainServer.id
-        ? "http://nudenet:5000"
+        ? "http://nsfwjs:5000"
         : `https://moderation.${d}`;
   }
 
@@ -99,9 +99,9 @@ export function generateMainEnv(config: WizardConfig): string {
     `IMGPROXY_KEY=${config.imgproxyKey || ""}`,
     `IMGPROXY_SALT=${config.imgproxySalt || ""}`,
     ``,
-    `# --- NudeNet ---`,
-    `NUDENET_URL=${nudenetUrl}`,
-    `NUDENET_API_KEY=${config.nudenetApiKey || ""}`,
+    `# --- Content Moderation ---`,
+    `CONTENT_MODERATION_URL=${contentModerationUrl}`,
+    `CONTENT_MODERATION_API_KEY=${config.contentModerationApiKey || ""}`,
     ``,
     `# --- LiveKit ---`,
     `LIVEKIT_API_KEY=${config.livekitApiKey || ""}`,
@@ -224,8 +224,8 @@ export function generateServicesEnv(
     lines.push(
       `MODERATION_DOMAIN=moderation.${d}`,
       ``,
-      `# --- NudeNet ---`,
-      `NUDENET_API_KEY=${config.nudenetApiKey || ""}`
+      `# --- Content Moderation ---`,
+      `CONTENT_MODERATION_API_KEY=${config.contentModerationApiKey || ""}`
     );
   }
 

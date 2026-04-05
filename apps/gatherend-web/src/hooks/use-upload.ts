@@ -3,7 +3,7 @@
  *
  * Centralized upload hook that uses our Express backend with:
  * - S3-compatible storage for public content (boards, avatars, banners) - WITH moderation
- * - S3-compatible storage for private content (chat/DM attachments) - NO moderation
+ * - Chat attachments use server-side policy based on board privacy
  */
 
 import { useState, useCallback, useEffect, useRef } from "react";
@@ -51,6 +51,10 @@ export interface UseUploadOptions {
   onModerationBlock?: (reason: string) => void;
 }
 
+export interface UploadExtraFields {
+  boardId?: string;
+}
+
 function useUploadInternal(
   context: UploadContext | keyof typeof ENDPOINT_TO_CONTEXT,
   options: UseUploadOptions = {},
@@ -69,7 +73,10 @@ function useUploadInternal(
     ENDPOINT_TO_CONTEXT[context] || (context as UploadContext);
 
   const startUpload = useCallback(
-    async (files: File[]): Promise<UploadedFile[]> => {
+    async (
+      files: File[],
+      extraFields?: UploadExtraFields,
+    ): Promise<UploadedFile[]> => {
       if (files.length === 0) {
         return [];
       }
@@ -91,6 +98,9 @@ function useUploadInternal(
           const formData = new FormData();
           formData.append("image", file);
           formData.append("context", resolvedContext);
+          if (extraFields?.boardId) {
+            formData.append("boardId", extraFields.boardId);
+          }
 
           // Upload to our Express backend
           const response = await fetch(

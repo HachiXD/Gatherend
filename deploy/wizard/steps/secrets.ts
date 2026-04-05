@@ -38,10 +38,10 @@ export function generateSecrets(
     secrets.imgproxySalt = existingSecrets?.imgproxySalt || generateSecret();
   }
 
-  // NudeNet API key
+  // Content moderation API key
   if (allModules.has("moderation")) {
-    secrets.nudenetApiKey =
-      existingSecrets?.nudenetApiKey || generateSecret(16);
+    secrets.contentModerationApiKey =
+      existingSecrets?.contentModerationApiKey || generateSecret(16);
   }
 
   // LiveKit

@@ -17,6 +17,7 @@ export async function GET() {
       id: profile.id,
       username: profile.username,
       discriminator: profile.discriminator,
+      reputationScore: profile.reputationScore,
       avatarAssetId: profile.avatarAssetId,
       bannerAssetId: profile.bannerAssetId,
       badgeStickerId: profile.badgeStickerId,

@@ -295,7 +295,9 @@ export const CreateBoardModal = () => {
                     )}
                   >
                     <Globe className="h-4 w-4" />
-                    <span className="text-xs font-medium">Público</span>
+                    <span className="text-xs font-medium">
+                      {t.modals.createBoard.publicOptionLabel}
+                    </span>
                   </button>
                   <button
                     type="button"
@@ -311,9 +313,14 @@ export const CreateBoardModal = () => {
                     )}
                   >
                     <Lock className="h-4 w-4" />
-                    <span className="text-xs font-medium">Privado</span>
+                    <span className="text-xs font-medium">
+                      {t.modals.createBoard.privateOptionLabel}
+                    </span>
                   </button>
                 </div>
+                <p className="px-1 text-[11px] text-theme-text-tertiary">
+                  {t.modals.createBoard.privacyPermanentNotice}
+                </p>
                 <DialogFooter
                   className={cn(
                     "border-t border-theme-border bg-theme-bg-secondary/20 px-4 py-1.5",

@@ -25,6 +25,8 @@ export type BoardChannel = {
 };
 
 export type BoardMember = Member & {
+  activeWarningCount: number;
+  latestActiveWarningId: string | null;
   profile: {
     id: string;
     username: string;

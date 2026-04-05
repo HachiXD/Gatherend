@@ -2,607 +2,734 @@
 
 import { useState } from "react";
 import {
-  Search,
-  Loader2,
-  User,
-  Flag,
   AlertTriangle,
-  Calendar,
-  Hash,
   Ban,
+  Loader2,
+  Search,
+  ShieldAlert,
   UserCheck,
-  Trash2,
 } from "lucide-react";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { UserAvatar } from "@/components/user-avatar";
+import { toast } from "sonner";
+import { useTranslation } from "@/i18n";
 import { cn } from "@/lib/utils";
-import type { ClientUploadedAsset } from "@/types/uploaded-assets";
+import {
+  banUser,
+  clearUserStrikes,
+  fetchUserActions,
+  fetchUserReports,
+  fetchUserStrikes,
+  fetchUserSummary,
+  fetchUserWarnings,
+  flattenCursorPages,
+  formatReportTargetType,
+  getReportStatusColor,
+  invalidateModerationDashboardQueries,
+  lookupProfiles,
+  removeStrike,
+  removeWarning,
+  strikeUser,
+  unbanUser,
+  warnUser,
+  type LookupResponse,
+} from "../lib";
 
-interface ModerationProfile {
-  id: string;
-  username: string;
-  discriminator: string | null;
-  avatarAsset: ClientUploadedAsset | null;
+const HEADER_PANEL_SHELL =
+  "border border-theme-border bg-theme-bg-overlay-primary/78 px-4 pt-4 pb-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.26)] sm:px-5 sm:py-5";
+const PANEL_CLASS =
+  "border border-theme-border bg-theme-bg-overlay-primary/50 p-4";
+const ITEM_ROW_CLASS =
+  "flex min-h-10 items-center gap-3 rounded-none border border-theme-border-subtle bg-theme-bg-edit-form/50 px-3 py-1";
+const actionButtonClass =
+  "h-6.5 min-w-[120px] cursor-pointer rounded-none bg-theme-tab-button-bg px-3 text-[14px] text-theme-text-light transition hover:bg-theme-tab-button-hover";
+const subtleButtonClass =
+  "cursor-pointer rounded-none border border-theme-border bg-theme-bg-secondary/35 px-2.5 py-1.5 text-theme-text-subtle transition hover:text-theme-text-light disabled:opacity-50";
+const metaBadgeClass =
+  "inline-flex items-center rounded-none border border-theme-border bg-theme-bg-secondary/35 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.05em] text-theme-text-muted";
+
+function SummaryCard({
+  label,
+  value,
+  helper,
+}: {
+  label: string;
+  value: string | number;
+  helper?: string;
+}) {
+  return (
+    <div className={PANEL_CLASS}>
+      <p className="text-xs uppercase tracking-[0.08em] text-theme-text-muted">
+        {label}
+      </p>
+      <p className="mt-2 text-2xl font-bold text-theme-text-primary">{value}</p>
+      {helper && <p className="mt-1 text-[11px] text-theme-text-muted">{helper}</p>}
+    </div>
+  );
 }
 
-interface UserLookupResult {
-  profile: ModerationProfile & {
-    userId: string;
-    banned: boolean;
-    bannedAt: string | null;
-    banReason: string | null;
-    validReports: number;
-    falseReports: number;
-    reportAccuracy: number | null;
-    createdAt: string;
-    updatedAt: string;
-  };
-  stats: {
-    totalReportsFiled: number;
-    totalReportsAgainst: number;
-    totalStrikes: number;
-    activeStrikes: number;
-    boardsOwned: number;
-    totalMessages: number;
-    accountAge: number;
-  };
-  reportsFiled: Array<{
-    id: string;
-    targetType: string;
-    targetId: string;
-    category: string;
-    status: string;
-    createdAt: string;
-  }>;
-  reportsAgainst: Array<{
-    id: string;
-    category: string;
-    status: string;
-    createdAt: string;
-    targetType: string;
-    reporter: ModerationProfile | null;
-  }>;
-  strikes: Array<{
-    id: string;
-    reason: string;
-    severity: string;
-    createdAt: string;
-    expiresAt: string | null;
-    contentType: string;
-  }>;
-  boardsOwned: Array<{
-    id: string;
-    name: string;
-    imageAsset: ClientUploadedAsset | null;
-    reportCount: number;
-    hiddenFromFeed: boolean;
-    createdAt: string;
-    _count: { members: number };
-  }>;
+function Section({
+  title,
+  count,
+  children,
+}: {
+  title: string;
+  count?: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold uppercase tracking-[0.08em] text-theme-text-muted">
+          {title}
+        </h3>
+        {typeof count === "number" && (
+          <span className={metaBadgeClass}>{count}</span>
+        )}
+      </div>
+      {children}
+    </div>
+  );
 }
 
-interface SearchProfile extends ModerationProfile {
-  userId: string;
-  banned: boolean;
-  createdAt: string;
+function LoadMoreButton({
+  show,
+  loading,
+  onClick,
+  label,
+}: {
+  show: boolean;
+  loading: boolean;
+  onClick: () => void;
+  label: string;
+}) {
+  if (!show) return null;
+
+  return (
+    <div className="flex justify-center pt-2">
+      <Button onClick={onClick} className={actionButtonClass} disabled={loading}>
+        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : label}
+      </Button>
+    </div>
+  );
 }
 
 export const UserLookupTab = () => {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [searchResults, setSearchResults] = useState<SearchProfile[]>([]);
-  const [result, setResult] = useState<UserLookupResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+  const [searchResults, setSearchResults] = useState<LookupResponse["profiles"]>([]);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
-
-    setIsLoading(true);
-    setError(null);
-    setResult(null);
-    setSearchResults([]);
-
-    try {
-      const res = await fetch(
-        `/api/moderation/lookup?q=${encodeURIComponent(searchQuery.trim())}`
-      );
-      if (!res.ok) {
-        if (res.status === 404) {
-          setError("User not found");
-        } else {
-          setError("Failed to search");
-        }
+  const searchMutation = useMutation({
+    mutationFn: (query: string) => lookupProfiles(query),
+    onSuccess: (data) => {
+      setSearchError(null);
+      if (data.exact && data.profiles.length === 1) {
+        setSelectedProfileId(data.profiles[0].id);
+        setSearchResults([]);
         return;
       }
-      const data = await res.json();
+
+      setSelectedProfileId(null);
+      setSearchResults(data.profiles);
 
       if (data.profiles.length === 0) {
-        setError("No users found");
-        return;
+        setSearchError("No users found");
       }
-
-      // If exact match (username/discriminator), load details directly
-      if (data.exact && data.profiles.length === 1) {
-        await loadUserDetails(data.profiles[0].id);
-      } else {
-        setSearchResults(data.profiles);
-      }
-    } catch {
-      setError("Failed to search");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadUserDetails = async (profileId: string) => {
-    setIsLoading(true);
-    try {
-      const res = await fetch(`/api/moderation/users/${profileId}`);
-      if (!res.ok) {
-        setError("Failed to load user details");
-        return;
-      }
-      const data = await res.json();
-      setResult(data);
+    },
+    onError: () => {
       setSearchResults([]);
-    } catch {
-      setError("Failed to load user details");
-    } finally {
-      setIsLoading(false);
-    }
+      setSearchError("Failed to search users");
+    },
+  });
+
+  const summaryQuery = useQuery({
+    queryKey: ["moderation", "user-summary", selectedProfileId],
+    queryFn: () => fetchUserSummary(selectedProfileId!),
+    enabled: !!selectedProfileId,
+  });
+
+  const warningsQuery = useInfiniteQuery({
+    queryKey: ["moderation", "user-warnings", selectedProfileId],
+    queryFn: ({ pageParam }: { pageParam?: string | null }) =>
+      fetchUserWarnings(selectedProfileId!, pageParam),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) =>
+      lastPage.hasMore ? lastPage.nextCursor : undefined,
+    enabled: !!selectedProfileId,
+  });
+
+  const strikesQuery = useInfiniteQuery({
+    queryKey: ["moderation", "user-strikes", selectedProfileId],
+    queryFn: ({ pageParam }: { pageParam?: string | null }) =>
+      fetchUserStrikes(selectedProfileId!, pageParam),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) =>
+      lastPage.hasMore ? lastPage.nextCursor : undefined,
+    enabled: !!selectedProfileId,
+  });
+
+  const actionsQuery = useInfiniteQuery({
+    queryKey: ["moderation", "user-actions", selectedProfileId],
+    queryFn: ({ pageParam }: { pageParam?: string | null }) =>
+      fetchUserActions(selectedProfileId!, pageParam),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) =>
+      lastPage.hasMore ? lastPage.nextCursor : undefined,
+    enabled: !!selectedProfileId,
+  });
+
+  const reportsQuery = useInfiniteQuery({
+    queryKey: ["moderation", "user-reports", selectedProfileId],
+    queryFn: ({ pageParam }: { pageParam?: string | null }) =>
+      fetchUserReports(selectedProfileId!, pageParam),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) =>
+      lastPage.hasMore ? lastPage.nextCursor : undefined,
+    enabled: !!selectedProfileId,
+  });
+
+  const warnings = flattenCursorPages(warningsQuery.data);
+  const strikes = flattenCursorPages(strikesQuery.data);
+  const actions = flattenCursorPages(actionsQuery.data);
+  const reports = flattenCursorPages(reportsQuery.data);
+
+  const runMutation = async (fn: () => Promise<unknown>) => {
+    if (!selectedProfileId) return;
+    await fn();
+    await invalidateModerationDashboardQueries(queryClient, selectedProfileId);
   };
 
-  const handleAction = async (
-    action: "ban" | "unban" | "clearStrikes",
-    reason?: string
-  ) => {
-    if (!result) return;
+  const banMutation = useMutation({
+    mutationFn: ({ profileId, reason }: { profileId: string; reason?: string }) =>
+      banUser(profileId, reason),
+    onSuccess: async () => {
+      await invalidateModerationDashboardQueries(queryClient, selectedProfileId);
+      toast.success("User banned");
+    },
+    onError: (error: unknown) => {
+      console.error(error);
+      toast.error("Failed to ban user");
+    },
+  });
 
-    const actionMessages = {
-      ban: "Are you sure you want to ban this user?",
-      unban: "Are you sure you want to unban this user?",
-      clearStrikes: "Are you sure you want to clear all strikes for this user?",
-    };
+  const unbanMutation = useMutation({
+    mutationFn: (profileId: string) => unbanUser(profileId),
+    onSuccess: async () => {
+      await invalidateModerationDashboardQueries(queryClient, selectedProfileId);
+      toast.success(t.moderation.unbanSuccess);
+    },
+    onError: (error: unknown) => {
+      console.error(error);
+      toast.error(t.moderation.unbanError);
+    },
+  });
 
-    if (!confirm(actionMessages[action])) return;
+  const warningMutation = useMutation({
+    mutationFn: ({ profileId, reason }: { profileId: string; reason: string }) =>
+      warnUser(profileId, reason),
+    onSuccess: async () => {
+      await invalidateModerationDashboardQueries(queryClient, selectedProfileId);
+      toast.success("Warning issued");
+    },
+    onError: (error: unknown) => {
+      console.error(error);
+      toast.error("Failed to issue warning");
+    },
+  });
 
-    setActionLoading(action);
-    try {
-      const res = await fetch(
-        `/api/moderation/users/${result.profile.id}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action, reason }),
-        }
-      );
+  const strikeMutation = useMutation({
+    mutationFn: ({ profileId, reason }: { profileId: string; reason: string }) =>
+      strikeUser(profileId, reason),
+    onSuccess: async () => {
+      await invalidateModerationDashboardQueries(queryClient, selectedProfileId);
+      toast.success("Strike issued");
+    },
+    onError: (error: unknown) => {
+      console.error(error);
+      toast.error("Failed to issue strike");
+    },
+  });
 
-      if (res.ok) {
-        // Refresh the user data
-        await loadUserDetails(result.profile.id);
-      }
-    } catch {
-      // Silent fail
-    } finally {
-      setActionLoading(null);
-    }
+  const clearStrikesMutation = useMutation({
+    mutationFn: (profileId: string) => clearUserStrikes(profileId),
+    onSuccess: async () => {
+      await invalidateModerationDashboardQueries(queryClient, selectedProfileId);
+      toast.success("Direct strikes cleared");
+    },
+    onError: (error: unknown) => {
+      console.error(error);
+      toast.error("Failed to clear direct strikes");
+    },
+  });
+
+  const removeWarningMutation = useMutation({
+    mutationFn: (warningId: string) => removeWarning(warningId),
+    onSuccess: async () => {
+      await invalidateModerationDashboardQueries(queryClient, selectedProfileId);
+      toast.success("Warning removed");
+    },
+    onError: (error: unknown) => {
+      console.error(error);
+      toast.error("Failed to remove warning");
+    },
+  });
+
+  const removeStrikeMutation = useMutation({
+    mutationFn: (strikeId: string) => removeStrike(strikeId),
+    onSuccess: async () => {
+      await invalidateModerationDashboardQueries(queryClient, selectedProfileId);
+      toast.success("Strike removed");
+    },
+    onError: (error: unknown) => {
+      console.error(error);
+      toast.error("Failed to remove strike");
+    },
+  });
+
+  const handleSearch = () => {
+    const normalized = searchQuery.trim();
+    if (!normalized) return;
+    searchMutation.mutate(normalized);
   };
 
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case "CRITICAL":
-        return "text-red-500 bg-red-500/10";
-      case "HIGH":
-        return "text-orange-500 bg-orange-500/10";
-      case "MEDIUM":
-        return "text-yellow-500 bg-yellow-500/10";
-      default:
-        return "text-gray-400 bg-gray-500/10";
-    }
+  const handleBan = () => {
+    if (!selectedProfileId) return;
+    const reason = window.prompt("Optional ban reason");
+    if (reason === null) return;
+    banMutation.mutate({ profileId: selectedProfileId, reason });
   };
+
+  const handleUnban = () => {
+    if (!selectedProfileId) return;
+    if (!window.confirm("Unban this user?")) return;
+    unbanMutation.mutate(selectedProfileId);
+  };
+
+  const handleWarn = () => {
+    if (!selectedProfileId) return;
+    const reason = window.prompt("Why are you issuing this warning?");
+    if (!reason?.trim()) return;
+    warningMutation.mutate({ profileId: selectedProfileId, reason: reason.trim() });
+  };
+
+  const handleStrike = () => {
+    if (!selectedProfileId) return;
+    const reason = window.prompt("Why are you issuing this strike?");
+    if (!reason?.trim()) return;
+    strikeMutation.mutate({ profileId: selectedProfileId, reason: reason.trim() });
+  };
+
+  const handleClearStrikes = () => {
+    if (!selectedProfileId) return;
+    if (!window.confirm("Clear all direct strikes for this user?")) return;
+    clearStrikesMutation.mutate(selectedProfileId);
+  };
+
+  const summary = summaryQuery.data;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-xl font-semibold text-theme-text-primary">
-          User Lookup
-        </h1>
-        <p className="text-sm text-theme-text-subtle mt-1">
-          Search by username or username/discriminator for exact match
-        </p>
+      <div className={HEADER_PANEL_SHELL}>
+        <div className="-mb-3 -mt-3 border-b border-theme-border pb-0.5">
+          <div>
+            <h2 className="text-2xl font-bold text-theme-text-primary">
+              {t.moderation.userLookup}
+            </h2>
+            <p className="-mt-1 text-sm text-theme-text-tertiary">
+              Search a user and manage warnings, strikes, bans, and review history.
+            </p>
+          </div>
+        </div>
       </div>
 
-      {/* Search Input */}
       <div className="flex gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-text-tertiary" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-theme-text-tertiary" />
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            onKeyDown={(event) => event.key === "Enter" && handleSearch()}
             placeholder="Search username or username/1234"
-            className="w-full pl-10 pr-4 py-2.5 rounded-md bg-theme-bg-input border border-theme-border-primary text-sm text-theme-text-primary placeholder:text-theme-text-tertiary focus:outline-none focus:ring-2 focus:ring-red-500/30"
+            className="w-full rounded-none border border-theme-border bg-theme-bg-input py-2.5 pl-10 pr-4 text-sm text-theme-text-primary placeholder:text-theme-text-tertiary focus:outline-none focus:ring-2 focus:ring-red-500/30"
           />
         </div>
-        <button
+        <Button
           onClick={handleSearch}
-          disabled={isLoading || !searchQuery.trim()}
-          className="px-4 py-2 rounded-md bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          className={actionButtonClass}
+          disabled={searchMutation.isPending || !searchQuery.trim()}
         >
-          {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Search"}
-        </button>
+          {searchMutation.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            "Search"
+          )}
+        </Button>
       </div>
 
-      {/* Error */}
-      {error && (
-        <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-          {error}
+      {searchError && (
+        <div className="border border-red-500/25 bg-red-500/10 p-4 text-sm text-red-400">
+          {searchError}
         </div>
       )}
 
-      {/* Search Results List */}
-      {searchResults.length > 0 && !result && (
+      {searchResults.length > 0 && !selectedProfileId && (
         <div className="space-y-3">
-          <p className="text-sm text-theme-text-subtle">
-            Found {searchResults.length} user
-            {searchResults.length !== 1 ? "s" : ""}
-          </p>
           {searchResults.map((profile) => (
             <button
               key={profile.id}
-              onClick={() => loadUserDetails(profile.userId)}
-              className="w-full p-4 rounded-lg bg-theme-bg-secondary border border-theme-border-primary hover:bg-theme-bg-tertiary transition text-left"
+              onClick={() => {
+                setSelectedProfileId(profile.id);
+                setSearchResults([]);
+              }}
+              className={cn(PANEL_CLASS, "w-full text-left transition hover:bg-theme-bg-secondary/40")}
             >
               <div className="flex items-center gap-3">
-                <img
-                  src={profile.avatarAsset?.url || undefined}
-                  alt=""
-                  className={cn(
-                    "w-10 h-10 rounded-full",
-                    profile.banned && "opacity-50 grayscale"
-                  )}
+                <UserAvatar
+                  src={profile.avatarAsset?.url || ""}
+                  profileId={profile.id}
+                  showStatus={false}
                 />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-theme-text-primary">
-                      @{profile.username}/{profile.discriminator}
-                    </span>
-                    {profile.banned && (
-                      <span className="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400">
-                        BANNED
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-theme-text-tertiary">
-                    Joined {new Date(profile.createdAt).toLocaleDateString()}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-theme-text-primary">
+                    @{profile.username}
+                    {profile.discriminator ? `/${profile.discriminator}` : ""}
+                  </p>
+                  <p className="mt-1 text-[11px] text-theme-text-muted">
+                    Created on {new Date(profile.createdAt).toLocaleDateString()}
                   </p>
                 </div>
+                {profile.banned && <span className={metaBadgeClass}>{t.moderation.ban}</span>}
               </div>
             </button>
           ))}
         </div>
       )}
 
-      {/* Detailed Result */}
-      {result && (
+      {summaryQuery.isLoading && selectedProfileId ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-theme-text-tertiary" />
+        </div>
+      ) : summary ? (
         <div className="space-y-6">
-          {/* User Profile Card */}
-          <div className="p-5 rounded-lg bg-theme-bg-secondary border border-theme-border-primary">
-            <div className="flex items-start gap-4">
-              <img
-                src={result.profile.avatarAsset?.url || undefined}
-                alt=""
-                className={cn(
-                  "w-16 h-16 rounded-full",
-                  result.profile.banned && "opacity-50 grayscale"
-                )}
-              />
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-semibold text-theme-text-primary">
-                    @{result.profile.username}/{result.profile.discriminator}
-                  </h2>
-                  {result.profile.banned && (
-                    <span className="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400">
-                      BANNED
+          <div className={PANEL_CLASS}>
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <UserAvatar
+                  src={summary.profile.avatarAsset?.url || ""}
+                  profileId={summary.profile.id}
+                  showStatus={false}
+                />
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="truncate text-lg font-semibold text-theme-text-primary">
+                      @{summary.profile.username}
+                      {summary.profile.discriminator
+                        ? `/${summary.profile.discriminator}`
+                        : ""}
+                    </p>
+                    {summary.profile.banned && (
+                      <span className={metaBadgeClass}>{t.moderation.ban}</span>
+                    )}
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] text-theme-text-muted">
+                    <span>Reputation: {summary.profile.reputationScore ?? 0}</span>
+                    <span>
+                      Accuracy:{" "}
+                      {summary.profile.reportAccuracy !== null
+                        ? `${Math.round(summary.profile.reportAccuracy * 100)}%`
+                        : "N/A"}
                     </span>
-                  )}
+                    <span>
+                      Created {new Date(summary.profile.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-4 mt-2 text-xs text-theme-text-tertiary">
-                  <span className="flex items-center gap-1">
-                    <Hash className="w-3 h-3" />
-                    {result.profile.id}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    Account age: {result.stats.accountAge} days
-                  </span>
-                </div>
-                {result.profile.banned && result.profile.banReason && (
-                  <p className="text-sm text-red-400 mt-2">
-                    Ban reason: {result.profile.banReason}
-                  </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {summary.profile.banned ? (
+                  <Button
+                    onClick={handleUnban}
+                    className={actionButtonClass}
+                    disabled={unbanMutation.isPending}
+                  >
+                    <UserCheck className="mr-1.5 h-3.5 w-3.5" />
+                    {t.moderation.unban}
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleBan}
+                    className={cn(actionButtonClass, "bg-red-600 hover:bg-red-500")}
+                    disabled={banMutation.isPending}
+                  >
+                    <Ban className="mr-1.5 h-3.5 w-3.5" />
+                    {t.moderation.ban}
+                  </Button>
                 )}
-
-                {/* Action Buttons */}
-                <div className="flex items-center gap-2 mt-4">
-                  {result.profile.banned ? (
-                    <button
-                      onClick={() => handleAction("unban")}
-                      disabled={actionLoading === "unban"}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded bg-green-500/10 hover:bg-green-500/20 transition text-green-400"
-                    >
-                      {actionLoading === "unban" ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                      ) : (
-                        <UserCheck className="w-3 h-3" />
-                      )}
-                      Unban User
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() =>
-                        handleAction("ban", "Banned via moderation dashboard")
-                      }
-                      disabled={actionLoading === "ban"}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded bg-red-500/10 hover:bg-red-500/20 transition text-red-400"
-                    >
-                      {actionLoading === "ban" ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                      ) : (
-                        <Ban className="w-3 h-3" />
-                      )}
-                      Ban User
-                    </button>
-                  )}
-                  {result.strikes.length > 0 && (
-                    <button
-                      onClick={() => handleAction("clearStrikes")}
-                      disabled={actionLoading === "clearStrikes"}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded bg-yellow-500/10 hover:bg-yellow-500/20 transition text-yellow-400"
-                    >
-                      {actionLoading === "clearStrikes" ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                      ) : (
-                        <Trash2 className="w-3 h-3" />
-                      )}
-                      Clear Strikes
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Stats */}
-            <div className="grid grid-cols-4 gap-3 mt-4 pt-4 border-t border-theme-border-primary">
-              <div className="text-center">
-                <p className="text-xl font-bold text-theme-text-primary">
-                  {result.stats.totalReportsAgainst}
-                </p>
-                <p className="text-xs text-theme-text-tertiary">
-                  Reports Against
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-xl font-bold text-theme-text-primary">
-                  {result.stats.activeStrikes}
-                </p>
-                <p className="text-xs text-theme-text-tertiary">
-                  Active Strikes
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-xl font-bold text-theme-text-primary">
-                  {result.stats.boardsOwned}
-                </p>
-                <p className="text-xs text-theme-text-tertiary">Boards</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xl font-bold text-theme-text-primary">
-                  {result.profile.reportAccuracy !== null
-                    ? `${Math.round(result.profile.reportAccuracy * 100)}%`
-                    : "N/A"}
-                </p>
-                <p className="text-xs text-theme-text-tertiary">
-                  Report Accuracy
-                </p>
+                <Button
+                  onClick={handleWarn}
+                  className={cn(actionButtonClass, "bg-yellow-600 hover:bg-yellow-500")}
+                  disabled={warningMutation.isPending}
+                >
+                  {t.moderation.warn}
+                </Button>
+                <Button
+                  onClick={handleStrike}
+                  className={cn(actionButtonClass, "bg-orange-600 hover:bg-orange-500")}
+                  disabled={strikeMutation.isPending}
+                >
+                  {t.moderation.strike}
+                </Button>
+                <Button
+                  onClick={handleClearStrikes}
+                  className={actionButtonClass}
+                  disabled={
+                    clearStrikesMutation.isPending ||
+                    summary.stats.strikeStats.direct === 0
+                  }
+                >
+                  {t.moderation.clearStrikes}
+                </Button>
               </div>
             </div>
           </div>
 
-          {/* Strikes */}
-          <div className="p-5 rounded-lg bg-theme-bg-secondary border border-theme-border-primary">
-            <h3 className="text-sm font-medium text-theme-text-primary mb-3 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-yellow-400" />
-              Strikes ({result.strikes.length})
-            </h3>
-            {result.strikes.length === 0 ? (
-              <p className="text-sm text-theme-text-tertiary">No strikes</p>
-            ) : (
-              <div className="space-y-2">
-                {result.strikes.map((strike) => (
-                  <div
-                    key={strike.id}
-                    className="flex items-center justify-between p-3 rounded bg-theme-bg-tertiary"
-                  >
-                    <div>
-                      <p className="text-sm text-theme-text-primary">
-                        {strike.reason}
-                      </p>
-                      <p className="text-xs text-theme-text-tertiary">
-                        {strike.contentType} •{" "}
-                        {new Date(strike.createdAt).toLocaleDateString()}
-                        {strike.expiresAt &&
-                          ` • Expires: ${new Date(
-                            strike.expiresAt
-                          ).toLocaleDateString()}`}
-                      </p>
-                    </div>
-                    <span
-                      className={cn(
-                        "text-xs px-2 py-0.5 rounded",
-                        getSeverityColor(strike.severity)
-                      )}
-                    >
-                      {strike.severity}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <SummaryCard
+              label="Active warnings"
+              value={summary.stats.warningStats.active}
+              helper={`${summary.stats.warningStats.promoted} promoted • ${summary.stats.warningStats.removed} removed`}
+            />
+            <SummaryCard
+              label="Active strikes"
+              value={summary.stats.strikeStats.active}
+              helper={`${summary.stats.strikeStats.direct} direct • ${summary.stats.strikeStats.warningEscalation} from warnings`}
+            />
+            <SummaryCard
+              label="Reports"
+              value={summary.stats.totalReportsAgainst}
+              helper={`${summary.stats.totalReportsFiled} filed by this user`}
+            />
+            <SummaryCard
+              label="Account"
+              value={`${summary.stats.accountAge}d`}
+              helper={`${summary.stats.totalMessages} messages • ${summary.stats.boardsOwned} boards owned`}
+            />
           </div>
 
-          {/* Recent Reports Against */}
-          <div className="p-5 rounded-lg bg-theme-bg-secondary border border-theme-border-primary">
-            <h3 className="text-sm font-medium text-theme-text-primary mb-3 flex items-center gap-2">
-              <Flag className="w-4 h-4 text-red-400" />
-              Reports Against ({result.reportsAgainst.length})
-            </h3>
-            {result.reportsAgainst.length === 0 ? (
-              <p className="text-sm text-theme-text-tertiary">No reports</p>
-            ) : (
-              <div className="space-y-2">
-                {result.reportsAgainst.map((report) => (
-                  <div
-                    key={report.id}
-                    className="flex items-center justify-between p-3 rounded bg-theme-bg-tertiary"
-                  >
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={report.reporter?.avatarAsset?.url || undefined}
-                        alt=""
-                        className="w-6 h-6 rounded-full"
-                      />
-                      <div>
-                        <p className="text-sm text-theme-text-primary capitalize">
-                          {report.category.replace(/_/g, " ").toLowerCase()} (
-                          {report.targetType})
-                        </p>
-                        <p className="text-xs text-theme-text-tertiary">
-                          by @{report.reporter?.username || "unknown"}/
-                          {report.reporter?.discriminator || "unknown"} •{" "}
-                          {new Date(report.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                    <span
-                      className={cn(
-                        "text-xs px-2 py-0.5 rounded",
-                        report.status === "PENDING"
-                          ? "bg-yellow-500/10 text-yellow-400"
-                          : report.status === "ACTION_TAKEN"
-                          ? "bg-red-500/10 text-red-400"
-                          : "bg-gray-500/10 text-gray-400"
-                      )}
-                    >
-                      {report.status}
-                    </span>
-                  </div>
-                ))}
+          <Section title="Warnings" count={warnings.length}>
+            {!warnings.length ? (
+              <div className={PANEL_CLASS}>
+                <p className="text-sm text-theme-text-muted">No warnings for this user.</p>
               </div>
-            )}
-          </div>
-
-          {/* Boards Owned */}
-          <div className="p-5 rounded-lg bg-theme-bg-secondary border border-theme-border-primary">
-            <h3 className="text-sm font-medium text-theme-text-primary mb-3">
-              Boards Owned ({result.boardsOwned.length})
-            </h3>
-            {result.boardsOwned.length === 0 ? (
-              <p className="text-sm text-theme-text-tertiary">No boards</p>
             ) : (
-              <div className="space-y-2">
-                {result.boardsOwned.map((board) => (
-                  <div
-                    key={board.id}
-                    className="flex items-center justify-between p-3 rounded bg-theme-bg-tertiary"
-                  >
-                    <div className="flex items-center gap-3">
-                      {board.imageAsset?.url && (
-                        <img
-                          src={board.imageAsset.url}
-                          alt=""
-                          className="w-8 h-8 rounded object-cover"
-                        />
-                      )}
-                      <div>
-                        <p className="text-sm text-theme-text-primary">
-                          {board.name}
-                          {board.hiddenFromFeed && (
-                            <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400">
-                              Hidden
-                            </span>
-                          )}
-                        </p>
-                        <p className="text-xs text-theme-text-tertiary">
-                          {board._count.members} members • Created{" "}
-                          {new Date(board.createdAt).toLocaleDateString()}
-                        </p>
+              <div className="space-y-3">
+                {warnings.map((warning) => (
+                  <div key={warning.id} className={ITEM_ROW_CLASS}>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-theme-text-primary">
+                        <span className={metaBadgeClass}>{warning.status}</span>
+                        <span className="truncate">{warning.reason}</span>
                       </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] text-theme-text-muted">
+                        <span>By @{warning.issuedBy?.username || "unknown"}</span>
+                        <span>{new Date(warning.createdAt).toLocaleString()}</span>
+                        {warning.report && (
+                          <span>
+                            {warning.report.category.replace(/_/g, " ").toLowerCase()}
+                          </span>
+                        )}
+                      </div>
+                      {warning.notes && (
+                        <p className="mt-1 text-[11px] text-theme-text-muted">
+                          {warning.notes}
+                        </p>
+                      )}
                     </div>
-                    {board.reportCount > 0 && (
-                      <span className="text-xs px-2 py-0.5 rounded bg-red-500/10 text-red-400">
-                        {board.reportCount} reports
-                      </span>
+                    {warning.status !== "REMOVED" && (
+                      <Button
+                        onClick={() => removeWarningMutation.mutate(warning.id)}
+                        className={actionButtonClass}
+                        disabled={removeWarningMutation.isPending}
+                      >
+                        {t.moderation.removeWarning}
+                      </Button>
                     )}
                   </div>
                 ))}
+                <LoadMoreButton
+                  show={!!warningsQuery.hasNextPage}
+                  loading={warningsQuery.isFetchingNextPage}
+                  onClick={() => warningsQuery.fetchNextPage()}
+                  label={t.discovery.loadMore}
+                />
               </div>
             )}
-          </div>
+          </Section>
 
-          {/* Reports Filed by User */}
-          <div className="p-5 rounded-lg bg-theme-bg-secondary border border-theme-border-primary">
-            <h3 className="text-sm font-medium text-theme-text-primary mb-3">
-              Reports Filed ({result.reportsFiled.length})
-              {result.profile.validReports + result.profile.falseReports >
-                0 && (
-                <span className="ml-2 text-xs font-normal text-theme-text-tertiary">
-                  {result.profile.validReports} valid /{" "}
-                  {result.profile.falseReports} false
-                </span>
-              )}
-            </h3>
-            {result.reportsFiled.length === 0 ? (
-              <p className="text-sm text-theme-text-tertiary">
-                No reports filed
-              </p>
+          <Section title="Strikes" count={strikes.length}>
+            {!strikes.length ? (
+              <div className={PANEL_CLASS}>
+                <p className="text-sm text-theme-text-muted">No strikes for this user.</p>
+              </div>
             ) : (
-              <div className="space-y-2">
-                {result.reportsFiled.map((report) => (
-                  <div
-                    key={report.id}
-                    className="flex items-center justify-between p-3 rounded bg-theme-bg-tertiary"
-                  >
-                    <div>
-                      <p className="text-sm text-theme-text-primary capitalize">
-                        {report.category.replace(/_/g, " ").toLowerCase()} (
-                        {report.targetType})
-                      </p>
-                      <p className="text-xs text-theme-text-tertiary">
-                        {new Date(report.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <span
-                      className={cn(
-                        "text-xs px-2 py-0.5 rounded",
-                        report.status === "PENDING"
-                          ? "bg-yellow-500/10 text-yellow-400"
-                          : report.status === "ACTION_TAKEN"
-                          ? "bg-green-500/10 text-green-400"
-                          : report.status === "DISMISSED"
-                          ? "bg-gray-500/10 text-gray-400"
-                          : "bg-blue-500/10 text-blue-400"
+              <div className="space-y-3">
+                {strikes.map((strike) => {
+                  const removable = strike.sourceType !== "WARNING_ESCALATION";
+                  return (
+                    <div key={strike.id} className={ITEM_ROW_CLASS}>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-theme-text-primary">
+                          <span className={metaBadgeClass}>{strike.severity}</span>
+                          <span className={metaBadgeClass}>
+                            {strike.sourceType || "DIRECT"}
+                          </span>
+                          <span className="truncate">{strike.reason}</span>
+                        </div>
+                        <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] text-theme-text-muted">
+                          <span>{new Date(strike.createdAt).toLocaleString()}</span>
+                          {strike.originReport && (
+                            <span>
+                              {strike.originReport.category
+                                .replace(/_/g, " ")
+                                .toLowerCase()}
+                            </span>
+                          )}
+                        </div>
+                        {!removable && (
+                          <p className="mt-1 text-[11px] text-theme-text-muted">
+                            Remove one of the source warnings to reverse this strike.
+                          </p>
+                        )}
+                      </div>
+                      {removable && (
+                        <Button
+                          onClick={() => removeStrikeMutation.mutate(strike.id)}
+                          className={actionButtonClass}
+                          disabled={removeStrikeMutation.isPending}
+                        >
+                          {t.moderation.removeStrike}
+                        </Button>
                       )}
-                    >
-                      {report.status}
-                    </span>
+                    </div>
+                  );
+                })}
+                <LoadMoreButton
+                  show={!!strikesQuery.hasNextPage}
+                  loading={strikesQuery.isFetchingNextPage}
+                  onClick={() => strikesQuery.fetchNextPage()}
+                  label={t.discovery.loadMore}
+                />
+              </div>
+            )}
+          </Section>
+
+          <Section title="Recent actions" count={actions.length}>
+            {!actions.length ? (
+              <div className={PANEL_CLASS}>
+                <p className="text-sm text-theme-text-muted">
+                  No moderation actions for this user yet.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {actions.map((action) => (
+                  <div key={action.id} className={ITEM_ROW_CLASS}>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-theme-text-primary">
+                        <span className={metaBadgeClass}>{action.actionType}</span>
+                        <span className="truncate">
+                          By @{action.issuedBy?.username || "unknown"}
+                        </span>
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] text-theme-text-muted">
+                        <span>{new Date(action.createdAt).toLocaleString()}</span>
+                        {action.warning && <span>{action.warning.status}</span>}
+                        {action.strike && <span>{action.strike.severity}</span>}
+                      </div>
+                      {action.notes && (
+                        <p className="mt-1 text-[11px] text-theme-text-muted">
+                          {action.notes}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 ))}
+                <LoadMoreButton
+                  show={!!actionsQuery.hasNextPage}
+                  loading={actionsQuery.isFetchingNextPage}
+                  onClick={() => actionsQuery.fetchNextPage()}
+                  label={t.discovery.loadMore}
+                />
               </div>
             )}
-          </div>
+          </Section>
+
+          <Section title="Reports" count={reports.length}>
+            {!reports.length ? (
+              <div className={PANEL_CLASS}>
+                <p className="text-sm text-theme-text-muted">No reports linked to this user.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {reports.map((report) => (
+                  <div key={report.id} className={ITEM_ROW_CLASS}>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-theme-text-primary">
+                        <span className={metaBadgeClass}>
+                          {report.relationType || "ALL"}
+                        </span>
+                        <span className={metaBadgeClass}>
+                          {formatReportTargetType(report.targetType)}
+                        </span>
+                        <span
+                          className={cn(
+                            "text-[11px] font-medium uppercase tracking-[0.05em]",
+                            getReportStatusColor(report.status),
+                          )}
+                        >
+                          {report.status}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-sm text-theme-text-primary">
+                        {report.description || report.snapshot.content || "No report note"}
+                      </p>
+                      <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] text-theme-text-muted">
+                        <span>{new Date(report.createdAt).toLocaleString()}</span>
+                        <span>{report.category.replace(/_/g, " ").toLowerCase()}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <LoadMoreButton
+                  show={!!reportsQuery.hasNextPage}
+                  loading={reportsQuery.isFetchingNextPage}
+                  onClick={() => reportsQuery.fetchNextPage()}
+                  label={t.discovery.loadMore}
+                />
+              </div>
+            )}
+          </Section>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-1 text-center">
+          <ShieldAlert className="mb-3 h-12 w-12 text-theme-text-muted" />
+          <p className="text-md font-medium text-theme-text-tertiary">
+            {t.moderation.userLookup}
+          </p>
+          <p className="mt-1 text-sm text-theme-text-muted">
+            Search for a user to review warnings, strikes, reports, and ban state.
+          </p>
         </div>
       )}
     </div>

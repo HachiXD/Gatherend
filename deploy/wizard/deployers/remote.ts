@@ -85,9 +85,9 @@ export function prepareManualDeploy(
   );
 
   if (server.modules.includes("moderation")) {
-    const nudenetDir = resolve(SERVICES_DIR, "nudenet-service");
+    const moderationDir = resolve(SERVICES_DIR, "nsfwjs-service");
     console.log(
-      `  scp ${scpPortFlag}-r ${nudenetDir} ${sshUser}@${server.ip}:~/services/nudenet-service`
+      `  scp ${scpPortFlag}-r ${moderationDir} ${sshUser}@${server.ip}:~/services/nsfwjs-service`
     );
   }
 
@@ -143,7 +143,7 @@ export async function deployRemote(
 
   try {
     // 1. Create remote directory structure
-    await ssh.execCommand(`mkdir -p ${remoteDir}/nudenet-service`);
+    await ssh.execCommand(`mkdir -p ${remoteDir}/nsfwjs-service`);
 
     // 2. Upload docker-compose.yml
     const composePath = resolve(SERVICES_DIR, "docker-compose.yml");
@@ -159,17 +159,17 @@ export async function deployRemote(
       console.log(chalk.green("  ✔ Dockerfile.caddy uploaded"));
     }
 
-    // 4. Upload nudenet-service files (if moderation module)
+    // 4. Upload nsfwjs-service files (if moderation module)
     if (server.modules.includes("moderation")) {
-      const nudenetDir = resolve(SERVICES_DIR, "nudenet-service");
-      const nudenetFiles = ["Dockerfile", "requirements.txt", "server.py"];
-      for (const f of nudenetFiles) {
-        const localPath = resolve(nudenetDir, f);
+      const moderationDir = resolve(SERVICES_DIR, "nsfwjs-service");
+      const moderationFiles = ["Dockerfile", "package.json", "server.js"];
+      for (const f of moderationFiles) {
+        const localPath = resolve(moderationDir, f);
         if (existsSync(localPath)) {
-          await ssh.putFile(localPath, `${remoteDir}/nudenet-service/${f}`);
+          await ssh.putFile(localPath, `${remoteDir}/nsfwjs-service/${f}`);
         }
       }
-      console.log(chalk.green("  ✔ nudenet-service files uploaded"));
+      console.log(chalk.green("  ✔ nsfwjs-service files uploaded"));
     }
 
     // 5. Upload generated files via putFile (not heredoc)

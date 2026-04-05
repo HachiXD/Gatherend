@@ -1,178 +1,173 @@
 "use client";
 
-import { Loader2, RefreshCw, UserX, UserCheck } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { ClientUploadedAsset } from "@/types/uploaded-assets";
+import { Loader2, RefreshCw, UserCheck, UserX } from "lucide-react";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { useTranslation } from "@/i18n";
+import {
+  fetchBannedUsers,
+  flattenCursorPages,
+  invalidateModerationDashboardQueries,
+  type ModerationProfile,
+  unbanUser,
+} from "../lib";
 
-interface BannedUser {
-  id: string;
-  userId: string;
-  username: string;
-  discriminator: string | null;
-  avatarAsset: ClientUploadedAsset | null;
-  bannedAt: string;
-  banReason: string | null;
-  _count: {
-    strikes: number;
-    reportsAgainst: number;
-  };
-}
-
-interface BannedUsersResponse {
-  bannedUsers: BannedUser[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
-}
-
-const fetchBannedUsers = async (): Promise<BannedUsersResponse> => {
-  const res = await fetch("/api/moderation/banned-users", {
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error("Failed to fetch banned users");
-  return res.json();
-};
-
-const unbanUser = async (profileId: string): Promise<void> => {
-  const res = await fetch(`/api/moderation/users/${profileId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "unban" }),
-  });
-  if (!res.ok) throw new Error("Failed to unban user");
-};
+const HEADER_PANEL_SHELL =
+  "border border-theme-border bg-theme-bg-overlay-primary/78 px-4 pt-4 pb-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.26)] sm:px-5 sm:py-5";
+const USER_ROW_CLASS =
+  "flex min-h-10 items-center gap-3 rounded-none border border-theme-border-subtle bg-theme-bg-edit-form/50 px-3 py-1";
+const actionButtonClass =
+  "h-6.5 min-w-[120px] cursor-pointer rounded-none bg-theme-tab-button-bg px-3 text-[14px] text-theme-text-light transition hover:bg-theme-tab-button-hover";
 
 export const BannedUsersTab = () => {
   const queryClient = useQueryClient();
-
-  const { data, isLoading, refetch, isFetching } = useQuery({
+  const { t } = useTranslation();
+  const {
+    data,
+    isLoading,
+    isFetching,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+    refetch,
+  } = useInfiniteQuery({
     queryKey: ["moderation", "banned-users"],
-    queryFn: fetchBannedUsers,
-    staleTime: 0,
-    refetchOnMount: true,
-    refetchOnWindowFocus: false,
+    queryFn: ({ pageParam }: { pageParam?: string | null }) =>
+      fetchBannedUsers(pageParam),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) =>
+      lastPage.hasMore ? lastPage.nextCursor : undefined,
+    staleTime: 30_000,
   });
 
+  const bannedUsers = flattenCursorPages<ModerationProfile>(data);
+  const total = data?.pages[0]?.total ?? bannedUsers.length;
+
   const unbanMutation = useMutation({
-    mutationFn: unbanUser,
-    onSuccess: async () => {
-      await queryClient.refetchQueries({
-        queryKey: ["moderation", "banned-users"],
-      });
-      await queryClient.refetchQueries({ queryKey: ["moderation", "stats"] });
+    mutationFn: (profileId: string) => unbanUser(profileId),
+    onSuccess: async (_data, profileId) => {
+      await invalidateModerationDashboardQueries(queryClient, profileId);
+      toast.success(t.moderation.unbanSuccess);
+    },
+    onError: (error: unknown) => {
+      console.error(error);
+      toast.error(t.moderation.unbanError);
     },
   });
 
-  const handleUnban = (user: BannedUser) => {
-    if (
-      !confirm(
-        `Are you sure you want to unban @${user.username}/${user.discriminator}?`
-      )
-    ) {
-      return;
-    }
-    unbanMutation.mutate(user.id);
-  };
-
-  const users = data?.bannedUsers ?? [];
-  const total = data?.pagination.total ?? 0;
-
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-theme-text-primary">
-            Banned Users
-          </h1>
-          <p className="text-sm text-theme-text-subtle mt-1">
-            Users banned from the platform
+      <div className={HEADER_PANEL_SHELL}>
+        <div className="-mb-3 -mt-3 border-b border-theme-border pb-0.5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-2xl font-bold text-theme-text-primary">
+                {t.moderation.bannedUsers}
+              </h2>
+              <p className="-mt-1 text-sm text-theme-text-tertiary">
+                {t.moderation.bannedUsersSubtitle}
+              </p>
+            </div>
+            <button
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className="cursor-pointer rounded-none border border-theme-border bg-theme-bg-secondary/35 p-2 text-theme-text-subtle transition hover:text-theme-text-light disabled:opacity-50"
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
+              />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="border border-theme-border bg-theme-bg-overlay-primary/50 px-4 py-3">
+        <p className="text-2xl font-bold text-red-400">{total}</p>
+        <p className="text-sm text-theme-text-subtle">
+          {t.moderation.totalBannedUsers}
+        </p>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-theme-text-tertiary" />
+        </div>
+      ) : bannedUsers.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-1 text-center">
+          <UserX className="mb-3 h-12 w-12 text-theme-text-muted" />
+          <p className="text-md font-medium text-theme-text-tertiary">
+            {t.moderation.noBannedUsers}
+          </p>
+          <p className="mt-1 text-sm text-theme-text-muted">
+            {t.moderation.noBannedUsersDescription}
           </p>
         </div>
-
-        <button
-          onClick={() => refetch()}
-          disabled={isFetching}
-          className="p-2 rounded-md hover:bg-theme-bg-tab-hover transition disabled:opacity-50"
-        >
-          <RefreshCw
-            className={`w-4 h-4 text-theme-text-subtle ${
-              isFetching ? "animate-spin" : ""
-            }`}
-          />
-        </button>
-      </div>
-
-      {/* Stats */}
-      <div className="p-4 rounded-lg bg-theme-bg-secondary border border-theme-border-primary">
-        <p className="text-2xl font-bold text-red-400">{total}</p>
-        <p className="text-sm text-theme-text-subtle">Total Banned Users</p>
-      </div>
-
-      {/* Users List */}
-      <div className="space-y-3">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-6 h-6 animate-spin text-theme-text-subtle" />
-          </div>
-        ) : users.length === 0 ? (
-          <div className="text-center py-12">
-            <UserX className="w-12 h-12 text-theme-text-tertiary mx-auto mb-3" />
-            <p className="text-theme-text-subtle">No banned users</p>
-            <p className="text-sm text-theme-text-tertiary mt-1">
-              The platform is clean!
-            </p>
-          </div>
-        ) : (
-          users.map((user) => (
-            <div
-              key={user.id}
-              className="p-4 rounded-lg bg-theme-bg-secondary border border-theme-border-primary"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <img
-                    src={user.avatarAsset?.url || undefined}
-                    alt=""
-                    className="w-10 h-10 rounded-full opacity-50"
-                  />
-                  <div>
-                    <p className="font-medium text-theme-text-primary line-through opacity-70">
-                      @{user.username}/{user.discriminator}
-                    </p>
-                    <p className="text-sm text-theme-text-subtle">
-                      {user.banReason || "No reason provided"}
-                    </p>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-theme-text-tertiary">
-                      <span>
-                        Banned {new Date(user.bannedAt).toLocaleDateString()}
-                      </span>
-                      <span>{user._count.strikes} strikes</span>
-                      <span>{user._count.reportsAgainst} reports</span>
-                    </div>
-                  </div>
+      ) : (
+        <div className="space-y-4">
+          {bannedUsers.map((user) => (
+            <div key={user.id} className={USER_ROW_CLASS}>
+              <img
+                src={user.avatarAsset?.url || undefined}
+                alt=""
+                className="h-10 w-10 rounded-full opacity-60"
+              />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-semibold text-theme-text-primary line-through opacity-80">
+                  @{user.username}
+                  {user.discriminator ? `/${user.discriminator}` : ""}
                 </div>
-
-                <button
-                  onClick={() => handleUnban(user)}
-                  disabled={unbanMutation.isPending}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded bg-green-500/10 hover:bg-green-500/20 transition text-green-400 disabled:opacity-50"
-                >
-                  {unbanMutation.isPending ? (
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                  ) : (
-                    <UserCheck className="w-3 h-3" />
+                <p className="text-[11px] text-theme-text-muted">
+                  {user.banReason || t.moderation.noReasonProvided}
+                </p>
+                <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] text-theme-text-tertiary">
+                  {user.bannedAt && (
+                    <span>
+                      {t.moderation.bannedOn}{" "}
+                      {new Date(user.bannedAt).toLocaleDateString()}
+                    </span>
                   )}
-                  Unban
-                </button>
+                  {user._count?.strikes !== undefined && (
+                    <span>{user._count.strikes} {t.moderation.strikes}</span>
+                  )}
+                  {user._count?.reportsAgainst !== undefined && (
+                    <span>{user._count.reportsAgainst} {t.moderation.reports}</span>
+                  )}
+                </div>
               </div>
+              {unbanMutation.isPending && unbanMutation.variables === user.id ? (
+                <Loader2 className="ml-auto h-4 w-4 animate-spin text-theme-text-tertiary" />
+              ) : (
+                <Button
+                  onClick={() => unbanMutation.mutate(user.id)}
+                  className={actionButtonClass}
+                  disabled={unbanMutation.isPending}
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    <UserCheck className="h-3.5 w-3.5" />
+                    {t.moderation.unban}
+                  </span>
+                </Button>
+              )}
             </div>
-          ))
-        )}
-      </div>
+          ))}
+          {hasNextPage && (
+            <div className="flex justify-center pt-2">
+              <Button
+                onClick={() => fetchNextPage()}
+                className={actionButtonClass}
+                disabled={isFetchingNextPage}
+              >
+                {isFetchingNextPage ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  t.discovery.loadMore
+                )}
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

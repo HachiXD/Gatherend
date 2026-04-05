@@ -9,6 +9,13 @@ import {
 } from "./direct-messages.service.js";
 import { AssetContext, AssetVisibility } from "@prisma/client";
 import { db } from "../../lib/db.js";
+import {
+  canSendDirectMessageAttachment,
+  canSendDirectMessageSticker,
+  canSendLinks,
+  containsExternalLinks,
+  REPUTATION_LIMITS,
+} from "../../lib/domain.js";
 import { logger } from "../../lib/logger.js";
 import { attachFilePreviews } from "../../lib/chat-image-previews.js";
 import { findOwnedUploadedAsset } from "../../lib/uploaded-assets.js";
@@ -21,6 +28,22 @@ const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_BATCH_MESSAGE_IDS = 200;
 
+function getReputationScore(reputationScore: number | undefined): number {
+  return typeof reputationScore === "number"
+    ? reputationScore
+    : REPUTATION_LIMITS.baseline;
+}
+
+function getAccessError(decision: {
+  code?: "INSUFFICIENT_LEVEL" | "INSUFFICIENT_REPUTATION";
+  requiredReputation?: number;
+}) {
+  return {
+    error: decision.code ?? "INSUFFICIENT_REPUTATION",
+    requiredReputation: decision.requiredReputation ?? null,
+  };
+}
+
 // POST → enviar DM
 
 router.post("/", async (req, res) => {
@@ -28,13 +51,16 @@ router.post("/", async (req, res) => {
 
   try {
     const profileId = req.profile?.id;
-    const { content, attachmentAssetId, stickerId, replyToId, tempId } = req.body;
+    const { content, attachmentAssetId, stickerId, replyToId, tempId } =
+      req.body;
     const { conversationId } = req.query;
+    const trimmedContent = typeof content === "string" ? content.trim() : "";
+    const reputationScore = getReputationScore(req.profile?.reputationScore);
 
     if (!profileId) return res.status(401).json({ error: "Unauthorized" });
     if (!conversationId || !UUID_REGEX.test(conversationId as string))
       return res.status(400).json({ error: "Invalid conversation ID" });
-    if (!content && !attachmentAssetId && !stickerId)
+    if (!trimmedContent && !attachmentAssetId && !stickerId)
       return res.status(400).json({ error: "Message empty" });
 
     // 1. Verificar que el usuario pertenece a la conversación
@@ -50,8 +76,15 @@ router.post("/", async (req, res) => {
     const { conversation, currentProfile, otherProfile } = result;
 
     let resolvedAttachmentAssetId: string | null = null;
-    if (attachmentAssetId !== undefined && attachmentAssetId !== null && attachmentAssetId !== "") {
-      if (typeof attachmentAssetId !== "string" || !UUID_REGEX.test(attachmentAssetId)) {
+    if (
+      attachmentAssetId !== undefined &&
+      attachmentAssetId !== null &&
+      attachmentAssetId !== ""
+    ) {
+      if (
+        typeof attachmentAssetId !== "string" ||
+        !UUID_REGEX.test(attachmentAssetId)
+      ) {
         return res.status(400).json({ error: "Invalid attachment" });
       }
 
@@ -69,10 +102,31 @@ router.post("/", async (req, res) => {
       resolvedAttachmentAssetId = attachmentAsset.id;
     }
 
+    if (resolvedAttachmentAssetId) {
+      const decision = canSendDirectMessageAttachment(reputationScore);
+      if (!decision.allowed) {
+        return res.status(403).json(getAccessError(decision));
+      }
+    }
+
+    if (stickerId) {
+      const decision = canSendDirectMessageSticker(reputationScore);
+      if (!decision.allowed) {
+        return res.status(403).json(getAccessError(decision));
+      }
+    }
+
+    if (trimmedContent && containsExternalLinks(trimmedContent)) {
+      const decision = canSendLinks(reputationScore);
+      if (!decision.allowed) {
+        return res.status(403).json(getAccessError(decision));
+      }
+    }
+
     // 3. Guardar mensaje en DB (también actualiza updatedAt de la conversación)
 
     const savedMessage = await createDirectMessage({
-      content: content || "",
+      content: trimmedContent,
       attachmentAssetId: resolvedAttachmentAssetId,
       stickerId,
       conversationId: conversation.id,
@@ -206,9 +260,7 @@ router.post("/by-ids", async (req, res) => {
     if (rawIds.length > MAX_BATCH_MESSAGE_IDS) {
       return res.status(400).json({ error: "Too many message IDs" });
     }
-    if (
-      rawIds.some((id) => typeof id !== "string" || !UUID_REGEX.test(id))
-    ) {
+    if (rawIds.some((id) => typeof id !== "string" || !UUID_REGEX.test(id))) {
       return res.status(400).json({ error: "Invalid message IDs" });
     }
 
@@ -224,7 +276,10 @@ router.post("/by-ids", async (req, res) => {
     if (!validConv)
       return res.status(404).json({ error: "Conversation not found" });
 
-    const messages = await getDirectMessagesByIds(conversationId as string, ids);
+    const messages = await getDirectMessagesByIds(
+      conversationId as string,
+      ids,
+    );
     const foundIds = new Set(messages.map((message) => message.id));
     const missingIds = ids.filter((id) => !foundIds.has(id));
 
@@ -246,13 +301,23 @@ router.patch("/:directMessageId", async (req, res) => {
     const { content } = req.body;
     const { directMessageId } = req.params;
     const { conversationId } = req.query;
+    const trimmedContent = typeof content === "string" ? content.trim() : "";
+    const reputationScore = getReputationScore(req.profile?.reputationScore);
 
     if (!profileId) return res.status(401).json({ error: "Unauthorized" });
     if (!directMessageId || !UUID_REGEX.test(directMessageId))
       return res.status(400).json({ error: "Invalid message ID" });
     if (!conversationId || !UUID_REGEX.test(conversationId as string))
       return res.status(400).json({ error: "Invalid conversation ID" });
-    if (!content) return res.status(400).json({ error: "Content missing" });
+    if (!trimmedContent)
+      return res.status(400).json({ error: "Content missing" });
+
+    if (containsExternalLinks(trimmedContent)) {
+      const decision = canSendLinks(reputationScore);
+      if (!decision.allowed) {
+        return res.status(403).json(getAccessError(decision));
+      }
+    }
 
     // Validar conversación
     const validConv = await findConversationForProfile(
@@ -290,14 +355,18 @@ router.patch("/:directMessageId", async (req, res) => {
     // Actualizar mensaje
     message = await db.directMessage.update({
       where: { id: directMessageId },
-      data: { content },
+      data: { content: trimmedContent },
       select: directMessageSelect,
     });
 
     // Emitir UPDATE
     const updateKey = `chat:${conversationId}:messages:update`;
-    const serializedMessage = attachFilePreviews(serializeDirectMessage(message));
-    req.io.to(`conversation:${conversationId}`).emit(updateKey, serializedMessage);
+    const serializedMessage = attachFilePreviews(
+      serializeDirectMessage(message),
+    );
+    req.io
+      .to(`conversation:${conversationId}`)
+      .emit(updateKey, serializedMessage);
 
     return res.json(serializedMessage);
   } catch (error) {
@@ -412,8 +481,12 @@ router.post("/:messageId/pin", async (req, res) => {
     });
 
     const updateKey = `chat:${conversationId}:messages:update`;
-    const serializedMessage = attachFilePreviews(serializeDirectMessage(message));
-    req.io.to(`conversation:${conversationId}`).emit(updateKey, serializedMessage);
+    const serializedMessage = attachFilePreviews(
+      serializeDirectMessage(message),
+    );
+    req.io
+      .to(`conversation:${conversationId}`)
+      .emit(updateKey, serializedMessage);
 
     return res.json(serializedMessage);
   } catch (error) {
@@ -469,8 +542,12 @@ router.delete("/:messageId/pin", async (req, res) => {
     });
 
     const updateKey = `chat:${conversationId}:messages:update`;
-    const serializedMessage = attachFilePreviews(serializeDirectMessage(message));
-    req.io.to(`conversation:${conversationId}`).emit(updateKey, serializedMessage);
+    const serializedMessage = attachFilePreviews(
+      serializeDirectMessage(message),
+    );
+    req.io
+      .to(`conversation:${conversationId}`)
+      .emit(updateKey, serializedMessage);
 
     return res.json(serializedMessage);
   } catch (error) {

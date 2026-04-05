@@ -130,10 +130,22 @@ export async function POST(req: Request) {
 
     // Verify the target exists based on type
     let resolvedTargetOwnerId = targetOwnerId;
+    let resolvedBoardId: string | null = null;
+    let resolvedChannelId: string | null = null;
 
     if (targetType === "MESSAGE") {
       const message = await db.message.findUnique({
         where: { id: targetId },
+        select: {
+          id: true,
+          channelId: true,
+          messageSenderId: true,
+          channel: {
+            select: {
+              boardId: true,
+            },
+          },
+        },
       });
       if (!message) {
         return NextResponse.json(
@@ -141,9 +153,16 @@ export async function POST(req: Request) {
           { status: 404 },
         );
       }
+      resolvedTargetOwnerId = message.messageSenderId;
+      resolvedBoardId = message.channel?.boardId ?? null;
+      resolvedChannelId = message.channelId;
     } else if (targetType === "DIRECT_MESSAGE") {
       const dm = await db.directMessage.findUnique({
         where: { id: targetId },
+        select: {
+          id: true,
+          senderId: true,
+        },
       });
       if (!dm) {
         return NextResponse.json(
@@ -151,6 +170,7 @@ export async function POST(req: Request) {
           { status: 404 },
         );
       }
+      resolvedTargetOwnerId = dm.senderId;
     } else if (targetType === "BOARD") {
       const board = await db.board.findUnique({
         where: { id: targetId },
@@ -161,6 +181,7 @@ export async function POST(req: Request) {
       }
       // Use the board owner's profile ID as targetOwnerId
       resolvedTargetOwnerId = board.profileId;
+      resolvedBoardId = board.id;
 
       // Prevent self-reporting own board
       if (board.profileId === profile.id) {
@@ -172,7 +193,12 @@ export async function POST(req: Request) {
     } else if (targetType === "COMMUNITY_POST") {
       const post = await db.communityPost.findUnique({
         where: { id: targetId },
-        select: { id: true, authorProfileId: true, deleted: true },
+        select: {
+          id: true,
+          authorProfileId: true,
+          deleted: true,
+          boardId: true,
+        },
       });
       if (!post || post.deleted) {
         return NextResponse.json(
@@ -182,6 +208,7 @@ export async function POST(req: Request) {
       }
 
       resolvedTargetOwnerId = post.authorProfileId;
+      resolvedBoardId = post.boardId;
 
       if (post.authorProfileId === profile.id) {
         return NextResponse.json(
@@ -199,6 +226,7 @@ export async function POST(req: Request) {
           post: {
             select: {
               deleted: true,
+              boardId: true,
             },
           },
         },
@@ -211,6 +239,7 @@ export async function POST(req: Request) {
       }
 
       resolvedTargetOwnerId = comment.authorProfileId;
+      resolvedBoardId = comment.post.boardId;
 
       if (comment.authorProfileId === profile.id) {
         return NextResponse.json(
@@ -250,6 +279,8 @@ export async function POST(req: Request) {
         reporterId: profile.id,
         targetType: targetType as ReportTargetType,
         targetId,
+        boardId: resolvedBoardId,
+        channelId: resolvedChannelId,
         targetOwnerId: resolvedTargetOwnerId || null,
         category: category as ReportCategory,
         description: description || null,

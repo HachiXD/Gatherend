@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin-auth";
-import { ReportStatus } from "@prisma/client";
+import {
+  PlatformBanSourceType,
+  PlatformWarningStatus,
+  ReportStatus,
+  StrikeSourceType,
+} from "@prisma/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import {
   moderationProfileSelect,
@@ -29,9 +34,16 @@ export async function GET() {
       totalReports,
       totalStrikes,
       activeStrikes,
+      activeWarnings,
+      promotedWarnings,
+      removedWarnings,
+      directStrikes,
+      warningEscalationStrikes,
       bannedUsers,
+      autoBannedUsers,
       reportsToday,
       reportsThisWeek,
+      actionsThisWeek,
       categoryBreakdown,
       typeBreakdown,
     ] = await Promise.all([
@@ -46,7 +58,28 @@ export async function GET() {
           OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
         },
       }),
+      db.platformWarning.count({
+        where: { status: PlatformWarningStatus.ACTIVE },
+      }),
+      db.platformWarning.count({
+        where: { status: PlatformWarningStatus.PROMOTED },
+      }),
+      db.platformWarning.count({
+        where: { status: PlatformWarningStatus.REMOVED },
+      }),
+      db.strike.count({
+        where: { sourceType: StrikeSourceType.DIRECT },
+      }),
+      db.strike.count({
+        where: { sourceType: StrikeSourceType.WARNING_ESCALATION },
+      }),
       db.profile.count({ where: { banned: true } }),
+      db.profile.count({
+        where: {
+          banned: true,
+          banSourceType: PlatformBanSourceType.AUTO_STRIKE_THRESHOLD,
+        },
+      }),
       db.report.count({
         where: {
           createdAt: {
@@ -55,6 +88,13 @@ export async function GET() {
         },
       }),
       db.report.count({
+        where: {
+          createdAt: {
+            gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+          },
+        },
+      }),
+      db.platformModerationAction.count({
         where: {
           createdAt: {
             gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
@@ -86,6 +126,22 @@ export async function GET() {
             username: true,
             discriminator: true,
           },
+        },
+      },
+    });
+
+    const recentActions = await db.platformModerationAction.findMany({
+      take: 10,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      select: {
+        id: true,
+        actionType: true,
+        createdAt: true,
+        profile: {
+          select: moderationProfileWithUserIdSelect,
+        },
+        issuedBy: {
+          select: moderationProfileSelect,
         },
       },
     });
@@ -139,9 +195,16 @@ export async function GET() {
         totalReports,
         totalStrikes,
         activeStrikes,
+        activeWarnings,
+        promotedWarnings,
+        removedWarnings,
+        directStrikes,
+        warningEscalationStrikes,
         bannedUsers,
+        autoBannedUsers,
         reportsToday,
         reportsThisWeek,
+        actionsThisWeek,
       },
       breakdown: {
         byCategory: categoryBreakdown.map((c) => ({
@@ -154,6 +217,12 @@ export async function GET() {
         })),
       },
       recentReports,
+      recentActions: recentActions.map((action) => ({
+        ...action,
+        createdAt: action.createdAt.toISOString(),
+        profile: serializeModerationProfile(action.profile),
+        issuedBy: serializeModerationProfile(action.issuedBy),
+      })),
       topReporters: topReporters.map(serializeModerationProfile),
       mostReportedUsers: mostReportedUsers.map(serializeModerationProfile),
     });

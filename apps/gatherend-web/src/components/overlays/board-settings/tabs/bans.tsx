@@ -3,12 +3,17 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { UserAvatar } from "@/components/user-avatar";
 import { Loader2, Gavel } from "lucide-react";
-import { Profile } from "@prisma/client";
+import { BoardBanSourceType, Profile } from "@prisma/client";
 import axios from "axios";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useTranslation } from "@/i18n";
+import { cn } from "@/lib/utils";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 const HEADER_PANEL_SHELL =
@@ -17,14 +22,27 @@ const BAN_ROW_CLASS =
   "flex min-h-10 items-center gap-3 rounded-none border border-theme-border-subtle bg-theme-bg-edit-form/50 px-3 py-1";
 const actionButtonClass =
   "h-6.5 min-w-[120px] cursor-pointer rounded-none bg-theme-tab-button-bg px-3 text-[14px] text-theme-text-light transition hover:bg-theme-tab-button-hover";
+const sourceBadgeClass =
+  "inline-flex items-center rounded-none border border-theme-border bg-theme-bg-secondary/35 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.05em] text-theme-text-muted";
 
 interface BannedUser {
   id: string;
   profileId: string;
   createdAt: string;
+  sourceType: BoardBanSourceType;
+  issuedBy: Pick<Profile, "id" | "username" | "discriminator"> & {
+    avatarAsset: ClientUploadedAsset | null;
+  };
   profile: Pick<Profile, "id" | "username" | "discriminator"> & {
     avatarAsset: ClientUploadedAsset | null;
   };
+}
+
+interface BoardBansPage {
+  items: BannedUser[];
+  bans: BannedUser[];
+  nextCursor: string | null;
+  hasMore: boolean;
 }
 
 interface BansTabProps {
@@ -35,17 +53,47 @@ export const BansTab = ({ boardId }: BansTabProps) => {
   const queryClient = useQueryClient();
   const { t } = useTranslation();
 
-  // Query para obtener usuarios baneados
-  const { data: bannedUsers = [], isLoading } = useQuery({
+  const getSourceLabel = (sourceType: BoardBanSourceType) =>
+    sourceType === "WARNING_THRESHOLD"
+      ? t.overlays.boardSettings.bans.autoBanLabel
+      : t.overlays.boardSettings.bans.manualBanLabel;
+
+  const getSourceDescription = (ban: BannedUser) =>
+    ban.sourceType === "WARNING_THRESHOLD"
+      ? t.overlays.boardSettings.bans.autoBanDescription
+      : t.overlays.boardSettings.bans.manualBanDescription.replace(
+          "{username}",
+          ban.issuedBy.username,
+        );
+
+  const {
+    data,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useInfiniteQuery({
     queryKey: ["boardBans", boardId],
-    queryFn: async () => {
-      const response = await axios.get<BannedUser[]>(
-        `/api/boards/${boardId}/bans`,
-      );
+    queryFn: async ({
+      pageParam,
+    }: {
+      pageParam?: string | null;
+    }): Promise<BoardBansPage> => {
+      const response = await axios.get<BoardBansPage>(`/api/boards/${boardId}/bans`, {
+        params: {
+          cursor: pageParam ?? undefined,
+          limit: 20,
+        },
+      });
       return response.data;
     },
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) =>
+      lastPage.hasMore ? lastPage.nextCursor : undefined,
     staleTime: 1000 * 60, // 1 minuto
   });
+
+  const bannedUsers = data?.pages.flatMap((page) => page.items) ?? [];
 
   // Mutation para unban
   const unbanMutation = useMutation({
@@ -55,12 +103,10 @@ export const BansTab = ({ boardId }: BansTabProps) => {
       });
       return profileId;
     },
-    onSuccess: (profileId) => {
-      // Actualizar cache optimistamente
-      queryClient.setQueryData<BannedUser[]>(
-        ["boardBans", boardId],
-        (old) => old?.filter((ban) => ban.profileId !== profileId) ?? [],
-      );
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["boardBans", boardId],
+      });
       toast.success(t.overlays.boardSettings.bans.unbanSuccess);
     },
     onError: () => {
@@ -123,8 +169,17 @@ export const BansTab = ({ boardId }: BansTabProps) => {
                   showStatus={false}
                 />
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-semibold text-theme-text-primary">
-                    {ban.profile.username}
+                  <div className="flex items-center gap-2 text-sm font-semibold text-theme-text-primary">
+                    <span className="truncate">{ban.profile.username}</span>
+                    <span
+                      className={cn(
+                        sourceBadgeClass,
+                        ban.sourceType === "WARNING_THRESHOLD" &&
+                          "border-[#8a5a2c] bg-[#5a3a14]/25 text-[#f2c084]",
+                      )}
+                    >
+                      {getSourceLabel(ban.sourceType)}
+                    </span>
                   </div>
                   <p className="truncate text-[11px] text-theme-text-tertiary">
                     /{ban.profile.discriminator}
@@ -132,6 +187,9 @@ export const BansTab = ({ boardId }: BansTabProps) => {
                   <p className="text-[11px] text-theme-text-muted">
                     {t.overlays.boardSettings.bans.bannedOn}{" "}
                     {new Date(ban.createdAt).toLocaleDateString()}
+                  </p>
+                  <p className="mt-1 text-[11px] text-theme-text-muted">
+                    {getSourceDescription(ban)}
                   </p>
                 </div>
                 {unbanMutation.isPending &&
@@ -148,6 +206,21 @@ export const BansTab = ({ boardId }: BansTabProps) => {
                 )}
               </div>
             ))}
+            {hasNextPage && (
+              <div className="flex justify-center pt-2">
+                <Button
+                  onClick={() => fetchNextPage()}
+                  className={actionButtonClass}
+                  disabled={isFetchingNextPage}
+                >
+                  {isFetchingNextPage ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    t.discovery.loadMore
+                  )}
+                </Button>
+              </div>
+            )}
           </div>
         </ScrollArea>
       )}

@@ -343,6 +343,7 @@ export type TranslationKeys = {
         general: string;
         members: string;
         bans: string;
+        history: string;
         dangerZone: string;
       };
       general: {
@@ -384,6 +385,13 @@ export type TranslationKeys = {
         actions: string;
         kick: string;
         ban: string;
+        warn: string;
+        removeWarning: string;
+        warnSuccess: string;
+        warnError: string;
+        removeWarningSuccess: string;
+        removeWarningError: string;
+        autoBanTriggered: string;
         roles: {
           guest: string;
           moderator: string;
@@ -400,9 +408,40 @@ export type TranslationKeys = {
         emptyTitle: string;
         emptyDescription: string;
         bannedOn: string;
+        autoBanLabel: string;
+        manualBanLabel: string;
+        autoBanDescription: string;
+        manualBanDescription: string;
         unban: string;
         unbanSuccess: string;
         unbanError: string;
+      };
+
+      history: {
+        title: string;
+        loading: string;
+        entry: string;
+        entries: string;
+        emptyTitle: string;
+        emptyDescription: string;
+        actions: {
+          warning: string;
+          removeWarning: string;
+          ban: string;
+          unban: string;
+          kick: string;
+          autoBan: string;
+          autoUnban: string;
+        };
+        descriptions: {
+          warning: string;
+          removeWarning: string;
+          ban: string;
+          unban: string;
+          kick: string;
+          autoBan: string;
+          autoUnban: string;
+        };
       };
 
       dangerZone: {
@@ -484,6 +523,9 @@ export type TranslationKeys = {
       publicSeatsDescription: string;
       inviteSeats: string;
       inviteSeatsDescription: string;
+      publicOptionLabel: string;
+      privateOptionLabel: string;
+      privacyPermanentNotice: string;
       success: string;
       error: string;
       moderationError: string;
@@ -737,8 +779,14 @@ export type TranslationKeys = {
   moderation: {
     dashboard: string;
     reports: string;
+    history: string;
     bannedUsers: string;
+    userLookup: string;
+    boardLookup: string;
+    pendingInvestigations: string;
+    stats: string;
     warnings: string;
+    strikes: string;
     kick: string;
     ban: string;
     unban: string;
@@ -750,9 +798,35 @@ export type TranslationKeys = {
     permanent: string;
     moderationLog: string;
     noReports: string;
+    reportsSubtitle: string;
+    reportsQueueEmptyDescription: string;
     reportUser: string;
     reportMessage: string;
     reportReason: string;
+    historySubtitle: string;
+    noHistory: string;
+    historyEmptyDescription: string;
+    warning: string;
+    removeWarning: string;
+    strike: string;
+    removeStrike: string;
+    clearStrikes: string;
+    note: string;
+    autoBan: string;
+    autoUnban: string;
+    autoBanDescription: string;
+    autoUnbanDescription: string;
+    unknownAdmin: string;
+    unknownUser: string;
+    warningStatus: string;
+    bannedUsersSubtitle: string;
+    totalBannedUsers: string;
+    noBannedUsers: string;
+    noBannedUsersDescription: string;
+    noReasonProvided: string;
+    bannedOn: string;
+    unbanSuccess: string;
+    unbanError: string;
   };
 
   // Time

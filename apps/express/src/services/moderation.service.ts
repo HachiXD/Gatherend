@@ -1,34 +1,32 @@
 /**
- * Moderation Service
- *
- * Main entry point for content moderation. Implements 3-layer caching:
- * 1. Exact hash match (SHA-256)
- * 2. AWS Rekognition analysis
- * 3. Cache results for future lookups
+ * Main entry point for image moderation.
  *
  * Flow:
- * Image → Hash → Cache check → Rekognition (if miss) → Cache result → Return
+ * Image -> normalize/hash -> cache check -> NSFWJS service -> cache result -> return
  */
 
 import { db } from "../lib/db.js";
 import { logger } from "../lib/logger.js";
 import {
   processImage,
-  extractFirstFrame,
-  prepareForRekognition,
   isValidImage,
+  prepareForModeration,
 } from "./image-processing.service.js";
 import {
   analyzeImage,
-  isRekognitionConfigured,
-  getBlockedReason,
-  type ModerationResult,
-} from "./rekognition.service.js";
+  isContentModerationConfigured,
+} from "./content-moderation.service.js";
 import {
-  getThresholdForContext,
-  type ModerationContext,
-  type StrikeSeverity,
   CACHE_CONFIG,
+  getGenericBlockedMessage,
+  getNsfwDecision,
+  getSeverityForReason,
+  MODERATION_ENGINE,
+  MODERATION_POLICY_VERSION,
+  type ModerationContext,
+  type ModerationReason,
+  type NsfwRawClasses,
+  type StrikeSeverity,
 } from "../config/moderation.config.js";
 
 export interface ModerationResponse {
@@ -39,6 +37,7 @@ export interface ModerationResponse {
   cached: boolean;
   processingTimeMs: number;
   hash: string;
+  failureKind?: "blocked" | "service_error";
 }
 
 export interface ModerateImageOptions {
@@ -48,127 +47,141 @@ export interface ModerateImageOptions {
   skipCache?: boolean;
 }
 
-/**
- * Main moderation function - call this for all image uploads
- */
+interface CachedModerationResult {
+  blocked: boolean;
+  reason: string | null;
+  severity: string | null;
+}
+
 export async function moderateImage(
-  options: ModerateImageOptions
+  options: ModerateImageOptions,
 ): Promise<ModerationResponse> {
   const { buffer, context, profileId, skipCache = false } = options;
   const startTime = Date.now();
 
-  // Validate image
   if (!(await isValidImage(buffer))) {
     return {
       allowed: false,
       reason: "invalid_image",
-      userMessage: "The uploaded file is not a valid image",
+      userMessage: "The uploaded file is not a valid image.",
       cached: false,
       processingTimeMs: Date.now() - startTime,
       hash: "",
+      failureKind: "service_error",
     };
   }
 
-  // Process image: strip EXIF, calculate hash
   const processed = await processImage(buffer);
 
-  // Check cache first (Layer 1)
   if (!skipCache) {
     const cachedResult = await checkCache(processed.hash);
     if (cachedResult) {
-      // Increment cache hits counter
       await incrementCacheHits(processed.hash);
 
       return {
         allowed: !cachedResult.blocked,
         reason: cachedResult.reason || undefined,
-        userMessage: cachedResult.reason
-          ? getBlockedReason(cachedResult.reason)
+        userMessage: cachedResult.blocked
+          ? getGenericBlockedMessage()
           : undefined,
         severity: cachedResult.severity as StrikeSeverity | undefined,
         cached: true,
         processingTimeMs: Date.now() - startTime,
         hash: processed.hash,
+        failureKind: cachedResult.blocked ? "blocked" : undefined,
       };
     }
   }
 
-  // Check if Rekognition is configured
-  if (!isRekognitionConfigured()) {
-    logger.warn("[Moderation] Rekognition not configured, allowing image");
+  if (!isContentModerationConfigured()) {
+    logger.warn(
+      "[Moderation] CONTENT_MODERATION_URL/API_KEY not configured, failing closed",
+    );
     return {
-      allowed: true,
+      allowed: false,
+      reason: "moderation_error",
+      userMessage: "Image moderation is currently unavailable. Please try again later.",
       cached: false,
       processingTimeMs: Date.now() - startTime,
       hash: processed.hash,
+      failureKind: "service_error",
     };
   }
 
-  // Get threshold based on context
-  const threshold = getThresholdForContext(context);
-
-  // Prepare image for Rekognition (resize if needed)
-  const rekognitionBuffer = await prepareForRekognition(processed.buffer);
-
-  // Call Rekognition (Layer 2)
-  const result = await analyzeImage(rekognitionBuffer, threshold);
-
-  // Cache the result (Layer 3)
-  await cacheResult(processed.hash, result, context);
-
-  // If blocked, record a strike
-  if (result.blocked && result.severity) {
-    await recordStrike({
-      profileId,
-      reason: result.reason || "unknown",
-      severity: result.severity,
-      contentType: getContentType(context),
-      imageHash: processed.hash,
-      labels: result.labels,
-      confidence: result.confidence,
+  try {
+    const prepared = await prepareForModeration(processed.buffer);
+    const inference = await analyzeImage(prepared.buffer, {
+      contentType:
+        prepared.format === "png" ? "image/png" : "image/jpeg",
+      filename: prepared.format === "png" ? "moderation.png" : "moderation.jpg",
     });
-  }
+    const decision = getNsfwDecision(inference.classes);
 
-  return {
-    allowed: !result.blocked,
-    reason: result.reason || undefined,
-    userMessage: result.reason ? getBlockedReason(result.reason) : undefined,
-    severity: result.severity || undefined,
-    cached: false,
-    processingTimeMs: Date.now() - startTime,
-    hash: processed.hash,
-  };
+    const result = {
+      blocked: decision.blocked,
+      reason: decision.reason,
+      severity: decision.reason ? getSeverityForReason(decision.reason) : null,
+      confidence: decision.confidence,
+      labels: inference.classes,
+    };
+
+    await cacheResult(processed.hash, result, context);
+
+    if (result.blocked && result.severity && result.reason) {
+      await recordStrike({
+        profileId,
+        reason: result.reason,
+        severity: result.severity,
+        contentType: getContentType(context),
+        imageHash: processed.hash,
+        labels: result.labels,
+        confidence: result.confidence,
+      });
+    }
+
+    return {
+      allowed: !result.blocked,
+      reason: result.reason || undefined,
+      userMessage: result.blocked ? getGenericBlockedMessage() : undefined,
+      severity: result.severity || undefined,
+      cached: false,
+      processingTimeMs: Date.now() - startTime,
+      hash: processed.hash,
+      failureKind: result.blocked ? "blocked" : undefined,
+    };
+  } catch (error) {
+    logger.error("[Moderation] NSFWJS moderation failed:", error);
+    return {
+      allowed: false,
+      reason: "moderation_error",
+      userMessage: "Image moderation is currently unavailable. Please try again later.",
+      cached: false,
+      processingTimeMs: Date.now() - startTime,
+      hash: processed.hash,
+      failureKind: "service_error",
+    };
+  }
 }
 
-/**
- * Moderate an animated sticker (extracts first frame)
- */
 export async function moderateSticker(
-  options: ModerateImageOptions
+  options: ModerateImageOptions,
 ): Promise<ModerationResponse> {
-  const { buffer, ...rest } = options;
-
-  // Extract first frame from animated images
-  const firstFrame = await extractFirstFrame(buffer);
-
   return moderateImage({
-    ...rest,
-    buffer: firstFrame,
+    ...options,
     context: "sticker",
   });
 }
 
-/**
- * Check moderation cache by hash
- */
-async function checkCache(hash: string): Promise<{
-  blocked: boolean;
-  reason: string | null;
-  severity: string | null;
-} | null> {
+async function checkCache(hash: string): Promise<CachedModerationResult | null> {
   try {
     const cached = await db.moderationCache.findUnique({
-      where: { hash },
+      where: {
+        hash_engine_policyVersion: {
+          hash,
+          engine: MODERATION_ENGINE,
+          policyVersion: MODERATION_POLICY_VERSION,
+        },
+      },
       select: {
         blocked: true,
         reason: true,
@@ -179,12 +192,18 @@ async function checkCache(hash: string): Promise<{
 
     if (!cached) return null;
 
-    // Check if cache is still valid (TTL)
     const ageInDays =
       (Date.now() - cached.createdAt.getTime()) / (1000 * 60 * 60 * 24);
     if (ageInDays > CACHE_CONFIG.ttlDays) {
-      // Cache expired, delete it
-      await db.moderationCache.delete({ where: { hash } });
+      await db.moderationCache.delete({
+        where: {
+          hash_engine_policyVersion: {
+            hash,
+            engine: MODERATION_ENGINE,
+            policyVersion: MODERATION_POLICY_VERSION,
+          },
+        },
+      });
       return null;
     }
 
@@ -199,33 +218,47 @@ async function checkCache(hash: string): Promise<{
   }
 }
 
-/**
- * Increment cache hits counter
- */
 async function incrementCacheHits(hash: string): Promise<void> {
   try {
     await db.moderationCache.update({
-      where: { hash },
+      where: {
+        hash_engine_policyVersion: {
+          hash,
+          engine: MODERATION_ENGINE,
+          policyVersion: MODERATION_POLICY_VERSION,
+        },
+      },
       data: { hits: { increment: 1 } },
     });
-  } catch (error) {
-    // Ignore errors, this is just for analytics
+  } catch {
+    // Best effort only.
   }
 }
 
-/**
- * Cache moderation result
- */
 async function cacheResult(
   hash: string,
-  result: ModerationResult,
-  context: ModerationContext
+  result: {
+    blocked: boolean;
+    reason: ModerationReason | null;
+    severity: StrikeSeverity | null;
+    labels: NsfwRawClasses;
+    confidence: number | null;
+  },
+  context: ModerationContext,
 ): Promise<void> {
   try {
     await db.moderationCache.upsert({
-      where: { hash },
+      where: {
+        hash_engine_policyVersion: {
+          hash,
+          engine: MODERATION_ENGINE,
+          policyVersion: MODERATION_POLICY_VERSION,
+        },
+      },
       create: {
         hash,
+        engine: MODERATION_ENGINE,
+        policyVersion: MODERATION_POLICY_VERSION,
         blocked: result.blocked,
         reason: result.reason,
         severity: result.severity,
@@ -247,16 +280,13 @@ async function cacheResult(
   }
 }
 
-/**
- * Record a strike against a user
- */
 async function recordStrike(data: {
   profileId: string;
-  reason: string;
+  reason: ModerationReason;
   severity: StrikeSeverity;
   contentType: string;
   imageHash: string;
-  labels: any[];
+  labels: NsfwRawClasses;
   confidence: number | null;
 }): Promise<void> {
   try {
@@ -267,20 +297,20 @@ async function recordStrike(data: {
         severity: data.severity,
         contentType: data.contentType,
         imageHash: data.imageHash,
-        snapshot: { labels: data.labels, confidence: data.confidence },
+        autoDetected: true,
+        snapshot: {
+          engine: MODERATION_ENGINE,
+          policyVersion: MODERATION_POLICY_VERSION,
+          classes: data.labels,
+          confidence: data.confidence,
+        } as any,
       },
     });
-
-    // TODO: Check if user should be banned based on strike count
-    // await checkForBan(data.profileId);
   } catch (error) {
     logger.error("[Moderation] Strike record error:", error);
   }
 }
 
-/**
- * Get content type string from context
- */
 function getContentType(context: ModerationContext): string {
   switch (context) {
     case "sticker":
@@ -301,9 +331,6 @@ function getContentType(context: ModerationContext): string {
   }
 }
 
-/**
- * Get moderation stats for analytics
- */
 export async function getModerationStats(): Promise<{
   totalScanned: number;
   totalBlocked: number;
@@ -312,9 +339,24 @@ export async function getModerationStats(): Promise<{
 }> {
   try {
     const [total, blocked, cacheStats] = await Promise.all([
-      db.moderationCache.count(),
-      db.moderationCache.count({ where: { blocked: true } }),
+      db.moderationCache.count({
+        where: {
+          engine: MODERATION_ENGINE,
+          policyVersion: MODERATION_POLICY_VERSION,
+        },
+      }),
+      db.moderationCache.count({
+        where: {
+          blocked: true,
+          engine: MODERATION_ENGINE,
+          policyVersion: MODERATION_POLICY_VERSION,
+        },
+      }),
       db.moderationCache.aggregate({
+        where: {
+          engine: MODERATION_ENGINE,
+          policyVersion: MODERATION_POLICY_VERSION,
+        },
         _sum: { hits: true },
         _count: true,
       }),
@@ -322,7 +364,11 @@ export async function getModerationStats(): Promise<{
 
     const byReasonRaw = await db.moderationCache.groupBy({
       by: ["reason"],
-      where: { blocked: true },
+      where: {
+        blocked: true,
+        engine: MODERATION_ENGINE,
+        policyVersion: MODERATION_POLICY_VERSION,
+      },
       _count: true,
     });
 

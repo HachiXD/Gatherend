@@ -1,67 +1,25 @@
 import { NextResponse } from "next/server";
+import { PlatformWarningStatus, StrikeSourceType } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/admin-auth";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
-import { profileCache } from "@/lib/redis";
-import { AuthProvider } from "@prisma/client";
-import {
-  serializeUploadedAsset,
-  uploadedAssetSummarySelect,
-} from "@/lib/uploaded-assets";
 import {
   moderationProfileSelect,
   moderationProfileWithUserIdSelect,
   serializeModerationProfile,
 } from "@/lib/moderation-serialization";
+import {
+  serializeUploadedAsset,
+  uploadedAssetSummarySelect,
+} from "@/lib/uploaded-assets";
+import { UUID_REGEX } from "@/lib/platform-moderation";
 
 export const dynamic = "force-dynamic";
-
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-async function invalidateProfileCaches(profile: { id: string; userId: string }) {
-  // Legacy key (Profile.userId) is still used in some transitional flows.
-  await profileCache.invalidate(profile.userId);
-
-  // Also invalidate keys for linked identities (legacy id, betterauth:<userId>).
-  const identities = await db.authIdentity.findMany({
-    where: { profileId: profile.id },
-    select: { provider: true, providerUserId: true },
-  });
-
-  for (const identity of identities) {
-    const cacheKey =
-      identity.provider === AuthProvider.BETTER_AUTH
-        ? `betterauth:${identity.providerUserId}`
-        : identity.providerUserId;
-    await profileCache.invalidate(cacheKey);
-  }
-}
-
-async function revokeBetterAuthSessions(profileId: string): Promise<void> {
-  const identity = await db.authIdentity.findFirst({
-    where: {
-      profileId,
-      provider: AuthProvider.BETTER_AUTH,
-    },
-    select: { providerUserId: true },
-  });
-
-  if (!identity) {
-    return;
-  }
-
-  // Revoke all BetterAuth sessions (forces logout).
-  await db.session.deleteMany({
-    where: { userId: identity.providerUserId },
-  });
-}
 
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ userId: string }> },
 ) {
-  // Rate limiting for moderation reads
   const rateLimitResponse = await checkRateLimit(RATE_LIMITS.moderationRead);
   if (rateLimitResponse) return rateLimitResponse;
 
@@ -70,7 +28,6 @@ export async function GET(
 
   const { userId: profileId } = await params;
 
-  // Validate profileId format (UUID)
   if (!profileId || !UUID_REGEX.test(profileId)) {
     return NextResponse.json(
       { error: "Invalid profile ID format" },
@@ -79,7 +36,6 @@ export async function GET(
   }
 
   try {
-    // Find profile by profileId
     const profile = await db.profile.findUnique({
       where: { id: profileId },
       select: {
@@ -90,6 +46,7 @@ export async function GET(
         validReports: true,
         falseReports: true,
         reportAccuracy: true,
+        reputationScore: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -99,66 +56,182 @@ export async function GET(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Get reports filed BY this user
-    const reportsFiled = await db.report.findMany({
-      where: { reporterId: profile.id },
-      orderBy: { createdAt: "desc" },
-      take: 20,
-      select: {
-        id: true,
-        targetType: true,
-        targetId: true,
-        category: true,
-        status: true,
-        createdAt: true,
-      },
-    });
-
-    // Get reports filed AGAINST this user
-    const reportsAgainst = await db.report.findMany({
-      where: { targetOwnerId: profile.id },
-      orderBy: { createdAt: "desc" },
-      take: 20,
-      include: {
-        reporter: {
-          select: moderationProfileSelect,
+    const [
+      reportsFiled,
+      reportsAgainst,
+      totalReportsFiled,
+      totalReportsAgainst,
+      strikes,
+      totalStrikes,
+      activeStrikes,
+      directStrikes,
+      warningEscalationStrikes,
+      totalPlatformActions,
+      boardsOwned,
+      members,
+      warningCounts,
+      recentWarnings,
+      recentPlatformActions,
+    ] = await Promise.all([
+      db.report.findMany({
+        where: { reporterId: profile.id },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        take: 10,
+        select: {
+          id: true,
+          targetType: true,
+          targetId: true,
+          category: true,
+          status: true,
+          createdAt: true,
         },
-      },
-    });
-
-    // Get strikes for this user
-    const strikes = await db.strike.findMany({
-      where: { profileId: profile.id },
-      orderBy: { createdAt: "desc" },
-      take: 100,
-    });
-
-    // Get boards created by this user
-    const boardsOwned = await db.board.findMany({
-      where: { profileId: profile.id },
-      select: {
-        id: true,
-        name: true,
-        imageAsset: {
-          select: uploadedAssetSummarySelect,
+      }),
+      db.report.findMany({
+        where: { targetOwnerId: profile.id },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        take: 10,
+        include: {
+          reporter: {
+            select: moderationProfileSelect,
+          },
         },
-        reportCount: true,
-        hiddenFromFeed: true,
-        createdAt: true,
-        _count: {
-          select: { members: true },
+      }),
+      db.report.count({
+        where: { reporterId: profile.id },
+      }),
+      db.report.count({
+        where: { targetOwnerId: profile.id },
+      }),
+      db.strike.findMany({
+        where: { profileId: profile.id },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        take: 10,
+      }),
+      db.strike.count({
+        where: { profileId: profile.id },
+      }),
+      db.strike.count({
+        where: {
+          profileId: profile.id,
+          OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
         },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+      }),
+      db.strike.count({
+        where: {
+          profileId: profile.id,
+          sourceType: StrikeSourceType.DIRECT,
+        },
+      }),
+      db.strike.count({
+        where: {
+          profileId: profile.id,
+          sourceType: StrikeSourceType.WARNING_ESCALATION,
+        },
+      }),
+      db.platformModerationAction.count({
+        where: { profileId: profile.id },
+      }),
+      db.board.findMany({
+        where: { profileId: profile.id },
+        select: {
+          id: true,
+          name: true,
+          imageAsset: {
+            select: uploadedAssetSummarySelect,
+          },
+          reportCount: true,
+          hiddenFromFeed: true,
+          riskLevel: true,
+          createdAt: true,
+          _count: {
+            select: { members: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+      db.member.findMany({
+        where: { profileId: profile.id },
+        select: { id: true },
+      }),
+      db.platformWarning.groupBy({
+        by: ["status"],
+        where: { profileId: profile.id },
+        _count: { _all: true },
+      }),
+      db.platformWarning.findMany({
+        where: { profileId: profile.id },
+        include: {
+          issuedBy: {
+            select: moderationProfileSelect,
+          },
+          removedBy: {
+            select: moderationProfileSelect,
+          },
+          report: {
+            select: {
+              id: true,
+              category: true,
+              targetType: true,
+              status: true,
+              createdAt: true,
+            },
+          },
+          promotedToStrike: {
+            select: {
+              id: true,
+              severity: true,
+              sourceType: true,
+              createdAt: true,
+            },
+          },
+        },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        take: 10,
+      }),
+      db.platformModerationAction.findMany({
+        where: { profileId: profile.id },
+        include: {
+          issuedBy: {
+            select: moderationProfileSelect,
+          },
+          report: {
+            select: {
+              id: true,
+              category: true,
+              targetType: true,
+              status: true,
+              createdAt: true,
+            },
+          },
+          warning: {
+            select: {
+              id: true,
+              reason: true,
+              notes: true,
+              status: true,
+              removedAt: true,
+              promotedToStrikeId: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+          },
+          strike: {
+            select: {
+              id: true,
+              severity: true,
+              reason: true,
+              sourceType: true,
+              autoBanTriggered: true,
+              createdAt: true,
+            },
+          },
+        },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        take: 10,
+      }),
+    ]);
 
-    // Get recent messages count (through member relationships)
-    const members = await db.member.findMany({
-      where: { profileId: profile.id },
-      select: { id: true },
-    });
-    const memberIds = members.map((m) => m.id);
-
+    const memberIds = members.map((member) => member.id);
     const messageCount =
       memberIds.length > 0
         ? await db.message.count({
@@ -166,176 +239,110 @@ export async function GET(
           })
         : 0;
 
-    // Calculate statistics
-    const stats = {
-      totalReportsFiled: reportsFiled.length,
-      totalReportsAgainst: reportsAgainst.length,
-      totalStrikes: strikes.length,
-      activeStrikes: strikes.filter(
-        (s) => !s.expiresAt || s.expiresAt > new Date(),
-      ).length,
-      boardsOwned: boardsOwned.length,
-      totalMessages: messageCount,
-      accountAge: Math.floor(
-        (Date.now() - new Date(profile.createdAt).getTime()) /
-          (1000 * 60 * 60 * 24),
-      ),
+    const warningStats = {
+      active:
+        warningCounts.find((entry) => entry.status === PlatformWarningStatus.ACTIVE)
+          ?._count._all ?? 0,
+      promoted:
+        warningCounts.find(
+          (entry) => entry.status === PlatformWarningStatus.PROMOTED,
+        )?._count._all ?? 0,
+      removed:
+        warningCounts.find((entry) => entry.status === PlatformWarningStatus.REMOVED)
+          ?._count._all ?? 0,
     };
 
     return NextResponse.json({
       profile: serializeModerationProfile(profile),
-      reportsFiled,
+      recentWarnings: recentWarnings.map((warning) => ({
+        ...warning,
+        issuedBy: serializeModerationProfile(warning.issuedBy),
+        removedBy: serializeModerationProfile(warning.removedBy),
+        createdAt: warning.createdAt.toISOString(),
+        updatedAt: warning.updatedAt.toISOString(),
+        removedAt: warning.removedAt?.toISOString() ?? null,
+        report: warning.report
+          ? {
+              ...warning.report,
+              createdAt: warning.report.createdAt.toISOString(),
+            }
+          : null,
+        promotedToStrike: warning.promotedToStrike
+          ? {
+              ...warning.promotedToStrike,
+              createdAt: warning.promotedToStrike.createdAt.toISOString(),
+            }
+          : null,
+      })),
+      recentPlatformActions: recentPlatformActions.map((action) => ({
+        ...action,
+        issuedBy: serializeModerationProfile(action.issuedBy),
+        createdAt: action.createdAt.toISOString(),
+        report: action.report
+          ? {
+              ...action.report,
+              createdAt: action.report.createdAt.toISOString(),
+            }
+          : null,
+        warning: action.warning
+          ? {
+              ...action.warning,
+              createdAt: action.warning.createdAt.toISOString(),
+              updatedAt: action.warning.updatedAt.toISOString(),
+              removedAt: action.warning.removedAt?.toISOString() ?? null,
+            }
+          : null,
+        strike: action.strike
+          ? {
+              ...action.strike,
+              createdAt: action.strike.createdAt.toISOString(),
+            }
+          : null,
+      })),
+      reportsFiled: reportsFiled.map((report) => ({
+        ...report,
+        createdAt: report.createdAt.toISOString(),
+      })),
       reportsAgainst: reportsAgainst.map((report) => ({
         ...report,
+        createdAt: report.createdAt.toISOString(),
         reporter: serializeModerationProfile(report.reporter),
       })),
-      strikes,
+      strikes: strikes.map((strike) => ({
+        ...strike,
+        createdAt: strike.createdAt.toISOString(),
+        appealedAt: strike.appealedAt?.toISOString() ?? null,
+        appealResolvedAt: strike.appealResolvedAt?.toISOString() ?? null,
+        expiresAt: strike.expiresAt?.toISOString() ?? null,
+      })),
       boardsOwned: boardsOwned.map((board) => ({
         ...board,
         imageAsset: serializeUploadedAsset(board.imageAsset),
+        createdAt: board.createdAt.toISOString(),
       })),
-      stats,
+      stats: {
+        warningStats,
+        strikeStats: {
+          active: activeStrikes,
+          total: totalStrikes,
+          direct: directStrikes,
+          warningEscalation: warningEscalationStrikes,
+        },
+        totalReportsFiled,
+        totalReportsAgainst,
+        totalStrikes,
+        activeStrikes,
+        totalPlatformActions,
+        boardsOwned: boardsOwned.length,
+        totalMessages: messageCount,
+        accountAge: Math.floor(
+          (Date.now() - new Date(profile.createdAt).getTime()) /
+            (1000 * 60 * 60 * 24),
+        ),
+      },
     });
   } catch (error) {
     console.error("[MODERATION_USER_LOOKUP]", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
-  }
-}
-
-// POST endpoint to take action on a user
-export async function POST(
-  req: Request,
-  { params }: { params: Promise<{ userId: string }> },
-) {
-  // Rate limiting for moderation actions
-  const rateLimitResponse = await checkRateLimit(RATE_LIMITS.moderation);
-  if (rateLimitResponse) return rateLimitResponse;
-
-  const admin = await requireAdmin();
-  if (!admin.success) return admin.response;
-
-  const { userId: profileId } = await params;
-
-  // Validate profileId format (UUID)
-  if (!profileId || !UUID_REGEX.test(profileId)) {
-    return NextResponse.json(
-      { error: "Invalid profile ID format" },
-      { status: 400 },
-    );
-  }
-
-  // Prevent self-moderation
-  if (profileId === admin.profile.id) {
-    return NextResponse.json(
-      { error: "Cannot perform moderation actions on yourself" },
-      { status: 400 },
-    );
-  }
-
-  try {
-    // Safe body parsing
-    let body;
-    try {
-      body = await req.json();
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-    }
-
-    const { action, reason } = body as {
-      action: "ban" | "unban" | "clearStrikes";
-      reason?: string;
-    };
-
-    // Validate action type early
-    const VALID_ACTIONS = ["ban", "unban", "clearStrikes"] as const;
-    if (!action || !VALID_ACTIONS.includes(action)) {
-      return NextResponse.json({ error: "Invalid action" }, { status: 400 });
-    }
-
-    // Validate reason if provided
-    if (reason !== undefined) {
-      if (typeof reason !== "string") {
-        return NextResponse.json(
-          { error: "Reason must be a string" },
-          { status: 400 },
-        );
-      }
-      if (reason.length > 500) {
-        return NextResponse.json(
-          { error: "Reason too long (max 500 characters)" },
-          { status: 400 },
-        );
-      }
-    }
-
-    const profile = await db.profile.findUnique({ where: { id: profileId } });
-
-    if (!profile) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    switch (action) {
-      case "ban":
-        // Check if already banned
-        if (profile.banned) {
-          return NextResponse.json(
-            { error: "User is already banned", alreadyBanned: true },
-            { status: 409 },
-          );
-        }
-
-        await db.profile.update({
-          where: { id: profile.id },
-          data: {
-            banned: true,
-            bannedAt: new Date(),
-            banReason: reason || "Banned by moderator",
-          },
-        });
-
-        // Invalidate profile caches immediately and revoke BetterAuth sessions.
-        await invalidateProfileCaches(profile);
-        await revokeBetterAuthSessions(profile.id);
-        break;
-
-      case "unban":
-        // Check if already unbanned
-        if (!profile.banned) {
-          return NextResponse.json(
-            { error: "User is not banned", alreadyUnbanned: true },
-            { status: 409 },
-          );
-        }
-
-        await db.profile.update({
-          where: { id: profile.id },
-          data: {
-            banned: false,
-            bannedAt: null,
-            banReason: null,
-          },
-        });
-
-        // Invalidate profile caches immediately (DB is the source of truth).
-        await invalidateProfileCaches(profile);
-        break;
-
-      case "clearStrikes":
-        await db.strike.deleteMany({
-          where: { profileId: profile.id },
-        });
-        break;
-
-      default:
-        return NextResponse.json({ error: "Invalid action" }, { status: 400 });
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("[MODERATION_USER_ACTION]", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },

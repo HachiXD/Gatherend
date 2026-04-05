@@ -1,0 +1,14 @@
+# Content moderation service — private, API key required
+{$MODERATION_DOMAIN} {
+    @authorized {
+        header X-API-Key {$CONTENT_MODERATION_API_KEY}
+    }
+
+    handle @authorized {
+        reverse_proxy nsfwjs:5000
+    }
+
+    handle {
+        respond "Unauthorized" 401
+    }
+}

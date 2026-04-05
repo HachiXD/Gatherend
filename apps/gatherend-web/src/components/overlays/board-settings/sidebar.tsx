@@ -3,7 +3,12 @@
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/i18n";
 
-type BoardSettingsTabId = "general" | "members" | "bans" | "danger";
+type BoardSettingsTabId =
+  | "general"
+  | "members"
+  | "bans"
+  | "history"
+  | "danger";
 
 interface SidebarProps {
   tab: BoardSettingsTabId;
@@ -12,6 +17,7 @@ interface SidebarProps {
   showGeneralTab?: boolean;
   showMembersTab?: boolean;
   showBansTab?: boolean;
+  showHistoryTab?: boolean;
   showDangerTab?: boolean;
 }
 
@@ -22,6 +28,7 @@ export const SettingsSidebar = ({
   showGeneralTab = true,
   showMembersTab = true,
   showBansTab = true,
+  showHistoryTab = true,
   showDangerTab = false,
 }: SidebarProps) => {
   const { t } = useTranslation();
@@ -37,6 +44,14 @@ export const SettingsSidebar = ({
       : []),
     ...(showBansTab
       ? [{ id: "bans" as const, label: t.overlays.boardSettings.tabs.bans }]
+      : []),
+    ...(showHistoryTab
+      ? [
+          {
+            id: "history" as const,
+            label: t.overlays.boardSettings.tabs.history,
+          },
+        ]
       : []),
     ...(showDangerTab
       ? [{ id: "danger" as const, label: t.overlays.boardSettings.tabs.dangerZone }]

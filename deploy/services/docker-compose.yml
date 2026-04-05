@@ -34,12 +34,16 @@ services:
     networks:
       - internal
 
-  nudenet:
-    build: ./nudenet-service
+  nsfwjs:
+    build: ./nsfwjs-service
     restart: always
     profiles: [moderation]
     expose:
       - "5000"
+    env_file:
+      - .env
+    environment:
+      CONTENT_MODERATION_API_KEY: ${CONTENT_MODERATION_API_KEY:-}
     mem_limit: 4g
     cpus: "2"
     networks:
@@ -48,9 +52,9 @@ services:
       test:
         [
           "CMD",
-          "python",
-          "-c",
-          "import urllib.request; urllib.request.urlopen('http://localhost:5000/')",
+          "node",
+          "-e",
+          "fetch('http://localhost:5000/').then((res) => { if (!res.ok) process.exit(1); }).catch(() => process.exit(1))",
         ]
       interval: 30s
       timeout: 10s

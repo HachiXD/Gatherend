@@ -9,7 +9,8 @@ import {
   Ghost,
   HardHat,
   Loader2,
-  ShieldOff,
+  Minus,
+  Plus,
   User,
   UserMinus,
 } from "lucide-react";
@@ -21,15 +22,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MemberRole, Member, Profile } from "@prisma/client";
+import { MemberRole } from "@prisma/client";
 import axios from "axios";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "@/i18n";
 import { cn } from "@/lib/utils";
-import type {
-  ClientStickerAssetRef,
-  ClientUploadedAsset,
-} from "@/types/uploaded-assets";
+import type { BoardWithData } from "@/components/providers/board-provider";
+import { toast } from "sonner";
 
 const roleIconMap = {
   GUEST: null,
@@ -62,6 +61,8 @@ const MEMBER_ROW_CLASS =
   "flex min-h-10 items-center gap-3 rounded-none border border-theme-border-subtle bg-theme-bg-edit-form/50 px-3 py-1";
 const actionButtonClass =
   "h-6.5 min-w-[120px] cursor-pointer rounded-none bg-theme-tab-button-bg px-3 text-[14px] text-theme-text-light transition hover:bg-theme-tab-button-hover";
+const memberMetaBadgeClass =
+  "inline-flex items-center rounded-none border border-theme-border bg-theme-bg-secondary/35 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.05em] text-theme-text-muted";
 const menuPanelShadow =
   "shadow-[0_10px_24px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.1),inset_1px_0_0_rgba(255,255,255,0.08),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]";
 const menuRowClass =
@@ -72,16 +73,7 @@ const menuIconShellClass =
   " flex h-6 w-6 items-center justify-center rounded-none border border-theme-border bg-theme-bg-primary/55 text-theme-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]";
 
 interface MembersTabProps {
-  board: {
-    id: string;
-    profileId: string | null;
-    members: (Member & {
-      profile: Pick<Profile, "id" | "username" | "discriminator"> & {
-        avatarAsset: ClientUploadedAsset | null;
-        badgeSticker: ClientStickerAssetRef | null;
-      };
-    })[];
-  };
+  board: Pick<BoardWithData, "id" | "profileId" | "members">;
   currentProfileId?: string;
 }
 
@@ -101,6 +93,7 @@ export const MembersTab = ({ board, currentProfileId }: MembersTabProps) => {
   const canAssignRoles = assignableRoles.length > 0;
   const canKick = CAN_KICK_ROLES.includes(currentRole);
   const canBan = currentRole === "OWNER" || currentRole === "ADMIN";
+  const canWarn = currentRole === "OWNER" || currentRole === "ADMIN";
 
   // Check if current user can modify a specific member
   const canModifyMember = (targetRole: MemberRole) => {
@@ -193,6 +186,72 @@ export const MembersTab = ({ board, currentProfileId }: MembersTabProps) => {
     },
   });
 
+  const warnMutation = useMutation({
+    mutationFn: async ({
+      memberId,
+      targetProfileId,
+    }: {
+      memberId: string;
+      targetProfileId: string;
+    }) => {
+      const response = await axios.post(`/api/boards/${board.id}/warning`, {
+        targetProfileId,
+      });
+      return { memberId, data: response.data as { autoBanned?: boolean } };
+    },
+    onMutate: ({ memberId }) => {
+      setLoadingId(memberId);
+    },
+    onSuccess: async ({ data }) => {
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ["board", board.id] }),
+        queryClient.refetchQueries({ queryKey: ["boardBans", board.id] }),
+      ]);
+      toast.success(
+        data.autoBanned
+          ? `${t.overlays.boardSettings.members.warnSuccess} (${t.overlays.boardSettings.members.autoBanTriggered})`
+          : t.overlays.boardSettings.members.warnSuccess,
+      );
+    },
+    onError: (error: unknown) => {
+      console.error(error);
+      toast.error(t.overlays.boardSettings.members.warnError);
+    },
+    onSettled: () => {
+      setLoadingId("");
+    },
+  });
+
+  const removeWarningMutation = useMutation({
+    mutationFn: async ({
+      memberId,
+      warningId,
+    }: {
+      memberId: string;
+      warningId: string;
+    }) => {
+      await axios.delete(`/api/boards/${board.id}/warnings/${warningId}`);
+      return memberId;
+    },
+    onMutate: ({ memberId }) => {
+      setLoadingId(memberId);
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ["board", board.id] }),
+        queryClient.refetchQueries({ queryKey: ["boardBans", board.id] }),
+      ]);
+      toast.success(t.overlays.boardSettings.members.removeWarningSuccess);
+    },
+    onError: (error: unknown) => {
+      console.error(error);
+      toast.error(t.overlays.boardSettings.members.removeWarningError);
+    },
+    onSettled: () => {
+      setLoadingId("");
+    },
+  });
+
   return (
     <div className="space-y-6">
       <div className={HEADER_PANEL_SHELL}>
@@ -216,7 +275,7 @@ export const MembersTab = ({ board, currentProfileId }: MembersTabProps) => {
               member.profile.id !== currentProfileId &&
               loadingId !== member.id &&
               canModify &&
-              (canAssignRoles || canKick || canBan);
+              (canAssignRoles || canKick || canWarn || canBan);
 
             return (
               <div key={member.id} className={cn(MEMBER_ROW_CLASS, "gap-2")}>
@@ -236,6 +295,20 @@ export const MembersTab = ({ board, currentProfileId }: MembersTabProps) => {
                     <p className="truncate text-[11px] text-theme-text-tertiary">
                       /{member.profile.discriminator}
                     </p>
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                      <span className={memberMetaBadgeClass}>
+                        Lv. {member.level}
+                      </span>
+                      <span
+                        className={cn(
+                          memberMetaBadgeClass,
+                          member.activeWarningCount >= 2 &&
+                            "border-[#8a5a2c] bg-[#5a3a14]/25 text-[#f2c084]",
+                        )}
+                      >
+                        {t.moderation.warnings}: {member.activeWarningCount}/3
+                      </span>
+                    </div>
                   </div>
                 </div>
                 {showActions && (
@@ -351,6 +424,49 @@ export const MembersTab = ({ board, currentProfileId }: MembersTabProps) => {
                           <DropdownMenuSeparator
                             className={menuSectionSeparatorClass}
                           />
+                        )}
+                        {canWarn && (
+                          <>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                warnMutation.mutate({
+                                  memberId: member.id,
+                                  targetProfileId: member.profile.id,
+                                })
+                              }
+                              className={menuRowClass}
+                            >
+                              <span className={menuIconShellClass}>
+                                <Plus className="h-3.5 w-3.5" />
+                              </span>
+                              {t.overlays.boardSettings.members.warn}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                if (!member.latestActiveWarningId) return;
+                                removeWarningMutation.mutate({
+                                  memberId: member.id,
+                                  warningId: member.latestActiveWarningId,
+                                });
+                              }}
+                              disabled={!member.latestActiveWarningId}
+                              className={cn(
+                                menuRowClass,
+                                !member.latestActiveWarningId &&
+                                  "cursor-not-allowed opacity-50 hover:border-transparent hover:bg-transparent hover:shadow-none focus:border-transparent focus:bg-transparent focus:shadow-none",
+                              )}
+                            >
+                              <span className={menuIconShellClass}>
+                                <Minus className="h-3.5 w-3.5" />
+                              </span>
+                              {t.overlays.boardSettings.members.removeWarning}
+                            </DropdownMenuItem>
+                            {canBan && (
+                              <DropdownMenuSeparator
+                                className={menuSectionSeparatorClass}
+                              />
+                            )}
+                          </>
                         )}
                         {canBan && (
                           <DropdownMenuItem

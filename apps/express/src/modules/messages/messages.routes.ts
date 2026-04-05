@@ -15,6 +15,7 @@ import {
 import {
   verifyMemberInBoardCached,
   findChannelCached,
+  invalidateMemberCache,
 } from "../../lib/cache.js";
 import {
   AssetContext,
@@ -23,6 +24,16 @@ import {
   MessageType,
 } from "@prisma/client";
 import { db } from "../../lib/db.js";
+import {
+  awardMemberXp,
+  canSendChatImage,
+  canSendLinks,
+  canSendSticker,
+  containsExternalLinks,
+  hasMinimumMeaningfulTextLength,
+  MEMBER_XP_REWARDS,
+  REPUTATION_LIMITS,
+} from "../../lib/domain.js";
 import { logger } from "../../lib/logger.js";
 import { attachFilePreviews } from "../../lib/chat-image-previews.js";
 import { findOwnedUploadedAsset } from "../../lib/uploaded-assets.js";
@@ -34,6 +45,34 @@ const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_BATCH_MESSAGE_IDS = 200;
 
+function getReputationScore(reputationScore: number | undefined): number {
+  return typeof reputationScore === "number"
+    ? reputationScore
+    : REPUTATION_LIMITS.baseline;
+}
+
+function getMemberLevel(level: number | undefined): number {
+  return typeof level === "number" ? level : 1;
+}
+
+function getAccessError(decision: {
+  code?: "INSUFFICIENT_LEVEL" | "INSUFFICIENT_REPUTATION";
+  requiredLevel?: number;
+  requiredReputation?: number;
+}) {
+  if (decision.code === "INSUFFICIENT_LEVEL") {
+    return {
+      error: "INSUFFICIENT_LEVEL",
+      requiredLevel: decision.requiredLevel ?? null,
+    };
+  }
+
+  return {
+    error: "INSUFFICIENT_REPUTATION",
+    requiredReputation: decision.requiredReputation ?? null,
+  };
+}
+
 // POST → Enviar Mensaje
 
 router.post("/", async (req, res) => {
@@ -41,13 +80,15 @@ router.post("/", async (req, res) => {
     const profileId = req.profile?.id;
     const { boardId, channelId } = req.query;
     const { content, attachmentAssetId, stickerId, replyToId, tempId } = req.body;
+    const trimmedContent = typeof content === "string" ? content.trim() : "";
+    const reputationScore = getReputationScore(req.profile?.reputationScore);
 
     if (!profileId) return res.status(401).json({ error: "Unauthorized" });
     if (!boardId || !UUID_REGEX.test(boardId as string))
       return res.status(400).json({ error: "Invalid board ID" });
     if (!channelId || !UUID_REGEX.test(channelId as string))
       return res.status(400).json({ error: "Invalid channel ID" });
-    if (!content && !attachmentAssetId && !stickerId)
+    if (!trimmedContent && !attachmentAssetId && !stickerId)
       return res.status(400).json({ error: "Content missing" });
 
     const board = await verifyMemberInBoardCached(profileId, boardId as string);
@@ -61,6 +102,7 @@ router.post("/", async (req, res) => {
 
     const member = board.members.find((m) => m.profileId === profileId);
     if (!member) return res.status(404).json({ error: "Member not found" });
+    const memberLevel = getMemberLevel(member.level);
 
     const channelMember = await db.channelMember.findUnique({
       where: {
@@ -85,6 +127,7 @@ router.post("/", async (req, res) => {
         ownerProfileId: profileId,
         context: AssetContext.MESSAGE_ATTACHMENT,
         visibility: AssetVisibility.PRIVATE,
+        boardId: boardId as string,
       });
 
       if (!attachmentAsset) {
@@ -92,6 +135,35 @@ router.post("/", async (req, res) => {
       }
 
       resolvedAttachmentAssetId = attachmentAsset.id;
+    }
+
+    if (resolvedAttachmentAssetId) {
+      const decision = canSendChatImage({
+        level: memberLevel,
+        reputationScore,
+      });
+
+      if (!decision.allowed) {
+        return res.status(403).json(getAccessError(decision));
+      }
+    }
+
+    if (stickerId) {
+      const decision = canSendSticker({
+        level: memberLevel,
+        reputationScore,
+      });
+
+      if (!decision.allowed) {
+        return res.status(403).json(getAccessError(decision));
+      }
+    }
+
+    if (trimmedContent && containsExternalLinks(trimmedContent)) {
+      const decision = canSendLinks(reputationScore);
+      if (!decision.allowed) {
+        return res.status(403).json(getAccessError(decision));
+      }
     }
 
     let type: MessageType = MessageType.TEXT;
@@ -108,30 +180,82 @@ router.post("/", async (req, res) => {
         1,
       );
 
-      return serializeMessageRecord(
-        await tx.message.create({
-          data: {
-            content: content || "",
-            attachmentAssetId: resolvedAttachmentAssetId,
-            stickerId,
-            channelId: channelId as string,
-            seq: reservedSeq,
-            memberId: member.id,
-            messageSenderId: profileId,
-            type,
-            replyToId,
-          },
-          select: messageSelectFields,
-        }),
-      );
+      const createdMessage = await tx.message.create({
+        data: {
+          content: trimmedContent,
+          attachmentAssetId: resolvedAttachmentAssetId,
+          stickerId,
+          channelId: channelId as string,
+          seq: reservedSeq,
+          memberId: member.id,
+          messageSenderId: profileId,
+          type,
+          replyToId,
+        },
+        select: messageSelectFields,
+      });
+
+      let memberTarget = {
+        id: member.id,
+        profileId: member.profileId,
+        boardId: member.boardId,
+        xp: typeof member.xp === "number" ? member.xp : 0,
+        level: memberLevel,
+      };
+
+      if (hasMinimumMeaningfulTextLength(trimmedContent)) {
+        const textReward = await awardMemberXp(tx, {
+          member: memberTarget,
+          delta: MEMBER_XP_REWARDS.chatText,
+          reason: "CHAT_MESSAGE_TEXT",
+          sourceType: "MESSAGE",
+          sourceId: createdMessage.id,
+        });
+
+        memberTarget = {
+          ...memberTarget,
+          xp: textReward.nextXp,
+          level: textReward.nextLevel,
+        };
+      }
+
+      if (resolvedAttachmentAssetId) {
+        const imageReward = await awardMemberXp(tx, {
+          member: memberTarget,
+          delta: MEMBER_XP_REWARDS.chatImage,
+          reason: "CHAT_MESSAGE_ATTACHMENT",
+          sourceType: "MESSAGE",
+          sourceId: createdMessage.id,
+        });
+
+        memberTarget = {
+          ...memberTarget,
+          xp: imageReward.nextXp,
+          level: imageReward.nextLevel,
+        };
+      }
+
+      if (stickerId) {
+        await awardMemberXp(tx, {
+          member: memberTarget,
+          delta: MEMBER_XP_REWARDS.sticker,
+          reason: "CHAT_MESSAGE_STICKER",
+          sourceType: "MESSAGE",
+          sourceId: createdMessage.id,
+        });
+      }
+
+      return serializeMessageRecord(createdMessage);
     });
+
+    await invalidateMemberCache(profileId, boardId as string);
 
     // Usar el profile que ya viene del cache de member verification (evita query extra)
     const senderProfile = member.profile;
 
     // Procesar menciones si hay contenido
-    if (content) {
-      const mentionIdentifiers = extractMentionIdentifiers(content);
+    if (trimmedContent) {
+      const mentionIdentifiers = extractMentionIdentifiers(trimmedContent);
       const mentionedProfileIds =
         await resolveMentionedChannelMemberProfileIds(
           channelId as string,
@@ -153,7 +277,7 @@ router.post("/", async (req, res) => {
               boardId,
               messageSeq: message.seq,
               sender: senderProfile,
-              content: content.substring(0, 100), // Preview del mensaje
+              content: trimmedContent.substring(0, 100), // Preview del mensaje
             });
           }
         }
@@ -330,6 +454,8 @@ router.patch("/:messageId", async (req, res) => {
     const { messageId } = req.params;
     const { boardId, channelId } = req.query;
     const { content } = req.body;
+    const trimmedContent = typeof content === "string" ? content.trim() : "";
+    const reputationScore = getReputationScore(req.profile?.reputationScore);
 
     if (!profileId) return res.status(401).json({ error: "Unauthorized" });
     if (!messageId || !UUID_REGEX.test(messageId))
@@ -338,7 +464,7 @@ router.patch("/:messageId", async (req, res) => {
       return res.status(400).json({ error: "Invalid board ID" });
     if (!channelId || !UUID_REGEX.test(channelId as string))
       return res.status(400).json({ error: "Invalid channel ID" });
-    if (!content) return res.status(400).json({ error: "Content missing" });
+    if (!trimmedContent) return res.status(400).json({ error: "Content missing" });
 
     const board = await verifyMemberInBoardCached(profileId, boardId as string);
     if (!board) return res.status(404).json({ error: "Board not found" });
@@ -351,6 +477,13 @@ router.patch("/:messageId", async (req, res) => {
 
     const member = board.members.find((m) => m.profileId === profileId);
     if (!member) return res.status(404).json({ error: "Member not found" });
+
+    if (containsExternalLinks(trimmedContent)) {
+      const decision = canSendLinks(reputationScore);
+      if (!decision.allowed) {
+        return res.status(403).json(getAccessError(decision));
+      }
+    }
 
     let message = await getMessage(messageId, channelId as string);
     if (!message || message.deleted)
@@ -365,7 +498,7 @@ router.patch("/:messageId", async (req, res) => {
     if (message.sticker)
       return res.status(400).json({ error: "Cannot edit sticker message" });
 
-    message = await updateMessageContent(messageId, content);
+    message = await updateMessageContent(messageId, trimmedContent);
 
     const updateKey = `chat:${channelId}:messages:update`;
     req.io.to(`channel:${channelId}`).emit(updateKey, message);

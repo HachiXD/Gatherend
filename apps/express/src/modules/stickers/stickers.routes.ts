@@ -162,6 +162,15 @@ router.post("/", upload.single("image"), async (req, res) => {
     });
 
     if (!moderationResult.allowed) {
+      if (moderationResult.failureKind === "service_error") {
+        return res.status(503).json({
+          error: "Moderation unavailable",
+          message:
+            moderationResult.userMessage ||
+            "Image moderation is currently unavailable. Please try again later.",
+        });
+      }
+
       return res.status(400).json({
         error: "Content not allowed",
         message:

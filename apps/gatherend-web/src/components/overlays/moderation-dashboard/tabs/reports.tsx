@@ -2,789 +2,628 @@
 
 import { useState } from "react";
 import {
+  AlertTriangle,
+  ArrowLeft,
   Flag,
   Loader2,
-  RefreshCw,
-  ArrowLeft,
-  User,
   MessageSquare,
+  RefreshCw,
+  ShieldAlert,
+  User,
   Users,
-  FileWarning,
 } from "lucide-react";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { UserAvatar } from "@/components/user-avatar";
+import { useTranslation } from "@/i18n";
 import { cn } from "@/lib/utils";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { ClientUploadedAsset } from "@/types/uploaded-assets";
+import {
+  fetchReportDetail,
+  fetchReportsQueue,
+  flattenCursorPages,
+  formatReportTargetType,
+  getPriorityColor,
+  getReportStatusColor,
+  invalidateModerationDashboardQueries,
+  openBoardInvestigation,
+  resolveReport,
+  type ModerationActionItem,
+  type ModerationReportDetail,
+  type ModerationReportItem,
+  type PlatformWarningItem,
+  type StrikeItem,
+} from "../lib";
 
-// Types
-interface ModerationProfile {
-  id: string;
-  username: string;
-  discriminator: string | null;
-  avatarAsset: ClientUploadedAsset | null;
+const HEADER_PANEL_SHELL =
+  "border border-theme-border bg-theme-bg-overlay-primary/78 px-4 pt-4 pb-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.26)] sm:px-5 sm:py-5";
+const REPORT_ROW_CLASS =
+  "flex min-h-10 items-center gap-3 rounded-none border border-theme-border-subtle bg-theme-bg-edit-form/50 px-3 py-1";
+const actionButtonClass =
+  "h-6.5 min-w-[120px] cursor-pointer rounded-none bg-theme-tab-button-bg px-3 text-[14px] text-theme-text-light transition hover:bg-theme-tab-button-hover";
+const subtleButtonClass =
+  "cursor-pointer rounded-none border border-theme-border bg-theme-bg-secondary/35 px-2.5 py-1.5 text-theme-text-subtle transition hover:text-theme-text-light disabled:opacity-50";
+const metaBadgeClass =
+  "inline-flex items-center rounded-none border border-theme-border bg-theme-bg-secondary/35 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.05em] text-theme-text-muted";
+
+function getTargetTypeIcon(type: string) {
+  switch (type) {
+    case "MESSAGE":
+    case "DIRECT_MESSAGE":
+      return <MessageSquare className="h-4 w-4" />;
+    case "PROFILE":
+      return <User className="h-4 w-4" />;
+    case "BOARD":
+    case "COMMUNITY":
+      return <Users className="h-4 w-4" />;
+    default:
+      return <Flag className="h-4 w-4" />;
+  }
 }
 
-interface ReportSnapshot {
-  // For BOARD
-  name?: string;
-  description?: string;
-  imageUrl?: string;
-  ownerId?: string;
-  ownerUsername?: string;
-  // For MESSAGE/DM
-  content?: string;
-  fileUrl?: string;
-  senderId?: string;
-  senderUsername?: string;
-  // For COMMUNITY_POST
-  authorId?: string;
-  authorUsername?: string;
-  authorDiscriminator?: string;
-  // For PROFILE
-  username?: string;
-  discriminator?: string;
-  longDescription?: string;
-  userId?: string;
-}
-
-interface ReportItem {
-  id: string;
-  targetType:
-    | "MESSAGE"
-    | "DIRECT_MESSAGE"
-    | "PROFILE"
-    | "BOARD"
-    | "COMMUNITY"
-    | "COMMUNITY_POST";
-  targetId: string;
-  category: string;
-  status: "PENDING" | "REVIEWING" | "ACTION_TAKEN" | "DISMISSED";
-  priority: string;
-  description: string | null;
-  createdAt: string;
-  reporter: ModerationProfile | null;
-  targetOwner:
-    | (ModerationProfile & {
-        userId: string;
-      })
-    | null;
-  snapshot: ReportSnapshot;
-}
-
-interface ReportDetail extends ReportItem {
-  // Additional context for review
-  boardMembers?: Array<{
-    id: string;
-    role: string;
-    profile: ModerationProfile | null;
-  }>;
-  messageContext?: Array<{
-    id: string;
-    content: string;
-    createdAt: string;
-    messageSender?: ModerationProfile | null;
-    member: {
-      profile: ModerationProfile | null;
-    } | null;
-    isReported: boolean;
-  }>;
-  community?: {
-    id: string;
-    name: string;
-    createdBy: ModerationProfile | null;
-  };
-  communityPost?: {
-    id: string;
-    content: string;
-    deleted: boolean;
-    createdAt: string;
-    community: {
-      id: string;
-      name: string;
-    };
-    author: ModerationProfile | null;
-  };
-}
-
-interface ReportsResponse {
-  reports: ReportItem[];
-}
-
-const fetchReports = async (filter: string): Promise<ReportsResponse> => {
-  const res = await fetch(`/api/moderation/reports?filter=${filter}`);
-  if (!res.ok) throw new Error("Failed to fetch reports");
-  return res.json();
-};
-
-const fetchReportDetail = async (reportId: string): Promise<ReportDetail> => {
-  const res = await fetch(`/api/moderation/reports/${reportId}`);
-  if (!res.ok) throw new Error("Failed to fetch report detail");
-  return res.json();
-};
-
-const resolveReport = async ({
-  reportId,
-  action,
-}: {
-  reportId: string;
-  action: string;
-}): Promise<void> => {
-  const res = await fetch(`/api/moderation/reports/${reportId}/resolve`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action }),
-  });
-  if (!res.ok) throw new Error("Failed to resolve report");
-};
-
-export const ReportsTab = () => {
-  const [filter, setFilter] = useState<"all" | "pending" | "resolved">(
-    "pending"
+function getPreviewText(report: ModerationReportItem) {
+  return (
+    report.snapshot.content ||
+    report.snapshot.description ||
+    report.snapshot.name ||
+    report.snapshot.authorUsername ||
+    report.snapshot.username ||
+    report.description ||
+    "No content snapshot available"
   );
-  const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
-  const queryClient = useQueryClient();
+}
 
-  // Fetch reports list
+function renderWarningSummary(warning: PlatformWarningItem) {
+  return (
+    <div key={warning.id} className={REPORT_ROW_CLASS}>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2 text-sm font-semibold text-theme-text-primary">
+          <span className={metaBadgeClass}>{warning.status}</span>
+          <span className="truncate">{warning.reason}</span>
+        </div>
+        <p className="mt-1 text-[11px] text-theme-text-muted">
+          Issued by @{warning.issuedBy?.username || "unknown"} on{" "}
+          {new Date(warning.createdAt).toLocaleString()}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function renderStrikeSummary(strike: StrikeItem) {
+  return (
+    <div key={strike.id} className={REPORT_ROW_CLASS}>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2 text-sm font-semibold text-theme-text-primary">
+          <span className={metaBadgeClass}>{strike.severity}</span>
+          <span className={metaBadgeClass}>{strike.sourceType || "DIRECT"}</span>
+          <span className="truncate">{strike.reason}</span>
+        </div>
+        <p className="mt-1 text-[11px] text-theme-text-muted">
+          Created on {new Date(strike.createdAt).toLocaleString()}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function renderActionSummary(action: ModerationActionItem) {
+  return (
+    <div key={action.id} className={REPORT_ROW_CLASS}>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2 text-sm font-semibold text-theme-text-primary">
+          <span className={metaBadgeClass}>{action.actionType}</span>
+          <span className="truncate">
+            @{action.profile?.username || "unknown user"}
+          </span>
+        </div>
+        <p className="mt-1 text-[11px] text-theme-text-muted">
+          By @{action.issuedBy?.username || "unknown"} on{" "}
+          {new Date(action.createdAt).toLocaleString()}
+        </p>
+        {action.notes && (
+          <p className="mt-1 text-[11px] text-theme-text-muted">{action.notes}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface ReportDetailViewProps {
+  report: ModerationReportDetail | null;
+  isLoading: boolean;
+  isResolving: boolean;
+  onBack: () => void;
+  onResolve: (action: "dismiss" | "warning" | "strike" | "ban") => void;
+  onViewBoard: (boardId: string) => void;
+  onOpenInvestigation: (reportId: string) => void;
+  isOpeningInvestigation: boolean;
+}
+
+function ReportDetailView({
+  report,
+  isLoading,
+  isResolving,
+  onBack,
+  onResolve,
+  onViewBoard,
+  onOpenInvestigation,
+  isOpeningInvestigation,
+}: ReportDetailViewProps) {
+  if (isLoading || !report) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-theme-text-tertiary" />
+      </div>
+    );
+  }
+
+  const canResolve =
+    report.status === "PENDING" || report.status === "REVIEWING";
+
+  return (
+    <div className="space-y-6">
+      <div className={HEADER_PANEL_SHELL}>
+        <div className="-mb-3 -mt-3 border-b border-theme-border pb-0.5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <button onClick={onBack} className={subtleButtonClass}>
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+              <div>
+                <h2 className="text-2xl font-bold text-theme-text-primary">
+                  Review Report
+                </h2>
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-theme-text-tertiary">
+                  <span className={metaBadgeClass}>
+                    {formatReportTargetType(report.targetType)}
+                  </span>
+                  <span
+                    className={cn(
+                      "rounded-none px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.05em]",
+                      getPriorityColor(report.priority),
+                    )}
+                  >
+                    {report.priority}
+                  </span>
+                  <span className={cn("text-xs", getReportStatusColor(report.status))}>
+                    {report.status}
+                  </span>
+                  <span>{new Date(report.createdAt).toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {report.boardId && (
+                <Button
+                  onClick={() => onViewBoard(report.boardId!)}
+                  className={subtleButtonClass}
+                >
+                  View board
+                </Button>
+              )}
+              {report.boardId && report.targetType !== "BOARD" && (
+                <Button
+                  onClick={() => onOpenInvestigation(report.id)}
+                  className={subtleButtonClass}
+                  disabled={isOpeningInvestigation}
+                >
+                  {isOpeningInvestigation ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Open investigation"
+                  )}
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="border border-theme-border bg-theme-bg-overlay-primary/50 p-4">
+          <p className="text-xs uppercase tracking-[0.08em] text-theme-text-muted">
+            Reporter
+          </p>
+          <div className="mt-3 flex items-center gap-3">
+            <UserAvatar
+              src={report.reporter?.avatarAsset?.url || ""}
+              profileId={report.reporter?.id}
+              showStatus={false}
+            />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-theme-text-primary">
+                @{report.reporter?.username || "unknown"}
+                {report.reporter?.discriminator
+                  ? `/${report.reporter.discriminator}`
+                  : ""}
+              </p>
+              {report.description && (
+                <p className="mt-1 text-[11px] text-theme-text-muted">
+                  "{report.description}"
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="border border-theme-border bg-theme-bg-overlay-primary/50 p-4">
+          <p className="text-xs uppercase tracking-[0.08em] text-theme-text-muted">
+            Target owner
+          </p>
+          <div className="mt-3 flex items-center gap-3">
+            <UserAvatar
+              src={report.targetOwner?.avatarAsset?.url || ""}
+              profileId={report.targetOwner?.id}
+              showStatus={false}
+            />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-theme-text-primary">
+                @{report.targetOwner?.username || "unknown"}
+                {report.targetOwner?.discriminator
+                  ? `/${report.targetOwner.discriminator}`
+                  : ""}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {report.currentBoardMetadata && (
+        <div className="border border-theme-border bg-theme-bg-overlay-primary/50 p-4">
+          <p className="text-xs uppercase tracking-[0.08em] text-theme-text-muted">
+            Current Board Metadata
+          </p>
+          <div className="mt-3 flex items-start gap-3">
+            {report.currentBoardMetadata.imageAsset?.url ? (
+              <img
+                src={report.currentBoardMetadata.imageAsset.url}
+                alt=""
+                className="h-16 w-16 rounded-none border border-theme-border object-cover"
+              />
+            ) : null}
+            <div className="min-w-0 flex-1 space-y-1">
+              <p className="text-sm font-semibold text-theme-text-primary">
+                {report.currentBoardMetadata.name}
+              </p>
+              {report.currentBoardMetadata.description && (
+                <p className="text-[12px] text-theme-text-muted">
+                  {report.currentBoardMetadata.description}
+                </p>
+              )}
+              <div className="flex flex-wrap gap-2 text-[11px] text-theme-text-tertiary">
+                <span className={metaBadgeClass}>
+                  {report.currentBoardMetadata.isPrivate ? "Private" : "Public"}
+                </span>
+                <span className={metaBadgeClass}>
+                  Risk {report.currentBoardMetadata.riskLevel}
+                </span>
+                <span className={metaBadgeClass}>
+                  Reports {report.currentBoardMetadata.reportCount}
+                </span>
+              </div>
+              <p className="text-[11px] text-theme-text-muted">
+                Owner: @{report.currentBoardMetadata.owner?.username || "unknown"}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="border border-theme-border bg-theme-bg-overlay-primary/50 p-4">
+        <p className="text-xs uppercase tracking-[0.08em] text-theme-text-muted">
+          Snapshot
+        </p>
+        <div className="mt-3 space-y-3 text-sm text-theme-text-primary">
+          <p className="whitespace-pre-wrap">{getPreviewText(report)}</p>
+          {report.snapshot.fileUrl && (
+            <img
+              src={report.snapshot.fileUrl}
+              alt=""
+              className="max-h-64 rounded-none border border-theme-border object-contain"
+            />
+          )}
+          {report.boardId && (
+            <p className="text-[11px] text-theme-text-muted">
+              Board ID: {report.boardId}
+            </p>
+          )}
+          {report.channelId && (
+            <p className="text-[11px] text-theme-text-muted">
+              Channel ID: {report.channelId}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {report.messageContext && report.messageContext.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold uppercase tracking-[0.08em] text-theme-text-muted">
+            Message Context
+          </h3>
+          {report.messageContext.map((message) => (
+            <div
+              key={message.id}
+              className={cn(
+                REPORT_ROW_CLASS,
+                message.isReported && "border-red-500/35 bg-red-500/5",
+              )}
+            >
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] text-theme-text-tertiary">
+                  @{message.messageSender?.username || "unknown"} •{" "}
+                  {new Date(message.createdAt).toLocaleString()}
+                </p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-theme-text-primary">
+                  {message.content || "No message content"}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {report.recentWarnings?.length ? (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold uppercase tracking-[0.08em] text-theme-text-muted">
+            Recent warnings
+          </h3>
+          {report.recentWarnings.map(renderWarningSummary)}
+        </div>
+      ) : null}
+
+      {report.recentTargetStrikes?.length ? (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold uppercase tracking-[0.08em] text-theme-text-muted">
+            Recent strikes
+          </h3>
+          {report.recentTargetStrikes.map(renderStrikeSummary)}
+        </div>
+      ) : null}
+
+      {report.recentPlatformActions?.length ? (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold uppercase tracking-[0.08em] text-theme-text-muted">
+            Recent platform actions
+          </h3>
+          {report.recentPlatformActions.map(renderActionSummary)}
+        </div>
+      ) : null}
+
+      {canResolve && (
+        <div className="flex flex-wrap items-center gap-3 border-t border-theme-border pt-4">
+          <Button
+            onClick={() => onResolve("dismiss")}
+            className={actionButtonClass}
+            disabled={isResolving}
+          >
+            Dismiss
+          </Button>
+          <Button
+            onClick={() => onResolve("warning")}
+            className={cn(actionButtonClass, "bg-yellow-600 hover:bg-yellow-500")}
+            disabled={isResolving}
+          >
+            Issue Warning
+          </Button>
+          <Button
+            onClick={() => onResolve("strike")}
+            className={cn(actionButtonClass, "bg-orange-600 hover:bg-orange-500")}
+            disabled={isResolving}
+          >
+            Issue Strike
+          </Button>
+          <Button
+            onClick={() => onResolve("ban")}
+            className={cn(actionButtonClass, "bg-red-600 hover:bg-red-500")}
+            disabled={isResolving}
+          >
+            Ban User
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface ReportsTabProps {
+  onViewBoard: (boardId: string) => void;
+  onViewInvestigation: (investigationId: string) => void;
+}
+
+export const ReportsTab = ({
+  onViewBoard,
+  onViewInvestigation,
+}: ReportsTabProps) => {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
+
   const {
-    data: reportsData,
+    data,
     isLoading,
-    refetch,
     isFetching,
-  } = useQuery({
-    queryKey: ["moderation", "reports", filter],
-    queryFn: () => fetchReports(filter),
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+    refetch,
+  } = useInfiniteQuery({
+    queryKey: ["moderation", "reports"],
+    queryFn: ({ pageParam }: { pageParam?: string | null }) =>
+      fetchReportsQueue(pageParam),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) =>
+      lastPage.hasMore ? lastPage.nextCursor : undefined,
     staleTime: 0,
   });
 
-  // Fetch report detail
+  const reports = flattenCursorPages(data);
+
   const { data: selectedReport, isLoading: isLoadingDetail } = useQuery({
     queryKey: ["moderation", "report", selectedReportId],
     queryFn: () => fetchReportDetail(selectedReportId!),
     enabled: !!selectedReportId,
   });
 
-  // Resolve mutation
   const resolveMutation = useMutation({
     mutationFn: resolveReport,
-    onSuccess: () => {
+    onSuccess: async () => {
+      const targetProfileId = selectedReport?.targetOwner?.id ?? null;
       setSelectedReportId(null);
-      queryClient.invalidateQueries({ queryKey: ["moderation", "reports"] });
-      queryClient.invalidateQueries({ queryKey: ["moderation", "stats"] });
+      await invalidateModerationDashboardQueries(queryClient, targetProfileId);
     },
   });
 
-  const handleReview = (reportId: string) => {
-    setSelectedReportId(reportId);
-  };
+  const openInvestigationMutation = useMutation({
+    mutationFn: openBoardInvestigation,
+    onSuccess: async (data) => {
+      await invalidateModerationDashboardQueries(
+        queryClient,
+        selectedReport?.targetOwner?.id ?? null,
+      );
+      onViewInvestigation(data.investigationId);
+    },
+  });
 
-  const handleResolve = (action: "dismiss" | "strike" | "ban" | "warning") => {
+  const handleResolve = (action: "dismiss" | "warning" | "strike" | "ban") => {
     if (!selectedReportId) return;
-    resolveMutation.mutate({ reportId: selectedReportId, action });
+
+    const confirmed = window.confirm(
+      `Are you sure you want to ${action} this report target?`,
+    );
+
+    if (!confirmed) return;
+
+    resolveMutation.mutate({
+      reportId: selectedReportId,
+      action,
+    });
   };
 
-  const reports = reportsData?.reports ?? [];
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "urgent":
-        return "text-red-500 bg-red-500/10";
-      case "high":
-        return "text-orange-500 bg-orange-500/10";
-      case "medium":
-        return "text-yellow-500 bg-yellow-500/10";
-      default:
-        return "text-gray-400 bg-gray-500/10";
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "PENDING":
-        return "text-yellow-400";
-      case "REVIEWING":
-        return "text-blue-400";
-      case "ACTION_TAKEN":
-        return "text-green-400";
-      case "DISMISSED":
-        return "text-gray-400";
-      default:
-        return "text-gray-400";
-    }
-  };
-
-  const getTargetTypeIcon = (type: string) => {
-    switch (type) {
-      case "MESSAGE":
-      case "DIRECT_MESSAGE":
-        return <MessageSquare className="w-4 h-4" />;
-      case "PROFILE":
-        return <User className="w-4 h-4" />;
-      case "BOARD":
-        return <Users className="w-4 h-4" />;
-      case "COMMUNITY":
-        return <Users className="w-4 h-4" />;
-      case "COMMUNITY_POST":
-        return <FileWarning className="w-4 h-4" />;
-      default:
-        return <Flag className="w-4 h-4" />;
-    }
-  };
-
-  const getTargetTypeLabel = (type: string) => {
-    switch (type) {
-      case "MESSAGE":
-        return "Message";
-      case "DIRECT_MESSAGE":
-        return "DM";
-      case "PROFILE":
-        return "Profile";
-      case "BOARD":
-        return "Board";
-      case "COMMUNITY":
-        return "Community";
-      case "COMMUNITY_POST":
-        return "Community Post";
-      default:
-        return type;
-    }
-  };
-
-  // Detail View
   if (selectedReportId || isLoadingDetail) {
     return (
-      <ReportDetailView
-        report={selectedReport ?? null}
-        isLoading={isLoadingDetail}
-        onBack={() => setSelectedReportId(null)}
-        onResolve={handleResolve}
-        getPriorityColor={getPriorityColor}
-        getStatusColor={getStatusColor}
-      />
-    );
+        <ReportDetailView
+          report={selectedReport ?? null}
+          isLoading={isLoadingDetail}
+          isResolving={resolveMutation.isPending}
+          onBack={() => setSelectedReportId(null)}
+          onResolve={handleResolve}
+          onViewBoard={onViewBoard}
+          onOpenInvestigation={(reportId) =>
+            openInvestigationMutation.mutate(reportId)
+          }
+          isOpeningInvestigation={openInvestigationMutation.isPending}
+        />
+      );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-theme-text-primary">
-            Reports
-          </h1>
-          <p className="text-sm text-theme-text-subtle mt-1">
-            Review and manage user reports
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Filter */}
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value as typeof filter)}
-            className="px-3 py-1.5 rounded-md bg-theme-bg-input border border-theme-border-primary text-sm text-theme-text-primary"
-          >
-            <option value="pending">Pending</option>
-            <option value="resolved">Resolved</option>
-            <option value="all">All</option>
-          </select>
-
-          {/* Refresh */}
-          <button
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="p-2 rounded-md hover:bg-theme-bg-tab-hover transition disabled:opacity-50"
-          >
-            <RefreshCw
-              className={`w-4 h-4 text-theme-text-subtle ${
-                isFetching ? "animate-spin" : ""
-              }`}
-            />
-          </button>
-        </div>
-      </div>
-
-      {/* Reports List */}
-      <div className="space-y-3">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-6 h-6 animate-spin text-theme-text-subtle" />
-          </div>
-        ) : reports.length === 0 ? (
-          <div className="text-center py-12">
-            <Flag className="w-12 h-12 text-theme-text-tertiary mx-auto mb-3" />
-            <p className="text-theme-text-subtle">No reports found</p>
-            <p className="text-sm text-theme-text-tertiary mt-1">
-              {filter === "pending"
-                ? "All caught up! No pending reports."
-                : "No reports match your filter."}
-            </p>
-          </div>
-        ) : (
-          reports.map((report) => (
-            <div
-              key={report.id}
-              className="p-4 rounded-lg bg-theme-bg-secondary border border-theme-border-primary hover:border-theme-border-secondary transition"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  {/* Type & Category */}
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded bg-theme-bg-tertiary text-theme-text-subtle">
-                      {getTargetTypeIcon(report.targetType)}
-                      {getTargetTypeLabel(report.targetType)}
-                    </span>
-                    <span
-                      className={cn(
-                        "text-xs font-medium px-2 py-0.5 rounded capitalize",
-                        getPriorityColor(report.priority)
-                      )}
-                    >
-                      {report.priority}
-                    </span>
-                    <span
-                      className={cn("text-xs", getStatusColor(report.status))}
-                    >
-                      {report.status}
-                    </span>
-                    <span className="text-xs px-2 py-0.5 rounded bg-theme-bg-tertiary text-theme-text-subtle capitalize">
-                      {report.category.replace("_", " ")}
-                    </span>
-                  </div>
-
-                  {/* Content Preview */}
-                  <p className="text-sm text-theme-text-primary line-clamp-2">
-                    {report.snapshot.content ||
-                      report.snapshot.description ||
-                      report.snapshot.name ||
-                      report.snapshot.authorUsername ||
-                      report.snapshot.username ||
-                      "No content"}
-                  </p>
-
-                  {/* Meta */}
-                  <div className="flex items-center gap-4 mt-2 text-xs text-theme-text-tertiary">
-                    <span>
-                      Reported by @
-                      {report.reporter?.username || "unknown"}
-                    </span>
-                    {report.targetOwner && (
-                      <span>Against @{report.targetOwner.username}</span>
-                    )}
-                    <span>
-                      {new Date(report.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center gap-2 ml-4">
-                  <button
-                    onClick={() => handleReview(report.id)}
-                    className="px-3 py-1.5 text-xs font-medium rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 transition"
-                  >
-                    Review
-                  </button>
-                </div>
-              </div>
+      <div className={HEADER_PANEL_SHELL}>
+        <div className="-mb-3 -mt-3 border-b border-theme-border pb-0.5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-2xl font-bold text-theme-text-primary">
+                {t.moderation.reports}
+              </h2>
+              <p className="-mt-1 text-sm text-theme-text-tertiary">
+                {t.moderation.reportsSubtitle}
+              </p>
             </div>
-          ))
-        )}
-      </div>
-    </div>
-  );
-};
-
-// Report Detail View Component
-interface ReportDetailViewProps {
-  report: ReportDetail | null;
-  isLoading: boolean;
-  onBack: () => void;
-  onResolve: (action: "dismiss" | "strike" | "ban" | "warning") => void;
-  getPriorityColor: (priority: string) => string;
-  getStatusColor: (status: string) => string;
-}
-
-const ReportDetailView = ({
-  report,
-  isLoading,
-  onBack,
-  onResolve,
-  getPriorityColor,
-  getStatusColor,
-}: ReportDetailViewProps) => {
-  if (isLoading || !report) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-theme-text-subtle" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      {/* Back Button & Header */}
-      <div className="flex items-center gap-4">
-        <button
-          onClick={onBack}
-          className="p-2 rounded-md hover:bg-theme-bg-tab-hover transition"
-        >
-          <ArrowLeft className="w-5 h-5 text-theme-text-subtle" />
-        </button>
-        <div>
-          <h1 className="text-xl font-semibold text-theme-text-primary">
-            Review Report
-          </h1>
-          <div className="flex items-center gap-2 mt-1">
-            <span
-              className={cn(
-                "text-xs px-2 py-0.5 rounded capitalize",
-                getPriorityColor(report.priority)
-              )}
+            <button
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className={subtleButtonClass}
             >
-              {report.priority}
-            </span>
-            <span className={cn("text-xs", getStatusColor(report.status))}>
-              {report.status}
-            </span>
-            <span className="text-xs text-theme-text-tertiary">
-              {new Date(report.createdAt).toLocaleString()}
-            </span>
+              <RefreshCw className={cn("h-4 w-4", isFetching && "animate-spin")} />
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Reporter Info */}
-      <div className="p-4 rounded-lg bg-theme-bg-secondary border border-theme-border-primary">
-        <h3 className="text-sm font-medium text-theme-text-primary mb-2">
-          Reported By
-        </h3>
-        <div className="flex items-center gap-3">
-          <img
-            src={report.reporter?.avatarAsset?.url || undefined}
-            alt=""
-            className="w-8 h-8 rounded-full"
-          />
-          <div>
-            <p className="text-sm text-theme-text-primary">
-              @{report.reporter?.username || "unknown"}/
-              {report.reporter?.discriminator || "unknown"}
-            </p>
-            {report.description && (
-              <p className="text-xs text-theme-text-subtle mt-1">
-                "{report.description}"
-              </p>
-            )}
-          </div>
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-theme-text-tertiary" />
         </div>
-      </div>
-
-      {/* Content Based on Type */}
-      {report.targetType === "BOARD" && <BoardReportContent report={report} />}
-      {(report.targetType === "MESSAGE" ||
-        report.targetType === "DIRECT_MESSAGE") && (
-        <MessageReportContent report={report} />
-      )}
-      {report.targetType === "PROFILE" && (
-        <ProfileReportContent report={report} />
-      )}
-      {report.targetType === "COMMUNITY" && (
-        <CommunityReportContent report={report} />
-      )}
-      {report.targetType === "COMMUNITY_POST" && (
-        <CommunityPostReportContent report={report} />
-      )}
-
-      {/* Actions */}
-      {report.status === "PENDING" && (
-        <div className="flex items-center gap-3 pt-4 border-t border-theme-border-primary">
-          <button
-            onClick={() => onResolve("dismiss")}
-            className="px-4 py-2 text-sm font-medium rounded bg-theme-bg-tertiary text-theme-text-subtle hover:bg-theme-bg-tab-hover transition"
-          >
-            Dismiss
-          </button>
-          <button
-            onClick={() => onResolve("warning")}
-            className="px-4 py-2 text-sm font-medium rounded bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 transition"
-          >
-            Issue Warning
-          </button>
-          <button
-            onClick={() => onResolve("strike")}
-            className="px-4 py-2 text-sm font-medium rounded bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 transition"
-          >
-            Issue Strike
-          </button>
-          <button
-            onClick={() => onResolve("ban")}
-            className="px-4 py-2 text-sm font-medium rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 transition"
-          >
-            Ban User
-          </button>
+      ) : reports.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-1 text-center">
+          <ShieldAlert className="mb-3 h-12 w-12 text-theme-text-muted" />
+          <p className="text-md font-medium text-theme-text-tertiary">
+            {t.moderation.noReports}
+          </p>
+          <p className="mt-1 text-sm text-theme-text-muted">
+            {t.moderation.reportsQueueEmptyDescription}
+          </p>
         </div>
-      )}
-    </div>
-  );
-};
-
-// Board Report Content
-const BoardReportContent = ({ report }: { report: ReportDetail }) => {
-  return (
-    <div className="space-y-4">
-      {/* Board Snapshot */}
-      <div className="p-4 rounded-lg bg-theme-bg-secondary border border-theme-border-primary">
-        <h3 className="text-sm font-medium text-theme-text-primary mb-3">
-          Board Snapshot (at time of report)
-        </h3>
-        <div className="flex gap-4">
-          {report.snapshot.imageUrl && (
-            <img
-              src={report.snapshot.imageUrl}
-              alt=""
-              className="w-24 h-24 rounded-lg object-cover"
-            />
-          )}
-          <div className="flex-1">
-            <p className="font-medium text-theme-text-primary">
-              {report.snapshot.name}
-            </p>
-            <p className="text-sm text-theme-text-subtle mt-1">
-              {report.snapshot.description || "No description"}
-            </p>
-            <p className="text-xs text-theme-text-tertiary mt-2">
-              Owner: @{report.snapshot.ownerUsername}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Board Members */}
-      {report.boardMembers && report.boardMembers.length > 0 && (
-        <div className="p-4 rounded-lg bg-theme-bg-secondary border border-theme-border-primary">
-          <h3 className="text-sm font-medium text-theme-text-primary mb-3">
-            Current Members ({report.boardMembers.length})
-          </h3>
-          <div className="space-y-2">
-            {report.boardMembers.map((member) => (
-              <div
-                key={member.id}
-                className="flex items-center gap-3 p-2 rounded bg-theme-bg-tertiary"
-              >
-                <img
-                  src={member.profile?.avatarAsset?.url || undefined}
-                  alt=""
-                  className="w-8 h-8 rounded-full"
-                />
-                <div className="flex-1">
-                    <p className="text-sm text-theme-text-primary">
-                    @{member.profile?.username}/{member.profile?.discriminator}
-                    </p>
+      ) : (
+        <div className="space-y-4">
+          {reports.map((report) => (
+            <div key={report.id} className={REPORT_ROW_CLASS}>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-theme-text-primary">
+                  <span className={metaBadgeClass}>
+                    {getTargetTypeIcon(report.targetType)}
+                    <span className="ml-1">{formatReportTargetType(report.targetType)}</span>
+                  </span>
+                  <span
+                    className={cn(
+                      "rounded-none px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.05em]",
+                      getPriorityColor(report.priority),
+                    )}
+                  >
+                    {report.priority}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-[11px] font-medium uppercase tracking-[0.05em]",
+                      getReportStatusColor(report.status),
+                    )}
+                  >
+                    {report.status}
+                  </span>
+                  <span className={metaBadgeClass}>
+                    {report.category.replace(/_/g, " ").toLowerCase()}
+                  </span>
                 </div>
-                <span className="text-xs px-2 py-0.5 rounded bg-theme-bg-secondary text-theme-text-tertiary">
-                  {member.role}
-                </span>
+                <p className="mt-1 line-clamp-2 text-sm text-theme-text-primary">
+                  {getPreviewText(report)}
+                </p>
+                <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] text-theme-text-tertiary">
+                  <span>@{report.reporter?.username || "unknown"}</span>
+                  {report.targetOwner && (
+                    <span>Against @{report.targetOwner.username}</span>
+                  )}
+                  <span>{new Date(report.createdAt).toLocaleString()}</span>
+                </div>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Message Report Content
-const MessageReportContent = ({ report }: { report: ReportDetail }) => {
-  return (
-    <div className="space-y-4">
-      {/* Reported Message Snapshot */}
-      <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
-        <h3 className="text-sm font-medium text-red-400 mb-3">
-          Reported Message (snapshot)
-        </h3>
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <p className="text-xs text-theme-text-tertiary mb-1">
-              From @{report.snapshot.senderUsername}
-            </p>
-            <p className="text-sm text-theme-text-primary whitespace-pre-wrap">
-              {report.snapshot.content}
-            </p>
-            {report.snapshot.fileUrl && (
-              <div className="mt-2">
-                <img
-                  src={report.snapshot.fileUrl}
-                  alt=""
-                  className="max-w-xs rounded-lg"
-                />
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Message Context */}
-      {report.messageContext && report.messageContext.length > 0 && (
-        <div className="p-4 rounded-lg bg-theme-bg-secondary border border-theme-border-primary">
-          <h3 className="text-sm font-medium text-theme-text-primary mb-3">
-            Message Context (±10 messages, current state)
-          </h3>
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {report.messageContext.map((msg) => (
-              <div
-                key={msg.id}
-                className={cn(
-                  "p-3 rounded",
-                  msg.isReported
-                    ? "bg-red-500/10 border border-red-500/20"
-                    : "bg-theme-bg-tertiary",
-                )}
+              <Button
+                onClick={() => setSelectedReportId(report.id)}
+                className={actionButtonClass}
               >
-                {(() => {
-                  const messageAuthor =
-                    msg.messageSender ?? msg.member?.profile ?? null;
+                Review
+              </Button>
+            </div>
+          ))}
 
-                  return (
-                    <>
-                      <div className="flex items-center gap-2 mb-1">
-                        {messageAuthor && (
-                          <>
-                            <img
-                              src={messageAuthor.avatarAsset?.url || undefined}
-                              alt=""
-                              className="w-5 h-5 rounded-full"
-                            />
-                            <span className="text-xs font-medium text-theme-text-primary">
-                              @{messageAuthor.username}
-                            </span>
-                          </>
-                        )}
-                        <span className="text-xs text-theme-text-tertiary">
-                          {new Date(msg.createdAt).toLocaleString()}
-                        </span>
-                        {msg.isReported && (
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">
-                            REPORTED
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-theme-text-primary whitespace-pre-wrap">
-                        {msg.content}
-                      </p>
-                    </>
-                  );
-                })()}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Profile Report Content
-const ProfileReportContent = ({ report }: { report: ReportDetail }) => {
-  return (
-    <div className="p-4 rounded-lg bg-theme-bg-secondary border border-theme-border-primary">
-      <h3 className="text-sm font-medium text-theme-text-primary mb-3">
-        Reported Profile
-      </h3>
-      <div className="flex items-start gap-4">
-        {report.targetOwner && (
-          <img
-            src={report.targetOwner?.avatarAsset?.url || undefined}
-            alt=""
-            className="w-16 h-16 rounded-full"
-          />
-        )}
-        <div className="flex-1">
-          <p className="font-medium text-theme-text-primary">
-            @{report.snapshot.username}/{report.snapshot.discriminator}
-          </p>
-          <p className="text-xs text-theme-text-tertiary mt-1">
-            User ID: {report.snapshot.userId || report.targetOwner?.userId}
-          </p>
-          {report.snapshot.longDescription && (
-            <p className="text-sm text-theme-text-subtle mt-2">
-              Bio: "{report.snapshot.longDescription}"
-            </p>
+          {hasNextPage && (
+            <div className="flex justify-center pt-2">
+              <Button
+                onClick={() => fetchNextPage()}
+                className={actionButtonClass}
+                disabled={isFetchingNextPage}
+              >
+                {isFetchingNextPage ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  t.discovery.loadMore
+                )}
+              </Button>
+            </div>
           )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const CommunityReportContent = ({ report }: { report: ReportDetail }) => {
-  return (
-    <div className="p-4 rounded-lg bg-theme-bg-secondary border border-theme-border-primary">
-      <h3 className="text-sm font-medium text-theme-text-primary mb-3">
-        Reported Community
-      </h3>
-      <div className="space-y-2">
-        <p className="font-medium text-theme-text-primary">
-          {report.snapshot.name || report.community?.name || "Unknown"}
-        </p>
-        {report.snapshot.imageUrl && (
-          <img
-            src={report.snapshot.imageUrl}
-            alt=""
-            className="h-32 w-full rounded-lg object-cover"
-          />
-        )}
-        {report.community?.createdBy && (
-          <p className="text-sm text-theme-text-subtle">
-            Owner: @{report.community.createdBy.username}
-          </p>
-        )}
-      </div>
-    </div>
-  );
-};
-
-const CommunityPostReportContent = ({ report }: { report: ReportDetail }) => {
-  return (
-    <div className="space-y-4">
-      <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
-        <h3 className="text-sm font-medium text-red-400 mb-3">
-          Reported Post (snapshot)
-        </h3>
-        <div className="space-y-2">
-          <p className="text-xs text-theme-text-tertiary">
-            From @{report.snapshot.authorUsername || "unknown"}
-          </p>
-          <p className="text-sm whitespace-pre-wrap text-theme-text-primary">
-            {report.snapshot.content || "No text content"}
-          </p>
-          {report.snapshot.imageUrl && (
-            <img
-              src={report.snapshot.imageUrl}
-              alt=""
-              className="max-w-xs rounded-lg"
-            />
-          )}
-        </div>
-      </div>
-
-      {report.communityPost && (
-        <div className="p-4 rounded-lg bg-theme-bg-secondary border border-theme-border-primary">
-          <h3 className="text-sm font-medium text-theme-text-primary mb-3">
-            Current Post State
-          </h3>
-          <div className="space-y-2">
-            <p className="text-sm text-theme-text-subtle">
-              Community: {report.communityPost.community.name}
-            </p>
-            {report.communityPost.author && (
-              <p className="text-sm text-theme-text-subtle">
-                Author: @{report.communityPost.author.username}
-              </p>
-            )}
-            <p className="text-sm whitespace-pre-wrap text-theme-text-primary">
-              {report.communityPost.deleted
-                ? "This post has been deleted."
-                : report.communityPost.content || "No text content"}
-            </p>
-          </div>
         </div>
       )}
     </div>

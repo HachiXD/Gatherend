@@ -68,8 +68,8 @@ services:
       IMGPROXY_URL: ${IMGPROXY_URL:-}
       IMGPROXY_KEY: ${IMGPROXY_KEY:-}
       IMGPROXY_SALT: ${IMGPROXY_SALT:-}
-      NUDENET_URL: ${NUDENET_URL:-}
-      NUDENET_API_KEY: ${NUDENET_API_KEY:-}
+      CONTENT_MODERATION_URL: ${CONTENT_MODERATION_URL:-}
+      CONTENT_MODERATION_API_KEY: ${CONTENT_MODERATION_API_KEY:-}
       FRONTEND_URL: ${FRONTEND_URL:?required}
       RAILWAY_PRIVATE_URL: http://web:3000
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:?required}
@@ -164,13 +164,15 @@ services:
     networks:
       - internal
 
-  nudenet:
+  nsfwjs:
     build:
-      context: ./services/nudenet-service
+      context: ./services/nsfwjs-service
     restart: unless-stopped
     profiles: [moderation]
     expose:
       - "5000"
+    environment:
+      CONTENT_MODERATION_API_KEY: ${CONTENT_MODERATION_API_KEY:-}
     mem_limit: 4g
     cpus: "2"
     networks:
@@ -179,9 +181,9 @@ services:
       test:
         [
           "CMD",
-          "python",
-          "-c",
-          "import urllib.request; urllib.request.urlopen('http://localhost:5000/')",
+          "node",
+          "-e",
+          "fetch('http://localhost:5000/').then((res) => { if (!res.ok) process.exit(1); }).catch(() => process.exit(1))",
         ]
       interval: 30s
       timeout: 10s
@@ -263,7 +265,7 @@ services:
       MINIO_DOMAIN: ${MINIO_DOMAIN:-}
       LIVEKIT_DOMAIN: ${LIVEKIT_DOMAIN:-}
       LIVEKIT_TURN_DOMAIN: ${LIVEKIT_TURN_DOMAIN:-}
-      NUDENET_API_KEY: ${NUDENET_API_KEY:-}
+      CONTENT_MODERATION_API_KEY: ${CONTENT_MODERATION_API_KEY:-}
     volumes:
       - caddy_data:/data
       - caddy_config:/config

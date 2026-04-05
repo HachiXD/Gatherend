@@ -10,7 +10,7 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
-    "dev:server": "nodemon dist/server.js",
+    "dev:server": "nodemon dist/apps/express/src/server.js",
     "dev:full": "concurrently \"npm run watch\" \"npm run dev:server\"",
     "dev": "npm run dev:full"
   },
