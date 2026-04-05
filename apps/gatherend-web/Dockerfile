@@ -10,6 +10,9 @@ RUN npm install --legacy-peer-deps
 # Copy prisma
 COPY prisma ./prisma
 
+# Copy shared domain modules
+COPY packages ./packages
+
 # Copy entire project
 COPY apps ./apps
 

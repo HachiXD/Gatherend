@@ -12,6 +12,9 @@ RUN npm install --legacy-peer-deps
 # Copy prisma 
 COPY prisma ./prisma
 
+# Copy shared domain modules
+COPY packages ./packages
+
 # Generate Prisma Client
 RUN npx prisma generate
 
