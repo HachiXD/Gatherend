@@ -1501,10 +1501,7 @@ const ChatItemOptimizedComponent = ({
                     data-chat-item-block="text-header"
                     className={cn(
                       "flex items-center gap-1 mb-0",
-                      groupedTextBubble &&
-                        showGroupedHeader &&
-                        authorProfile?.badgeStickerUrl &&
-                        "min-h-[28.5px]",
+                      authorProfile?.badgeStickerUrl && "min-h-[28.5px]",
                     )}
                   >
                     {(authorProfile?.badge ||
