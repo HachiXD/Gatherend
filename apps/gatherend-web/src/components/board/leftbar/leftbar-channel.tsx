@@ -146,7 +146,7 @@ const LeftbarChannelComponent = ({
           }
         }
         className={cn(
-          "group relative  flex w-full min-w-0 max-w-full cursor-pointer items-center overflow-hidden rounded-none px-0 h-12 text-left transition",
+          "group relative flex h-12 w-full min-w-0 max-w-full cursor-pointer items-center overflow-hidden rounded-none border border-theme-channel-type-active-border px-0 text-left transition",
           channelImageUrl
             ? [
                 "bg-cover bg-center bg-no-repeat",
@@ -157,7 +157,6 @@ const LeftbarChannelComponent = ({
              : [
                   "bg-theme-channel-type-active-border shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_-1px_0_rgba(0,0,0,0.38)]",
                   !isActive && "hover:bg-theme-channel-type-active-border",
-                  isActive && "border-theme-border",
                   isActive && "bg-theme-button-primary",
                   isActive &&
                     "shadow-[inset_0_1px_0_rgba(0,0,0,0.42),inset_1px_0_0_rgba(0,0,0,0.36),inset_-1px_0_0_rgba(255,255,255,0.14),inset_0_-1px_0_rgba(255,255,255,0.18)]",

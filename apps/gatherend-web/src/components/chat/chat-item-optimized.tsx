@@ -1126,10 +1126,9 @@ const ChatItemOptimizedComponent = ({
     groupedTextBubble && showGroupedHeader && hideAvatarColumn && !isCompact;
   const shouldRenderReplyPreviewInsideTextBubble = Boolean(
     replyTo &&
-    !fileUrl &&
-    !sticker &&
-    !isEditing &&
-    (!groupedTextBubble || showGroupedHeader),
+      !fileUrl &&
+      !sticker &&
+      !isEditing,
   );
   const effectiveHovered = isHovered || forcedHovered;
 

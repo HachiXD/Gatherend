@@ -41,6 +41,10 @@ import {
   GROUPED_TEXT_BUBBLE_LEFT_SPACER_CLASS,
   GROUPED_TEXT_BUBBLE_ROW_CLASS,
 } from "./chat-grouped-layout";
+import {
+  canUsePretextForGroupedBubbleMessage,
+  measureGroupedTextBubbleGroup,
+} from "./chat-text-bubble-pretext";
 
 // CONSTANTS
 
@@ -97,8 +101,13 @@ type MessageRenderNode =
       items: Array<{ message: ChatMessage; index: number }>;
     };
 
-function getGroupedBubbleBounds(node: HTMLElement | null) {
+const ENABLE_PRETEXT_GROUPED_BUBBLE_LAYOUT = true;
+const ENABLE_PRETEXT_GROUPED_BUBBLE_DOM_FALLBACK = true;
+
+function getGroupedBubbleBoundsFromDom(node: HTMLElement | null) {
   if (!node) return undefined;
+
+  console.log("[grouped-bubble-measure] dom-path:getGroupedBubbleBoundsFromDom");
 
   const containerRect = node.getBoundingClientRect();
   let width = 0;
@@ -180,12 +189,20 @@ function GroupedTextBubbleRun({
   messages,
   compactById,
   compactRevision,
+  deletedMemberLabel,
+  fileLabel,
+  stickerLabel,
+  editedLabel,
   renderMessage,
 }: {
   items: Array<{ message: ChatMessage; index: number }>;
   messages: ChatMessage[];
   compactById: Record<string, boolean>;
   compactRevision: number;
+  deletedMemberLabel: string;
+  fileLabel: string;
+  stickerLabel: string;
+  editedLabel: string;
   renderMessage: (
     msg: ChatMessage,
     index: number,
@@ -202,7 +219,8 @@ function GroupedTextBubbleRun({
   ) => ReactNode;
 }) {
   const contentRef = useRef<HTMLDivElement | null>(null);
-  const [bubbleBounds, setBubbleBounds] = useState<
+  const [contentWidthPx, setContentWidthPx] = useState(0);
+  const [domBubbleBounds, setDomBubbleBounds] = useState<
     | {
         width: number;
         left: number;
@@ -211,33 +229,158 @@ function GroupedTextBubbleRun({
       }
     | undefined
   >(undefined);
+  const canUsePretextLayout = useMemo(
+    () =>
+      ENABLE_PRETEXT_GROUPED_BUBBLE_LAYOUT &&
+      contentWidthPx > 0 &&
+      items.every(({ message }) =>
+        canUsePretextForGroupedBubbleMessage({
+          content: message.content,
+          deleted: message.deleted,
+        }),
+      ),
+    [contentWidthPx, items],
+  );
 
-  useLayoutEffect(() => {
-    const node = contentRef.current;
-    if (!node) return;
+  const pretextBubbleBounds = useMemo(() => {
+    if (!canUsePretextLayout) {
+      console.log("[grouped-bubble-measure] pretext-path:skipped", {
+        reason:
+          contentWidthPx <= 0
+            ? "content-width-not-ready"
+            : "group-not-compatible",
+        contentWidthPx,
+        itemCount: items.length,
+        compat: items.map(({ message }) => ({
+          id: message.id,
+          deleted: message.deleted,
+          compatible: canUsePretextForGroupedBubbleMessage({
+            content: message.content,
+            deleted: message.deleted,
+          }),
+        })),
+      });
+      return undefined;
+    }
 
-    const nextBounds = getGroupedBubbleBounds(node);
-    setBubbleBounds((prev) => {
-      if (!nextBounds) return prev;
-      if (
-        prev?.width === nextBounds.width &&
-        prev?.left === nextBounds.left &&
-        prev?.top === nextBounds.top &&
-        prev?.height === nextBounds.height
-      ) {
-        return prev;
-      }
-      return nextBounds;
+    console.log("[grouped-bubble-measure] pretext-path:measure", {
+      contentWidthPx,
+      itemCount: items.length,
+      itemIds: items.map(({ message }) => message.id),
     });
-  }, [items]);
+
+    return measureGroupedTextBubbleGroup({
+      contentWidthPx,
+      items: items.map(({ message }, itemIndex) => {
+        const author = getMessageAuthor(message, {
+          fallbackLabel: deletedMemberLabel,
+        });
+        const replyTo = message.replyTo
+          ? {
+              content: message.replyTo.content,
+              sender: getReplyAuthor(message.replyTo, {
+                fallbackLabel: deletedMemberLabel,
+              }),
+              fileUrl: message.replyTo.attachmentAsset?.url || null,
+              fileName: message.replyTo.attachmentAsset?.originalName || null,
+              sticker: message.replyTo.sticker,
+            }
+          : null;
+
+        return {
+          content: message.content,
+          deleted: message.deleted,
+          isUpdated: message.updatedAt !== message.createdAt,
+          position:
+            itemIndex === 0
+              ? "start"
+              : itemIndex === items.length - 1
+                ? "end"
+                : "middle",
+          showGroupedHeader: itemIndex === 0,
+          authorUsername: author?.username,
+          authorHasBadgeSticker: Boolean(author?.badgeSticker?.asset?.url),
+          replyTo,
+          deletedMemberLabel,
+          fileLabel,
+          stickerLabel,
+          editedLabel,
+        };
+      }),
+    });
+  }, [
+    canUsePretextLayout,
+    contentWidthPx,
+    deletedMemberLabel,
+    editedLabel,
+    fileLabel,
+    items,
+    stickerLabel,
+  ]);
+
+  const bubbleBounds = pretextBubbleBounds ?? domBubbleBounds;
+
+  useEffect(() => {
+    console.log("[grouped-bubble-measure] bubble-bounds:active-path", {
+      path: pretextBubbleBounds ? "pretext" : domBubbleBounds ? "dom" : "none",
+      pretextBubbleBounds,
+      domBubbleBounds,
+      contentWidthPx,
+      itemIds: items.map(({ message }) => message.id),
+    });
+  }, [contentWidthPx, domBubbleBounds, items, pretextBubbleBounds]);
 
   useEffect(() => {
     const node = contentRef.current;
     if (!node || typeof ResizeObserver === "undefined") return;
 
     const observer = new ResizeObserver(() => {
-      const nextBounds = getGroupedBubbleBounds(node);
-      setBubbleBounds((prev) => {
+      const nextWidth = Math.ceil(node.clientWidth);
+      setContentWidthPx((prev) => (prev === nextWidth ? prev : nextWidth));
+
+      if (!canUsePretextLayout && ENABLE_PRETEXT_GROUPED_BUBBLE_DOM_FALLBACK) {
+        console.log("[grouped-bubble-measure] dom-path:resize-observer", {
+          reason:
+            nextWidth <= 0
+              ? "content-width-not-ready"
+              : "pretext-disabled-or-incompatible",
+          nextWidth,
+          canUsePretextLayout,
+          itemIds: items.map(({ message }) => message.id),
+        });
+        const nextBounds = getGroupedBubbleBoundsFromDom(node);
+        setDomBubbleBounds((prev) => {
+          if (!nextBounds) return prev;
+          if (
+            prev?.width === nextBounds.width &&
+            prev?.left === nextBounds.left &&
+            prev?.top === nextBounds.top &&
+            prev?.height === nextBounds.height
+          ) {
+            return prev;
+          }
+          return nextBounds;
+        });
+      } else {
+        setDomBubbleBounds(undefined);
+      }
+    });
+
+    const nextWidth = Math.ceil(node.clientWidth);
+    setContentWidthPx((prev) => (prev === nextWidth ? prev : nextWidth));
+
+    if (!canUsePretextLayout && ENABLE_PRETEXT_GROUPED_BUBBLE_DOM_FALLBACK) {
+      console.log("[grouped-bubble-measure] dom-path:initial-effect", {
+        reason:
+          nextWidth <= 0
+            ? "content-width-not-ready"
+            : "pretext-disabled-or-incompatible",
+        nextWidth,
+        canUsePretextLayout,
+        itemIds: items.map(({ message }) => message.id),
+      });
+      const nextBounds = getGroupedBubbleBoundsFromDom(node);
+      setDomBubbleBounds((prev) => {
         if (!nextBounds) return prev;
         if (
           prev?.width === nextBounds.width &&
@@ -249,14 +392,16 @@ function GroupedTextBubbleRun({
         }
         return nextBounds;
       });
-    });
+    } else {
+      setDomBubbleBounds(undefined);
+    }
 
     observer.observe(node);
 
     return () => {
       observer.disconnect();
     };
-  }, [items]);
+  }, [canUsePretextLayout, items]);
 
   return (
     <div>
@@ -938,6 +1083,7 @@ function ChatMessagesComponent({
       apiUrl,
       socketQuery,
       chatWindow.compactById,
+      t.chat.deletedMember,
     ],
   );
 
@@ -969,6 +1115,10 @@ function ChatMessagesComponent({
           messages={messages}
           compactById={chatWindow.compactById}
           compactRevision={chatWindow.compactRevision}
+          deletedMemberLabel={t.chat.deletedMember}
+          fileLabel={t.chat.file}
+          stickerLabel={t.chat.sticker}
+          editedLabel={t.chat.messageEdited}
           renderMessage={renderMessage}
         />
       );
@@ -978,6 +1128,10 @@ function ChatMessagesComponent({
     chatWindow.compactRevision,
     messages,
     renderMessage,
+    t.chat.deletedMember,
+    t.chat.file,
+    t.chat.messageEdited,
+    t.chat.sticker,
   ]);
 
   // LOADING STATE

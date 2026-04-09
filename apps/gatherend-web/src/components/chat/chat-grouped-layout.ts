@@ -1,3 +1,8 @@
+export const GROUPED_TEXT_BUBBLE_LEFT_SPACER_PX = 40;
+export const GROUPED_TEXT_BUBBLE_ROW_GAP_PX = 8;
+export const GROUPED_TEXT_BUBBLE_LEFT_PX =
+  GROUPED_TEXT_BUBBLE_LEFT_SPACER_PX + GROUPED_TEXT_BUBBLE_ROW_GAP_PX;
+
 export const GROUPED_TEXT_BUBBLE_ROW_CLASS =
   "grid w-full grid-cols-[2.5rem_minmax(0,1fr)] gap-x-2";
 
