@@ -19,9 +19,6 @@ import { ChatItemOptimized } from "./chat-item-optimized";
 import { WelcomeMessageCard } from "./welcome-message-card";
 import { ChatSkeleton } from "./chat-skeleton";
 import { GoToRecentButton } from "./go-to-recent-button";
-import { UserAvatarMenu } from "@/components/user-avatar-menu";
-import { UserAvatar } from "@/components/user-avatar";
-import { AnimatedSticker } from "@/components/ui/animated-sticker";
 
 import {
   getMessageAuthor,
@@ -40,7 +37,10 @@ import { useTranslation } from "@/i18n";
 import { useMountedChatRoom } from "@/hooks/use-chat-room-lifecycle-store";
 import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
 import { useChannelData } from "@/hooks/use-board-data";
-import { isMissingMessageAuthor } from "@/hooks/chat/message-author";
+import {
+  GROUPED_TEXT_BUBBLE_LEFT_SPACER_CLASS,
+  GROUPED_TEXT_BUBBLE_ROW_CLASS,
+} from "./chat-grouped-layout";
 
 // CONSTANTS
 
@@ -97,56 +97,52 @@ type MessageRenderNode =
       items: Array<{ message: ChatMessage; index: number }>;
     };
 
-function getGroupedBubbleMeasurements(node: HTMLElement | null) {
-  if (!node) return [];
+function getGroupedBubbleBounds(node: HTMLElement | null) {
+  if (!node) return undefined;
 
-  return Array.from(
+  const containerRect = node.getBoundingClientRect();
+  let width = 0;
+  let minLeft = Number.POSITIVE_INFINITY;
+  let minTop = Number.POSITIVE_INFINITY;
+  let maxBottom = 0;
+
+  const bubbles = Array.from(
     node.querySelectorAll<HTMLElement>('[data-chat-item-block="text-bubble"]'),
-  ).map((bubble) => {
+  );
+
+  bubbles.forEach((bubble) => {
     const rect = bubble.getBoundingClientRect();
-    const messageId =
-      bubble
-        .closest<HTMLElement>("[data-message-id]")
-        ?.getAttribute("data-message-id") ?? null;
-
-    return {
-      messageId,
-      width: Math.ceil(rect.width),
-      height: Math.ceil(rect.height),
-      textLength: bubble.textContent?.trim().length ?? 0,
-      textPreview: bubble.textContent?.replace(/\s+/g, " ").trim().slice(0, 80),
-    };
-  });
-}
-
-function getGroupedBubbleWidth(node: HTMLElement | null): number {
-  const measurements = getGroupedBubbleMeasurements(node);
-  let nextWidth = 0;
-
-  measurements.forEach((bubble) => {
-    nextWidth = Math.max(nextWidth, bubble.width);
+    width = Math.max(width, Math.ceil(rect.width));
+    minLeft = Math.min(minLeft, Math.floor(rect.left - containerRect.left));
+    minTop = Math.min(minTop, Math.floor(rect.top - containerRect.top));
+    maxBottom = Math.max(maxBottom, Math.ceil(rect.bottom - containerRect.top));
   });
 
-  return nextWidth;
+  if (!bubbles.length || width === 0) return undefined;
+
+  return {
+    width,
+    left: Number.isFinite(minLeft) ? minLeft : 0,
+    top: Number.isFinite(minTop) ? minTop : 0,
+    height: Math.max(0, maxBottom - (Number.isFinite(minTop) ? minTop : 0)),
+  };
 }
 
-function GroupedTextBubbleRun({
-  items,
+function GroupedTextBubbleRow({
+  msg,
+  index,
+  isStartItem,
   messages,
   compactById,
   compactRevision,
-  isChannel,
-  currentProfile,
-  deletedMemberLabel,
   renderMessage,
 }: {
-  items: Array<{ message: ChatMessage; index: number }>;
+  msg: ChatMessage;
+  index: number;
+  isStartItem: boolean;
   messages: ChatMessage[];
   compactById: Record<string, boolean>;
   compactRevision: number;
-  isChannel: boolean;
-  currentProfile: ChatMessagesProps["currentProfile"];
-  deletedMemberLabel: string;
   renderMessage: (
     msg: ChatMessage,
     index: number,
@@ -154,35 +150,85 @@ function GroupedTextBubbleRun({
     options?: {
       groupedTextBubble?: boolean;
       hideAvatarColumn?: boolean;
+      showGroupedHeader?: boolean;
+      externalHoverArea?: boolean;
+      forcedHovered?: boolean;
+      messageCompactData?: "0" | "1";
+      compactRevisionData?: number;
+    },
+  ) => ReactNode;
+}) {
+  return (
+    <div className={GROUPED_TEXT_BUBBLE_ROW_CLASS}>
+      <div aria-hidden="true" className={GROUPED_TEXT_BUBBLE_LEFT_SPACER_CLASS} />
+      <div className="min-w-0">
+        {renderMessage(msg, index, messages, {
+          groupedTextBubble: true,
+          hideAvatarColumn: true,
+          showGroupedHeader: isStartItem,
+          externalHoverArea: true,
+          messageCompactData: compactById[msg.id] ? "1" : "0",
+          compactRevisionData: compactRevision,
+        })}
+      </div>
+    </div>
+  );
+}
+
+function GroupedTextBubbleRun({
+  items,
+  messages,
+  compactById,
+  compactRevision,
+  renderMessage,
+}: {
+  items: Array<{ message: ChatMessage; index: number }>;
+  messages: ChatMessage[];
+  compactById: Record<string, boolean>;
+  compactRevision: number;
+  renderMessage: (
+    msg: ChatMessage,
+    index: number,
+    messages: ChatMessage[],
+    options?: {
+      groupedTextBubble?: boolean;
+      hideAvatarColumn?: boolean;
+      showGroupedHeader?: boolean;
+      externalHoverArea?: boolean;
+      forcedHovered?: boolean;
+      messageCompactData?: "0" | "1";
+      compactRevisionData?: number;
     },
   ) => ReactNode;
 }) {
   const contentRef = useRef<HTMLDivElement | null>(null);
-  const [bubbleWidthPx, setBubbleWidthPx] = useState<number | undefined>(
-    undefined,
-  );
-  const firstItem = items[0];
-  const firstMessage = firstItem?.message;
-  const authorProfile = firstMessage
-    ? getMessageAuthor(firstMessage, {
-        fallbackLabel: deletedMemberLabel,
-      })
-    : null;
-  const channelMessage =
-    isChannel && firstMessage ? (firstMessage as ChannelMessage) : null;
-  const canOpenAuthorProfile = !isMissingMessageAuthor(authorProfile);
-  const groupedTimestamp = firstMessage
-    ? formatMessageTimestamp(new Date(firstMessage.createdAt))
-    : "";
+  const [bubbleBounds, setBubbleBounds] = useState<
+    | {
+        width: number;
+        left: number;
+        top: number;
+        height: number;
+      }
+    | undefined
+  >(undefined);
 
   useLayoutEffect(() => {
     const node = contentRef.current;
     if (!node) return;
 
-    const nextWidth = getGroupedBubbleWidth(node);
-    setBubbleWidthPx((prev) =>
-      prev === nextWidth || nextWidth === 0 ? prev : nextWidth,
-    );
+    const nextBounds = getGroupedBubbleBounds(node);
+    setBubbleBounds((prev) => {
+      if (!nextBounds) return prev;
+      if (
+        prev?.width === nextBounds.width &&
+        prev?.left === nextBounds.left &&
+        prev?.top === nextBounds.top &&
+        prev?.height === nextBounds.height
+      ) {
+        return prev;
+      }
+      return nextBounds;
+    });
   }, [items]);
 
   useEffect(() => {
@@ -190,10 +236,19 @@ function GroupedTextBubbleRun({
     if (!node || typeof ResizeObserver === "undefined") return;
 
     const observer = new ResizeObserver(() => {
-      const nextWidth = getGroupedBubbleWidth(node);
-      setBubbleWidthPx((prev) =>
-        prev === nextWidth || nextWidth === 0 ? prev : nextWidth,
-      );
+      const nextBounds = getGroupedBubbleBounds(node);
+      setBubbleBounds((prev) => {
+        if (!nextBounds) return prev;
+        if (
+          prev?.width === nextBounds.width &&
+          prev?.left === nextBounds.left &&
+          prev?.top === nextBounds.top &&
+          prev?.height === nextBounds.height
+        ) {
+          return prev;
+        }
+        return nextBounds;
+      });
     });
 
     observer.observe(node);
@@ -204,93 +259,34 @@ function GroupedTextBubbleRun({
   }, [items]);
 
   return (
-    <div className="px-2">
-      <div className="group flex w-full items-start gap-x-2">
-        <div className="shrink-0 pt-3">
-          {canOpenAuthorProfile ? (
-            <UserAvatarMenu
-              profileId={authorProfile?.id || ""}
-              profileImageUrl={authorProfile?.imageUrl || ""}
-              username={authorProfile?.username || ""}
-              discriminator={authorProfile?.discriminator}
-              currentProfileId={currentProfile.id}
-              currentProfile={currentProfile}
-              memberId={channelMessage?.member?.id || undefined}
-              showStatus={false}
-              usernameColor={authorProfile?.usernameColor}
-              usernameFormat={authorProfile?.usernameFormat}
-              avatarAnimationMode="onHover"
+    <div>
+      <div ref={contentRef} className="relative min-w-0 w-full">
+        {bubbleBounds ? (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute rounded-md bg-theme-bg-overlay-primary/72"
+            style={{
+              left: `${bubbleBounds.left}px`,
+              top: `${bubbleBounds.top}px`,
+              width: `${bubbleBounds.width}px`,
+              height: `${bubbleBounds.height}px`,
+            }}
+          />
+        ) : null}
+
+        <div className="relative z-10 w-full">
+          {items.map((item, itemIndex) => (
+            <GroupedTextBubbleRow
+              key={item.message.id}
+              msg={item.message}
+              index={item.index}
+              isStartItem={itemIndex === 0}
+              messages={messages}
+              compactById={compactById}
+              compactRevision={compactRevision}
+              renderMessage={renderMessage}
             />
-          ) : (
-            <UserAvatar
-              src={authorProfile?.imageUrl || undefined}
-              profileId={authorProfile?.id}
-              showStatus={false}
-              className="h-10 w-10"
-            />
-          )}
-        </div>
-
-        <div className="flex w-full min-w-0 flex-col overflow-hidden pt-0.5">
-          <div className="mb-1 flex items-center gap-1">
-            {(authorProfile?.badge || authorProfile?.badgeStickerUrl) && (
-              <>
-                <span className="inline-flex items-center gap-0.5">
-                  {authorProfile?.badgeStickerUrl && (
-                    <AnimatedSticker
-                      src={authorProfile.badgeStickerUrl}
-                      alt="badge"
-                      containerClassName="h-5 w-5"
-                      fallbackWidthPx={20}
-                      fallbackHeightPx={20}
-                      className="object-contain"
-                    />
-                  )}
-                  {authorProfile?.badge && (
-                    <span className="pt-2.5 text-[11px] leading-none text-theme-text-tertiary">
-                      {authorProfile.badge}
-                    </span>
-                  )}
-                </span>
-                <span className="pt-2.5 text-[11px] text-theme-text-tertiary">
-                  |
-                </span>
-              </>
-            )}
-            <span className="pt-2.5 text-[11px] text-theme-text-tertiary">
-              {groupedTimestamp}
-            </span>
-          </div>
-
-          <div ref={contentRef} className="relative min-w-0">
-            {bubbleWidthPx ? (
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-y-0 left-0 rounded-md bg-theme-bg-overlay-primary/72"
-                style={{ width: `${bubbleWidthPx}px` }}
-              />
-            ) : null}
-
-            <div className="relative z-10">
-              {items.map((item) => {
-                const msg = item.message;
-
-                return (
-                  <div
-                    key={msg.id}
-                    data-message-id={msg.id}
-                    data-message-compact={compactById[msg.id] ? "1" : "0"}
-                    data-compact-revision={compactRevision}
-                  >
-                    {renderMessage(msg, item.index, messages, {
-                      groupedTextBubble: true,
-                      hideAvatarColumn: true,
-                    })}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          ))}
         </div>
       </div>
     </div>
@@ -847,6 +843,11 @@ function ChatMessagesComponent({
       options?: {
         groupedTextBubble?: boolean;
         hideAvatarColumn?: boolean;
+        showGroupedHeader?: boolean;
+        externalHoverArea?: boolean;
+        forcedHovered?: boolean;
+        messageCompactData?: "0" | "1";
+        compactRevisionData?: number;
       },
     ) => {
       const isOptimistic = Boolean("isOptimistic" in msg && msg.isOptimistic);
@@ -921,6 +922,11 @@ function ChatMessagesComponent({
           textBubbleGroupPosition={textBubbleGroupPosition}
           groupedTextBubble={options?.groupedTextBubble}
           hideAvatarColumn={options?.hideAvatarColumn}
+          showGroupedHeader={options?.showGroupedHeader}
+          externalHoverArea={options?.externalHoverArea}
+          forcedHovered={options?.forcedHovered}
+          messageCompactData={options?.messageCompactData}
+          compactRevisionData={options?.compactRevisionData}
         />
       );
     },
@@ -963,9 +969,6 @@ function ChatMessagesComponent({
           messages={messages}
           compactById={chatWindow.compactById}
           compactRevision={chatWindow.compactRevision}
-          isChannel={isChannel}
-          currentProfile={currentProfile}
-          deletedMemberLabel={t.chat.deletedMember}
           renderMessage={renderMessage}
         />
       );
@@ -973,11 +976,8 @@ function ChatMessagesComponent({
   }, [
     chatWindow.compactById,
     chatWindow.compactRevision,
-    currentProfile,
-    isChannel,
     messages,
     renderMessage,
-    t.chat.deletedMember,
   ]);
 
   // LOADING STATE

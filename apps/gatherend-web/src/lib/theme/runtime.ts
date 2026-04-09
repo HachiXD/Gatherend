@@ -15,6 +15,10 @@ import {
   validateGradientConfig,
 } from "@/lib/theme/utils";
 
+type NormalizedGradientConfig = Omit<GradientConfig, "colors"> & {
+  colors: GradientColorStop[];
+};
+
 export function parseThemeConfig(config: unknown): ThemeConfig | null {
   if (!config || typeof config !== "object") return null;
 
@@ -42,7 +46,7 @@ export function parseThemeConfig(config: unknown): ThemeConfig | null {
 
 function normalizeThemeGradientConfig(
   gradient: GradientConfig | undefined,
-): (GradientConfig & { colors: GradientColorStop[] }) | undefined {
+): NormalizedGradientConfig | undefined {
   if (!gradient || !validateGradientConfig(gradient)) {
     return undefined;
   }

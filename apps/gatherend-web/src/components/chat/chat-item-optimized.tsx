@@ -44,6 +44,7 @@ import type {
   ClientSticker,
 } from "@/types/uploaded-assets";
 import { isMissingMessageAuthor } from "@/hooks/chat/message-author";
+import { GROUPED_TEXT_BUBBLE_EXTERNAL_HOVER_CLASS } from "./chat-grouped-layout";
 
 // Lazy load heavy components - only loaded when needed
 const ChatItemActions = lazy(() =>
@@ -101,6 +102,10 @@ interface ChatItemOptimizedProps {
   textBubbleGroupPosition?: "single" | "start" | "middle" | "end";
   groupedTextBubble?: boolean;
   hideAvatarColumn?: boolean;
+  showGroupedHeader?: boolean;
+  externalHoverArea?: boolean;
+  messageCompactData?: "0" | "1";
+  compactRevisionData?: number;
   forcedHovered?: boolean;
   onHoverChange?: (hovered: boolean) => void;
 }
@@ -186,11 +191,13 @@ const ReplyPreview = memo(function ReplyPreview({
   t,
   groupedTextBubble,
   isCompact,
+  insideBubble = false,
 }: {
   replyTo: NonNullable<ChatItemOptimizedProps["replyTo"]>;
   t: ReturnType<typeof useTranslation>["t"];
   groupedTextBubble?: boolean;
   isCompact?: boolean;
+  insideBubble?: boolean;
 }) {
   const replyAuthor = replyTo.sender;
 
@@ -206,9 +213,14 @@ const ReplyPreview = memo(function ReplyPreview({
     <div
       data-chat-item-block="reply-preview"
       className={cn(
-        "mt-2 pl-2.5 border-l-2 border-theme-border-accent-item-reply-preview",
-        groupedTextBubble && "ml-2",
-        isCompact ? "mb-0" : "-mb-2",
+        "border-l-2 border-theme-border-accent-item-reply-preview pl-2.5",
+        insideBubble
+          ? "mb-0.5"
+          : cn(
+              "mt-2",
+              groupedTextBubble && "ml-3",
+              isCompact ? "mb-0" : "-mb-2",
+            ),
       )}
     >
       <div className="text-xs text-theme-text-tertiary break-words">
@@ -452,6 +464,10 @@ const ChatItemOptimizedComponent = ({
   textBubbleGroupPosition,
   groupedTextBubble = false,
   hideAvatarColumn = false,
+  showGroupedHeader = false,
+  externalHoverArea = false,
+  messageCompactData,
+  compactRevisionData,
   forcedHovered = false,
   onHoverChange,
 }: ChatItemOptimizedProps) => {
@@ -1106,16 +1122,29 @@ const ChatItemOptimizedComponent = ({
     textBubbleGroupPosition === "middle" ||
     textBubbleGroupPosition === "end";
   const isMergedCompactText = isCompact && isGroupedTextBubble;
+  const showGroupedStartChrome =
+    groupedTextBubble && showGroupedHeader && hideAvatarColumn && !isCompact;
+  const shouldRenderReplyPreviewInsideTextBubble = Boolean(
+    replyTo &&
+    !fileUrl &&
+    !sticker &&
+    !isEditing &&
+    (!groupedTextBubble || showGroupedHeader),
+  );
   const effectiveHovered = isHovered || forcedHovered;
 
   return (
     <div
       ref={rootRef}
       data-message-id={id}
+      data-message-compact={messageCompactData}
+      data-compact-revision={compactRevisionData}
       className={cn(
         "relative group flex items-center hover:bg-black/5 transition",
         groupedTextBubble
-          ? "w-full py-0 px-0"
+          ? externalHoverArea
+            ? GROUPED_TEXT_BUBBLE_EXTERNAL_HOVER_CLASS
+            : "w-full py-0 px-0"
           : isCompact
             ? isMergedCompactText
               ? "py-0.5 pl-0 pr-2"
@@ -1128,6 +1157,36 @@ const ChatItemOptimizedComponent = ({
       onMouseLeave={handleMouseLeave}
     >
       <AvatarGroupHoverContext.Provider value={effectiveHovered}>
+        {showGroupedStartChrome && (
+          <div
+            data-chat-item-block="grouped-start-avatar"
+            className="absolute left-2 top-0 shrink-0 pt-3"
+          >
+            {canOpenAuthorProfile ? (
+              <UserAvatarMenu
+                profileId={authorProfile?.id || ""}
+                profileImageUrl={authorProfile?.imageUrl || ""}
+                username={authorProfile?.username || ""}
+                discriminator={authorProfile?.discriminator}
+                currentProfileId={currentProfile.id}
+                currentProfile={currentProfile}
+                memberId={member?.id || undefined}
+                showStatus={false}
+                usernameColor={authorProfile?.usernameColor}
+                usernameFormat={authorProfile?.usernameFormat}
+                avatarAnimationMode="onHover"
+              />
+            ) : (
+              <UserAvatar
+                src={authorProfile?.imageUrl || undefined}
+                profileId={authorProfile?.id}
+                showStatus={false}
+                className="h-10 w-10"
+              />
+            )}
+          </div>
+        )}
+
         <div
           data-chat-item-block="row"
           className={cn(
@@ -1136,7 +1195,7 @@ const ChatItemOptimizedComponent = ({
           )}
         >
           {/* Avatar - only show if not compact */}
-          {!hideAvatarColumn && !isCompact ? (
+          {!showGroupedStartChrome && !hideAvatarColumn && !isCompact ? (
             <div data-chat-item-block="avatar" className="shrink-0 pt-3">
               {canOpenAuthorProfile ? (
                 <UserAvatarMenu
@@ -1176,7 +1235,7 @@ const ChatItemOptimizedComponent = ({
             )}
           >
             {/* Reply Preview */}
-            {replyTo && (
+            {replyTo && !shouldRenderReplyPreviewInsideTextBubble && (
               <ReplyPreview
                 replyTo={replyTo}
                 t={t}
@@ -1436,7 +1495,7 @@ const ChatItemOptimizedComponent = ({
             {!fileUrl && !isEditing && !sticker && (
               <>
                 {/* Badge + Timestamp row above message - only if not compact */}
-                {!isCompact && !groupedTextBubble && (
+                {!isCompact && (!groupedTextBubble || showGroupedHeader) && (
                   <div
                     data-chat-item-block="text-header"
                     className="flex items-center gap-1 mb-0"
@@ -1476,7 +1535,7 @@ const ChatItemOptimizedComponent = ({
                   data-chat-item-block="text-bubble"
                   className={cn(
                     groupedTextBubble &&
-                      "mt-0 w-fit max-w-full border-0 bg-transparent shadow-none",
+                      "mt-1 w-fit max-w-full border-0 bg-transparent shadow-none",
                     groupedTextBubble &&
                       textBubbleGroupPosition === "start" &&
                       "px-3 pt-2",
@@ -1510,6 +1569,15 @@ const ChatItemOptimizedComponent = ({
                         : "mt-1 self-start max-w-full rounded-md bg-theme-bg-overlay-primary/72 px-3 py-2"),
                   )}
                 >
+                  {replyTo && shouldRenderReplyPreviewInsideTextBubble && (
+                    <ReplyPreview
+                      replyTo={replyTo}
+                      t={t}
+                      groupedTextBubble={groupedTextBubble}
+                      isCompact={isCompact}
+                      insideBubble
+                    />
+                  )}
                   <MessageContent
                     content={content}
                     deleted={deleted}
@@ -1675,6 +1743,11 @@ export const ChatItemOptimized = memo(
       prev.textBubbleGroupPosition === next.textBubbleGroupPosition &&
       prev.groupedTextBubble === next.groupedTextBubble &&
       prev.hideAvatarColumn === next.hideAvatarColumn &&
+      prev.showGroupedHeader === next.showGroupedHeader &&
+      prev.externalHoverArea === next.externalHoverArea &&
+      prev.messageCompactData === next.messageCompactData &&
+      prev.compactRevisionData === next.compactRevisionData &&
+      prev.forcedHovered === next.forcedHovered &&
       reactionsEqual &&
       prev.attachmentAsset?.id === next.attachmentAsset?.id &&
       prev.filePreviewUrl === next.filePreviewUrl &&
