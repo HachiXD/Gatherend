@@ -34,9 +34,9 @@ const GROUPED_BUBBLE_PADDING_BOTTOM_BY_POSITION = {
   middle: 0,
   end: 8,
 } as const;
+const GROUPED_START_ROW_MARGIN_TOP_PX = 4;
 const GROUPED_START_COLUMN_TOP_PADDING_PX = 2;
-const GROUPED_START_HEADER_HEIGHT_PX = 26;
-const GROUPED_START_HEADER_WITH_STICKER_HEIGHT_PX = 30;
+const GROUPED_START_HEADER_HEIGHT_PX = 26.5;
 const REPLY_PREVIEW_EXTRA_LEFT_PX = 12;
 const REPLY_PREVIEW_GAP_BELOW_PX = 2;
 
@@ -212,12 +212,6 @@ function measurePreparedParagraph({
   };
 }
 
-function getGroupedHeaderHeightPx(hasBadgeSticker: boolean) {
-  return hasBadgeSticker
-    ? GROUPED_START_HEADER_WITH_STICKER_HEIGHT_PX
-    : GROUPED_START_HEADER_HEIGHT_PX;
-}
-
 export function canUsePretextForGroupedBubbleMessage({
   content,
   deleted,
@@ -346,8 +340,9 @@ export function measureGroupedTextBubbleGroup({
 
     const bubbleOffsetTopWithinRowPx =
       item.showGroupedHeader
-        ? GROUPED_START_COLUMN_TOP_PADDING_PX +
-          getGroupedHeaderHeightPx(item.authorHasBadgeSticker) +
+        ? GROUPED_START_ROW_MARGIN_TOP_PX +
+          GROUPED_START_COLUMN_TOP_PADDING_PX +
+          GROUPED_START_HEADER_HEIGHT_PX +
           GROUPED_BUBBLE_MARGIN_TOP_PX
         : GROUPED_BUBBLE_MARGIN_TOP_PX;
 

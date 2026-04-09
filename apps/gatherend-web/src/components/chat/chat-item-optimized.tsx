@@ -192,12 +192,14 @@ const ReplyPreview = memo(function ReplyPreview({
   groupedTextBubble,
   isCompact,
   insideBubble = false,
+  groupedStartInsideBubble = false,
 }: {
   replyTo: NonNullable<ChatItemOptimizedProps["replyTo"]>;
   t: ReturnType<typeof useTranslation>["t"];
   groupedTextBubble?: boolean;
   isCompact?: boolean;
   insideBubble?: boolean;
+  groupedStartInsideBubble?: boolean;
 }) {
   const replyAuthor = replyTo.sender;
 
@@ -215,7 +217,7 @@ const ReplyPreview = memo(function ReplyPreview({
       className={cn(
         "border-l-2 border-theme-border-accent-item-reply-preview pl-2.5",
         insideBubble
-          ? "mb-0.5"
+          ? cn("mb-0.5", groupedStartInsideBubble && "mt-0.5")
           : cn(
               "mt-2",
               groupedTextBubble && "ml-3",
@@ -1140,6 +1142,7 @@ const ChatItemOptimizedComponent = ({
       data-compact-revision={compactRevisionData}
       className={cn(
         "relative group flex items-center hover:bg-black/5 transition",
+        showGroupedStartChrome && "mt-1",
         groupedTextBubble
           ? externalHoverArea
             ? GROUPED_TEXT_BUBBLE_EXTERNAL_HOVER_CLASS
@@ -1575,6 +1578,9 @@ const ChatItemOptimizedComponent = ({
                       groupedTextBubble={groupedTextBubble}
                       isCompact={isCompact}
                       insideBubble
+                      groupedStartInsideBubble={
+                        groupedTextBubble && showGroupedHeader
+                      }
                     />
                   )}
                   <MessageContent
