@@ -322,6 +322,7 @@ function getContentType(context: ModerationContext): string {
     case "board_rules_image":
     case "profile_avatar":
     case "profile_banner":
+    case "profile_card_image":
       return "image";
     case "message_attachment":
     case "dm_attachment":

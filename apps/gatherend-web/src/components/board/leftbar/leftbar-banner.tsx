@@ -38,7 +38,6 @@ export const LeftbarBanner = ({
   role,
   currentProfileId,
 }: LeftbarBannerProps) => {
-  // Solo suscribirse a acciones para evitar re-renders cuando cambia el estado global del modal/overlay.
   const onOpen = useModal(useCallback((state) => state.onOpen, []));
   const onOpenOverlay = useOverlayStore(
     useCallback((state) => state.onOpen, []),
@@ -66,7 +65,6 @@ export const LeftbarBanner = ({
     512,
   );
 
-  // Detectar si es Dicebear para usar quality máxima
   const isDicebear = finalImageUrl ? isDicebearUrl(finalImageUrl) : false;
   const displayImageUrl = forceOriginalImage
     ? finalImageUrl
@@ -116,108 +114,106 @@ export const LeftbarBanner = ({
         if (e.key !== "Enter" && e.key !== " ") return;
         openOnFirstInteraction(e);
       }}
-      className="h-8 w-8 pl-1 cursor-pointer rounded-none border border-theme-border bg-theme-bg-primary/55 text-theme-text-secondary transition hover:bg-theme-bg-primary/72 hover:text-theme-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]"
+      className="flex h-8 w-8 items-center justify-center cursor-pointer rounded-none border border-theme-border bg-theme-bg-primary/55 text-theme-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)] transition hover:bg-theme-bg-primary/72 hover:text-theme-text-secondary"
     >
       <Settings className="h-5 w-5" />
     </button>
   );
 
   return (
-    <div className="relative w-full h-[140px] border border-t-theme-border-primary border-t-2 overflow-hidden">
-      {/* Imagen de fondo - cover para Dicebear (avatars), fill para imágenes subidas */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={displayImageUrl ?? undefined}
-        alt={boardName}
-        className={`absolute inset-0 h-full w-full ${
-          isDicebear ? "object-cover" : "object-fill"
-        }`}
-        loading="eager"
-        decoding="async"
-        crossOrigin={isGatherendCdnUrl ? "anonymous" : undefined}
-        onError={() => setForceOriginalImage(true)}
-      />
-      {/* Overlay gradiente superior para el botón del dropdown */}
-      {/*<div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-transparent" />*/}
-
-      {/* Header superpuesto con degradado negro en la parte inferior */}
-      <div className="absolute bottom-0 left-0 right-0 px-2 py-3 bg-linear-to-t from-black/90 via-black/60 to-transparent">
-        <h2 className="text-md font-semibold text-white truncate drop-shadow-lg">
+    <div className="w-full border border-t-2 border-t-theme-border-primary bg-theme-bg-secondary">
+      <div className="flex items-center gap-2 border-b border-theme-border-primary px-2 py-2">
+        <h2 className="min-w-0 truncate text-[18px] font-semibold text-theme-text-primary">
           {boardName}
         </h2>
+        <div className="ml-auto shrink-0">
+          {!menuEnabled ? (
+            triggerButtonEl
+          ) : (
+            <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+              <DropdownMenuTrigger className="focus:outline-none" asChild>
+                {triggerButtonEl}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className={`w-56 rounded-none border-theme-border bg-theme-bg-dropdown-menu-primary px-1 py-0.5 text-xs font-medium text-theme-text-secondary ${menuPanelShadow}`}
+              >
+                {isModerator && (
+                  <DropdownMenuItem
+                    onClick={() => onOpen("invite", { board })}
+                    className={`${menuRowClass} text-theme-menu-accent-text`}
+                  >
+                    {t.board.invitePeople}
+                    <UserPlus className="ml-auto h-4 w-4 text-theme-menu-accent-text" />
+                  </DropdownMenuItem>
+                )}
+                {isModerator && (
+                  <DropdownMenuItem
+                    onClick={() =>
+                      onOpenOverlay("boardSettings", {
+                        boardId,
+                        currentProfileId,
+                      })
+                    }
+                    className={menuRowClass}
+                  >
+                    {t.board.boardSettings}
+                    <Settings className="ml-auto h-4 w-4" />
+                  </DropdownMenuItem>
+                )}
+                {FEATURES.CATEGORIES_ENABLED && isModerator && (
+                  <DropdownMenuItem
+                    onClick={() => onOpen("createCategory", { board })}
+                    className={menuRowClass}
+                  >
+                    {t.board.createCategory}
+                    <PlusCircle className="ml-auto h-4 w-4" />
+                  </DropdownMenuItem>
+                )}
+                {isAdmin && (
+                  <DropdownMenuItem
+                    onClick={() =>
+                      onOpen("createChannel", { board, categoryId: null })
+                    }
+                    className={menuRowClass}
+                  >
+                    {t.board.createRoom}
+                    <PlusCircle className="ml-auto h-4 w-4" />
+                  </DropdownMenuItem>
+                )}
+                {!isOwner && (
+                  <DropdownMenuSeparator className="mx-0 my-1 bg-theme-border" />
+                )}
+                {!isOwner && (
+                  <DropdownMenuItem
+                    onClick={() => onOpen("leaveBoard", { board })}
+                    className={menuDangerRowClass}
+                  >
+                    {t.board.leaveBoard}
+                    <LogOut className="ml-auto h-4 w-4 text-rose-400" />
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
       </div>
 
-      {/* Dropdown Menu en esquina superior derecha */}
-      <div className="absolute top-2 right-2 z-10">
-        {!menuEnabled ? (
-          triggerButtonEl
-        ) : (
-          <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-            <DropdownMenuTrigger className="focus:outline-none" asChild>
-              {triggerButtonEl}
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className={`w-56 rounded-none border-theme-border bg-theme-bg-dropdown-menu-primary px-1 py-0.5  text-xs text-theme-text-secondary font-medium ${menuPanelShadow}`}
-            >
-              {isModerator && (
-                <DropdownMenuItem
-                  onClick={() => onOpen("invite", { board })}
-                  className={`${menuRowClass} text-theme-menu-accent-text`}
-                >
-                  {t.board.invitePeople}
-                  <UserPlus className="h-4 w-4 ml-auto text-theme-menu-accent-text" />
-                </DropdownMenuItem>
-              )}
-              {isModerator && (
-                <DropdownMenuItem
-                  onClick={() =>
-                    onOpenOverlay("boardSettings", {
-                      boardId,
-                      currentProfileId,
-                    })
-                  }
-                  className={menuRowClass}
-                >
-                  {t.board.boardSettings}
-                  <Settings className="h-4 w-4 ml-auto" />
-                </DropdownMenuItem>
-              )}
-              {FEATURES.CATEGORIES_ENABLED && isModerator && (
-                <DropdownMenuItem
-                  onClick={() => onOpen("createCategory", { board })}
-                  className={menuRowClass}
-                >
-                  {t.board.createCategory}
-                  <PlusCircle className="h-4 w-4 ml-auto" />
-                </DropdownMenuItem>
-              )}
-              {isAdmin && (
-                <DropdownMenuItem
-                  onClick={() =>
-                    onOpen("createChannel", { board, categoryId: null })
-                  }
-                  className={menuRowClass}
-                >
-                  {t.board.createRoom}
-                  <PlusCircle className="h-4 w-4 ml-auto" />
-                </DropdownMenuItem>
-              )}
-              {!isOwner && (
-                <DropdownMenuSeparator className="mx-0 my-1 bg-theme-border" />
-              )}
-              {!isOwner && (
-                <DropdownMenuItem
-                  onClick={() => onOpen("leaveBoard", { board })}
-                  className={menuDangerRowClass}
-                >
-                  {t.board.leaveBoard}
-                  <LogOut className="text-rose-400 h-4 w-4 ml-auto" />
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+      <div className="p-2">
+        <div className="relative h-[108px] overflow-hidden border border-theme-border-primary bg-theme-bg-secondary">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={displayImageUrl ?? undefined}
+            alt={boardName}
+            className={`h-full w-full ${
+              isDicebear ? "object-cover" : "object-fill"
+            }`}
+            loading="eager"
+            decoding="async"
+            crossOrigin={isGatherendCdnUrl ? "anonymous" : undefined}
+            onError={() => setForceOriginalImage(true)}
+          />
+        </div>
       </div>
     </div>
   );

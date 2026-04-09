@@ -13,6 +13,7 @@ export type ModerationContext =
   | "board_rules_image"
   | "profile_avatar"
   | "profile_banner"
+  | "profile_card_image"
   | "message_attachment"
   | "sticker"
   | "dm_attachment";
@@ -59,6 +60,7 @@ export const CONTEXT_STORAGE_MAP: Record<ModerationContext, StorageBackend> = {
   board_rules_image: "s3",
   profile_avatar: "s3",
   profile_banner: "s3",
+  profile_card_image: "s3",
   sticker: "s3",
   message_attachment: "s3",
   dm_attachment: "s3",
@@ -72,6 +74,7 @@ export const STORAGE_FOLDERS: Record<ModerationContext, string> = {
   board_rules_image: "board-rules",
   profile_avatar: "avatars",
   profile_banner: "banners",
+  profile_card_image: "profile-cards",
   sticker: "stickers",
   message_attachment: "chat-attachments",
   dm_attachment: "dm-attachments",

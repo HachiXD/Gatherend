@@ -53,7 +53,7 @@ export const en: TranslationKeys = {
     username: "Username",
     usernamePlaceholder: "Enter your username",
     identifier: "Identifier",
-    color: "Color",
+    color: "Username color",
     style: "Style",
     styleNormal: "Normal",
     styleBold: "Bold",
@@ -426,8 +426,7 @@ export const en: TranslationKeys = {
           unban: "Manual unban executed by {username}.",
           kick: "Member kicked by {username}.",
           autoBan: "Automatic ban after reaching 3 active warnings.",
-          autoUnban:
-            "Automatic unban after a promoted warning was removed.",
+          autoUnban: "Automatic unban after a promoted warning was removed.",
         },
       },
 
@@ -801,14 +800,18 @@ export const en: TranslationKeys = {
     permanent: "Permanent",
     moderationLog: "Moderation Log",
     noReports: "No reports",
-    reportsSubtitle: "Review unresolved reports and resolve them from the queue",
-    reportsQueueEmptyDescription: "All caught up. There are no reports waiting for review.",
+    reportsSubtitle:
+      "Review unresolved reports and resolve them from the queue",
+    reportsQueueEmptyDescription:
+      "All caught up. There are no reports waiting for review.",
     reportUser: "Report User",
     reportMessage: "Report Message",
     reportReason: "Report Reason",
-    historySubtitle: "Immutable platform moderation activity across warnings, strikes, bans, and notes",
+    historySubtitle:
+      "Immutable platform moderation activity across warnings, strikes, bans, and notes",
     noHistory: "No moderation history yet",
-    historyEmptyDescription: "New moderation activity will appear here as actions are taken.",
+    historyEmptyDescription:
+      "New moderation activity will appear here as actions are taken.",
     warning: "Warning",
     removeWarning: "Remove warning",
     strike: "Strike",
@@ -817,15 +820,18 @@ export const en: TranslationKeys = {
     note: "Note",
     autoBan: "Auto ban",
     autoUnban: "Auto unban",
-    autoBanDescription: "Automatically banned after reaching the strike threshold",
-    autoUnbanDescription: "Automatically unbanned after dropping below the strike threshold",
+    autoBanDescription:
+      "Automatically banned after reaching the strike threshold",
+    autoUnbanDescription:
+      "Automatically unbanned after dropping below the strike threshold",
     unknownAdmin: "Unknown admin",
     unknownUser: "Unknown user",
     warningStatus: "Warning status",
     bannedUsersSubtitle: "Users currently banned at the platform level",
     totalBannedUsers: "Total banned users",
     noBannedUsers: "No banned users",
-    noBannedUsersDescription: "No accounts are currently banned on the platform.",
+    noBannedUsersDescription:
+      "No accounts are currently banned on the platform.",
     noReasonProvided: "No reason provided",
     bannedOn: "Banned on",
     unbanSuccess: "User unbanned successfully",

@@ -32,7 +32,6 @@ export type ExtendedProfile = ClientProfile & {
   profileTags?: string[];
   badge?: string | null;
   usernameFormat?: UsernameFormatConfig | null;
-  longDescription?: string | null;
 };
 
 // Shared Props
@@ -95,14 +94,6 @@ export interface UsernameColorSectionProps
     updateSelectedColor: (color: string) => void;
     removeSelectedColor: () => void;
   };
-}
-
-// About Me Section
-
-export interface AboutMeSectionProps
-  extends ProfileSectionProps, WithTranslations {
-  value: string | null | undefined;
-  onChange: (value: string) => void;
 }
 
 // Badge Section (refactored - lazy loads stickers)

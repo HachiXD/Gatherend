@@ -11,12 +11,11 @@ import {
 import { cn } from "@/lib/utils";
 import { usePresenceStore } from "@/hooks/use-presence-store";
 import { Crown, Ghost, HardHat, User } from "lucide-react";
-import { getProfileAvatarUrl, stringToColor } from "@/lib/avatar-utils";
+import { getProfileAvatarUrl } from "@/lib/avatar-utils";
 import { getNeverAnimatedImageUrl } from "@/lib/media-static";
 import { AnimatedSticker } from "@/components/ui/animated-sticker";
 import { canUseImgproxy, isAnimatedFormat } from "@/lib/imgproxy-utils";
 import { getOptimizedStaticUiImageUrl } from "@/lib/ui-image-optimizer";
-import { getDisplayColor } from "@/lib/username-color";
 import { JsonValue } from "@prisma/client/runtime/library";
 
 // Tipo para los roles de miembro
@@ -169,7 +168,6 @@ interface UserAvatarProps {
 export const UserAvatar = ({
   src,
   profileId,
-  usernameColor,
   status,
   className,
   sizePx,
@@ -203,12 +201,6 @@ export const UserAvatar = ({
     }
     return null;
   }, [profileId]);
-
-  const fallbackBgColor = useMemo(() => {
-    if (usernameColor != null) return getDisplayColor(usernameColor);
-    if (profileId) return `#${stringToColor(profileId)}`;
-    return getDisplayColor(null);
-  }, [profileId, usernameColor]);
 
   const resolvedSrc = src || fallbackAvatarUrl;
   const [currentSrc, setCurrentSrc] = useState<string | null>(resolvedSrc);
@@ -315,12 +307,7 @@ export const UserAvatar = ({
         onError={() => setCurrentSrc(fallbackAvatarUrl)}
       />
     ) : (
-      <div
-        className={avatarBoxClass}
-        style={{
-          backgroundColor: fallbackBgColor,
-        }}
-      >
+      <div className={avatarBoxClass}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={optimizedStaticSrc ?? undefined}

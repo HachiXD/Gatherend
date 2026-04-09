@@ -18,7 +18,6 @@ import {
 import { AnimatedSticker } from "@/components/ui/animated-sticker";
 import { useStickers } from "@/hooks/use-stickers";
 import type {
-  AboutMeSectionProps,
   BadgeSectionProps,
   ProfileTagsSectionProps,
   LanguagesSectionProps,
@@ -43,44 +42,6 @@ const panelSelectContentClass =
   "w-[var(--radix-select-trigger-width)] min-w-[var(--radix-select-trigger-width)] rounded-none border-theme-border bg-theme-bg-modal p-0 text-theme-text-secondary [&>div]:p-0";
 const panelSelectItemClass =
   "h-8 w-full cursor-pointer rounded-none border-x-0 border-t-0 border-b border-theme-border-subtle px-2 hover:border-theme-channel-type-active-border hover:bg-theme-channel-type-active-bg hover:text-theme-channel-type-active-text focus:border-theme-channel-type-active-border focus:bg-theme-channel-type-active-bg focus:text-theme-channel-type-active-text";
-
-// About Me Section
-
-export const AboutMeSection = memo(function AboutMeSection({
-  value,
-  isSaving,
-  onChange,
-  t,
-}: AboutMeSectionProps) {
-  return (
-    <div className="space-y-2">
-      <label
-        htmlFor="profile-about-me"
-        className="uppercase text-xs font-bold text-theme-text-subtle"
-      >
-        {t.profile.aboutMe}
-      </label>
-      <div className="relative w-full">
-        <Textarea
-          id="profile-about-me"
-          name="profile-about-me"
-          disabled={isSaving}
-          className={cn(
-            fieldTextareaClass,
-            "w-full resize-none min-h-[100px] break-all",
-          )}
-          placeholder={t.profile.aboutMePlaceholder}
-          maxLength={200}
-          value={value || ""}
-          onChange={(e) => onChange(e.target.value)}
-        />
-        <span className="absolute right-3 bottom-3 text-xs text-theme-text-muted">
-          {(value || "").length}/200
-        </span>
-      </div>
-    </div>
-  );
-});
 
 // Badge Section (with lazy-loaded stickers)
 

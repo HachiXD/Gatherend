@@ -6,6 +6,7 @@ import { JsonValue } from "@prisma/client/runtime/library";
 import { fetchWithRetry } from "@/lib/fetch-with-retry";
 import { useTokenReady } from "@/components/providers/token-manager-provider";
 import { useSession } from "@/lib/better-auth-client";
+import type { ProfileCardConfig } from "@/lib/profile-card-config";
 import type {
   ClientStickerAssetRef,
   ClientUploadedAsset,
@@ -18,8 +19,19 @@ export interface ClientProfile {
   avatarAssetId: string | null;
   bannerAssetId: string | null;
   badgeStickerId: string | null;
+  profileCardConfig: ProfileCardConfig | null;
+  profileCardLeftTopImageAssetId: string | null;
+  profileCardLeftBottomRightTopImageAssetId: string | null;
+  profileCardLeftBottomRightBottomImageAssetId: string | null;
+  profileCardRightTopImageAssetId: string | null;
+  profileCardRightBottomImageAssetId: string | null;
   avatarAsset: ClientUploadedAsset | null;
   bannerAsset: ClientUploadedAsset | null;
+  profileCardLeftTopImageAsset: ClientUploadedAsset | null;
+  profileCardLeftBottomRightTopImageAsset: ClientUploadedAsset | null;
+  profileCardLeftBottomRightBottomImageAsset: ClientUploadedAsset | null;
+  profileCardRightTopImageAsset: ClientUploadedAsset | null;
+  profileCardRightBottomImageAsset: ClientUploadedAsset | null;
   badgeSticker: ClientStickerAssetRef | null;
   email: string;
   languages: Languages[];
@@ -27,7 +39,6 @@ export interface ClientProfile {
   profileTags: string[];
   badge: string | null;
   usernameFormat: JsonValue;
-  longDescription: string | null;
   themeConfig: JsonValue;
 }
 

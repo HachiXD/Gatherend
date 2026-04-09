@@ -11,13 +11,13 @@ import { GradientSlider } from "@/components/ui/gradient-slider";
 import type { UsernameColorSectionProps } from "./types";
 
 const fieldInputClass =
-  "h-8 rounded-none border-theme-border-subtle bg-theme-bg-edit-form/50 text-theme-text-light placeholder:text-theme-text-muted focus-visible:border-theme-border-subtle";
+  "h-8 rounded-none border-theme-border bg-theme-bg-primary/70 text-theme-text-light placeholder:text-theme-text-muted focus-visible:border-theme-border-accent";
 const panelToggleButtonClass =
   "h-6.5 cursor-pointer rounded-none border px-3 text-[13px] transition";
 const panelToggleActiveClass =
   "border-theme-channel-type-active-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text";
 const panelToggleInactiveClass =
-  "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border";
+  "border-theme-border bg-theme-bg-primary/70 text-theme-text-subtle hover:bg-theme-bg-primary/90 hover:text-theme-text-light";
 
 function normalizeHexDraft(value: string): string {
   return value.slice(0, 7).toUpperCase();
@@ -122,7 +122,7 @@ export const UsernameColorSection = memo(function UsernameColorSection({
             Color sólido
           </label>
           <div
-            className="relative h-8 w-8 shrink-0 cursor-pointer overflow-hidden rounded-none border border-theme-border-subtle"
+            className="relative h-8 w-8 shrink-0 cursor-pointer overflow-hidden rounded-none border border-theme-border"
             style={{ backgroundColor: colorState.solidColor }}
           >
             <input
@@ -147,8 +147,8 @@ export const UsernameColorSection = memo(function UsernameColorSection({
           />
         </div>
       ) : (
-        <div className="space-y-2 border border-theme-border-subtle bg-theme-bg-edit-form/30 px-3 py-2">
-          <div className="space-y-0 border-b border-theme-border-subtle pb-1">
+        <div className="space-y-2 border border-theme-border bg-theme-bg-primary/70 px-3 py-2">
+          <div className="space-y-0 border-b border-theme-border pb-1">
             <div className="space-y-0">
               <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-theme-text-subtle">
                 Editor de Gradiente
@@ -178,19 +178,19 @@ export const UsernameColorSection = memo(function UsernameColorSection({
           />
 
           {selectedColor && (
-            <div className="space-y-1 border border-theme-border-subtle bg-theme-bg-edit-form/35 p-2">
+            <div className="space-y-1 border border-theme-border bg-theme-bg-primary/70 p-2">
               <div className="flex items-center justify-between gap-2 -mt-1">
                 <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-theme-text-subtle">
                   Selected Color
                 </span>
-                <span className="border border-theme-border-subtle bg-theme-bg-edit-form/50 px-2 py-0 text-[11px] text-theme-text-muted">
+                <span className="border border-theme-border bg-theme-bg-primary/70 px-2 py-0 text-[11px] text-theme-text-muted">
                   {selectedColor.position}%
                 </span>
               </div>
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <div
-                    className="relative h-8 w-8 shrink-0 cursor-pointer overflow-hidden rounded-none border border-theme-border-subtle"
+                      className="relative h-8 w-8 shrink-0 cursor-pointer overflow-hidden rounded-none border border-theme-border"
                     style={{ backgroundColor: selectedColor.color }}
                   >
                     <input
@@ -251,7 +251,7 @@ export const UsernameColorSection = memo(function UsernameColorSection({
             </div>
           )}
 
-          <div className="space-y-0 border border-theme-border-subtle bg-theme-bg-edit-form/35 p-2">
+          <div className="space-y-0 border border-theme-border bg-theme-bg-primary/70 p-2">
             <div className="flex items-center justify-between gap-2 -mt-1">
               <label
                 htmlFor="username-gradient-angle"
@@ -259,7 +259,7 @@ export const UsernameColorSection = memo(function UsernameColorSection({
               >
                 Angle
               </label>
-              <span className="border border-theme-border-subtle bg-theme-bg-edit-form/50 px-2 py-0.5 text-[11px] text-theme-text-muted">
+              <span className="border border-theme-border bg-theme-bg-primary/70 px-2 py-0.5 text-[11px] text-theme-text-muted">
                 {colorState.gradientAngle}°
               </span>
             </div>
@@ -273,13 +273,13 @@ export const UsernameColorSection = memo(function UsernameColorSection({
               onChange={(e) =>
                 colorActions.setGradientAngle(parseInt(e.target.value))
               }
-              className="h-2 w-full cursor-pointer appearance-none rounded-none bg-theme-bg-edit-form accent-theme-accent-primary"
+              className="h-2 w-full cursor-pointer appearance-none rounded-none bg-theme-bg-primary/70 accent-theme-accent-primary"
               disabled={isSaving}
               aria-label="Angulo del gradiente"
             />
           </div>
 
-          <div className="border-t border-theme-border-subtle pt-2">
+          <div className="border-t border-theme-border pt-2">
             <button
               type="button"
               onClick={() => {

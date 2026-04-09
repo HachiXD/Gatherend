@@ -27,6 +27,7 @@ export interface ThemeColors {
 
   // Buttons
   buttonPrimary: string; // Botón principal
+  buttonPrimaryActive: string; // Variante un poco más luminosa para estados activos
   buttonHover: string; // Botón en hover
 
   // Text
@@ -103,9 +104,12 @@ export interface ThemeColors {
   // Chat input icons
   chatInputIcon: string; // Color de iconos del chat input (Plus bg, emoji/sticker text)
   chatInputIconHover: string; // Hover de iconos del chat input
+  chatInputButtonBg: string; // Fondo de botones utilitarios del chat input
+  chatInputSurfaceBg: string; // Fondo del contenedor de escritura del chat input
 
   // Channel type buttons (Text/Voice selector)
   channelTypeActiveBorder: string; // Borde del botón activo (verde)
+  channelTypeActiveSoftBg: string; // Fondo desaturado derivado del activo
   channelTypeActiveBg: string; // Fondo del botón activo (verde con alfa)
   channelTypeActiveText: string; // Texto del botón activo
   channelTypeInactiveBg: string; // Fondo del botón inactivo
@@ -248,6 +252,8 @@ export const THEME_CSS_VAR_MAP: Record<ThemeColorKey, string> = {
   buttonSendHover: "--theme-button-send-hover",
   chatInputIcon: "--theme-chat-input-icon",
   chatInputIconHover: "--theme-chat-input-icon-hover",
+  chatInputButtonBg: "--theme-chat-input-button-bg",
+  chatInputSurfaceBg: "--theme-chat-input-surface-bg",
   channelTypeActiveBorder: "--theme-channel-type-active-border",
   channelTypeActiveBg: "--theme-channel-type-active-bg",
   channelTypeActiveText: "--theme-channel-type-active-text",

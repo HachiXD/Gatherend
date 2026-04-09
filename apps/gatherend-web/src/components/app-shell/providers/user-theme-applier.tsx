@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { applyGradientToDOM, applyThemeToDOM } from "@/lib/theme/utils";
 import { resolveThemeColors } from "@/lib/theme/runtime";
 import { useEffectiveThemeConfig } from "@/hooks/use-effective-theme-config";
@@ -15,7 +15,7 @@ export function UserThemeApplier() {
   const themeConfig = useEffectiveThemeConfig();
   const themeConfigKey = JSON.stringify(themeConfig || null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const colors = resolveThemeColors(themeConfig);
     applyThemeToDOM(colors);
     applyGradientToDOM(themeConfig?.gradient || null);

@@ -8,15 +8,15 @@ import { getRingBackground, getUsernameColorStyle } from "@/lib/username-color";
 import type { UsernameSectionProps } from "./types";
 
 const fieldInputClass =
-  "h-8 rounded-none border-theme-border-subtle bg-theme-bg-edit-form/50 text-theme-text-light placeholder:text-theme-text-muted focus-visible:border-theme-border-subtle";
+  "h-8 rounded-none border-theme-border bg-theme-bg-primary/70 text-theme-text-light placeholder:text-theme-text-muted focus-visible:border-theme-border-accent";
 const readonlyFieldInputClass =
-  "h-8 rounded-none border-theme-border-subtle bg-theme-bg-edit-form/35 text-theme-text-muted";
+  "h-8 rounded-none border-theme-border bg-theme-bg-primary/70 text-theme-text-light disabled:opacity-100";
 const panelToggleButtonClass =
   "flex h-6.5 w-10 cursor-pointer items-center justify-center rounded-none border text-[13px] transition";
 const panelToggleActiveClass =
   "border-theme-channel-type-active-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text";
 const panelToggleInactiveClass =
-  "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border";
+  "border-theme-border bg-theme-bg-primary/70 text-theme-text-subtle hover:bg-theme-bg-primary/90 hover:text-theme-text-light";
 
 export const UsernameSection = memo(function UsernameSection({
   username,

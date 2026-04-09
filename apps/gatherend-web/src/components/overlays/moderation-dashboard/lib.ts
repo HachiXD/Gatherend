@@ -45,7 +45,6 @@ export interface ReportSnapshot {
   authorDiscriminator?: string;
   username?: string;
   discriminator?: string;
-  longDescription?: string;
   userId?: string;
 }
 

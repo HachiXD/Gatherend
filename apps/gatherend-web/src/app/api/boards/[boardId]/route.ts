@@ -86,7 +86,6 @@ export async function GET(
                 profileTags: true,
                 badge: true,
                 usernameFormat: true,
-                longDescription: true,
                 avatarAsset: {
                   select: uploadedAssetSummarySelect,
                 },

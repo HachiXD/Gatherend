@@ -30,7 +30,7 @@ export const ChatHeaderClient = ({
 
   return (
     <div
-      className={`flex min-w-[160px] items-center justify-center gap-2 px-3 py-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)] ${isConversation ? "bg-theme-bg-secondary/40" : ""}`}
+      className={`flex min-w-[160px] items-center justify-center gap-2 border border-[var(--community-header-btn-ring)] px-3 py-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)] ${isConversation ? "bg-theme-bg-secondary/40" : ""}`}
       style={isConversation ? undefined : { backgroundColor: "var(--community-header-btn-bg, var(--theme-bg-secondary))" }}
     >
       {type === "channel" && (

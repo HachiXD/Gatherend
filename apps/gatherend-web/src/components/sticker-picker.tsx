@@ -19,10 +19,25 @@ import { AnimatedSticker } from "@/components/ui/animated-sticker";
 import { toast } from "sonner";
 import { useTranslation } from "@/i18n";
 import type { ClientSticker } from "@/types/uploaded-assets";
+import { cn } from "@/lib/utils";
 
 interface StickerPickerProps {
   onChange: (sticker: ClientSticker) => void;
   profileId: string;
+  triggerClassName?: string;
+  iconClassName?: string;
+}
+
+function getMutationErrorMessage(error: unknown): string | undefined {
+  if (typeof error !== "object" || error === null || !("response" in error)) {
+    return undefined;
+  }
+
+  const response = (error as { response?: { data?: { message?: unknown } } })
+    .response;
+  return typeof response?.data?.message === "string"
+    ? response.data.message
+    : undefined;
 }
 
 function StickerPickerPopover({
@@ -40,7 +55,7 @@ function StickerPickerPopover({
   const { data: stickers, isLoading } = useStickers(profileId);
   const { mutate: uploadSticker, isPending: isUploading } = useUploadSticker();
   const { mutate: deleteSticker } = useDeleteSticker();
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedCategory] = useState<string>("all");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isNarrowScreen, setIsNarrowScreen] = useState(false);
   const [cellInnerPx, setCellInnerPx] = useState(80);
@@ -121,9 +136,9 @@ function StickerPickerPopover({
             fileInputRef.current.value = "";
           }
         },
-        onError: (error: any) => {
+        onError: (error: unknown) => {
           toast.error(
-            error.response?.data?.message || t.stickerPicker.uploadFailed,
+            getMutationErrorMessage(error) || t.stickerPicker.uploadFailed,
           );
         },
       },
@@ -138,9 +153,9 @@ function StickerPickerPopover({
         onSuccess: () => {
           toast.success(t.stickerPicker.stickerDeleted);
         },
-        onError: (error: any) => {
+        onError: (error: unknown) => {
           toast.error(
-            error.response?.data?.message || t.stickerPicker.deleteFailed,
+            getMutationErrorMessage(error) || t.stickerPicker.deleteFailed,
           );
         },
       },
@@ -264,7 +279,12 @@ function StickerPickerPopover({
   );
 }
 
-export const StickerPicker = ({ onChange, profileId }: StickerPickerProps) => {
+export const StickerPicker = ({
+  onChange,
+  profileId,
+  triggerClassName,
+  iconClassName,
+}: StickerPickerProps) => {
   const [popoverEnabled, setPopoverEnabled] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -294,9 +314,20 @@ export const StickerPicker = ({ onChange, profileId }: StickerPickerProps) => {
         if (e.key !== "Enter" && e.key !== " ") return;
         openOnFirstInteraction(e);
       }}
-      className="inline-flex"
+      className={cn(
+        "inline-flex items-center justify-center",
+        triggerClassName,
+      )}
     >
-      <Sticker className="text-theme-chat-input-icon hover:text-theme-chat-input-icon-hover transition cursor-pointer" />
+      <Sticker
+        className={cn(
+          "text-theme-chat-input-icon transition",
+          triggerClassName
+            ? "h-4 w-4 text-current"
+            : "hover:text-theme-chat-input-icon-hover cursor-pointer",
+          iconClassName,
+        )}
+      />
     </button>
   );
 

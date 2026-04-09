@@ -9,6 +9,7 @@ import { AssetContext, AssetVisibility, Languages } from "@prisma/client";
 import { db } from "@/lib/db";
 import { profileCache } from "@/lib/redis";
 import { normalizeLanguages } from "@/lib/detect-language";
+import type { ProfileCardConfig } from "@/lib/profile-card-config";
 import {
   generateUniqueDiscriminator,
   generateRandomUsername,
@@ -57,8 +58,8 @@ export type ProfileData = {
   profileTags: string[];
   badge: string | null;
   usernameFormat: unknown;
-  longDescription: string | null;
   themeConfig: unknown;
+  profileCardConfig: ProfileCardConfig | null;
   banned: boolean;
   bannedAt: Date | null;
   banReason: string | null;
@@ -67,8 +68,18 @@ export type ProfileData = {
   avatarAssetId: string | null;
   bannerAssetId: string | null;
   badgeStickerId: string | null;
+  profileCardLeftTopImageAssetId: string | null;
+  profileCardLeftBottomRightTopImageAssetId: string | null;
+  profileCardLeftBottomRightBottomImageAssetId: string | null;
+  profileCardRightTopImageAssetId: string | null;
+  profileCardRightBottomImageAssetId: string | null;
   avatarAsset: SerializedUploadedAsset;
   bannerAsset: SerializedUploadedAsset;
+  profileCardLeftTopImageAsset: SerializedUploadedAsset;
+  profileCardLeftBottomRightTopImageAsset: SerializedUploadedAsset;
+  profileCardLeftBottomRightBottomImageAsset: SerializedUploadedAsset;
+  profileCardRightTopImageAsset: SerializedUploadedAsset;
+  profileCardRightBottomImageAsset: SerializedUploadedAsset;
   badgeSticker:
     | {
         id: string;
@@ -89,8 +100,8 @@ const profileSelect = {
   profileTags: true,
   badge: true,
   usernameFormat: true,
-  longDescription: true,
   themeConfig: true,
+  profileCardConfig: true,
   banned: true,
   bannedAt: true,
   banReason: true,
@@ -99,10 +110,30 @@ const profileSelect = {
   avatarAssetId: true,
   bannerAssetId: true,
   badgeStickerId: true,
+  profileCardLeftTopImageAssetId: true,
+  profileCardLeftBottomRightTopImageAssetId: true,
+  profileCardLeftBottomRightBottomImageAssetId: true,
+  profileCardRightTopImageAssetId: true,
+  profileCardRightBottomImageAssetId: true,
   avatarAsset: {
     select: uploadedAssetSummarySelect,
   },
   bannerAsset: {
+    select: uploadedAssetSummarySelect,
+  },
+  profileCardLeftTopImageAsset: {
+    select: uploadedAssetSummarySelect,
+  },
+  profileCardLeftBottomRightTopImageAsset: {
+    select: uploadedAssetSummarySelect,
+  },
+  profileCardLeftBottomRightBottomImageAsset: {
+    select: uploadedAssetSummarySelect,
+  },
+  profileCardRightTopImageAsset: {
+    select: uploadedAssetSummarySelect,
+  },
+  profileCardRightBottomImageAsset: {
     select: uploadedAssetSummarySelect,
   },
   badgeSticker: {
@@ -127,8 +158,8 @@ type ProfileRecord = {
   profileTags: string[];
   badge: string | null;
   usernameFormat: unknown;
-  longDescription: string | null;
   themeConfig: unknown;
+  profileCardConfig: ProfileCardConfig | null;
   banned: boolean;
   bannedAt: Date | null;
   banReason: string | null;
@@ -137,8 +168,18 @@ type ProfileRecord = {
   avatarAssetId: string | null;
   bannerAssetId: string | null;
   badgeStickerId: string | null;
+  profileCardLeftTopImageAssetId: string | null;
+  profileCardLeftBottomRightTopImageAssetId: string | null;
+  profileCardLeftBottomRightBottomImageAssetId: string | null;
+  profileCardRightTopImageAssetId: string | null;
+  profileCardRightBottomImageAssetId: string | null;
   avatarAsset: UploadedAssetSummary | null;
   bannerAsset: UploadedAssetSummary | null;
+  profileCardLeftTopImageAsset: UploadedAssetSummary | null;
+  profileCardLeftBottomRightTopImageAsset: UploadedAssetSummary | null;
+  profileCardLeftBottomRightBottomImageAsset: UploadedAssetSummary | null;
+  profileCardRightTopImageAsset: UploadedAssetSummary | null;
+  profileCardRightBottomImageAsset: UploadedAssetSummary | null;
   badgeSticker:
     | {
         id: string;
@@ -152,6 +193,21 @@ function serializeProfileRecord(profile: ProfileRecord): ProfileData {
     ...profile,
     avatarAsset: serializePublicAsset(profile.avatarAsset),
     bannerAsset: serializePublicAsset(profile.bannerAsset),
+    profileCardLeftTopImageAsset: serializePublicAsset(
+      profile.profileCardLeftTopImageAsset,
+    ),
+    profileCardLeftBottomRightTopImageAsset: serializePublicAsset(
+      profile.profileCardLeftBottomRightTopImageAsset,
+    ),
+    profileCardLeftBottomRightBottomImageAsset: serializePublicAsset(
+      profile.profileCardLeftBottomRightBottomImageAsset,
+    ),
+    profileCardRightTopImageAsset: serializePublicAsset(
+      profile.profileCardRightTopImageAsset,
+    ),
+    profileCardRightBottomImageAsset: serializePublicAsset(
+      profile.profileCardRightBottomImageAsset,
+    ),
     badgeSticker: profile.badgeSticker
       ? {
           id: profile.badgeSticker.id,

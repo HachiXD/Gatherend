@@ -175,7 +175,7 @@ export function generatePaletteFromBase(baseColor: string): ThemeColors {
     ), // Mismo que bgPrimary, para dropdown menus
     bgSecondary,
     bgTertiary: hslToHex(h + 6, clampS(0.25, 17, 37), clampL(0.57, 23, 26)),
-    bgQuaternary: hslToHex(h + 4, clampS(0.26, 18, 39), clampL(0.72, 29, 32)),
+    bgQuaternary: hslToHex(h + 4, clampS(0.26, 18, 39), clampL(0.72, 28, 31)),
     bgInputPlus: hslToHex(h + 4, clampS(0.26, 18, 39), clampL(0.72, 29, 32)), // Igual que bgQuaternary
     bgQuinary: hslToHex(h + 2, clampS(0.29, 20, 41), clampL(0.42, 17, 22)),
     bgInput: hslToHex(h + 5, clampS(0.26, 22, 39), clampL(0.45, 19, 24)),
@@ -191,6 +191,11 @@ export function generatePaletteFromBase(baseColor: string): ThemeColors {
 
     // Buttons
     buttonPrimary: hslToHex(h, clampS(0.9, 50, 80), clampL(1.0, 36, 44)),
+    buttonPrimaryActive: hslToHex(
+      h,
+      clampS(0.9, 50, 80),
+      clampL(1.08, 39, 47),
+    ),
     buttonHover: hslToHex(h, clampS(1.0, 55, 85), clampL(1.12, 41, 49)),
     buttonSendHover: hslToHex(h, clampS(0.75, 40, 50), clampL(1.1, 40, 46)),
 
@@ -289,11 +294,26 @@ export function generatePaletteFromBase(baseColor: string): ThemeColors {
       clampS(0.43, 27, 33),
       clampL(1.5, 57, 63),
     ),
+    chatInputButtonBg: hslToHex(
+      h + 4,
+      clampS(0.28, 18, 34),
+      clampL(0.6, 25, 27),
+    ),
+    chatInputSurfaceBg: hslToHex(
+      h + 5,
+      clampS(0.2, 14, 28),
+      clampL(0.98, 35, 40),
+    ),
 
     // Channel type buttons (Text/Voice)
     channelTypeActiveBorder: hslToHex(
       h,
       clampS(0.7, 38, 48),
+      clampL(0.92, 34, 40),
+    ),
+    channelTypeActiveSoftBg: hslToHex(
+      h,
+      clampS(0.52, 24, 34),
       clampL(0.92, 34, 40),
     ),
     channelTypeActiveBg: `hsla(${h}, ${clampS(0.7, 38, 48)}%, ${clampL(
@@ -448,6 +468,11 @@ export function generateLightPaletteFromBase(baseColor: string): ThemeColors {
 
     // Buttons - Boton del discovery
     buttonPrimary: hslToHex(h + 28, clampS(1.13, 65, 85), clampL(1.65, 62, 70)),
+    buttonPrimaryActive: hslToHex(
+      h + 28,
+      clampS(1.13, 65, 85),
+      clampL(1.72, 65, 73),
+    ),
     buttonHover: hslToHex(h + 28, clampS(1.13, 65, 85), clampL(1.52, 57, 65)),
     buttonSendHover: hslToHex(h + 30, clampS(0.9, 50, 65), clampL(1.5, 56, 64)),
 
@@ -566,11 +591,26 @@ export function generateLightPaletteFromBase(baseColor: string): ThemeColors {
       clampS(0.55, 58, 68),
       clampL(0.75, 55, 65),
     ),
+    chatInputButtonBg: hslToHex(
+      h + 31,
+      clampS(0.95, 50, 70),
+      clampL(1.42, 54, 62),
+    ),
+    chatInputSurfaceBg: hslToHex(
+      h + 34,
+      clampS(1.0, 55, 75),
+      clampL(2.2, 84, 92),
+    ),
 
     // Channel type buttons (Text/Voice)
     channelTypeActiveBorder: hslToHex(
       h + 38,
       clampS(0.7, 55, 68),
+      clampL(1.5, 56, 64),
+    ),
+    channelTypeActiveSoftBg: hslToHex(
+      h + 38,
+      clampS(0.52, 40, 54),
       clampL(1.5, 56, 64),
     ),
     channelTypeActiveBg: `hsla(${h + 38}, ${clampS(0.7, 55, 68)}%, ${clampL(
@@ -802,6 +842,10 @@ export function applyThemeToDOM(colors: ThemeColors): void {
   root.style.setProperty("--theme-border-primary", colors.borderPrimary);
   root.style.setProperty("--theme-border-secondary", colors.borderSecondary);
   root.style.setProperty("--theme-button-primary", colors.buttonPrimary);
+  root.style.setProperty(
+    "--theme-button-primary-active",
+    colors.buttonPrimaryActive,
+  );
   root.style.setProperty("--theme-button-hover", colors.buttonHover);
   root.style.setProperty("--theme-button-send-hover", colors.buttonSendHover);
   root.style.setProperty("--theme-text-accent", colors.textAccent);
@@ -879,8 +923,20 @@ export function applyThemeToDOM(colors: ThemeColors): void {
     colors.chatInputIconHover,
   );
   root.style.setProperty(
+    "--theme-chat-input-button-bg",
+    colors.chatInputButtonBg,
+  );
+  root.style.setProperty(
+    "--theme-chat-input-surface-bg",
+    colors.chatInputSurfaceBg,
+  );
+  root.style.setProperty(
     "--theme-channel-type-active-border",
     colors.channelTypeActiveBorder,
+  );
+  root.style.setProperty(
+    "--theme-channel-type-active-soft-bg",
+    colors.channelTypeActiveSoftBg,
   );
   root.style.setProperty(
     "--theme-channel-type-active-bg",
@@ -964,6 +1020,7 @@ export function themeColorsToCssVars(
     "--theme-border-primary": colors.borderPrimary,
     "--theme-border-secondary": colors.borderSecondary,
     "--theme-button-primary": colors.buttonPrimary,
+    "--theme-button-primary-active": colors.buttonPrimaryActive,
     "--theme-button-hover": colors.buttonHover,
     "--theme-button-send-hover": colors.buttonSendHover,
     "--theme-text-accent": colors.textAccent,
@@ -992,7 +1049,8 @@ export function themeColorsToCssVars(
     "--theme-tab-button-bg": colors.tabButtonBg,
     "--theme-tab-button-hover": colors.tabButtonHover,
     "--theme-community-tabs-fallback-bg": colors.communityTabsFallbackBg,
-    "--theme-community-tabs-fallback-active-bg": colors.communityTabsFallbackActiveBg,
+    "--theme-community-tabs-fallback-active-bg":
+      colors.communityTabsFallbackActiveBg,
     "--theme-toolbar-bg": colors.toolbarBg,
     "--theme-toolbar-icon": colors.toolbarIcon,
     "--theme-toolbar-border": colors.toolbarBorder,
@@ -1016,12 +1074,16 @@ export function themeColorsToCssVars(
     "--theme-bg-cancel-button-hover": colors.bgCancelButtonHover,
     "--theme-chat-input-icon": colors.chatInputIcon,
     "--theme-chat-input-icon-hover": colors.chatInputIconHover,
+    "--theme-chat-input-button-bg": colors.chatInputButtonBg,
+    "--theme-chat-input-surface-bg": colors.chatInputSurfaceBg,
     "--theme-channel-type-active-border": colors.channelTypeActiveBorder,
+    "--theme-channel-type-active-soft-bg": colors.channelTypeActiveSoftBg,
     "--theme-channel-type-active-bg": colors.channelTypeActiveBg,
     "--theme-channel-type-active-text": colors.channelTypeActiveText,
     "--theme-channel-type-inactive-bg": colors.channelTypeInactiveBg,
     "--theme-channel-type-inactive-border": colors.channelTypeInactiveBorder,
-    "--theme-channel-type-inactive-hover-border": colors.channelTypeInactiveHoverBorder,
+    "--theme-channel-type-inactive-hover-border":
+      colors.channelTypeInactiveHoverBorder,
     "--theme-channel-type-inactive-text": colors.channelTypeInactiveText,
     "--theme-scrollbar-nav-thumb": colors.scrollbarNavThumb,
     "--theme-scrollbar-nav-thumb-hover": colors.scrollbarNavThumbHover,
@@ -1030,7 +1092,8 @@ export function themeColorsToCssVars(
     "--theme-app-settings-hover": colors.appSettingsHover,
     "--theme-accent-custom-user-button": colors.accentCustomUserButton,
     "--theme-bg-tab-hover": colors.bgTabHover,
-    "--theme-border-accent-item-reply-preview": colors.borderAccentItemReplyPreview,
+    "--theme-border-accent-item-reply-preview":
+      colors.borderAccentItemReplyPreview,
     "--theme-border-accent-active-channel": colors.borderAccentActiveChannel,
     "--theme-bg-edit-form": colors.bgEditForm,
     "--theme-notification-bg": colors.notificationBg,
@@ -1095,6 +1158,7 @@ const BACKGROUND_ALPHA_MAP: Record<string, number> = {
   // BUTTONS - Opacos para mantener legibilidad y contraste
   // ═══════════════════════════════════════════════════════════════════════════
   buttonPrimary: 0.35,
+  buttonPrimaryActive: 0.35,
   buttonHover: 0.35,
   buttonSendHover: 1,
 
@@ -1181,11 +1245,14 @@ const BACKGROUND_ALPHA_MAP: Record<string, number> = {
   // ═══════════════════════════════════════════════════════════════════════════
   chatInputIcon: 0.9,
   chatInputIconHover: 0.85,
+  chatInputButtonBg: 0.82,
+  chatInputSurfaceBg: 0.92,
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CHANNEL TYPE BUTTONS (Text/Voice selector)
   // ═══════════════════════════════════════════════════════════════════════════
   channelTypeActiveBorder: 0.85,
+  channelTypeActiveSoftBg: 0.85,
   channelTypeActiveBg: 1.0, // Ya tiene alfa en el valor
   channelTypeActiveText: 0.95,
   channelTypeInactiveBg: 0.7,
@@ -1295,7 +1362,11 @@ export function clearThemeFromDOM(): void {
     "--theme-border-primary",
     "--theme-border-secondary",
     "--theme-button-primary",
+    "--theme-button-primary-active",
     "--theme-button-hover",
+    "--theme-chat-input-button-bg",
+    "--theme-chat-input-surface-bg",
+    "--theme-channel-type-active-soft-bg",
     "--theme-text-accent",
     "--theme-text-muted",
     "--theme-text-light",

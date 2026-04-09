@@ -76,6 +76,7 @@ const ALWAYS_MODERATED_CONTEXTS: ModerationContext[] = [
   "board_rules_image",
   "profile_avatar",
   "profile_banner",
+  "profile_card_image",
   "sticker",
 ];
 
@@ -91,6 +92,7 @@ const CONTEXT_TO_ASSET_CONTEXT: Record<ModerationContext, AssetContext> = {
   board_rules_image: AssetContext.BOARD_RULES_IMAGE,
   profile_avatar: AssetContext.PROFILE_AVATAR,
   profile_banner: AssetContext.PROFILE_BANNER,
+  profile_card_image: AssetContext.PROFILE_CARD_IMAGE,
   message_attachment: AssetContext.MESSAGE_ATTACHMENT,
   dm_attachment: AssetContext.DM_ATTACHMENT,
   sticker: AssetContext.STICKER_IMAGE,

@@ -53,7 +53,7 @@ export const es: TranslationKeys = {
     username: "Nombre de usuario",
     usernamePlaceholder: "Ingresa tu nombre de usuario",
     identifier: "Identificador",
-    color: "Color",
+    color: "Color del nombre de usuario",
     style: "Estilo",
     styleNormal: "Normal",
     styleBold: "Negrita",
@@ -429,8 +429,7 @@ export const es: TranslationKeys = {
           unban: "Desbaneo manual ejecutado por {username}.",
           kick: "Miembro expulsado por {username}.",
           autoBan: "Baneo automático tras alcanzar 3 warnings activos.",
-          autoUnban:
-            "Desbaneo automático tras quitar un warning promovido.",
+          autoUnban: "Desbaneo automático tras quitar un warning promovido.",
         },
       },
 

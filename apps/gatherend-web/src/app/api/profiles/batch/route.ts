@@ -32,7 +32,6 @@ const PROFILE_SELECT = {
       },
     },
   },
-  longDescription: true,
 } as const;
 
 // No cache

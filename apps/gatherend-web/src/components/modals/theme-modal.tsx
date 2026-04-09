@@ -21,6 +21,7 @@ import {
   isValidHexColor,
   clampGradientColor,
 } from "@/lib/theme/utils";
+import { normalizeThemeConfig, parseThemeConfig } from "@/lib/theme/runtime";
 import {
   normalizeThemeGradientColorStops,
 } from "@/lib/theme/gradient-stops";
@@ -222,6 +223,9 @@ export function ThemeModal({
   const clearPreviewConfig = useThemePreviewStore(
     (state) => state.clearPreviewConfig,
   );
+  const setPersistedConfig = useThemePreviewStore(
+    (state) => state.setPersistedConfig,
+  );
   const [isSaving, setIsSaving] = useState(false);
   const { t } = useTranslation();
 
@@ -359,6 +363,11 @@ export function ThemeModal({
       // Mismo patrón que profile-settings - NO usar refetchQueries porque
       // Prisma Accelerate puede tener datos cacheados viejos
       const serverProfile = response.data;
+      const savedThemeConfig =
+        normalizeThemeConfig(parseThemeConfig(serverProfile?.themeConfig)) ??
+        normalizeThemeConfig(themeConfig);
+
+      setPersistedConfig(savedThemeConfig);
       queryClient.setQueryData(
         ["current-profile"],
         (oldProfile: Profile | undefined) =>

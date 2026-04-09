@@ -47,7 +47,6 @@ export type BoardWithMembersWithProfiles = Board & {
       avatarAsset: ClientUploadedAsset | null;
       badgeSticker: ClientStickerAssetRef | null;
       usernameFormat: UsernameFormatConfig | null;
-      longDescription: string | null;
     };
   })[];
 };

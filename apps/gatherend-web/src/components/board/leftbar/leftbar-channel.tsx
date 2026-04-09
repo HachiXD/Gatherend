@@ -14,6 +14,7 @@ import { useBoardNavigationStore } from "@/stores/board-navigation-store";
 import { useTranslation } from "@/i18n";
 import { useVoiceStore } from "@/hooks/use-voice-store";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
+import { useBoardAccent } from "@/hooks/use-board-accent";
 
 interface LeftbarChannelProps {
   channel: {
@@ -27,6 +28,7 @@ interface LeftbarChannelProps {
   };
   boardId: string;
   role?: MemberRole;
+  dominantColor?: string | null;
 }
 
 // Optimización #6: Memoizar componente
@@ -34,6 +36,7 @@ const LeftbarChannelComponent = ({
   channel,
   boardId,
   role,
+  dominantColor,
 }: LeftbarChannelProps) => {
   const { onOpen } = useModal();
   const [, startTransition] = useTransition();
@@ -127,6 +130,7 @@ const LeftbarChannelComponent = ({
   // Esto evita que el canal anterior aparezca como activo cuando navegamos a discovery o conversación
   const isVoiceChannel = channel.type === ChannelType.VOICE;
   const channelImageUrl = channel.imageAsset?.url ?? null;
+  const accentVars = useBoardAccent(dominantColor);
 
   return (
     <div className="w-full min-w-0">
@@ -134,9 +138,12 @@ const LeftbarChannelComponent = ({
         onClick={onClick}
         onMouseEnter={enableTooltipsOnce}
         style={
-          channelImageUrl
-            ? { backgroundImage: `url(${channelImageUrl})` }
-            : undefined
+          {
+            ...(accentVars ?? {}),
+            ...(channelImageUrl
+              ? { backgroundImage: `url(${channelImageUrl})` }
+              : {}),
+          }
         }
         className={cn(
           "group relative  flex w-full min-w-0 max-w-full cursor-pointer items-center overflow-hidden rounded-none px-0 h-12 text-left transition",
@@ -145,15 +152,17 @@ const LeftbarChannelComponent = ({
                 "bg-cover bg-center bg-no-repeat",
                 "shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_-1px_0_rgba(0,0,0,0.38)]",
                 isActive &&
-                  "shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_-1px_0_rgba(0,0,0,0.38)]",
+                  "shadow-[inset_0_1px_0_rgba(0,0,0,0.42),inset_1px_0_0_rgba(0,0,0,0.36),inset_-1px_0_0_rgba(255,255,255,0.14),inset_0_-1px_0_rgba(255,255,255,0.18)]",
               ]
-            : [
-                "bg-theme-channel-bg shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_-1px_0_rgba(0,0,0,0.38)]",
-                "hover:bg-theme-channel-hover",
-                isActive && "border-theme-border",
-                isActive && "bg-theme-channel-active",
-              ],
-          isActive && "border-l-4 border-theme-border-accent-active-channel",
+             : [
+                  "bg-theme-channel-type-active-border shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_-1px_0_rgba(0,0,0,0.38)]",
+                  !isActive && "hover:bg-theme-channel-type-active-border",
+                  isActive && "border-theme-border",
+                  isActive && "bg-theme-button-primary",
+                  isActive &&
+                    "shadow-[inset_0_1px_0_rgba(0,0,0,0.42),inset_1px_0_0_rgba(0,0,0,0.36),inset_-1px_0_0_rgba(255,255,255,0.14),inset_0_-1px_0_rgba(255,255,255,0.18)]",
+                ],
+          channelImageUrl && isActive && "border-l-4 border-theme-channel-type-active-border",
         )}
       >
         {/* Overlay oscuro cuando hay imagen de fondo */}
@@ -189,13 +198,13 @@ const LeftbarChannelComponent = ({
                   />
                 )}
                 <p
-                  className={cn(
-                    "min-w-0 flex-1 truncate font-medium text-[14.5px] text-theme-text-primary transition",
-                    isText ? "-ml-0.5" : "ml-0.5",
-                    "group-hover:underline underline-offset-4",
-                    isActive &&
-                      "font-semibold text-theme-accent-primary underline underline-offset-4",
-                  )}
+                    className={cn(
+                      "min-w-0 flex-1 truncate font-medium text-[14.5px] text-theme-text-primary transition",
+                      isText ? "-ml-0.5" : "ml-0.5",
+                      !isActive && "group-hover:underline underline-offset-4",
+                      isActive &&
+                        "font-semibold text-theme-accent-primary underline underline-offset-4",
+                    )}
                 >
                   {channel.name}
                 </p>

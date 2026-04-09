@@ -98,6 +98,11 @@ interface ChatItemOptimizedProps {
   pinned?: boolean;
   isCompact?: boolean;
   isLastMessage?: boolean;
+  textBubbleGroupPosition?: "single" | "start" | "middle" | "end";
+  groupedTextBubble?: boolean;
+  hideAvatarColumn?: boolean;
+  forcedHovered?: boolean;
+  onHoverChange?: (hovered: boolean) => void;
 }
 
 const FALLBACK_CHAT_IMAGE_PREVIEW_SIZE = { width: 224, height: 168 };
@@ -179,9 +184,13 @@ function getChatAttachmentPreviewSize({
 const ReplyPreview = memo(function ReplyPreview({
   replyTo,
   t,
+  groupedTextBubble,
+  isCompact,
 }: {
   replyTo: NonNullable<ChatItemOptimizedProps["replyTo"]>;
   t: ReturnType<typeof useTranslation>["t"];
+  groupedTextBubble?: boolean;
+  isCompact?: boolean;
 }) {
   const replyAuthor = replyTo.sender;
 
@@ -196,7 +205,11 @@ const ReplyPreview = memo(function ReplyPreview({
   return (
     <div
       data-chat-item-block="reply-preview"
-      className="mt-1 mb-2 pl-2.5 border-l-2 border-theme-border-accent-item-reply-preview"
+      className={cn(
+        "mt-2 pl-2.5 border-l-2 border-theme-border-accent-item-reply-preview",
+        groupedTextBubble && "ml-2",
+        isCompact ? "mb-0" : "-mb-2",
+      )}
     >
       <div className="text-xs text-theme-text-tertiary break-words">
         <span className="font-semibold">
@@ -394,7 +407,9 @@ const ImageViewerDialog = memo(function ImageViewerDialog({
             style={{
               transformOrigin: "center center",
               transform: `translate(${imageViewerTranslate.x}px, ${imageViewerTranslate.y}px) scale(${imageViewerScale})`,
-              transition: isImageViewerPanning ? "none" : "transform 160ms ease-out",
+              transition: isImageViewerPanning
+                ? "none"
+                : "transform 160ms ease-out",
               willChange: "transform",
             }}
             loading="eager"
@@ -434,6 +449,11 @@ const ChatItemOptimizedComponent = ({
   pinned = false,
   isCompact = false,
   isLastMessage = false,
+  textBubbleGroupPosition,
+  groupedTextBubble = false,
+  hideAvatarColumn = false,
+  forcedHovered = false,
+  onHoverChange,
 }: ChatItemOptimizedProps) => {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -673,11 +693,13 @@ const ChatItemOptimizedComponent = ({
 
   const handleMouseEnter = useCallback(() => {
     setIsHovered(true);
-  }, []);
+    onHoverChange?.(true);
+  }, [onHoverChange]);
 
   const handleMouseLeave = useCallback(() => {
     setIsHovered(false);
-  }, []);
+    onHoverChange?.(false);
+  }, [onHoverChange]);
 
   const resetImageViewerZoom = useCallback(() => {
     setImageViewerScale(1);
@@ -1079,26 +1101,42 @@ const ChatItemOptimizedComponent = ({
         ? fileUrl
         : optimizedStillSrc;
 
+  const isGroupedTextBubble =
+    textBubbleGroupPosition === "start" ||
+    textBubbleGroupPosition === "middle" ||
+    textBubbleGroupPosition === "end";
+  const isMergedCompactText = isCompact && isGroupedTextBubble;
+  const effectiveHovered = isHovered || forcedHovered;
+
   return (
     <div
       ref={rootRef}
       data-message-id={id}
       className={cn(
-        "relative group flex items-center hover:bg-black/5 transition w-full",
-        isCompact ? "py-0.5 pl-0 pr-2" : "px-2",
+        "relative group flex items-center hover:bg-black/5 transition",
+        groupedTextBubble
+          ? "w-full py-0 px-0"
+          : isCompact
+            ? isMergedCompactText
+              ? "py-0.5 pl-0 pr-2"
+              : "py-0.5 pl-0 pr-2"
+            : "w-full px-2",
         isOptimistic && !isFailed && "opacity-50",
         isFailed && "bg-red-950/40",
       )}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <AvatarGroupHoverContext.Provider value={isHovered}>
+      <AvatarGroupHoverContext.Provider value={effectiveHovered}>
         <div
           data-chat-item-block="row"
-          className={cn("group flex gap-x-2 w-full", "items-start")}
+          className={cn(
+            "group flex gap-x-2 items-start",
+            groupedTextBubble ? "w-full" : "w-full",
+          )}
         >
           {/* Avatar - only show if not compact */}
-          {!isCompact ? (
+          {!hideAvatarColumn && !isCompact ? (
             <div data-chat-item-block="avatar" className="shrink-0 pt-3">
               {canOpenAuthorProfile ? (
                 <UserAvatarMenu
@@ -1123,385 +1161,438 @@ const ChatItemOptimizedComponent = ({
                 />
               )}
             </div>
-          ) : (
+          ) : !hideAvatarColumn ? (
             <div
               data-chat-item-block="avatar-placeholder"
               className="w-10 shrink-0"
             />
-          )}
+          ) : null}
 
           <div
             data-chat-item-block="col"
             className={cn(
-              "flex flex-col w-full min-w-0 overflow-hidden",
+              "flex min-w-0 flex-col overflow-hidden w-full",
               !isCompact && "pt-0.5",
             )}
           >
-          {/* Reply Preview */}
-          {replyTo && <ReplyPreview replyTo={replyTo} t={t} />}
-
-          {/* Image */}
-          {isImage && fileUrl && (
-            <>
-              {!isCompact && (
-                <div
-                  data-chat-item-block="image-header"
-                  className="flex items-center gap-1 mb-0"
-                >
-                  {(authorProfile?.badge || authorProfile?.badgeStickerUrl) && (
-                    <>
-                      <span className="inline-flex items-center gap-0.5">
-                        {authorProfile?.badgeStickerUrl && (
-                          <AnimatedSticker
-                            src={authorProfile.badgeStickerUrl}
-                            alt="badge"
-                            containerClassName="h-5 w-5"
-                            fallbackWidthPx={20}
-                            fallbackHeightPx={20}
-                            className="object-contain"
-                            isHovered={isHovered}
-                          />
-                        )}
-                        {authorProfile?.badge && (
-                          <span className="text-[11px] leading-none text-theme-text-tertiary pt-2.5">
-                            {authorProfile.badge}
-                          </span>
-                        )}
-                      </span>
-                      <span className="text-[11px] text-theme-text-tertiary pt-2.5">
-                        |
-                      </span>
-                    </>
-                  )}
-                  <span className="text-[11px] text-theme-text-tertiary pt-2.5">
-                    {timestamp}
-                  </span>
-                </div>
-              )}
-
-              {!isCompact && (
-                <div
-                  data-chat-item-block="image-username"
-                  className="flex items-center -mt-0.5"
-                >
-                  <ProfileNameTrigger
-                    canOpenAuthorProfile={canOpenAuthorProfile}
-                    authorProfile={authorProfile}
-                    currentProfile={currentProfile}
-                    memberId={member?.id || undefined}
-                    isOptimistic={isOptimistic}
-                    isFailed={isFailed}
-                    isOwnMessage={isOwnMessage}
-                    resolvedTheme={resolvedTheme}
-                  />
-                </div>
-              )}
-
-              <button
-                ref={attachmentButtonRef}
-                type="button"
-                onClick={() => setIsImageViewerOpen(true)}
-                className="mt-1 self-start block w-full max-w-full overflow-hidden rounded-md border bg-black/[0.03] cursor-pointer"
-                style={imageFrameStyle}
-                data-attachment-animatable={isAnimatableAttachment ? "1" : "0"}
-                data-attachment-in-band={isAttachmentInCenterBand ? "1" : "0"}
-                data-chat-item-block="image"
-              >
-                {isAnimatableAttachment ? (
-                  <div
-                    className="relative"
-                    style={imageFrameStyle}
-                  >
-                    <span
-                      ref={attachmentCenterSentinelRef}
-                      aria-hidden="true"
-                      className="pointer-events-none absolute left-1/2 top-1/2 h-px w-px -translate-x-1/2 -translate-y-1/2"
-                    />
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={effectiveAttachmentUrl || fileUrl}
-                      alt={fileName || content || "attachment"}
-                      onError={() => {
-                        if (!fileUrl) return;
-                        // If Express media previews fail (404/500/etc), fall back to the backend-provided
-                        // static/preview URLs (imgproxy direct) instead of forcing the original animated URL.
-                        setDisableExpressAttachmentPreviews({
-                          url: fileUrl,
-                          value: true,
-                        });
-                        // Clear any cached displayed URL so we can fall back immediately.
-                        setAttachmentDisplayedUrlState(null);
-                        attachmentSwapTokenRef.current += 1;
-                      }}
-                      className="absolute inset-0 h-full w-full object-contain"
-                      loading="eager"
-                      decoding="async"
-                    />
-                  </div>
-                ) : (
-                  <div
-                    className="relative"
-                    style={imageFrameStyle}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={imagePreviewSrc || fileUrl}
-                      alt={fileName || content || "attachment"}
-                      onError={() => {
-                        if (!fileUrl) return;
-                        setForceOriginalImage({ url: fileUrl, value: true });
-                      }}
-                      className="absolute inset-0 h-full w-full object-contain"
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  </div>
-                )}
-              </button>
-
-              <ImageViewerDialog
-                open={isImageViewerOpen}
-                onOpenChange={setIsImageViewerOpen}
-                fileUrl={fileUrl}
-                fileName={fileName}
-                content={content}
-                imageViewerContainerRef={imageViewerContainerRef}
-                imageViewerImgRef={imageViewerImgRef}
-                imageViewerScale={imageViewerScale}
-                imageViewerTranslate={imageViewerTranslate}
-                isImageViewerPanning={isImageViewerPanning}
-                handleImageViewerPointerDown={handleImageViewerPointerDown}
-                handleImageViewerPointerMove={handleImageViewerPointerMove}
-                handleImageViewerPointerUp={handleImageViewerPointerUp}
-              />
-            </>
-          )}
-
-          {/* Sticker */}
-          {sticker && (
-            <>
-              {/* Badge + Timestamp row above sticker - only if not compact */}
-              {!isCompact && (
-                <div
-                  data-chat-item-block="sticker-header"
-                  className="flex items-center gap-1 mb-0"
-                >
-                  {(authorProfile?.badge || authorProfile?.badgeStickerUrl) && (
-                    <>
-                      <span className="inline-flex items-center gap-0.5">
-                        {authorProfile?.badgeStickerUrl && (
-                          <AnimatedSticker
-                            src={authorProfile.badgeStickerUrl}
-                            alt="badge"
-                            containerClassName="h-5 w-5"
-                            fallbackWidthPx={20}
-                            fallbackHeightPx={20}
-                            className="object-contain"
-                            isHovered={isHovered}
-                          />
-                        )}
-                        {authorProfile?.badge && (
-                          <span className="text-[11px] leading-none text-theme-text-tertiary pt-2.5">
-                            {authorProfile.badge}
-                          </span>
-                        )}
-                      </span>
-                      <span className="text-[11px] text-theme-text-tertiary pt-2.5">
-                        |
-                      </span>
-                    </>
-                  )}
-                  <span className="text-[11px] text-theme-text-tertiary pt-2.5">
-                    {timestamp}
-                  </span>
-                </div>
-              )}
-              {/* Username for sticker - only if not compact */}
-              {!isCompact && (
-                <div
-                  data-chat-item-block="sticker-username"
-                  className="flex items-center -mt-0.5"
-                >
-                  <ProfileNameTrigger
-                    canOpenAuthorProfile={canOpenAuthorProfile}
-                    authorProfile={authorProfile}
-                    currentProfile={currentProfile}
-                    memberId={member?.id || undefined}
-                    isOptimistic={isOptimistic}
-                    isFailed={isFailed}
-                    isOwnMessage={isOwnMessage}
-                    resolvedTheme={resolvedTheme}
-                  />
-                </div>
-              )}
-              <div className="mt-1" data-chat-item-block="sticker">
-                <div
-                  className={cn("relative h-32 w-32", isFailed && "opacity-50")}
-                >
-                  <AnimatedSticker
-                    src={sticker.asset?.url || ""}
-                    alt={sticker.name}
-                    containerClassName="h-full w-full"
-                    fallbackWidthPx={128}
-                    fallbackHeightPx={128}
-                    isHovered={isHovered}
-                  />
-                </div>
-                {canRetry && (
-                  <button
-                    type="button"
-                    onClick={handleRetry}
-                    disabled={isRetrying}
-                    className="mt-1 text-[11px] text-red-400 hover:text-red-300 underline cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isRetrying ? `(${t.chat.retrying})` : `(${t.chat.retry})`}
-                  </button>
-                )}
-              </div>
-            </>
-          )}
-
-          {/* PDF */}
-          {isPDF && fileUrl && (
-            <div
-              data-chat-item-block="pdf"
-              className="relative flex items-center p-2 mt-2 rounded-md bg-background/10"
-            >
-              <FileIcon className="h-10 w-10 fill-indigo-200 stroke-indigo-400" />
-              <div className="ml-2 flex-1">
-                <a
-                  href={fileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-indigo-400 hover:underline"
-                >
-                  {fileName || "PDF"}
-                </a>
-                <p className="text-xs text-gray-500">
-                  {fileSize && `${(fileSize / 1024 / 1024).toFixed(2)} MB`}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Text content (not editing) */}
-          {!fileUrl && !isEditing && !sticker && (
-            <>
-              {/* Badge + Timestamp row above message - only if not compact */}
-              {!isCompact && (
-                <div
-                  data-chat-item-block="text-header"
-                  className="flex items-center gap-1 mb-0"
-                >
-                  {(authorProfile?.badge || authorProfile?.badgeStickerUrl) && (
-                    <>
-                      <span className="inline-flex items-center gap-0.5">
-                        {authorProfile?.badgeStickerUrl && (
-                          <AnimatedSticker
-                            src={authorProfile.badgeStickerUrl}
-                            alt="badge"
-                            containerClassName="h-5 w-5"
-                            fallbackWidthPx={20}
-                            fallbackHeightPx={20}
-                            className="object-contain"
-                            isHovered={isHovered}
-                          />
-                        )}
-                        {authorProfile?.badge && (
-                          <span className="text-[11px] leading-none text-theme-text-tertiary pt-2.5">
-                            {authorProfile.badge}
-                          </span>
-                        )}
-                      </span>
-                      <span className="text-[11px] text-theme-text-tertiary pt-2.5">
-                        |
-                      </span>
-                    </>
-                  )}
-                  <span className="text-[11px] text-theme-text-tertiary pt-2.5">
-                    {timestamp}
-                  </span>
-                </div>
-              )}
-              <MessageContent
-                content={content}
-                deleted={deleted}
-                isUpdated={isUpdated}
-                isOptimistic={isOptimistic}
-                isFailed={isFailed}
+            {/* Reply Preview */}
+            {replyTo && (
+              <ReplyPreview
+                replyTo={replyTo}
                 t={t}
-                failedAction={
-                  canRetry ? (
+                groupedTextBubble={groupedTextBubble}
+                isCompact={isCompact}
+              />
+            )}
+
+            {/* Image */}
+            {isImage && fileUrl && (
+              <>
+                {!isCompact && (
+                  <div
+                    data-chat-item-block="image-header"
+                    className="flex items-center gap-1 mb-0"
+                  >
+                    {(authorProfile?.badge ||
+                      authorProfile?.badgeStickerUrl) && (
+                      <>
+                        <span className="inline-flex items-center gap-0.5">
+                          {authorProfile?.badgeStickerUrl && (
+                            <AnimatedSticker
+                              src={authorProfile.badgeStickerUrl}
+                              alt="badge"
+                              containerClassName="h-5 w-5"
+                              fallbackWidthPx={20}
+                              fallbackHeightPx={20}
+                              className="object-contain"
+                              isHovered={effectiveHovered}
+                            />
+                          )}
+                          {authorProfile?.badge && (
+                            <span className="text-[11px] leading-none text-theme-text-tertiary pt-2.5">
+                              {authorProfile.badge}
+                            </span>
+                          )}
+                        </span>
+                        <span className="text-[11px] text-theme-text-tertiary pt-2.5">
+                          |
+                        </span>
+                      </>
+                    )}
+                    <span className="text-[11px] text-theme-text-tertiary pt-2.5">
+                      {timestamp}
+                    </span>
+                  </div>
+                )}
+
+                {!isCompact && (
+                  <div
+                    data-chat-item-block="image-username"
+                    className="flex items-center -mt-0.5"
+                  >
+                    <ProfileNameTrigger
+                      canOpenAuthorProfile={canOpenAuthorProfile}
+                      authorProfile={authorProfile}
+                      currentProfile={currentProfile}
+                      memberId={member?.id || undefined}
+                      isOptimistic={isOptimistic}
+                      isFailed={isFailed}
+                      isOwnMessage={isOwnMessage}
+                      resolvedTheme={resolvedTheme}
+                    />
+                  </div>
+                )}
+
+                <button
+                  ref={attachmentButtonRef}
+                  type="button"
+                  onClick={() => setIsImageViewerOpen(true)}
+                  className="mt-1 self-start block w-full max-w-full overflow-hidden rounded-md border bg-black/[0.03] cursor-pointer"
+                  style={imageFrameStyle}
+                  data-attachment-animatable={
+                    isAnimatableAttachment ? "1" : "0"
+                  }
+                  data-attachment-in-band={isAttachmentInCenterBand ? "1" : "0"}
+                  data-chat-item-block="image"
+                >
+                  {isAnimatableAttachment ? (
+                    <div className="relative" style={imageFrameStyle}>
+                      <span
+                        ref={attachmentCenterSentinelRef}
+                        aria-hidden="true"
+                        className="pointer-events-none absolute left-1/2 top-1/2 h-px w-px -translate-x-1/2 -translate-y-1/2"
+                      />
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={effectiveAttachmentUrl || fileUrl}
+                        alt={fileName || content || "attachment"}
+                        onError={() => {
+                          if (!fileUrl) return;
+                          // If Express media previews fail (404/500/etc), fall back to the backend-provided
+                          // static/preview URLs (imgproxy direct) instead of forcing the original animated URL.
+                          setDisableExpressAttachmentPreviews({
+                            url: fileUrl,
+                            value: true,
+                          });
+                          // Clear any cached displayed URL so we can fall back immediately.
+                          setAttachmentDisplayedUrlState(null);
+                          attachmentSwapTokenRef.current += 1;
+                        }}
+                        className="absolute inset-0 h-full w-full object-contain"
+                        loading="eager"
+                        decoding="async"
+                      />
+                    </div>
+                  ) : (
+                    <div className="relative" style={imageFrameStyle}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={imagePreviewSrc || fileUrl}
+                        alt={fileName || content || "attachment"}
+                        onError={() => {
+                          if (!fileUrl) return;
+                          setForceOriginalImage({ url: fileUrl, value: true });
+                        }}
+                        className="absolute inset-0 h-full w-full object-contain"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    </div>
+                  )}
+                </button>
+
+                <ImageViewerDialog
+                  open={isImageViewerOpen}
+                  onOpenChange={setIsImageViewerOpen}
+                  fileUrl={fileUrl}
+                  fileName={fileName}
+                  content={content}
+                  imageViewerContainerRef={imageViewerContainerRef}
+                  imageViewerImgRef={imageViewerImgRef}
+                  imageViewerScale={imageViewerScale}
+                  imageViewerTranslate={imageViewerTranslate}
+                  isImageViewerPanning={isImageViewerPanning}
+                  handleImageViewerPointerDown={handleImageViewerPointerDown}
+                  handleImageViewerPointerMove={handleImageViewerPointerMove}
+                  handleImageViewerPointerUp={handleImageViewerPointerUp}
+                />
+              </>
+            )}
+
+            {/* Sticker */}
+            {sticker && (
+              <>
+                {/* Badge + Timestamp row above sticker - only if not compact */}
+                {!isCompact && (
+                  <div
+                    data-chat-item-block="sticker-header"
+                    className="flex items-center gap-1 mb-0"
+                  >
+                    {(authorProfile?.badge ||
+                      authorProfile?.badgeStickerUrl) && (
+                      <>
+                        <span className="inline-flex items-center gap-0.5">
+                          {authorProfile?.badgeStickerUrl && (
+                            <AnimatedSticker
+                              src={authorProfile.badgeStickerUrl}
+                              alt="badge"
+                              containerClassName="h-5 w-5"
+                              fallbackWidthPx={20}
+                              fallbackHeightPx={20}
+                              className="object-contain"
+                              isHovered={effectiveHovered}
+                            />
+                          )}
+                          {authorProfile?.badge && (
+                            <span className="text-[11px] leading-none text-theme-text-tertiary pt-2.5">
+                              {authorProfile.badge}
+                            </span>
+                          )}
+                        </span>
+                        <span className="text-[11px] text-theme-text-tertiary pt-2.5">
+                          |
+                        </span>
+                      </>
+                    )}
+                    <span className="text-[11px] text-theme-text-tertiary pt-2.5">
+                      {timestamp}
+                    </span>
+                  </div>
+                )}
+                {/* Username for sticker - only if not compact */}
+                {!isCompact && (
+                  <div
+                    data-chat-item-block="sticker-username"
+                    className="flex items-center -mt-0.5"
+                  >
+                    <ProfileNameTrigger
+                      canOpenAuthorProfile={canOpenAuthorProfile}
+                      authorProfile={authorProfile}
+                      currentProfile={currentProfile}
+                      memberId={member?.id || undefined}
+                      isOptimistic={isOptimistic}
+                      isFailed={isFailed}
+                      isOwnMessage={isOwnMessage}
+                      resolvedTheme={resolvedTheme}
+                    />
+                  </div>
+                )}
+                <div className="mt-1" data-chat-item-block="sticker">
+                  <div
+                    className={cn(
+                      "relative h-32 w-32",
+                      isFailed && "opacity-50",
+                    )}
+                  >
+                    <AnimatedSticker
+                      src={sticker.asset?.url || ""}
+                      alt={sticker.name}
+                      containerClassName="h-full w-full"
+                      fallbackWidthPx={128}
+                      fallbackHeightPx={128}
+                      isHovered={effectiveHovered}
+                    />
+                  </div>
+                  {canRetry && (
                     <button
                       type="button"
                       onClick={handleRetry}
                       disabled={isRetrying}
-                      className="ml-2 text-[11px] text-red-400 hover:text-red-300 underline cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="mt-1 text-[11px] text-red-400 hover:text-red-300 underline cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isRetrying
                         ? `(${t.chat.retrying})`
                         : `(${t.chat.retry})`}
                     </button>
-                  ) : null
-                }
-                inlineUsername={
-                  !isCompact ? (
-                    <>
-                      <span className="whitespace-nowrap">
-                        <ProfileNameTrigger
-                          canOpenAuthorProfile={canOpenAuthorProfile}
-                          authorProfile={authorProfile}
-                          currentProfile={currentProfile}
-                          memberId={member?.id || undefined}
-                          isOptimistic={isOptimistic}
-                          isFailed={isFailed}
-                          isOwnMessage={isOwnMessage}
-                          resolvedTheme={resolvedTheme}
-                        />
-                      </span>
-                      {"\u00A0"}
-                    </>
-                  ) : undefined
-                }
-              />
-            </>
-          )}
+                  )}
+                </div>
+              </>
+            )}
 
-          {/* Reactions */}
-          {!deleted && !isOptimistic && (
-            <div data-chat-item-block="reactions">
-              <MessageReactionsDisplay
-                messageId={isChannel ? id : undefined}
-                directMessageId={!isChannel ? id : undefined}
-                reactions={reactions}
-                currentProfileId={currentProfile.id}
-                channelId={channelId}
-                conversationId={conversationId}
-              />
-            </div>
-          )}
+            {/* PDF */}
+            {isPDF && fileUrl && (
+              <div
+                data-chat-item-block="pdf"
+                className="relative flex items-center p-2 mt-2 rounded-md bg-background/10"
+              >
+                <FileIcon className="h-10 w-10 fill-indigo-200 stroke-indigo-400" />
+                <div className="ml-2 flex-1">
+                  <a
+                    href={fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-indigo-400 hover:underline"
+                  >
+                    {fileName || "PDF"}
+                  </a>
+                  <p className="text-xs text-gray-500">
+                    {fileSize && `${(fileSize / 1024 / 1024).toFixed(2)} MB`}
+                  </p>
+                </div>
+              </div>
+            )}
 
-          {/* Edit form - lazy loaded */}
-          {!fileUrl && isEditing && (
-            <div data-chat-item-block="edit-form">
-              <Suspense fallback={<div className="h-20" />}>
-                <ChatItemEditForm
-                  id={id}
-                  content={content}
-                  apiUrl={apiUrl}
-                  socketQuery={socketQuery}
-                  currentProfile={currentProfile}
-                  onCancel={handleCancelEdit}
+            {/* Text content (not editing) */}
+            {!fileUrl && !isEditing && !sticker && (
+              <>
+                {/* Badge + Timestamp row above message - only if not compact */}
+                {!isCompact && !groupedTextBubble && (
+                  <div
+                    data-chat-item-block="text-header"
+                    className="flex items-center gap-1 mb-0"
+                  >
+                    {(authorProfile?.badge ||
+                      authorProfile?.badgeStickerUrl) && (
+                      <>
+                        <span className="inline-flex items-center gap-0.5">
+                          {authorProfile?.badgeStickerUrl && (
+                            <AnimatedSticker
+                              src={authorProfile.badgeStickerUrl}
+                              alt="badge"
+                              containerClassName="h-5 w-5"
+                              fallbackWidthPx={20}
+                              fallbackHeightPx={20}
+                              className="object-contain"
+                              isHovered={effectiveHovered}
+                            />
+                          )}
+                          {authorProfile?.badge && (
+                            <span className="text-[11px] leading-none text-theme-text-tertiary pt-2.5">
+                              {authorProfile.badge}
+                            </span>
+                          )}
+                        </span>
+                        <span className="text-[11px] text-theme-text-tertiary pt-2.5">
+                          |
+                        </span>
+                      </>
+                    )}
+                    <span className="text-[11px] text-theme-text-tertiary pt-2.5">
+                      {timestamp}
+                    </span>
+                  </div>
+                )}
+                <div
+                  data-chat-item-block="text-bubble"
+                  className={cn(
+                    groupedTextBubble &&
+                      "mt-0 w-fit max-w-full border-0 bg-transparent shadow-none",
+                    groupedTextBubble &&
+                      textBubbleGroupPosition === "start" &&
+                      "px-3 pt-2",
+                    groupedTextBubble &&
+                      textBubbleGroupPosition === "middle" &&
+                      "px-3",
+                    groupedTextBubble &&
+                      textBubbleGroupPosition === "end" &&
+                      "px-3 pb-2",
+                    groupedTextBubble &&
+                      textBubbleGroupPosition !== "start" &&
+                      textBubbleGroupPosition !== "middle" &&
+                      textBubbleGroupPosition !== "end" &&
+                      "px-3",
+                    !groupedTextBubble &&
+                      textBubbleGroupPosition === "start" &&
+                      "mt-1 self-start max-w-full bg-theme-bg-overlay-primary/72 px-3 pt-2 pb-1",
+                    !groupedTextBubble &&
+                      textBubbleGroupPosition === "middle" &&
+                      "self-start max-w-full bg-theme-bg-overlay-primary/72 px-3 py-1",
+                    !groupedTextBubble &&
+                      textBubbleGroupPosition === "end" &&
+                      "self-start max-w-full bg-theme-bg-overlay-primary/72 px-3 pt-1 pb-2",
+                    !groupedTextBubble &&
+                      textBubbleGroupPosition === "single" &&
+                      "mt-1 self-start max-w-full rounded-md bg-theme-bg-overlay-primary/72 px-3 py-2",
+                    !groupedTextBubble &&
+                      textBubbleGroupPosition === undefined &&
+                      (isCompact
+                        ? "mt-0"
+                        : "mt-1 self-start max-w-full rounded-md bg-theme-bg-overlay-primary/72 px-3 py-2"),
+                  )}
+                >
+                  <MessageContent
+                    content={content}
+                    deleted={deleted}
+                    isUpdated={isUpdated}
+                    isOptimistic={isOptimistic}
+                    isFailed={isFailed}
+                    t={t}
+                    failedAction={
+                      canRetry ? (
+                        <button
+                          type="button"
+                          onClick={handleRetry}
+                          disabled={isRetrying}
+                          className="ml-2 text-[11px] text-red-400 hover:text-red-300 underline cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isRetrying
+                            ? `(${t.chat.retrying})`
+                            : `(${t.chat.retry})`}
+                        </button>
+                      ) : null
+                    }
+                    inlineUsername={
+                      !isCompact ? (
+                        <>
+                          <span className="whitespace-nowrap">
+                            <ProfileNameTrigger
+                              canOpenAuthorProfile={canOpenAuthorProfile}
+                              authorProfile={authorProfile}
+                              currentProfile={currentProfile}
+                              memberId={member?.id || undefined}
+                              isOptimistic={isOptimistic}
+                              isFailed={isFailed}
+                              isOwnMessage={isOwnMessage}
+                              resolvedTheme={resolvedTheme}
+                            />
+                          </span>
+                          {"\u00A0"}
+                        </>
+                      ) : undefined
+                    }
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Reactions */}
+            {!deleted && !isOptimistic && (
+              <div
+                data-chat-item-block="reactions"
+                className={cn(groupedTextBubble && "ml-2")}
+              >
+                <MessageReactionsDisplay
+                  messageId={isChannel ? id : undefined}
+                  directMessageId={!isChannel ? id : undefined}
+                  reactions={reactions}
+                  currentProfileId={currentProfile.id}
+                  channelId={channelId}
+                  conversationId={conversationId}
                 />
-              </Suspense>
-            </div>
-          )}
+              </div>
+            )}
+
+            {/* Edit form - lazy loaded */}
+            {!fileUrl && isEditing && (
+              <div data-chat-item-block="edit-form">
+                <Suspense fallback={<div className="h-20" />}>
+                  <ChatItemEditForm
+                    id={id}
+                    content={content}
+                    apiUrl={apiUrl}
+                    socketQuery={socketQuery}
+                    currentProfile={currentProfile}
+                    onCancel={handleCancelEdit}
+                  />
+                </Suspense>
+              </div>
+            )}
           </div>
         </div>
       </AvatarGroupHoverContext.Provider>
 
       {/* Actions toolbar - lazy loaded only when hovered or menu is open */}
-      {showActions && isHovered && (
+      {showActions && effectiveHovered && (
         <Suspense fallback={null}>
           <ChatItemActions
             id={id}
@@ -1581,6 +1672,9 @@ export const ChatItemOptimized = memo(
       prev.pinned === next.pinned &&
       prev.isCompact === next.isCompact &&
       prev.isLastMessage === next.isLastMessage &&
+      prev.textBubbleGroupPosition === next.textBubbleGroupPosition &&
+      prev.groupedTextBubble === next.groupedTextBubble &&
+      prev.hideAvatarColumn === next.hideAvatarColumn &&
       reactionsEqual &&
       prev.attachmentAsset?.id === next.attachmentAsset?.id &&
       prev.filePreviewUrl === next.filePreviewUrl &&

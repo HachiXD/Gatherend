@@ -17,6 +17,7 @@ export type UploadContext =
   | "board_rules_image"
   | "profile_avatar"
   | "profile_banner"
+  | "profile_card_image"
   | "message_attachment"
   | "sticker"
   | "dm_attachment";
@@ -29,6 +30,7 @@ const ENDPOINT_TO_CONTEXT: Record<string, UploadContext> = {
   boardRulesImage: "board_rules_image",
   profileAvatar: "profile_avatar",
   profileBanner: "profile_banner",
+  profileCardImage: "profile_card_image",
   sticker: "sticker",
   dmAttachment: "dm_attachment",
 };

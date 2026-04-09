@@ -16,6 +16,7 @@ import {
   Categories,
 } from "emoji-picker-react";
 import { useTranslation } from "@/i18n";
+import { cn } from "@/lib/utils";
 
 // Lazy load emoji-picker-react con virtualización built-in
 const EmojiPickerReact = dynamic(() => import("emoji-picker-react"), {
@@ -29,6 +30,8 @@ const EmojiPickerReact = dynamic(() => import("emoji-picker-react"), {
 
 interface EmojiPickerProps {
   onChange: (value: string) => void;
+  triggerClassName?: string;
+  iconClassName?: string;
 }
 
 function EmojiPickerPopover({
@@ -130,51 +133,64 @@ function EmojiPickerPopover({
   );
 }
 
-export const EmojiPicker = memo(({ onChange }: EmojiPickerProps) => {
-  const [popoverEnabled, setPopoverEnabled] = useState(false);
-  const [open, setOpen] = useState(false);
+export const EmojiPicker = memo(
+  ({ onChange, triggerClassName, iconClassName }: EmojiPickerProps) => {
+    const [popoverEnabled, setPopoverEnabled] = useState(false);
+    const [open, setOpen] = useState(false);
 
-  const enablePopoverOnce = useCallback(() => {
-    setPopoverEnabled(true);
-  }, []);
-
-  const openOnFirstInteraction = useCallback(
-    (e: React.SyntheticEvent) => {
-      if (popoverEnabled) return;
-      e.preventDefault();
-      e.stopPropagation();
+    const enablePopoverOnce = useCallback(() => {
       setPopoverEnabled(true);
-      setOpen(true);
-    },
-    [popoverEnabled],
-  );
+    }, []);
 
-  const triggerEl = (
-    <button
-      type="button"
-      onMouseEnter={enablePopoverOnce}
-      onClickCapture={openOnFirstInteraction}
-      onKeyDownCapture={(e) => {
+    const openOnFirstInteraction = useCallback(
+      (e: React.SyntheticEvent) => {
         if (popoverEnabled) return;
-        if (e.key !== "Enter" && e.key !== " ") return;
-        openOnFirstInteraction(e);
-      }}
-      className="inline-flex"
-    >
-      <Smile className="text-theme-chat-input-icon hover:text-theme-chat-input-icon-hover transition cursor-pointer" />
-    </button>
-  );
+        e.preventDefault();
+        e.stopPropagation();
+        setPopoverEnabled(true);
+        setOpen(true);
+      },
+      [popoverEnabled],
+    );
 
-  if (!popoverEnabled) return triggerEl;
+    const triggerEl = (
+      <button
+        type="button"
+        onMouseEnter={enablePopoverOnce}
+        onClickCapture={openOnFirstInteraction}
+        onKeyDownCapture={(e) => {
+          if (popoverEnabled) return;
+          if (e.key !== "Enter" && e.key !== " ") return;
+          openOnFirstInteraction(e);
+        }}
+        className={cn(
+          "inline-flex items-center justify-center",
+          triggerClassName,
+        )}
+      >
+        <Smile
+          className={cn(
+            "text-theme-chat-input-icon transition",
+            triggerClassName
+              ? "h-4 w-4 text-current"
+              : "hover:text-theme-chat-input-icon-hover cursor-pointer",
+            iconClassName,
+          )}
+        />
+      </button>
+    );
 
-  return (
-    <EmojiPickerPopover
-      onChange={onChange}
-      open={open}
-      onOpenChange={setOpen}
-      triggerEl={triggerEl}
-    />
-  );
-});
+    if (!popoverEnabled) return triggerEl;
+
+    return (
+      <EmojiPickerPopover
+        onChange={onChange}
+        open={open}
+        onOpenChange={setOpen}
+        triggerEl={triggerEl}
+      />
+    );
+  },
+);
 
 EmojiPicker.displayName = "EmojiPicker";

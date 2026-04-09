@@ -18,6 +18,10 @@ import {
   MAX_DISCRIMINATORS,
 } from "@/lib/username";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import {
+  profileCardConfigSchema,
+  type ProfileCardConfig,
+} from "@/lib/profile-card-config";
 import { normalizeUsernameGradientStops } from "@/lib/username-gradient-stops";
 import {
   UUID_REGEX,
@@ -36,7 +40,6 @@ const profileResponseSelect = {
   reputationScore: true,
   languages: true,
   badge: true,
-  longDescription: true,
   themeConfig: true,
   banReason: true,
   banned: true,
@@ -52,10 +55,31 @@ const profileResponseSelect = {
   avatarAssetId: true,
   bannerAssetId: true,
   badgeStickerId: true,
+  profileCardConfig: true,
+  profileCardLeftTopImageAssetId: true,
+  profileCardLeftBottomRightTopImageAssetId: true,
+  profileCardLeftBottomRightBottomImageAssetId: true,
+  profileCardRightTopImageAssetId: true,
+  profileCardRightBottomImageAssetId: true,
   avatarAsset: {
     select: uploadedAssetSummarySelect,
   },
   bannerAsset: {
+    select: uploadedAssetSummarySelect,
+  },
+  profileCardLeftTopImageAsset: {
+    select: uploadedAssetSummarySelect,
+  },
+  profileCardLeftBottomRightTopImageAsset: {
+    select: uploadedAssetSummarySelect,
+  },
+  profileCardLeftBottomRightBottomImageAsset: {
+    select: uploadedAssetSummarySelect,
+  },
+  profileCardRightTopImageAsset: {
+    select: uploadedAssetSummarySelect,
+  },
+  profileCardRightBottomImageAsset: {
     select: uploadedAssetSummarySelect,
   },
   badgeSticker: {
@@ -71,6 +95,13 @@ const profileResponseSelect = {
 type ProfileResponseRecord = Prisma.ProfileGetPayload<{
   select: typeof profileResponseSelect;
 }>;
+
+type ProfileCardImageSlotKey =
+  | "profileCardLeftTopImageAssetId"
+  | "profileCardLeftBottomRightTopImageAssetId"
+  | "profileCardLeftBottomRightBottomImageAssetId"
+  | "profileCardRightTopImageAssetId"
+  | "profileCardRightBottomImageAssetId";
 
 async function emitProfileUpdated(
   profileId: string,
@@ -106,6 +137,21 @@ function serializeProfileResponse(profile: ProfileResponseRecord) {
     ...profile,
     avatarAsset: serializePublicAsset(profile.avatarAsset),
     bannerAsset: serializePublicAsset(profile.bannerAsset),
+    profileCardLeftTopImageAsset: serializePublicAsset(
+      profile.profileCardLeftTopImageAsset,
+    ),
+    profileCardLeftBottomRightTopImageAsset: serializePublicAsset(
+      profile.profileCardLeftBottomRightTopImageAsset,
+    ),
+    profileCardLeftBottomRightBottomImageAsset: serializePublicAsset(
+      profile.profileCardLeftBottomRightBottomImageAsset,
+    ),
+    profileCardRightTopImageAsset: serializePublicAsset(
+      profile.profileCardRightTopImageAsset,
+    ),
+    profileCardRightBottomImageAsset: serializePublicAsset(
+      profile.profileCardRightBottomImageAsset,
+    ),
     badgeSticker: profile.badgeSticker
       ? {
           id: profile.badgeSticker.id,
@@ -123,6 +169,30 @@ function buildRealtimeProfilePatch(profile: ProfileResponseRecord) {
     avatarAsset: serializePublicAsset(profile.avatarAsset),
     bannerAssetId: profile.bannerAssetId,
     bannerAsset: serializePublicAsset(profile.bannerAsset),
+    profileCardConfig: profile.profileCardConfig,
+    profileCardLeftTopImageAssetId: profile.profileCardLeftTopImageAssetId,
+    profileCardLeftTopImageAsset: serializePublicAsset(
+      profile.profileCardLeftTopImageAsset,
+    ),
+    profileCardLeftBottomRightTopImageAssetId:
+      profile.profileCardLeftBottomRightTopImageAssetId,
+    profileCardLeftBottomRightTopImageAsset: serializePublicAsset(
+      profile.profileCardLeftBottomRightTopImageAsset,
+    ),
+    profileCardLeftBottomRightBottomImageAssetId:
+      profile.profileCardLeftBottomRightBottomImageAssetId,
+    profileCardLeftBottomRightBottomImageAsset: serializePublicAsset(
+      profile.profileCardLeftBottomRightBottomImageAsset,
+    ),
+    profileCardRightTopImageAssetId: profile.profileCardRightTopImageAssetId,
+    profileCardRightTopImageAsset: serializePublicAsset(
+      profile.profileCardRightTopImageAsset,
+    ),
+    profileCardRightBottomImageAssetId:
+      profile.profileCardRightBottomImageAssetId,
+    profileCardRightBottomImageAsset: serializePublicAsset(
+      profile.profileCardRightBottomImageAsset,
+    ),
     usernameColor: profile.usernameColor,
     usernameFormat: profile.usernameFormat,
     badge: profile.badge,
@@ -133,8 +203,80 @@ function buildRealtimeProfilePatch(profile: ProfileResponseRecord) {
           asset: serializePublicAsset(profile.badgeSticker.asset),
         }
       : null,
-    longDescription: profile.longDescription,
   };
+}
+
+async function resolveOwnedAssetId(
+  input: {
+    assetId: unknown;
+    ownerProfileId: string;
+    context: AssetContext;
+    invalidMessage: string;
+    notFoundMessage: string;
+  },
+): Promise<
+  | { ok: true; value: string | null | undefined }
+  | { ok: false; response: NextResponse }
+> {
+  const {
+    assetId,
+    ownerProfileId,
+    context,
+    invalidMessage,
+    notFoundMessage,
+  } = input;
+
+  if (assetId === undefined) {
+    return { ok: true, value: undefined };
+  }
+
+  if (assetId === null || assetId === "") {
+    return { ok: true, value: null };
+  }
+
+  if (typeof assetId !== "string" || !UUID_REGEX.test(assetId)) {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: invalidMessage }, { status: 400 }),
+    };
+  }
+
+  const ownedAsset = await findOwnedUploadedAsset(
+    assetId,
+    ownerProfileId,
+    context,
+    AssetVisibility.PUBLIC,
+  );
+
+  if (!ownedAsset) {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: notFoundMessage }, { status: 400 }),
+    };
+  }
+
+  return { ok: true, value: ownedAsset.id };
+}
+
+function validateProfileCardConfigAgainstSlots(
+  config: ProfileCardConfig,
+  effectiveImageSlots: Pick<ProfileResponseRecord, ProfileCardImageSlotKey>,
+) {
+  if (
+    config.content.rightTopImage &&
+    !effectiveImageSlots.profileCardRightTopImageAssetId
+  ) {
+    return "rightTopImage metadata requires a rightTopImage asset";
+  }
+
+  if (
+    config.content.rightBottomImage &&
+    !effectiveImageSlots.profileCardRightBottomImageAssetId
+  ) {
+    return "rightBottomImage metadata requires a rightBottomImage asset";
+  }
+
+  return null;
 }
 
 export async function GET() {
@@ -192,7 +334,12 @@ export async function PATCH(req: Request) {
       badge,
       badgeStickerId,
       usernameFormat,
-      longDescription,
+      profileCardConfig,
+      profileCardLeftTopImageAssetId,
+      profileCardLeftBottomRightTopImageAssetId,
+      profileCardLeftBottomRightBottomImageAssetId,
+      profileCardRightTopImageAssetId,
+      profileCardRightBottomImageAssetId,
     } = body as Record<string, unknown>;
 
     let resolvedUsername: string | undefined;
@@ -397,18 +544,6 @@ export async function PATCH(req: Request) {
       );
     }
 
-    if (
-      longDescription !== undefined &&
-      longDescription !== null &&
-      typeof longDescription === "string" &&
-      longDescription.length > 200
-    ) {
-      return NextResponse.json(
-        { error: "Description must be 200 characters or less" },
-        { status: 400 },
-      );
-    }
-
     if (usernameFormat !== undefined && usernameFormat !== null) {
       if (typeof usernameFormat !== "object") {
         return NextResponse.json(
@@ -446,60 +581,139 @@ export async function PATCH(req: Request) {
       }
     }
 
-    let resolvedAvatarAssetId: string | null | undefined = undefined;
-    if (avatarAssetId !== undefined) {
-      if (avatarAssetId === null || avatarAssetId === "") {
-        resolvedAvatarAssetId = null;
-      } else if (typeof avatarAssetId !== "string" || !UUID_REGEX.test(avatarAssetId)) {
-        return NextResponse.json(
-          { error: "Avatar asset ID must be a valid UUID" },
-          { status: 400 },
-        );
+    let validatedProfileCardConfig: ProfileCardConfig | null | undefined =
+      undefined;
+    if (profileCardConfig !== undefined) {
+      if (profileCardConfig === null) {
+        validatedProfileCardConfig = null;
       } else {
-        const avatarAsset = await findOwnedUploadedAsset(
-          avatarAssetId,
-          profile.id,
-          AssetContext.PROFILE_AVATAR,
-          AssetVisibility.PUBLIC,
-        );
-
-        if (!avatarAsset) {
+        const parsedProfileCardConfig =
+          profileCardConfigSchema.safeParse(profileCardConfig);
+        if (!parsedProfileCardConfig.success) {
           return NextResponse.json(
-            { error: "Avatar asset not found" },
+            {
+              error:
+                parsedProfileCardConfig.error.issues[0]?.message ||
+                "Invalid profileCardConfig",
+            },
             { status: 400 },
           );
         }
 
-        resolvedAvatarAssetId = avatarAsset.id;
+        validatedProfileCardConfig = parsedProfileCardConfig.data;
       }
     }
 
+    let resolvedAvatarAssetId: string | null | undefined = undefined;
+    {
+      const resolvedAvatar = await resolveOwnedAssetId({
+        assetId: avatarAssetId,
+        ownerProfileId: profile.id,
+        context: AssetContext.PROFILE_AVATAR,
+        invalidMessage: "Avatar asset ID must be a valid UUID",
+        notFoundMessage: "Avatar asset not found",
+      });
+      if (!resolvedAvatar.ok) return resolvedAvatar.response;
+      resolvedAvatarAssetId = resolvedAvatar.value;
+    }
+
     let resolvedBannerAssetId: string | null | undefined = undefined;
-    if (bannerAssetId !== undefined) {
-      if (bannerAssetId === null || bannerAssetId === "") {
-        resolvedBannerAssetId = null;
-      } else if (typeof bannerAssetId !== "string" || !UUID_REGEX.test(bannerAssetId)) {
-        return NextResponse.json(
-          { error: "Banner asset ID must be a valid UUID" },
-          { status: 400 },
-        );
-      } else {
-        const bannerAsset = await findOwnedUploadedAsset(
-          bannerAssetId,
-          profile.id,
-          AssetContext.PROFILE_BANNER,
-          AssetVisibility.PUBLIC,
-        );
+    {
+      const resolvedBanner = await resolveOwnedAssetId({
+        assetId: bannerAssetId,
+        ownerProfileId: profile.id,
+        context: AssetContext.PROFILE_BANNER,
+        invalidMessage: "Banner asset ID must be a valid UUID",
+        notFoundMessage: "Banner asset not found",
+      });
+      if (!resolvedBanner.ok) return resolvedBanner.response;
+      resolvedBannerAssetId = resolvedBanner.value;
+    }
 
-        if (!bannerAsset) {
-          return NextResponse.json(
-            { error: "Banner asset not found" },
-            { status: 400 },
-          );
-        }
+    let resolvedProfileCardLeftTopImageAssetId: string | null | undefined =
+      undefined;
+    {
+      const resolvedLeftTopImage = await resolveOwnedAssetId({
+        assetId: profileCardLeftTopImageAssetId,
+        ownerProfileId: profile.id,
+        context: AssetContext.PROFILE_CARD_IMAGE,
+        invalidMessage: "Left top image asset ID must be a valid UUID",
+        notFoundMessage: "Left top image asset not found",
+      });
+      if (!resolvedLeftTopImage.ok) return resolvedLeftTopImage.response;
+      resolvedProfileCardLeftTopImageAssetId = resolvedLeftTopImage.value;
+    }
 
-        resolvedBannerAssetId = bannerAsset.id;
+    let resolvedProfileCardLeftBottomRightTopImageAssetId:
+      | string
+      | null
+      | undefined = undefined;
+    {
+      const resolvedLeftBottomRightTopImage = await resolveOwnedAssetId({
+        assetId: profileCardLeftBottomRightTopImageAssetId,
+        ownerProfileId: profile.id,
+        context: AssetContext.PROFILE_CARD_IMAGE,
+        invalidMessage:
+          "Left bottom right top image asset ID must be a valid UUID",
+        notFoundMessage: "Left bottom right top image asset not found",
+      });
+      if (!resolvedLeftBottomRightTopImage.ok) {
+        return resolvedLeftBottomRightTopImage.response;
       }
+      resolvedProfileCardLeftBottomRightTopImageAssetId =
+        resolvedLeftBottomRightTopImage.value;
+    }
+
+    let resolvedProfileCardLeftBottomRightBottomImageAssetId:
+      | string
+      | null
+      | undefined = undefined;
+    {
+      const resolvedLeftBottomRightBottomImage = await resolveOwnedAssetId({
+        assetId: profileCardLeftBottomRightBottomImageAssetId,
+        ownerProfileId: profile.id,
+        context: AssetContext.PROFILE_CARD_IMAGE,
+        invalidMessage:
+          "Left bottom right bottom image asset ID must be a valid UUID",
+        notFoundMessage: "Left bottom right bottom image asset not found",
+      });
+      if (!resolvedLeftBottomRightBottomImage.ok) {
+        return resolvedLeftBottomRightBottomImage.response;
+      }
+      resolvedProfileCardLeftBottomRightBottomImageAssetId =
+        resolvedLeftBottomRightBottomImage.value;
+    }
+
+    let resolvedProfileCardRightTopImageAssetId: string | null | undefined =
+      undefined;
+    {
+      const resolvedRightTopImage = await resolveOwnedAssetId({
+        assetId: profileCardRightTopImageAssetId,
+        ownerProfileId: profile.id,
+        context: AssetContext.PROFILE_CARD_IMAGE,
+        invalidMessage: "Right top image asset ID must be a valid UUID",
+        notFoundMessage: "Right top image asset not found",
+      });
+      if (!resolvedRightTopImage.ok) return resolvedRightTopImage.response;
+      resolvedProfileCardRightTopImageAssetId = resolvedRightTopImage.value;
+    }
+
+    let resolvedProfileCardRightBottomImageAssetId:
+      | string
+      | null
+      | undefined = undefined;
+    {
+      const resolvedRightBottomImage = await resolveOwnedAssetId({
+        assetId: profileCardRightBottomImageAssetId,
+        ownerProfileId: profile.id,
+        context: AssetContext.PROFILE_CARD_IMAGE,
+        invalidMessage: "Right bottom image asset ID must be a valid UUID",
+        notFoundMessage: "Right bottom image asset not found",
+      });
+      if (!resolvedRightBottomImage.ok) {
+        return resolvedRightBottomImage.response;
+      }
+      resolvedProfileCardRightBottomImageAssetId = resolvedRightBottomImage.value;
     }
 
     let resolvedBadgeStickerId: string | null | undefined = undefined;
@@ -524,6 +738,47 @@ export async function PATCH(req: Request) {
       }
     }
 
+    const effectiveProfileCardConfig =
+      validatedProfileCardConfig !== undefined
+        ? validatedProfileCardConfig
+        : ((profile.profileCardConfig as ProfileCardConfig | null | undefined) ??
+          null);
+
+    if (effectiveProfileCardConfig) {
+      const profileCardConfigError = validateProfileCardConfigAgainstSlots(
+        effectiveProfileCardConfig,
+        {
+          profileCardLeftTopImageAssetId:
+            resolvedProfileCardLeftTopImageAssetId !== undefined
+              ? resolvedProfileCardLeftTopImageAssetId
+              : profile.profileCardLeftTopImageAssetId,
+          profileCardLeftBottomRightTopImageAssetId:
+            resolvedProfileCardLeftBottomRightTopImageAssetId !== undefined
+              ? resolvedProfileCardLeftBottomRightTopImageAssetId
+              : profile.profileCardLeftBottomRightTopImageAssetId,
+          profileCardLeftBottomRightBottomImageAssetId:
+            resolvedProfileCardLeftBottomRightBottomImageAssetId !== undefined
+              ? resolvedProfileCardLeftBottomRightBottomImageAssetId
+              : profile.profileCardLeftBottomRightBottomImageAssetId,
+          profileCardRightTopImageAssetId:
+            resolvedProfileCardRightTopImageAssetId !== undefined
+              ? resolvedProfileCardRightTopImageAssetId
+              : profile.profileCardRightTopImageAssetId,
+          profileCardRightBottomImageAssetId:
+            resolvedProfileCardRightBottomImageAssetId !== undefined
+              ? resolvedProfileCardRightBottomImageAssetId
+              : profile.profileCardRightBottomImageAssetId,
+        },
+      );
+
+      if (profileCardConfigError) {
+        return NextResponse.json(
+          { error: profileCardConfigError },
+          { status: 400 },
+        );
+      }
+    }
+
     const updateData: Prisma.ProfileUncheckedUpdateInput = {};
 
     if (resolvedAvatarAssetId !== undefined) {
@@ -531,6 +786,26 @@ export async function PATCH(req: Request) {
     }
     if (resolvedBannerAssetId !== undefined) {
       updateData.bannerAssetId = resolvedBannerAssetId;
+    }
+    if (resolvedProfileCardLeftTopImageAssetId !== undefined) {
+      updateData.profileCardLeftTopImageAssetId =
+        resolvedProfileCardLeftTopImageAssetId;
+    }
+    if (resolvedProfileCardLeftBottomRightTopImageAssetId !== undefined) {
+      updateData.profileCardLeftBottomRightTopImageAssetId =
+        resolvedProfileCardLeftBottomRightTopImageAssetId;
+    }
+    if (resolvedProfileCardLeftBottomRightBottomImageAssetId !== undefined) {
+      updateData.profileCardLeftBottomRightBottomImageAssetId =
+        resolvedProfileCardLeftBottomRightBottomImageAssetId;
+    }
+    if (resolvedProfileCardRightTopImageAssetId !== undefined) {
+      updateData.profileCardRightTopImageAssetId =
+        resolvedProfileCardRightTopImageAssetId;
+    }
+    if (resolvedProfileCardRightBottomImageAssetId !== undefined) {
+      updateData.profileCardRightBottomImageAssetId =
+        resolvedProfileCardRightBottomImageAssetId;
     }
     if (languages !== undefined) updateData.languages = languages as Languages[];
     if (usernameColor !== undefined) {
@@ -544,8 +819,11 @@ export async function PATCH(req: Request) {
     if (usernameFormat !== undefined) {
       updateData.usernameFormat = usernameFormat as Prisma.InputJsonValue;
     }
-    if (longDescription !== undefined) {
-      updateData.longDescription = longDescription as string | null;
+    if (validatedProfileCardConfig !== undefined) {
+      updateData.profileCardConfig =
+        validatedProfileCardConfig === null
+          ? Prisma.JsonNull
+          : (validatedProfileCardConfig as Prisma.InputJsonValue);
     }
 
     if (resolvedUsername !== undefined) {
@@ -626,13 +904,18 @@ export async function DELETE() {
         discriminator: anonymizedDiscriminator,
         avatarAssetId: null,
         bannerAssetId: null,
+        profileCardConfig: Prisma.JsonNull,
+        profileCardLeftTopImageAssetId: null,
+        profileCardLeftBottomRightTopImageAssetId: null,
+        profileCardLeftBottomRightBottomImageAssetId: null,
+        profileCardRightTopImageAssetId: null,
+        profileCardRightBottomImageAssetId: null,
         email: "",
         usernameColor: Prisma.JsonNull,
         profileTags: [],
         badge: null,
         badgeStickerId: null,
         usernameFormat: Prisma.JsonNull,
-        longDescription: null,
         themeConfig: Prisma.JsonNull,
         languages: ["EN"],
         reportAccuracy: null,
@@ -642,17 +925,7 @@ export async function DELETE() {
       select: profileResponseSelect,
     });
 
-    emitProfileUpdated(profile.id, {
-      username: deletedProfile.username,
-      discriminator: deletedProfile.discriminator,
-      avatarAssetId: deletedProfile.avatarAssetId,
-      bannerAssetId: deletedProfile.bannerAssetId,
-      usernameColor: deletedProfile.usernameColor,
-      usernameFormat: deletedProfile.usernameFormat,
-      badge: deletedProfile.badge,
-      badgeStickerId: deletedProfile.badgeStickerId,
-      longDescription: deletedProfile.longDescription,
-    });
+    emitProfileUpdated(profile.id, buildRealtimeProfilePatch(deletedProfile));
 
     await profileCache.invalidate(profile.userId);
 

@@ -23,19 +23,16 @@ export const ChatWelcome = memo(function ChatWelcome({
 
   return (
     <div className="space-y-4 px-4 mb-4 flex flex-col items-center text-center">
-      {/* TOP TEXT: Greetings */}
       <p className="text-xl text-theme-text-subtle md:text-3xl font-bold">
         {isChannel ? `${t.chat.greetingsThisIs}` : ""}
         {name}
       </p>
 
-      {/* SVG LOGO CENTERED */}
       <div className="relative w-50 h-50">
         <div className="absolute inset-0 rounded-full bg-theme-bg-quaternary" />
         <GatherendOutlineSVG className="absolute inset-0 w-full h-full p-5 text-theme-accent-light" />
       </div>
 
-      {/* BOTTOM TEXT: description */}
       <p className="text-theme-text-subtle text-[16px] max-w-[360px]">
         {isChannel ? (
           <>

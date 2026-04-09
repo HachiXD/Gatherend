@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { useOverlayStore } from "@/hooks/use-overlay-store";
 import { useProfile } from "@/components/app-shell/providers/profile-provider";
 import { ThemeModal } from "@/components/modals/theme-modal";
-import type { ThemeConfig } from "@/lib/theme/types";
+import { normalizeThemeConfig, parseThemeConfig } from "@/lib/theme/runtime";
 import { useTranslation } from "@/i18n";
 import { UserAvatar } from "@/components/user-avatar";
 
@@ -59,9 +59,7 @@ export function CustomUserButton() {
     setIsThemeModalOpen(true);
   };
 
-  // Parse themeConfig from profile (Json field from Prisma)
-  const themeConfig = (profile as { themeConfig?: unknown })
-    .themeConfig as ThemeConfig | null;
+  const themeConfig = normalizeThemeConfig(parseThemeConfig(profile.themeConfig));
 
   return (
     <div className="relative" ref={dropdownRef}>

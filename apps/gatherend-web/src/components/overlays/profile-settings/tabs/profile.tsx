@@ -15,6 +15,8 @@ import { useInvalidateProfileCard } from "@/hooks/use-profile-card";
 import { applyProfilePatchToAllCaches } from "@/hooks/profile-patch-utils";
 import { useTranslation, localeToLanguage, languageToLocale } from "@/i18n";
 import { Button } from "@/components/ui/button";
+import type { ProfileCardConfig } from "@/lib/profile-card-config";
+import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 // Import optimized hooks
 import {
@@ -27,9 +29,11 @@ import {
 // Import sub-components
 import {
   AvatarSection,
+  ProfileCardEditorShell,
+  type ProfileCardEditorDraft,
+  type ProfileCardImageSlot,
   UsernameSection,
   UsernameColorSection,
-  AboutMeSection,
   BadgeSection,
   ProfileTagsSection,
   LanguagesSection,
@@ -45,20 +49,216 @@ const schema = z.object({
     .min(2, { message: "Username must be at least 2 characters" })
     .max(20, { message: "Username must be at most 20 characters" }),
   avatarAssetId: z.string().optional().nullable(),
+  bannerAssetId: z.string().optional().nullable(),
   badge: z
     .string()
     .max(30, { message: "Badge must be at most 30 characters" })
     .optional()
     .nullable(),
   badgeStickerId: z.string().optional().nullable(),
-  longDescription: z
-    .string()
-    .max(200, { message: "Description must be at most 200 characters" })
-    .optional()
-    .nullable(),
 });
 
 type FormSchema = z.infer<typeof schema>;
+
+const DEFAULT_PROFILE_CARD_STYLE = {
+  backgroundColor: "#707070",
+  boxColor: "#8a8a8a",
+  rounded: false,
+  shadows: true,
+} as const;
+
+function trimToNull(value: string) {
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function createUploadedAssetFromUpload(file: {
+  assetId: string;
+  url: string;
+  width?: number;
+  height?: number;
+}): ClientUploadedAsset {
+  return {
+    id: file.assetId,
+    url: file.url,
+    width: file.width ?? null,
+    height: file.height ?? null,
+    dominantColor: null,
+  };
+}
+
+function createInitialProfileCardDraft(
+  profile: ExtendedProfile,
+): ProfileCardEditorDraft {
+  const config = profile.profileCardConfig;
+
+  return {
+    style: {
+      backgroundColor:
+        config?.style.backgroundColor ?? DEFAULT_PROFILE_CARD_STYLE.backgroundColor,
+      boxColor: config?.style.boxColor ?? DEFAULT_PROFILE_CARD_STYLE.boxColor,
+      rounded: config?.style.rounded ?? DEFAULT_PROFILE_CARD_STYLE.rounded,
+      shadows: config?.style.shadows ?? DEFAULT_PROFILE_CARD_STYLE.shadows,
+    },
+    content: {
+      pageTitle: config?.content.pageTitle ?? "",
+      leftTopTextTitle: config?.content.leftTopText?.title ?? "",
+      leftTopTextContent: config?.content.leftTopText?.content ?? "",
+      sectionATitle: config?.content.leftBottomText?.sectionA?.title ?? "",
+      sectionAContent: config?.content.leftBottomText?.sectionA?.content ?? "",
+      sectionBTitle: config?.content.leftBottomText?.sectionB?.title ?? "",
+      sectionBContent: config?.content.leftBottomText?.sectionB?.content ?? "",
+      rightTopImageTitle: config?.content.rightTopImage?.title ?? "",
+      rightBottomImageTitle: config?.content.rightBottomImage?.title ?? "",
+    },
+    images: {
+      leftTopImage: {
+        assetId: profile.profileCardLeftTopImageAssetId,
+        asset: profile.profileCardLeftTopImageAsset,
+      },
+      leftBottomRightTopImage: {
+        assetId: profile.profileCardLeftBottomRightTopImageAssetId,
+        asset: profile.profileCardLeftBottomRightTopImageAsset,
+      },
+      leftBottomRightBottomImage: {
+        assetId: profile.profileCardLeftBottomRightBottomImageAssetId,
+        asset: profile.profileCardLeftBottomRightBottomImageAsset,
+      },
+      rightTopImage: {
+        assetId: profile.profileCardRightTopImageAssetId,
+        asset: profile.profileCardRightTopImageAsset,
+      },
+      rightBottomImage: {
+        assetId: profile.profileCardRightBottomImageAssetId,
+        asset: profile.profileCardRightBottomImageAsset,
+      },
+    },
+  };
+}
+
+function buildProfileCardConfigFromDraft(draft: ProfileCardEditorDraft): {
+  config: ProfileCardConfig;
+  error: string | null;
+} {
+  const pageTitle = trimToNull(draft.content.pageTitle);
+  const leftTopTextTitle = trimToNull(draft.content.leftTopTextTitle);
+  const leftTopTextContent = trimToNull(draft.content.leftTopTextContent);
+  const sectionATitle = trimToNull(draft.content.sectionATitle);
+  const sectionAContent = trimToNull(draft.content.sectionAContent);
+  const sectionBTitle = trimToNull(draft.content.sectionBTitle);
+  const sectionBContent = trimToNull(draft.content.sectionBContent);
+  const rightTopImageTitle = trimToNull(draft.content.rightTopImageTitle);
+  const rightBottomImageTitle = trimToNull(draft.content.rightBottomImageTitle);
+
+  if (leftTopTextTitle && !leftTopTextContent) {
+    return {
+      config: {
+        version: 1,
+        style: { ...draft.style },
+        content: {},
+      },
+      error: "leftTopText needs content before you save a title.",
+    };
+  }
+
+  const hasPartialSectionA = Boolean(sectionATitle) !== Boolean(sectionAContent);
+  if (hasPartialSectionA) {
+    return {
+      config: {
+        version: 1,
+        style: { ...draft.style },
+        content: {},
+      },
+      error: "Section A needs both title and content.",
+    };
+  }
+
+  const hasPartialSectionB = Boolean(sectionBTitle) !== Boolean(sectionBContent);
+  if (hasPartialSectionB) {
+    return {
+      config: {
+        version: 1,
+        style: { ...draft.style },
+        content: {},
+      },
+      error: "Section B needs both title and content.",
+    };
+  }
+
+  if (rightTopImageTitle && !draft.images.rightTopImage.assetId) {
+    return {
+      config: {
+        version: 1,
+        style: { ...draft.style },
+        content: {},
+      },
+      error: "rightTopImage needs an uploaded image before adding a title.",
+    };
+  }
+
+  if (rightBottomImageTitle && !draft.images.rightBottomImage.assetId) {
+    return {
+      config: {
+        version: 1,
+        style: { ...draft.style },
+        content: {},
+      },
+      error: "rightBottomImage needs an uploaded image before adding a title.",
+    };
+  }
+
+  return {
+    config: {
+      version: 1,
+      style: {
+        backgroundColor: draft.style.backgroundColor,
+        boxColor: draft.style.boxColor,
+        rounded: draft.style.rounded,
+        shadows: draft.style.shadows,
+      },
+      content: {
+        ...(pageTitle ? { pageTitle } : {}),
+        ...(leftTopTextContent
+          ? {
+              leftTopText: {
+                content: leftTopTextContent,
+                ...(leftTopTextTitle ? { title: leftTopTextTitle } : {}),
+              },
+            }
+          : {}),
+        ...((sectionATitle && sectionAContent) || (sectionBTitle && sectionBContent)
+          ? {
+              leftBottomText: {
+                ...(sectionATitle && sectionAContent
+                  ? {
+                      sectionA: {
+                        title: sectionATitle,
+                        content: sectionAContent,
+                      },
+                    }
+                  : {}),
+                ...(sectionBTitle && sectionBContent
+                  ? {
+                      sectionB: {
+                        title: sectionBTitle,
+                        content: sectionBContent,
+                      },
+                    }
+                  : {}),
+              },
+            }
+          : {}),
+        ...(rightTopImageTitle
+          ? { rightTopImage: { title: rightTopImageTitle } }
+          : {}),
+        ...(rightBottomImageTitle
+          ? { rightBottomImage: { title: rightBottomImageTitle } }
+          : {}),
+      },
+    },
+    error: null,
+  };
+}
 
 // Props
 
@@ -86,13 +286,19 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
     defaultValues: {
       username: user.username,
       avatarAssetId: user.avatarAssetId || "",
+      bannerAssetId: user.bannerAssetId || "",
       badge: extendedUser.badge || "",
       badgeStickerId: extendedUser.badgeStickerId || "",
-      longDescription: extendedUser.longDescription || "",
     },
   });
 
   const [isSaving, setIsSaving] = useState(false);
+  const [profileCardDraft, setProfileCardDraft] =
+    useState<ProfileCardEditorDraft>(() =>
+      createInitialProfileCardDraft(extendedUser),
+    );
+  const [activeProfileCardUploadSlot, setActiveProfileCardUploadSlot] =
+    useState<ProfileCardImageSlot | null>(null);
 
   // Username Validation (dedicated hook with debounce)
 
@@ -186,10 +392,27 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
   const [imagePreview, setImagePreview] = useState<string>(
     user.avatarAsset?.url || "",
   );
+  const [bannerPreview, setBannerPreview] = useState<string | null>(
+    user.bannerAsset?.url || null,
+  );
   const [uploading, setUploading] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const profileCardFileInputRef = useRef<HTMLInputElement>(null);
+  const bannerFileInputRef = useRef<HTMLInputElement>(null);
 
   const { startUpload } = useUpload("profile_avatar", {
+    onModerationBlock: (reason) => toast.error(reason),
+    onUploadError: (error) => toast.error(`Upload failed: ${error}`),
+  });
+  const { startUpload: startBannerUpload } = useUpload("profile_banner", {
+    onModerationBlock: (reason) => toast.error(reason),
+    onUploadError: (error) => toast.error(`Upload failed: ${error}`),
+  });
+  const {
+    startUpload: startProfileCardUpload,
+    isUploading: isProfileCardUploading,
+  } = useUpload("profile_card_image", {
     onModerationBlock: (reason) => toast.error(reason),
     onUploadError: (error) => toast.error(`Upload failed: ${error}`),
   });
@@ -221,27 +444,171 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
     fileInputRef.current?.click();
   }, []);
 
+  const handleBannerUpload = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files;
+      if (!files || files.length === 0) return;
+
+      setUploadingBanner(true);
+      try {
+        const res = await startBannerUpload(Array.from(files));
+        const file = res?.[0];
+        if (file) {
+          setBannerPreview(file.url);
+          form.setValue("bannerAssetId", file.assetId);
+        }
+      } catch {
+        toast.error("Failed to upload banner image");
+      } finally {
+        setUploadingBanner(false);
+        if (bannerFileInputRef.current) bannerFileInputRef.current.value = "";
+      }
+    },
+    [form, startBannerUpload],
+  );
+
+  const handleBannerUploadClick = useCallback(() => {
+    bannerFileInputRef.current?.click();
+  }, []);
+
+  const handleClearBanner = useCallback(() => {
+    setBannerPreview(null);
+    form.setValue("bannerAssetId", null);
+    if (bannerFileInputRef.current) bannerFileInputRef.current.value = "";
+  }, [form]);
+
+  const handleProfileCardStyleChange = useCallback(
+    (field: keyof ProfileCardEditorDraft["style"], value: string | boolean) => {
+      setProfileCardDraft((current) => ({
+        ...current,
+        style: {
+          ...current.style,
+          [field]: value,
+        },
+      }));
+    },
+    [],
+  );
+
+  const handleProfileCardContentChange = useCallback(
+    (field: keyof ProfileCardEditorDraft["content"], value: string) => {
+      setProfileCardDraft((current) => ({
+        ...current,
+        content: {
+          ...current.content,
+          [field]: value,
+        },
+      }));
+    },
+    [],
+  );
+
+  const handleProfileCardUploadClick = useCallback(
+    (slot: ProfileCardImageSlot) => {
+      setActiveProfileCardUploadSlot(slot);
+      profileCardFileInputRef.current?.click();
+    },
+    [],
+  );
+
+  const handleProfileCardClearImage = useCallback((slot: ProfileCardImageSlot) => {
+    setProfileCardDraft((current) => ({
+      ...current,
+      content: {
+        ...current.content,
+        ...(slot === "rightTopImage" ? { rightTopImageTitle: "" } : {}),
+        ...(slot === "rightBottomImage" ? { rightBottomImageTitle: "" } : {}),
+      },
+      images: {
+        ...current.images,
+        [slot]: {
+          assetId: null,
+          asset: null,
+        },
+      },
+    }));
+  }, []);
+
+  const handleProfileCardImageUpload = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files;
+      const activeSlot = activeProfileCardUploadSlot;
+      if (!files || files.length === 0 || !activeSlot) {
+        setActiveProfileCardUploadSlot(null);
+        if (profileCardFileInputRef.current) {
+          profileCardFileInputRef.current.value = "";
+        }
+        return;
+      }
+
+      try {
+        const res = await startProfileCardUpload(Array.from(files));
+        const file = res?.[0];
+        if (file) {
+          setProfileCardDraft((current) => ({
+            ...current,
+            images: {
+              ...current.images,
+              [activeSlot]: {
+                assetId: file.assetId,
+                asset: createUploadedAssetFromUpload(file),
+              },
+            },
+          }));
+        }
+      } catch {
+        toast.error("Failed to upload profile card image");
+      } finally {
+        setActiveProfileCardUploadSlot(null);
+        if (profileCardFileInputRef.current) {
+          profileCardFileInputRef.current.value = "";
+        }
+      }
+    },
+    [activeProfileCardUploadSlot, startProfileCardUpload],
+  );
+
   // Form Submission
 
   const onSubmit = useCallback(
     async (values: FormSchema) => {
+      const { config: profileCardConfig, error: profileCardConfigError } =
+        buildProfileCardConfigFromDraft(profileCardDraft);
+
+      if (profileCardConfigError) {
+        toast.error(profileCardConfigError);
+        return;
+      }
+
       try {
         setIsSaving(true);
 
         const updatedProfileData = {
           username: values.username,
           avatarAssetId: values.avatarAssetId,
+          bannerAssetId: values.bannerAssetId,
           languages: selectedLanguages,
           usernameColor: usernameColor.buildColor(),
           profileTags: profileTags.state.tags,
           badge: values.badge || null,
           badgeStickerId: values.badgeStickerId || null,
           usernameFormat: usernameFormat.buildFormat(),
-          longDescription: values.longDescription || null,
+          profileCardConfig,
+          profileCardLeftTopImageAssetId:
+            profileCardDraft.images.leftTopImage.assetId,
+          profileCardLeftBottomRightTopImageAssetId:
+            profileCardDraft.images.leftBottomRightTopImage.assetId,
+          profileCardLeftBottomRightBottomImageAssetId:
+            profileCardDraft.images.leftBottomRightBottomImage.assetId,
+          profileCardRightTopImageAssetId:
+            profileCardDraft.images.rightTopImage.assetId,
+          profileCardRightBottomImageAssetId:
+            profileCardDraft.images.rightBottomImage.assetId,
         };
 
         const response = await axios.patch("/api/profile", updatedProfileData);
         const serverProfile = response.data;
+        setProfileCardDraft(createInitialProfileCardDraft(serverProfile));
 
         // Update React Query cache (simplified - let invalidation handle the rest)
         queryClient.setQueryData(
@@ -255,12 +622,12 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
           username: serverProfile.username,
           discriminator: serverProfile.discriminator,
           avatarAsset: serverProfile.avatarAsset,
+          bannerAsset: serverProfile.bannerAsset,
           usernameColor: serverProfile.usernameColor,
           usernameFormat: serverProfile.usernameFormat,
           profileTags: serverProfile.profileTags,
           badge: serverProfile.badge,
           badgeSticker: serverProfile.badgeSticker,
-          longDescription: serverProfile.longDescription,
         });
 
         // Invalidate related caches
@@ -288,6 +655,7 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
       usernameColor,
       profileTags.state.tags,
       usernameFormat,
+      profileCardDraft,
       queryClient,
       invalidateProfileCard,
       user.id,
@@ -300,12 +668,15 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
   // Memoized form values (avoid watch() re-renders)
 
   // Use getValues with a controlled re-render trigger via form state
-  const { username, longDescription, badge, badgeStickerId } = form.watch();
+  const { username, badge, badgeStickerId } = form.watch();
 
   // Render
 
   const isSubmitDisabled =
     isSaving ||
+    uploading ||
+    uploadingBanner ||
+    isProfileCardUploading ||
     !usernameValidation.status.valid ||
     usernameValidation.status.checking;
 
@@ -337,56 +708,90 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
           className="hidden"
           onChange={handleImageUpload}
         />
+        <label htmlFor="profile-banner-upload" className="sr-only">
+          Upload profile banner
+        </label>
+        <input
+          id="profile-banner-upload"
+          name="profile-banner-upload"
+          ref={bannerFileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleBannerUpload}
+        />
+        <label htmlFor="profile-card-image-upload" className="sr-only">
+          Upload profile card image
+        </label>
+        <input
+          id="profile-card-image-upload"
+          name="profile-card-image-upload"
+          ref={profileCardFileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleProfileCardImageUpload}
+        />
 
-        {/* SECTION 1: IDENTITY (Avatar & Username) */}
+        {/* SECTION 1: PROFILE PAGE LAYOUT */}
         <section className={panelShellClass}>
-          <div className="-mt-3 -mb-2.5 flex flex-col items-start gap-8 md:flex-row">
-            <div className="md:self-center">
-              <AvatarSection
-                profileId={user.id}
-                imagePreview={imagePreview}
-                usernameColor={extendedUser.usernameColor}
-                uploading={uploading}
-                isSaving={isSaving}
-                onUploadClick={handleUploadClick}
-                t={t}
-              />
-            </div>
-            <div className="-mt-1 w-full flex-1 space-y-2">
-              <UsernameSection
-                username={username}
-                usernameColor={usernameColor.buildColor()}
-                discriminator={user.discriminator}
-                usernameStatus={usernameValidation.status}
-                originalUsername={originalUsername}
-                formatState={usernameFormat.state}
-                formatActions={usernameFormat.actions}
-                isSaving={isSaving}
-                onUsernameChange={handleUsernameChange}
-                t={t}
-              />
+          <h3 className={sectionTitleClass}>Detalles del Perfil</h3>
+          <div className="mt-4">
+            <ProfileCardEditorShell
+              bannerUrl={bannerPreview}
+              draft={profileCardDraft}
+              isSaving={isSaving}
+              isUploadingImage={isProfileCardUploading}
+              isUploadingBanner={uploadingBanner}
+              activeUploadSlot={activeProfileCardUploadSlot}
+              avatarEditor={
+                <AvatarSection
+                  profileId={user.id}
+                  imagePreview={imagePreview}
+                  usernameColor={extendedUser.usernameColor}
+                  uploading={uploading}
+                  isSaving={isSaving}
+                  onUploadClick={handleUploadClick}
+                  t={t}
+                />
+              }
+              identityEditor={
+                <div className="w-full space-y-2">
+                  <UsernameSection
+                    username={username}
+                    usernameColor={usernameColor.buildColor()}
+                    discriminator={user.discriminator}
+                    usernameStatus={usernameValidation.status}
+                    originalUsername={originalUsername}
+                    formatState={usernameFormat.state}
+                    formatActions={usernameFormat.actions}
+                    isSaving={isSaving}
+                    onUsernameChange={handleUsernameChange}
+                    t={t}
+                  />
 
-              <UsernameColorSection
-                colorState={usernameColor.state}
-                colorActions={usernameColor.actions}
-                isSaving={isSaving}
-                t={t}
-              />
-            </div>
+                  <UsernameColorSection
+                    colorState={usernameColor.state}
+                    colorActions={usernameColor.actions}
+                    isSaving={isSaving}
+                    t={t}
+                  />
+                </div>
+              }
+              onStyleChange={handleProfileCardStyleChange}
+              onContentChange={handleProfileCardContentChange}
+              onBannerUploadClick={handleBannerUploadClick}
+              onClearBanner={handleClearBanner}
+              onUploadClick={handleProfileCardUploadClick}
+              onClearImage={handleProfileCardClearImage}
+            />
           </div>
         </section>
 
         {/* SECTION 2: DETAILS */}
         <section className={panelShellClass}>
-          <h3 className={sectionTitleClass}>{t.profile.profileDetails}</h3>
+          <h3 className={sectionTitleClass}>Datos adicionales</h3>
           <div className="mt-1 space-y-1.5">
-            <AboutMeSection
-              value={longDescription}
-              isSaving={isSaving}
-              onChange={(value) => form.setValue("longDescription", value)}
-              t={t}
-            />
-
             <BadgeSection
               badgeText={badge}
               badgeStickerId={badgeStickerId}

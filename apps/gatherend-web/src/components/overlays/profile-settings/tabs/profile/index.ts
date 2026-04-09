@@ -1,9 +1,13 @@
 // Re-export all profile sub-components
 export { AvatarSection } from "./avatar-section";
+export { ProfileCardEditorShell } from "./profile-card-editor-shell";
+export type {
+  ProfileCardEditorDraft,
+  ProfileCardImageSlot,
+} from "./profile-card-editor-shell";
 export { UsernameSection } from "./username-section";
 export { UsernameColorSection } from "./username-color-section";
 export {
-  AboutMeSection,
   BadgeSection,
   ProfileTagsSection,
   LanguagesSection,
@@ -19,7 +23,6 @@ export type {
   AvatarSectionProps,
   UsernameSectionProps,
   UsernameColorSectionProps,
-  AboutMeSectionProps,
   BadgeSectionProps,
   ProfileTagsSectionProps,
   LanguagesSectionProps,

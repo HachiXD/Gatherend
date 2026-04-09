@@ -35,6 +35,28 @@ const ChatHeaderComponent = ({
   conversationId,
   style,
 }: ChatHeaderProps) => {
+  const resolvedStyle = {
+    "--community-header-bg-base": "var(--theme-bg-quaternary)",
+    "--community-header-bg-top":
+      "color-mix(in srgb, white 18%, var(--theme-bg-quaternary) 82%)",
+    "--community-header-bg-mid":
+      "color-mix(in srgb, white 8%, var(--theme-bg-quaternary) 92%)",
+    "--community-header-bg-bottom":
+      "color-mix(in srgb, black 18%, var(--theme-bg-quaternary) 82%)",
+    "--community-header-highlight": "rgba(255,255,255,0.24)",
+    "--community-header-shadow": "rgba(0,0,0,0.28)",
+    "--community-header-btn-bg": "var(--theme-chat-input-button-bg)",
+    "--community-header-btn-hover": "var(--theme-chat-input-surface-bg)",
+    "--community-header-btn-text": "var(--theme-text-secondary)",
+    "--community-header-btn-muted": "var(--theme-text-tertiary)",
+    "--community-header-btn-ring": "var(--theme-border-secondary)",
+    "--community-header-border": "var(--theme-chat-input-button-bg)",
+    ...style,
+    backgroundColor: "var(--community-header-bg-base)",
+    backgroundImage:
+      "linear-gradient(180deg, var(--community-header-bg-top) 0%, var(--community-header-bg-mid) 52%, var(--community-header-bg-bottom) 100%)",
+  } as CSSProperties;
+
   const {
     isConnected: isVoiceConnected,
     isConnecting: isVoiceConnecting,
@@ -51,8 +73,11 @@ const ChatHeaderComponent = ({
     activeVoiceChannelId === channelId &&
     (isVoiceConnected || isVoiceConnecting);
 
-  return (
-    <div className="hidden h-12 shrink-0 items-center bg-theme-bg-quaternary px-3 md:flex border-b border-theme-border" style={style}>
+    return (
+      <div
+      className="hidden h-12 shrink-0 items-center border-b border-theme-border-primary bg-theme-bg-quaternary px-3 md:flex"
+      style={resolvedStyle}
+    >
       {/* MobileToggle removido - sidebars disponibles en layout SPA */}
       <ChatHeaderClient
         boardId={boardId}

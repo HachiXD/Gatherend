@@ -26,7 +26,6 @@ interface MemberJoinedPayload {
       badge: string | null;
       badgeSticker: { id: string; asset: ClientUploadedAsset | null } | null;
       usernameFormat: unknown;
-      longDescription: string | null;
     };
   };
   timestamp: number;

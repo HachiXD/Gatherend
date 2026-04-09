@@ -60,6 +60,7 @@
   --color-theme-border-primary: var(--theme-border-primary);
   --color-theme-border-secondary: var(--theme-border-secondary);
   --color-theme-button-primary: var(--theme-button-primary);
+  --color-theme-button-primary-active: var(--theme-button-primary-active);
   --color-theme-button-hover: var(--theme-button-hover);
   --color-theme-button-send-hover: var(--theme-button-send-hover);
   --color-theme-text-accent: var(--theme-text-accent);
@@ -116,8 +117,13 @@
   --color-theme-bg-cancel-button-hover: var(--theme-bg-cancel-button-hover);
   --color-theme-chat-input-icon: var(--theme-chat-input-icon);
   --color-theme-chat-input-icon-hover: var(--theme-chat-input-icon-hover);
+  --color-theme-chat-input-button-bg: var(--theme-chat-input-button-bg);
+  --color-theme-chat-input-surface-bg: var(--theme-chat-input-surface-bg);
   --color-theme-channel-type-active-border: var(
     --theme-channel-type-active-border
+  );
+  --color-theme-channel-type-active-soft-bg: var(
+    --theme-channel-type-active-soft-bg
   );
   --color-theme-channel-type-active-bg: var(--theme-channel-type-active-bg);
   --color-theme-channel-type-active-text: var(--theme-channel-type-active-text);
@@ -207,6 +213,7 @@
   --theme-border-primary: #3a5b58;
   --theme-border-secondary: #2f4745;
   --theme-button-primary: #368780;
+  --theme-button-primary-active: #3a9088;
   --theme-button-hover: #3c9c94;
   --theme-button-send-hover: #3a9b8f;
   --theme-text-accent: #9ad0c2;
@@ -259,7 +266,10 @@
   --theme-bg-cancel-button-hover: #424f4d;
   --theme-chat-input-icon: #9dcec0;
   --theme-chat-input-icon-hover: #7db8a8;
+  --theme-chat-input-button-bg: #314845;
+  --theme-chat-input-surface-bg: #56726e;
   --theme-channel-type-active-border: #358349;
+  --theme-channel-type-active-soft-bg: #4b7755;
   --theme-channel-type-active-bg: hsla(135, 42%, 36%, 0.4);
   --theme-channel-type-active-text: #eaf5f5;
   --theme-channel-type-inactive-bg: #394c48;

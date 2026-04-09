@@ -21,8 +21,24 @@ export async function GET() {
       avatarAssetId: profile.avatarAssetId,
       bannerAssetId: profile.bannerAssetId,
       badgeStickerId: profile.badgeStickerId,
+      profileCardConfig: profile.profileCardConfig,
+      profileCardLeftTopImageAssetId: profile.profileCardLeftTopImageAssetId,
+      profileCardLeftBottomRightTopImageAssetId:
+        profile.profileCardLeftBottomRightTopImageAssetId,
+      profileCardLeftBottomRightBottomImageAssetId:
+        profile.profileCardLeftBottomRightBottomImageAssetId,
+      profileCardRightTopImageAssetId: profile.profileCardRightTopImageAssetId,
+      profileCardRightBottomImageAssetId:
+        profile.profileCardRightBottomImageAssetId,
       avatarAsset: profile.avatarAsset,
       bannerAsset: profile.bannerAsset,
+      profileCardLeftTopImageAsset: profile.profileCardLeftTopImageAsset,
+      profileCardLeftBottomRightTopImageAsset:
+        profile.profileCardLeftBottomRightTopImageAsset,
+      profileCardLeftBottomRightBottomImageAsset:
+        profile.profileCardLeftBottomRightBottomImageAsset,
+      profileCardRightTopImageAsset: profile.profileCardRightTopImageAsset,
+      profileCardRightBottomImageAsset: profile.profileCardRightBottomImageAsset,
       badgeSticker: profile.badgeSticker,
       email: profile.email,
       languages: profile.languages,
@@ -30,7 +46,6 @@ export async function GET() {
       profileTags: profile.profileTags,
       badge: profile.badge,
       usernameFormat: profile.usernameFormat,
-      longDescription: profile.longDescription,
       themeConfig: profile.themeConfig,
     });
   } catch (error) {

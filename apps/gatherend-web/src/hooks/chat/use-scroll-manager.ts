@@ -474,18 +474,6 @@ export function useScrollManager(
     lastProgrammaticWriteReasonRef.current = reason;
   }, []);
 
-  const logScrollWrite = useCallback(
-    (
-      reason: string,
-      from: number,
-      to: number,
-      extra?: Record<string, unknown>,
-    ) => {
-      const tx = transactionRef.current;
-    },
-    [],
-  );
-
   const setScrollLoadingDisabled = useCallback(
     (disabled: boolean, reason?: string) => {
       interactionStateRef.current.isScrollLoadingDisabled = disabled;
@@ -617,6 +605,18 @@ export function useScrollManager(
       distanceFromBottom: Math.max(0, maxScrollTop - clampedScrollTop),
     };
   }, []);
+
+  const logScrollWrite = useCallback(
+    (
+      reason: string,
+      from: number,
+      to: number,
+      extra?: Record<string, unknown>,
+    ) => {
+      const tx = transactionRef.current;
+    },
+    [],
+  );
 
   const isScrolledToBottom = useCallback((pos: ScrollPosition) => {
     return (

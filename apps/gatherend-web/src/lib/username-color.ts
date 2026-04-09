@@ -67,6 +67,21 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
+function invertHexColor(hex: string): string {
+  const normalized = hex.replace(/^#/, "");
+  if (normalized.length !== 6) {
+    return DEFAULT_USERNAME_COLOR;
+  }
+
+  const r = 255 - parseInt(normalized.slice(0, 2), 16);
+  const g = 255 - parseInt(normalized.slice(2, 4), 16);
+  const b = 255 - parseInt(normalized.slice(4, 6), 16);
+
+  return `#${r.toString(16).padStart(2, "0")}${g
+    .toString(16)
+    .padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+}
+
 // Username Color Adaptation for Theme Contrast
 
 /**
@@ -221,6 +236,35 @@ export function getUsernameTintBackgroundStyle(
   return {
     backgroundColor: hslToHex(h, mutedS, tintedL),
   };
+}
+
+/**
+ * Get a softened inverse of the username color for larger surfaces such as
+ * profile-card headers. This keeps the "opposite color" idea while toning it
+ * down so it behaves better as a background.
+ */
+export function getSoftInvertedUsernameColor(
+  color: JsonValue | string | null | undefined,
+  themeMode: "dark" | "light",
+): string {
+  const parsed = parseUsernameColor(color);
+  const sourceColor = parsed
+    ? parsed.type === "solid"
+      ? parsed.color
+      : (getFirstUsernameGradientStop(parsed.colors)?.color ??
+          DEFAULT_USERNAME_COLOR)
+    : DEFAULT_USERNAME_COLOR;
+
+  const invertedHex = invertHexColor(sourceColor);
+  const { h, s, l } = hexToHsl(invertedHex);
+
+  const softenedS = clamp(Math.round(s * 0.42), 14, 38);
+  const softenedL =
+    themeMode === "dark"
+      ? clamp(Math.round(22 + l * 0.18), 24, 38)
+      : clamp(Math.round(82 + (l - 50) * 0.12), 74, 88);
+
+  return hslToHex(h, softenedS, softenedL);
 }
 
 /**

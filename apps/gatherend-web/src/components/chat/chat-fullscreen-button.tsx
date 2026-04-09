@@ -58,9 +58,9 @@ export function ChatFullscreenButton({
       <button
         onClick={onClick}
         disabled={disabled}
-        className="hover:opacity-75 cursor-pointer transition disabled:opacity-40 disabled:cursor-not-allowed"
+        className="flex h-8 w-8 cursor-pointer items-center justify-center border border-[var(--community-header-btn-ring)] bg-[var(--community-header-btn-bg)] text-[var(--community-header-btn-muted)] transition hover:bg-[var(--community-header-btn-hover)] hover:text-[var(--community-header-btn-text)] disabled:cursor-not-allowed disabled:opacity-40 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]"
       >
-        <Icon className="h-6 w-6 text-theme-text-tertiary" />
+        <Icon className="h-5 w-5" />
       </button>
     </ActionTooltip>
   );

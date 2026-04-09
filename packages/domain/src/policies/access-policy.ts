@@ -83,95 +83,55 @@ export function canSendTextChatMessage(): AccessDecision {
 }
 
 export function canCreateTextComment(
-  input: LevelAndReputationInput,
+  _input: LevelAndReputationInput,
 ): AccessDecision {
-  return requireLevelAndReputation(
-    input,
-    MEMBER_LEVEL_GATES.textComment,
-    REPUTATION_GATES.textComment,
-  );
+  return allow();
 }
 
-export function canCreateTextPost(input: LevelAndReputationInput): AccessDecision {
-  return requireLevelAndReputation(
-    input,
-    MEMBER_LEVEL_GATES.textPost,
-    REPUTATION_GATES.textPost,
-  );
+export function canCreateTextPost(
+  _input: LevelAndReputationInput,
+): AccessDecision {
+  return allow();
 }
 
 export function canCreateCommentWithImage(
-  input: LevelAndReputationInput,
+  _input: LevelAndReputationInput,
 ): AccessDecision {
-  return requireLevelAndReputation(
-    input,
-    MEMBER_LEVEL_GATES.commentImage,
-    REPUTATION_GATES.anyImage,
-  );
+  return allow();
 }
 
 export function canCreatePostWithImage(
-  input: LevelAndReputationInput,
+  _input: LevelAndReputationInput,
 ): AccessDecision {
-  return requireLevelAndReputation(
-    input,
-    MEMBER_LEVEL_GATES.postImage,
-    REPUTATION_GATES.anyImage,
-  );
+  return allow();
 }
 
-export function canSendChatImage(input: LevelAndReputationInput): AccessDecision {
-  return requireLevelAndReputation(
-    input,
-    MEMBER_LEVEL_GATES.chatImage,
-    REPUTATION_GATES.anyImage,
-  );
+export function canSendChatImage(
+  _input: LevelAndReputationInput,
+): AccessDecision {
+  return allow();
 }
 
-export function canSendSticker(input: LevelAndReputationInput): AccessDecision {
-  return requireLevelAndReputation(
-    input,
-    MEMBER_LEVEL_GATES.sticker,
-    REPUTATION_GATES.sticker,
-  );
+export function canSendSticker(_input: LevelAndReputationInput): AccessDecision {
+  return allow();
 }
 
 export function canSendDirectMessageAttachment(
-  reputationScore: number,
+  _reputationScore: number,
 ): AccessDecision {
-  const byReputation = requireReputation(
-    reputationScore,
-    REPUTATION_GATES.anyImage,
-  );
-
-  return byReputation ?? allow();
+  return allow();
 }
 
 export function canSendDirectMessageSticker(
-  reputationScore: number,
+  _reputationScore: number,
 ): AccessDecision {
-  const byReputation = requireReputation(
-    reputationScore,
-    REPUTATION_GATES.sticker,
-  );
-
-  return byReputation ?? allow();
+  return allow();
 }
 
-export function canCreateBoard(reputationScore: number): AccessDecision {
-  const byReputation = requireReputation(
-    reputationScore,
-    REPUTATION_GATES.createBoard,
-  );
-
-  return byReputation ?? allow();
+export function canCreateBoard(_reputationScore: number): AccessDecision {
+  return allow();
 }
 
-export function canSendLinks(reputationScore: number): AccessDecision {
-  const byReputation = requireReputation(
-    reputationScore,
-    REPUTATION_GATES.links,
-  );
-
-  return byReputation ?? allow();
+export function canSendLinks(_reputationScore: number): AccessDecision {
+  return allow();
 }

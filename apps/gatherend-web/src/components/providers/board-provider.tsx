@@ -33,13 +33,12 @@ export type BoardMember = Member & {
     discriminator: string;
     avatarAsset: ClientUploadedAsset | null;
     usernameColor: UsernameColor;
-    profileTags: string[];
-    badge: string | null;
-    badgeSticker: ClientStickerAssetRef | null;
-    usernameFormat: UsernameFormatConfig | null;
-    longDescription: string | null;
+      profileTags: string[];
+      badge: string | null;
+      badgeSticker: ClientStickerAssetRef | null;
+      usernameFormat: UsernameFormatConfig | null;
+    };
   };
-};
 
 export type BoardWithData = Board & {
   imageAsset: ClientUploadedAsset | null;

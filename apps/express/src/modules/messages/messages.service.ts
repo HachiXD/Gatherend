@@ -1,4 +1,4 @@
-import { MessageType, type Prisma } from "@prisma/client";
+import { MessageType, Prisma } from "@prisma/client";
 import { db } from "../../lib/db.js";
 import { logger } from "../../lib/logger.js";
 import {
@@ -211,6 +211,62 @@ export async function reserveChannelMessageSeqRange(
   });
 
   return channel.lastMessageSeq - count + 1;
+}
+
+export async function advanceAuthorChannelReadState(
+  client: Prisma.TransactionClient | typeof db,
+  options: {
+    profileId: string;
+    channelId: string;
+    lastReadSeq: number;
+  },
+) {
+  const now = new Date();
+  const data = {
+    lastReadAt: now,
+    lastReadSeq: options.lastReadSeq,
+    unreadCount: 0,
+  };
+
+  const updated = await client.channelReadState.updateMany({
+    where: {
+      profileId: options.profileId,
+      channelId: options.channelId,
+      lastReadSeq: { lt: options.lastReadSeq },
+    },
+    data,
+  });
+
+  if (updated.count > 0) {
+    return;
+  }
+
+  try {
+    await client.channelReadState.create({
+      data: {
+        profileId: options.profileId,
+        channelId: options.channelId,
+        ...data,
+      },
+    });
+    return;
+  } catch (error) {
+    if (
+      !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+      error.code !== "P2002"
+    ) {
+      throw error;
+    }
+  }
+
+  await client.channelReadState.updateMany({
+    where: {
+      profileId: options.profileId,
+      channelId: options.channelId,
+      lastReadSeq: { lt: options.lastReadSeq },
+    },
+    data,
+  });
 }
 
 export async function verifyMemberInBoard(profileId: string, boardId: string) {

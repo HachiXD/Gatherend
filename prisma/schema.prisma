@@ -41,6 +41,11 @@ model UploadedAsset {
   boardScope                   Board?                 @relation("UploadedAssetBoardScope", fields: [boardId], references: [id], onDelete: SetNull)
   profileAvatarFor             Profile[]              @relation("ProfileAvatarAsset")
   profileBannerFor             Profile[]              @relation("ProfileBannerAsset")
+  profileCardLeftTopImageFor   Profile[]              @relation("ProfileCardLeftTopImageAsset")
+  profileCardLeftBottomRightTopImageFor Profile[]     @relation("ProfileCardLeftBottomRightTopImageAsset")
+  profileCardLeftBottomRightBottomImageFor Profile[]  @relation("ProfileCardLeftBottomRightBottomImageAsset")
+  profileCardRightTopImageFor  Profile[]              @relation("ProfileCardRightTopImageAsset")
+  profileCardRightBottomImageFor Profile[]            @relation("ProfileCardRightBottomImageAsset")
   boardImageFor                Board[]                @relation("BoardImageAsset")
   communityPostImageFor        CommunityPost[]        @relation("CommunityPostImageAsset")
   communityPostCommentImageFor CommunityPostComment[] @relation("CommunityPostCommentImageAsset")
@@ -60,6 +65,12 @@ model Profile {
   id                              String                     @id @default(uuid())
   avatarAssetId                   String?
   bannerAssetId                   String?
+  profileCardConfig               Json?
+  profileCardLeftTopImageAssetId  String?
+  profileCardLeftBottomRightTopImageAssetId String?
+  profileCardLeftBottomRightBottomImageAssetId String?
+  profileCardRightTopImageAssetId String?
+  profileCardRightBottomImageAssetId String?
   email                           String
   createdAt                       DateTime                   @default(now())
   updatedAt                       DateTime                   @updatedAt
@@ -68,7 +79,6 @@ model Profile {
   username                        String
   userId                          String                     @unique
   badge                           String?                    @db.VarChar(30)
-  longDescription                 String?                    @db.VarChar(200)
   badgeStickerId                  String?
   themeConfig                     Json?
   banReason                       String?
@@ -83,8 +93,16 @@ model Profile {
   profileTags                     String[]                   @default([])
   usernameColor                   Json?
   usernameFormat                  Json?
+  // `profileCardConfig` stores the fixed-layout mini profile page state:
+  // - style: backgroundColor, boxColor, rounded, shadows
+  // - content: pageTitle, leftTopText, leftBottomText sections, right image titles
   avatarAsset                     UploadedAsset?             @relation("ProfileAvatarAsset", fields: [avatarAssetId], references: [id], onDelete: SetNull)
   bannerAsset                     UploadedAsset?             @relation("ProfileBannerAsset", fields: [bannerAssetId], references: [id], onDelete: SetNull)
+  profileCardLeftTopImageAsset    UploadedAsset?             @relation("ProfileCardLeftTopImageAsset", fields: [profileCardLeftTopImageAssetId], references: [id], onDelete: SetNull)
+  profileCardLeftBottomRightTopImageAsset UploadedAsset?     @relation("ProfileCardLeftBottomRightTopImageAsset", fields: [profileCardLeftBottomRightTopImageAssetId], references: [id], onDelete: SetNull)
+  profileCardLeftBottomRightBottomImageAsset UploadedAsset?  @relation("ProfileCardLeftBottomRightBottomImageAsset", fields: [profileCardLeftBottomRightBottomImageAssetId], references: [id], onDelete: SetNull)
+  profileCardRightTopImageAsset   UploadedAsset?             @relation("ProfileCardRightTopImageAsset", fields: [profileCardRightTopImageAssetId], references: [id], onDelete: SetNull)
+  profileCardRightBottomImageAsset UploadedAsset?            @relation("ProfileCardRightBottomImageAsset", fields: [profileCardRightBottomImageAssetId], references: [id], onDelete: SetNull)
   badgeSticker                    Sticker?                   @relation("ProfileBadgeSticker", fields: [badgeStickerId], references: [id], onDelete: SetNull)
   boards                          Board[]
   boardBans                       BoardBan[]                 @relation("BoardBanTarget")
@@ -131,6 +149,11 @@ model Profile {
   @@index([discriminator])
   @@index([avatarAssetId])
   @@index([bannerAssetId])
+  @@index([profileCardLeftTopImageAssetId])
+  @@index([profileCardLeftBottomRightTopImageAssetId])
+  @@index([profileCardLeftBottomRightBottomImageAssetId])
+  @@index([profileCardRightTopImageAssetId])
+  @@index([profileCardRightBottomImageAssetId])
   @@index([badgeStickerId])
 }
 
@@ -829,6 +852,7 @@ enum AssetVisibility {
 enum AssetContext {
   PROFILE_AVATAR
   PROFILE_BANNER
+  PROFILE_CARD_IMAGE
   BOARD_IMAGE
   BOARD_RULES_IMAGE
   COMMUNITY_POST_IMAGE

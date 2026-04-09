@@ -3,6 +3,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import type { UsernameFormatConfig } from "@/lib/username-format";
+import type { ProfileCardConfig } from "@/lib/profile-card-config";
 import { useTokenGetter } from "@/components/providers/token-manager-provider";
 import { getExpressAxiosConfig } from "@/lib/express-fetch";
 import type {
@@ -16,11 +17,18 @@ export interface ProfileCard {
   username: string;
   discriminator: string | null;
   avatarAsset: ClientUploadedAsset | null;
+  bannerAsset: ClientUploadedAsset | null;
   usernameColor: unknown; // JSON field
   badge: string | null;
   badgeSticker: ClientStickerAssetRef | null;
   usernameFormat: UsernameFormatConfig | string | null; // Supports both legacy and new format
-  longDescription: string | null;
+  profileTags: string[];
+  profileCardConfig: ProfileCardConfig | null;
+  profileCardLeftTopImageAsset: ClientUploadedAsset | null;
+  profileCardLeftBottomRightTopImageAsset: ClientUploadedAsset | null;
+  profileCardLeftBottomRightBottomImageAsset: ClientUploadedAsset | null;
+  profileCardRightTopImageAsset: ClientUploadedAsset | null;
+  profileCardRightBottomImageAsset: ClientUploadedAsset | null;
 }
 
 const SOCKET_URL =

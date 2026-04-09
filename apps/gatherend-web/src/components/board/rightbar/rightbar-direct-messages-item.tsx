@@ -140,10 +140,12 @@ export const DirectMessageItem = memo(function DirectMessageItemComponent({
           disabled={isPending || isHiding}
           className={cn(
             "group flex items-center gap-x-2 w-full cursor-pointer transition mb-1 ml-1 py-1.5 px-2 rounded-none relative",
-            "border border-transparent hover:border-theme-border hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_-1px_0_rgba(0,0,0,0.38)]",
-            "hover:bg-theme-channel-hover",
+            "border border-transparent",
+            !isActive &&
+              "hover:border-theme-border hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_-1px_0_rgba(0,0,0,0.38)]",
+            !isActive && "hover:bg-theme-channel-hover",
             isActive &&
-              "bg-theme-channel-active border-transparent border-l-4 [border-left-color:var(--theme-border-accent-active-channel)] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_-1px_0_rgba(0,0,0,0.38)]",
+              "bg-theme-channel-active border-transparent border-l-4 [border-left-color:var(--theme-border-accent-active-channel)] shadow-[inset_0_1px_0_rgba(0,0,0,0.42),inset_1px_0_0_rgba(0,0,0,0.36),inset_-1px_0_0_rgba(255,255,255,0.14),inset_0_-1px_0_rgba(255,255,255,0.18)]",
             (isPending || isHiding) && "opacity-50",
           )}
           onMouseEnter={() => {
@@ -162,7 +164,8 @@ export const DirectMessageItem = memo(function DirectMessageItemComponent({
             className="h-8 w-8 md:h-8 md:w-8"
             ringColorClass="indicator-ring"
             overlayRingColorClass={cn(
-              "bg-theme-bg-secondary group-hover:bg-theme-channel-hover",
+              "bg-theme-bg-secondary",
+              !isActive && "group-hover:bg-theme-channel-hover",
               isActive && "!bg-theme-channel-active",
               (isPending || isHiding) && "opacity-50",
             )}
@@ -178,7 +181,10 @@ export const DirectMessageItem = memo(function DirectMessageItemComponent({
                 getGradientAnimationClass(otherProfile.usernameColor),
                 // Si no tiene color personalizado, usar estilos por defecto
                 !otherProfile.usernameColor &&
-                  "text-theme-text-tertiary group-hover:text-theme-text-secondary",
+                  cn(
+                    "text-theme-text-tertiary",
+                    !isActive && "group-hover:text-theme-text-secondary",
+                  ),
                 isActive &&
                   !otherProfile.usernameColor &&
                   "text-theme-text-primary",

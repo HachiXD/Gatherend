@@ -108,7 +108,6 @@ export async function rateLimit(
   const key = config.prefix ? `${config.prefix}:${identifier}` : identifier;
 
   // Usar rate limiting en memoria
-  // En producción con alta escala, considera usar Upstash Redis
   return inMemoryRateLimit(key, config);
 }
 
@@ -146,7 +145,7 @@ export async function checkRateLimit(
 
 // Configuraciones predefinidas para diferentes endpoints
 export const RATE_LIMITS = {
-  /** Auth endpoints - muy estricto: 5 requests por minuto */
+  /** Auth endpoints - 5 requests por minuto */
   auth: {
     limit: 5,
     windowSeconds: 60,

@@ -11,6 +11,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactNode,
 } from "react";
 
 import { ChatWelcome } from "./chat-welcome";
@@ -18,6 +19,9 @@ import { ChatItemOptimized } from "./chat-item-optimized";
 import { WelcomeMessageCard } from "./welcome-message-card";
 import { ChatSkeleton } from "./chat-skeleton";
 import { GoToRecentButton } from "./go-to-recent-button";
+import { UserAvatarMenu } from "@/components/user-avatar-menu";
+import { UserAvatar } from "@/components/user-avatar";
+import { AnimatedSticker } from "@/components/ui/animated-sticker";
 
 import {
   getMessageAuthor,
@@ -36,6 +40,7 @@ import { useTranslation } from "@/i18n";
 import { useMountedChatRoom } from "@/hooks/use-chat-room-lifecycle-store";
 import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
 import { useChannelData } from "@/hooks/use-board-data";
+import { isMissingMessageAuthor } from "@/hooks/chat/message-author";
 
 // CONSTANTS
 
@@ -51,6 +56,296 @@ const formatMessageTimestamp = (date: Date): string => {
   if (isYesterday(date)) return `Yesterday, ${format(date, "hh:mm a")}`;
   return format(date, DATE_FORMAT);
 };
+
+function isTextBubbleGroupableMessage(message: ChatMessage): boolean {
+  return (
+    !("type" in message && message.type === "WELCOME") &&
+    !message.attachmentAsset &&
+    !message.sticker
+  );
+}
+
+function getTextBubbleGroupPosition(
+  messages: ChatMessage[],
+  index: number,
+  compactById: Record<string, boolean>,
+): "single" | "start" | "middle" | "end" | undefined {
+  const current = messages[index];
+  if (!current || !isTextBubbleGroupableMessage(current)) return undefined;
+
+  const prev = index > 0 ? messages[index - 1] : undefined;
+  const next = index < messages.length - 1 ? messages[index + 1] : undefined;
+
+  const currentCompact = compactById[current.id] ?? false;
+  const continuesFromPrev =
+    currentCompact && Boolean(prev && isTextBubbleGroupableMessage(prev));
+  const nextGroupable = next ? isTextBubbleGroupableMessage(next) : false;
+  const continuesToNext =
+    nextGroupable && next ? (compactById[next.id] ?? false) : false;
+
+  if (continuesFromPrev && continuesToNext) return "middle";
+  if (continuesFromPrev) return "end";
+  if (continuesToNext) return "start";
+  if (!currentCompact) return "single";
+  return undefined;
+}
+
+type MessageRenderNode =
+  | { kind: "single"; message: ChatMessage; index: number }
+  | {
+      kind: "text-group";
+      items: Array<{ message: ChatMessage; index: number }>;
+    };
+
+function getGroupedBubbleMeasurements(node: HTMLElement | null) {
+  if (!node) return [];
+
+  return Array.from(
+    node.querySelectorAll<HTMLElement>('[data-chat-item-block="text-bubble"]'),
+  ).map((bubble) => {
+    const rect = bubble.getBoundingClientRect();
+    const messageId =
+      bubble
+        .closest<HTMLElement>("[data-message-id]")
+        ?.getAttribute("data-message-id") ?? null;
+
+    return {
+      messageId,
+      width: Math.ceil(rect.width),
+      height: Math.ceil(rect.height),
+      textLength: bubble.textContent?.trim().length ?? 0,
+      textPreview: bubble.textContent?.replace(/\s+/g, " ").trim().slice(0, 80),
+    };
+  });
+}
+
+function getGroupedBubbleWidth(node: HTMLElement | null): number {
+  const measurements = getGroupedBubbleMeasurements(node);
+  let nextWidth = 0;
+
+  measurements.forEach((bubble) => {
+    nextWidth = Math.max(nextWidth, bubble.width);
+  });
+
+  return nextWidth;
+}
+
+function GroupedTextBubbleRun({
+  items,
+  messages,
+  compactById,
+  compactRevision,
+  isChannel,
+  currentProfile,
+  deletedMemberLabel,
+  renderMessage,
+}: {
+  items: Array<{ message: ChatMessage; index: number }>;
+  messages: ChatMessage[];
+  compactById: Record<string, boolean>;
+  compactRevision: number;
+  isChannel: boolean;
+  currentProfile: ChatMessagesProps["currentProfile"];
+  deletedMemberLabel: string;
+  renderMessage: (
+    msg: ChatMessage,
+    index: number,
+    messages: ChatMessage[],
+    options?: {
+      groupedTextBubble?: boolean;
+      hideAvatarColumn?: boolean;
+    },
+  ) => ReactNode;
+}) {
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  const [bubbleWidthPx, setBubbleWidthPx] = useState<number | undefined>(
+    undefined,
+  );
+  const firstItem = items[0];
+  const firstMessage = firstItem?.message;
+  const authorProfile = firstMessage
+    ? getMessageAuthor(firstMessage, {
+        fallbackLabel: deletedMemberLabel,
+      })
+    : null;
+  const channelMessage =
+    isChannel && firstMessage ? (firstMessage as ChannelMessage) : null;
+  const canOpenAuthorProfile = !isMissingMessageAuthor(authorProfile);
+  const groupedTimestamp = firstMessage
+    ? formatMessageTimestamp(new Date(firstMessage.createdAt))
+    : "";
+
+  useLayoutEffect(() => {
+    const node = contentRef.current;
+    if (!node) return;
+
+    const nextWidth = getGroupedBubbleWidth(node);
+    setBubbleWidthPx((prev) =>
+      prev === nextWidth || nextWidth === 0 ? prev : nextWidth,
+    );
+  }, [items]);
+
+  useEffect(() => {
+    const node = contentRef.current;
+    if (!node || typeof ResizeObserver === "undefined") return;
+
+    const observer = new ResizeObserver(() => {
+      const nextWidth = getGroupedBubbleWidth(node);
+      setBubbleWidthPx((prev) =>
+        prev === nextWidth || nextWidth === 0 ? prev : nextWidth,
+      );
+    });
+
+    observer.observe(node);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [items]);
+
+  return (
+    <div className="px-2">
+      <div className="group flex w-full items-start gap-x-2">
+        <div className="shrink-0 pt-3">
+          {canOpenAuthorProfile ? (
+            <UserAvatarMenu
+              profileId={authorProfile?.id || ""}
+              profileImageUrl={authorProfile?.imageUrl || ""}
+              username={authorProfile?.username || ""}
+              discriminator={authorProfile?.discriminator}
+              currentProfileId={currentProfile.id}
+              currentProfile={currentProfile}
+              memberId={channelMessage?.member?.id || undefined}
+              showStatus={false}
+              usernameColor={authorProfile?.usernameColor}
+              usernameFormat={authorProfile?.usernameFormat}
+              avatarAnimationMode="onHover"
+            />
+          ) : (
+            <UserAvatar
+              src={authorProfile?.imageUrl || undefined}
+              profileId={authorProfile?.id}
+              showStatus={false}
+              className="h-10 w-10"
+            />
+          )}
+        </div>
+
+        <div className="flex w-full min-w-0 flex-col overflow-hidden pt-0.5">
+          <div className="mb-1 flex items-center gap-1">
+            {(authorProfile?.badge || authorProfile?.badgeStickerUrl) && (
+              <>
+                <span className="inline-flex items-center gap-0.5">
+                  {authorProfile?.badgeStickerUrl && (
+                    <AnimatedSticker
+                      src={authorProfile.badgeStickerUrl}
+                      alt="badge"
+                      containerClassName="h-5 w-5"
+                      fallbackWidthPx={20}
+                      fallbackHeightPx={20}
+                      className="object-contain"
+                    />
+                  )}
+                  {authorProfile?.badge && (
+                    <span className="pt-2.5 text-[11px] leading-none text-theme-text-tertiary">
+                      {authorProfile.badge}
+                    </span>
+                  )}
+                </span>
+                <span className="pt-2.5 text-[11px] text-theme-text-tertiary">
+                  |
+                </span>
+              </>
+            )}
+            <span className="pt-2.5 text-[11px] text-theme-text-tertiary">
+              {groupedTimestamp}
+            </span>
+          </div>
+
+          <div ref={contentRef} className="relative min-w-0">
+            {bubbleWidthPx ? (
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-y-0 left-0 rounded-md bg-theme-bg-overlay-primary/72"
+                style={{ width: `${bubbleWidthPx}px` }}
+              />
+            ) : null}
+
+            <div className="relative z-10">
+              {items.map((item) => {
+                const msg = item.message;
+
+                return (
+                  <div
+                    key={msg.id}
+                    data-message-id={msg.id}
+                    data-message-compact={compactById[msg.id] ? "1" : "0"}
+                    data-compact-revision={compactRevision}
+                  >
+                    {renderMessage(msg, item.index, messages, {
+                      groupedTextBubble: true,
+                      hideAvatarColumn: true,
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function buildMessageRenderNodes(
+  messages: ChatMessage[],
+  compactById: Record<string, boolean>,
+): MessageRenderNode[] {
+  const nodes: MessageRenderNode[] = [];
+
+  for (let index = 0; index < messages.length; index += 1) {
+    const current = messages[index];
+    if (!current) continue;
+
+    const canStartTextGroup =
+      isTextBubbleGroupableMessage(current) &&
+      !(compactById[current.id] ?? false) &&
+      index < messages.length - 1;
+
+    if (!canStartTextGroup) {
+      nodes.push({ kind: "single", message: current, index });
+      continue;
+    }
+
+    const groupItems: Array<{ message: ChatMessage; index: number }> = [
+      { message: current, index },
+    ];
+    let cursor = index + 1;
+
+    while (cursor < messages.length) {
+      const next = messages[cursor];
+      if (
+        !next ||
+        !isTextBubbleGroupableMessage(next) ||
+        !(compactById[next.id] ?? false)
+      ) {
+        break;
+      }
+
+      groupItems.push({ message: next, index: cursor });
+      cursor += 1;
+    }
+
+    if (groupItems.length > 1) {
+      nodes.push({ kind: "text-group", items: groupItems });
+      index = cursor - 1;
+    } else {
+      nodes.push({ kind: "single", message: current, index });
+    }
+  }
+
+  return nodes;
+}
 
 // COMPONENT
 
@@ -467,7 +762,6 @@ function ChatMessagesComponent({
     }
 
     const { distanceFromBottom } = pos;
-
     // PINNED STATE
     // Pinned-to-bottom is a combination of scroll position AND
     // "present is mounted". If you have evicted newer content (or
@@ -546,7 +840,15 @@ function ChatMessagesComponent({
     isChannel && welcomeChannel ? welcomeChannel.name : name;
 
   const renderMessage = useCallback(
-    (msg: ChatMessage, index: number, messages: ChatMessage[]) => {
+    (
+      msg: ChatMessage,
+      index: number,
+      messages: ChatMessage[],
+      options?: {
+        groupedTextBubble?: boolean;
+        hideAvatarColumn?: boolean;
+      },
+    ) => {
       const isOptimistic = Boolean("isOptimistic" in msg && msg.isOptimistic);
       const isFailed = Boolean("isFailed" in msg && msg.isFailed);
       const tempId = "tempId" in msg ? (msg.tempId as string) : undefined;
@@ -580,6 +882,11 @@ function ChatMessagesComponent({
         : null;
 
       const stableCompact = chatWindow.compactById[msg.id] ?? false;
+      const textBubbleGroupPosition = getTextBubbleGroupPosition(
+        messages,
+        index,
+        chatWindow.compactById,
+      );
       const isLast = index === messages.length - 1;
 
       return (
@@ -611,6 +918,9 @@ function ChatMessagesComponent({
           pinned={msg.pinned || false}
           isCompact={stableCompact}
           isLastMessage={isLast}
+          textBubbleGroupPosition={textBubbleGroupPosition}
+          groupedTextBubble={options?.groupedTextBubble}
+          hideAvatarColumn={options?.hideAvatarColumn}
         />
       );
     },
@@ -626,21 +936,48 @@ function ChatMessagesComponent({
   );
 
   const messageNodes = useMemo(() => {
-    return messages.map((msg, index) => (
-      <div
-        key={msg.id}
-        data-message-id={msg.id}
-        data-message-compact={chatWindow.compactById[msg.id] ? "1" : "0"}
-        data-compact-revision={chatWindow.compactRevision}
-      >
-        {renderMessage(msg, index, messages)}
-      </div>
-    ));
+    const renderNodes = buildMessageRenderNodes(
+      messages,
+      chatWindow.compactById,
+    );
+
+    return renderNodes.map((node) => {
+      if (node.kind === "single") {
+        const msg = node.message;
+        return (
+          <div
+            key={msg.id}
+            data-message-id={msg.id}
+            data-message-compact={chatWindow.compactById[msg.id] ? "1" : "0"}
+            data-compact-revision={chatWindow.compactRevision}
+          >
+            {renderMessage(msg, node.index, messages)}
+          </div>
+        );
+      }
+
+      return (
+        <GroupedTextBubbleRun
+          key={`text-group-${node.items[0]?.message.id}`}
+          items={node.items}
+          messages={messages}
+          compactById={chatWindow.compactById}
+          compactRevision={chatWindow.compactRevision}
+          isChannel={isChannel}
+          currentProfile={currentProfile}
+          deletedMemberLabel={t.chat.deletedMember}
+          renderMessage={renderMessage}
+        />
+      );
+    });
   }, [
     chatWindow.compactById,
     chatWindow.compactRevision,
+    currentProfile,
+    isChannel,
     messages,
     renderMessage,
+    t.chat.deletedMember,
   ]);
 
   // LOADING STATE

@@ -46,9 +46,7 @@ interface InfiniteData {
   pageParams: unknown[];
 }
 
-type CachedProfile = ClientProfileSummary & {
-  longDescription?: string | null;
-};
+type CachedProfile = ClientProfileSummary;
 
 type ProfileUpdateFields = Partial<
   Pick<
@@ -61,7 +59,6 @@ type ProfileUpdateFields = Partial<
     | "profileTags"
     | "badge"
     | "badgeSticker"
-    | "longDescription"
   >
 >;
 

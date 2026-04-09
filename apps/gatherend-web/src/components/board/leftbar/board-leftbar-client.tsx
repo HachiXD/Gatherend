@@ -27,6 +27,7 @@ import {
 interface LeftbarClientProps {
   role?: MemberRole;
   boardId: string;
+  dominantColor?: string | null;
 }
 
 const canReorder = (role?: MemberRole) =>
@@ -38,7 +39,11 @@ const canReorder = (role?: MemberRole) =>
  * Lista de canales con drag & drop para reordenar.
  * Sin categorías — todos los canales son root.
  */
-export const LeftbarClient = ({ role, boardId }: LeftbarClientProps) => {
+export const LeftbarClient = ({
+  role,
+  boardId,
+  dominantColor,
+}: LeftbarClientProps) => {
   // false on server, true on client — avoids DnD hydration mismatch
   const isMounted = useSyncExternalStore(() => () => {}, () => true, () => false);
 
@@ -90,11 +95,17 @@ export const LeftbarClient = ({ role, boardId }: LeftbarClientProps) => {
   // Pre-render without DnD to avoid hydration mismatch
   if (!isMounted) {
     return (
-      <div className="flex flex-col gap-1">
-        {sortedRootChannels.map((ch) => (
-          <LeftbarChannel key={ch.id} channel={ch} boardId={boardId} role={role} />
-        ))}
-      </div>
+        <div className="flex flex-col gap-1">
+          {sortedRootChannels.map((ch) => (
+            <LeftbarChannel
+              key={ch.id}
+              channel={ch}
+              boardId={boardId}
+              role={role}
+              dominantColor={dominantColor}
+            />
+          ))}
+        </div>
     );
   }
 
@@ -107,7 +118,12 @@ export const LeftbarClient = ({ role, boardId }: LeftbarClientProps) => {
         <div className="flex flex-col gap-1">
           {sortedRootChannels.map((ch) => (
             <SortableItem key={ch.id} id={ch.id} disableDrag={dragDisabled}>
-              <LeftbarChannel channel={ch} boardId={boardId} role={role} />
+              <LeftbarChannel
+                channel={ch}
+                boardId={boardId}
+                role={role}
+                dominantColor={dominantColor}
+              />
             </SortableItem>
           ))}
         </div>
@@ -115,7 +131,12 @@ export const LeftbarClient = ({ role, boardId }: LeftbarClientProps) => {
 
       <DragOverlay>
         {activeChannel ? (
-          <LeftbarChannel channel={activeChannel} boardId={boardId} role={role} />
+          <LeftbarChannel
+            channel={activeChannel}
+            boardId={boardId}
+            role={role}
+            dominantColor={dominantColor}
+          />
         ) : null}
       </DragOverlay>
     </DndContext>

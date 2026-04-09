@@ -111,7 +111,11 @@ const ChannelsSectionClient = memo(function ChannelsSectionClient() {
       </div>
       <ScrollArea className="flex-1 min-h-0 px-1">
         <div className="px-1 pb-2">
-          <LeftbarClient boardId={board.id} role={role} />
+          <LeftbarClient
+            boardId={board.id}
+            role={role}
+            dominantColor={board.imageAsset?.dominantColor}
+          />
         </div>
       </ScrollArea>
     </div>

@@ -56,7 +56,6 @@ async function notifyMemberJoined(
       badge: string | null;
       badgeSticker: { id: string; asset: import("@/types/uploaded-assets").ClientUploadedAsset | null } | null;
       usernameFormat: unknown;
-      longDescription: string | null;
     };
   },
 ) {
@@ -225,7 +224,6 @@ const InviteCodePage = async ({ params }: InviteCodePageProps) => {
         badge: profile.badge,
         badgeSticker: profile.badgeSticker,
         usernameFormat: profile.usernameFormat,
-        longDescription: profile.longDescription,
       },
     });
 

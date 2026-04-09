@@ -74,34 +74,29 @@ export const BoardLeftbar = ({
     useCallback((state) => state.switchToMembers, []),
   );
 
-  // Navigate to forum view for this board
   const handleForum = useCallback(() => {
     switchToForum(board.id);
   }, [switchToForum, board.id]);
 
-  // Navigate to rules view for this board
   const handleRules = useCallback(() => {
     switchToRules(board.id);
   }, [switchToRules, board.id]);
 
-  // Navigate to members view for this board
   const handleMembers = useCallback(() => {
     switchToMembers(board.id);
   }, [switchToMembers, board.id]);
 
   return (
     <div
-      className="flex flex-col h-full w-full text-primary"
+      className="flex h-full w-full flex-col bg-theme-bg-secondary text-primary"
       style={
         accentVars
           ? ({
               ...accentVars,
-              backgroundColor: accentVars["--leftbar-bg"],
             } as React.CSSProperties)
           : undefined
       }
     >
-      {/* Banner con imagen del board y dropdown menu */}
       <LeftbarBanner
         imageAsset={board.imageAsset}
         boardName={board.name}
@@ -111,126 +106,109 @@ export const BoardLeftbar = ({
         currentProfileId={currentProfileId}
       />
 
-      {/* Resumen del board */}
-      <div className="scrollbar-navigation flex-1 min-h-0 overflow-y-auto px-2 pt-2 pb-1.5 flex flex-col gap-2">
-        {/* Navigation buttons */}
-        <div className="flex gap-1.5">
+      <div className="scrollbar-navigation flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-2 pt-2 pb-1.5">
+        <div className="shrink-0 flex overflow-hidden border border-theme-channel-type-active-border -mb-1.5">
           <button
             onClick={handleRules}
             className={cn(
-              "flex h-12 flex-1 cursor-pointer flex-col rounded-none border overflow-hidden text-[16px] font-medium transition shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_1px_0_0_rgba(255,255,255,0.14),inset_-1px_0_0_rgba(0,0,0,0.40),inset_0_-1px_0_rgba(0,0,0,0.55)]",
+              "group flex h-12 flex-1 cursor-pointer flex-col items-center justify-center gap-1 rounded-none bg-theme-channel-type-active-border px-2 text-[11px] font-semibold uppercase tracking-[0.04em] text-theme-channel-type-active-text transition",
               isRules
-                ? "border-theme-channel-type-active-border bg-theme-channel-type-active-border text-theme-channel-type-active-text"
-                : "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border",
+                ? "bg-[var(--theme-button-primary-active)] shadow-[inset_0_1px_0_rgba(0,0,0,0.42),inset_1px_0_0_rgba(0,0,0,0.36),inset_-1px_0_0_rgba(255,255,255,0.14),inset_0_-1px_0_rgba(255,255,255,0.18)]"
+                : "shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(0,0,0,0.55)]",
             )}
           >
-            <span className="flex w-full items-center justify-center border-b border-current/40 px-3 py-0">
-              Reglas
-            </span>
-            <div className="flex flex-1 items-center justify-center bg-black/15">
-              <ScrollText className="h-4 w-4" />
-            </div>
+            <ScrollText className="h-4 w-4 shrink-0" />
+            <span className="leading-none group-hover:underline">Reglas</span>
           </button>
           <button
             onClick={handleForum}
             className={cn(
-              "flex h-12 flex-1 cursor-pointer flex-col rounded-none border overflow-hidden text-[16px] font-medium transition shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_1px_0_0_rgba(255,255,255,0.14),inset_-1px_0_0_rgba(0,0,0,0.40),inset_0_-1px_0_rgba(0,0,0,0.55)]",
+              "group flex h-12 flex-1 cursor-pointer flex-col items-center justify-center gap-1 bg-theme-channel-type-active-border px-2 text-[11px] font-semibold uppercase tracking-[0.04em] text-theme-channel-type-active-text transition",
               isForum
-                ? "border-theme-channel-type-active-border bg-theme-channel-type-active-border text-theme-channel-type-active-text"
-                : "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border",
+                ? "bg-[var(--theme-button-primary-active)] shadow-[inset_0_1px_0_rgba(0,0,0,0.42),inset_1px_0_0_rgba(0,0,0,0.36),inset_-1px_0_0_rgba(255,255,255,0.14),inset_0_-1px_0_rgba(255,255,255,0.18)]"
+                : "shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(0,0,0,0.55)]",
             )}
           >
-            <span className="flex w-full items-center justify-center border-b border-current/40 px-3 py-0">
-              Foro
-            </span>
-            <div className="flex flex-1 items-center justify-center bg-black/15">
-              <MessageSquare className="h-4 w-4" />
-            </div>
+            <MessageSquare className="h-4 w-4 shrink-0" />
+            <span className="leading-none group-hover:underline">Foro</span>
           </button>
           <button
             onClick={handleMembers}
             className={cn(
-              "flex h-12 flex-1 cursor-pointer flex-col rounded-none border overflow-hidden text-[16px] font-medium transition shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_1px_0_0_rgba(255,255,255,0.14),inset_-1px_0_0_rgba(0,0,0,0.40),inset_0_-1px_0_rgba(0,0,0,0.55)]",
+              "group flex h-12 flex-1 cursor-pointer flex-col items-center justify-center gap-1 bg-theme-channel-type-active-border px-2 text-[11px] font-semibold uppercase tracking-[0.04em] text-theme-channel-type-active-text transition",
               isMembers
-                ? "border-theme-channel-type-active-border bg-theme-channel-type-active-border text-theme-channel-type-active-text"
-                : "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border",
+                ? "bg-[var(--theme-button-primary-active)] shadow-[inset_0_1px_0_rgba(0,0,0,0.42),inset_1px_0_0_rgba(0,0,0,0.36),inset_-1px_0_0_rgba(255,255,255,0.14),inset_0_-1px_0_rgba(255,255,255,0.18)]"
+                : "shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(0,0,0,0.55)]",
             )}
           >
-            <span className="flex w-full items-center justify-center border-b border-current/40 px-3 py-0">
-              Miembros
-            </span>
-            <div className="flex flex-1 items-center justify-center bg-black/15">
-              <Users className="h-4 w-4 " />
-            </div>
+            <Users className="h-4 w-4 shrink-0" />
+            <span className="leading-none group-hover:underline">Miembros</span>
           </button>
         </div>
 
-        {/* Stats */}
-        <div className=" bg-transparent px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-          <div className="grid grid-cols-2 gap-x-2 gap-y-2">
-            <div>
-              <p className="mb-0.5 text-[11px] font-bold uppercase tracking-wide text-theme-text-subtle">
+        <div className="shrink-0 mt-2 bg-transparent px-0.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+          <div className="grid grid-cols-[0.88fr_1.12fr] gap-x-2 gap-y-2">
+            <div className="flex min-h-[38px] flex-col justify-center gap-0.5 border border-theme-channel-type-active-border bg-[var(--theme-channel-type-active-soft-bg)] px-2 py-1 text-theme-channel-type-active-text shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_1px_0_0_rgba(255,255,255,0.14),inset_-1px_0_0_rgba(0,0,0,0.40),inset_0_-1px_0_rgba(0,0,0,0.55)]">
+              <p className="text-[10px] font-bold uppercase tracking-[0.06em] text-theme-channel-type-active-text/70">
                 Miembros
               </p>
-              <div className="flex h-7 items-center gap-1.5 border border-theme-border-subtle bg-theme-bg-edit-form/35 px-1.5 text-[12px] text-theme-text-muted">
-                <Users className="h-3 w-3  shrink-0" />
+              <div className="flex items-center gap-1.5 text-[13px] font-semibold">
+                <Users className="h-3.5 w-3.5 shrink-0" />
                 <span className="mt-0.5">
                   {board.members.length.toLocaleString()}
                 </span>
               </div>
             </div>
-            <div>
-              <p className="mb-0.5 text-[11px] font-bold uppercase tracking-wide text-theme-text-subtle">
-                En línea
+            <div className="flex min-h-[38px] flex-col justify-center gap-0 border border-theme-channel-type-active-border bg-[var(--theme-channel-type-active-soft-bg)] px-2 py-0 text-theme-channel-type-active-text shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_1px_0_0_rgba(255,255,255,0.14),inset_-1px_0_0_rgba(0,0,0,0.40),inset_0_-1px_0_rgba(0,0,0,0.55)]">
+              <p className="text-[10px] font-bold uppercase tracking-[0.06em] text-theme-channel-type-active-text/70">
+                En linea
               </p>
-              <div className="flex h-7 items-center gap-1.5 border border-theme-border-subtle bg-theme-bg-edit-form/35 px-1.5 text-[12px] text-theme-text-muted">
+              <div className="flex items-center gap-1.5 text-[13px] font-semibold">
                 <Circle className="h-2.5 w-2.5 shrink-0 fill-emerald-500 text-emerald-500" />
                 <span className="mt-0.5">{onlineCount}</span>
               </div>
             </div>
-            <div>
-              <p className="mb-0.5 text-[11px] font-bold uppercase tracking-wide text-theme-text-subtle">
-                Rooms
+            <div className="flex min-h-[38px] flex-col justify-center gap-0.5 border border-theme-channel-type-active-border bg-[var(--theme-channel-type-active-soft-bg)] px-2 py-1 text-theme-channel-type-active-text shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_1px_0_0_rgba(255,255,255,0.14),inset_-1px_0_0_rgba(0,0,0,0.40),inset_0_-1px_0_rgba(0,0,0,0.55)]">
+              <p className="text-[10px] font-bold uppercase tracking-[0.06em] text-theme-channel-type-active-text/70">
+                Chats
               </p>
-              <div className="flex h-7 items-center gap-1.5 border border-theme-border-subtle bg-theme-bg-edit-form/35 px-1.5 text-[12px] text-theme-text-muted">
-                <MessagesSquare className="h-3 w-3 shrink-0" />
+              <div className="flex items-center gap-1.5 text-[13px] font-semibold">
+                <MessagesSquare className="h-3.5 w-3.5 shrink-0" />
                 <span className="mt-0.5">{board.channels.length}</span>
               </div>
             </div>
-            <div>
-              <p className="mb-0.5 text-[11px] font-bold uppercase tracking-wide text-theme-text-subtle">
+            <div className="flex min-h-[38px] flex-col justify-center gap-0.5 border border-theme-channel-type-active-border bg-[var(--theme-channel-type-active-soft-bg)] px-2 py-1 text-theme-channel-type-active-text shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_1px_0_0_rgba(255,255,255,0.14),inset_-1px_0_0_rgba(0,0,0,0.40),inset_0_-1px_0_rgba(0,0,0,0.55)]">
+              <p className="text-[10px] font-bold uppercase tracking-[0.06em] text-theme-channel-type-active-text/70">
                 Posts esta semana
               </p>
-              <div className="flex h-7 items-center gap-1.5 border border-theme-border-subtle bg-theme-bg-edit-form/35 px-1.5 text-[12px] text-theme-text-muted">
-                <BookOpenText className="h-3 w-3 shrink-0" />
+              <div className="flex items-center gap-1.5 text-[13px] font-semibold">
+                <BookOpenText className="h-3.5 w-3.5 shrink-0" />
                 <span className="mt-0.5">{board.recentPostCount7d}</span>
               </div>
             </div>
-            <div className="col-span-2">
-              <p className="mb-0.5 text-[11px] font-bold uppercase tracking-wide text-theme-text-subtle">
-                Fecha de Creación
+            <div className="col-span-2 flex min-h-[38px] flex-col justify-center gap-0.5 border border-theme-channel-type-active-border bg-[var(--theme-channel-type-active-soft-bg)] px-2 py-1 text-theme-channel-type-active-text shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_1px_0_0_rgba(255,255,255,0.14),inset_-1px_0_0_rgba(0,0,0,0.40),inset_0_-1px_0_rgba(0,0,0,0.55)]">
+              <p className="text-[10px] font-bold uppercase tracking-[0.06em] text-theme-channel-type-active-text/70">
+                Fecha de creacion
               </p>
-              <div className="flex h-7 items-center gap-1.5 border border-theme-border-subtle bg-theme-bg-edit-form/35 px-1.5 text-[12px] text-theme-text-muted">
-                <span>{createdDate}</span>
+              <div className="flex items-center gap-1.5 text-[12px] font-semibold">
+                <span className="mt-0.5">{createdDate}</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Descripción */}
         {board.description && (
           <div className="border border-theme-border bg-theme-bg-overlay-primary/78 px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.26)]">
-            <h3 className="border-b border-theme-border -mt-0.5 pb-1 mb-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-theme-text-muted">
-              Descripción
+            <h3 className="-mt-0.5 mb-2 border-b border-theme-border pb-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-theme-text-muted">
+              Descripcion
             </h3>
-            <p className="text-[12px] text-theme-text-secondary leading-relaxed line-clamp-6">
+            <p className="line-clamp-6 text-[12px] leading-relaxed text-theme-text-secondary">
               {board.description}
             </p>
           </div>
         )}
       </div>
 
-      {/* Voice Control Bar - aparece al final cuando hay llamada activa */}
       <VoiceControlBar position="left" />
     </div>
   );

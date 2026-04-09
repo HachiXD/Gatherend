@@ -11,6 +11,7 @@ import {
   resolveMentionedChannelMemberProfileIds,
   createMentions,
   reserveChannelMessageSeqRange,
+  advanceAuthorChannelReadState,
 } from "./messages.service.js";
 import {
   verifyMemberInBoardCached,
@@ -193,6 +194,12 @@ router.post("/", async (req, res) => {
           replyToId,
         },
         select: messageSelectFields,
+      });
+
+      await advanceAuthorChannelReadState(tx, {
+        profileId,
+        channelId: channelId as string,
+        lastReadSeq: reservedSeq,
       });
 
       let memberTarget = {
