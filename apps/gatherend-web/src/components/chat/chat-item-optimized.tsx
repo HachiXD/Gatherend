@@ -1142,7 +1142,6 @@ const ChatItemOptimizedComponent = ({
       data-compact-revision={compactRevisionData}
       className={cn(
         "relative group flex items-center hover:bg-black/5 transition",
-        showGroupedStartChrome && "mt-1",
         groupedTextBubble
           ? externalHoverArea
             ? GROUPED_TEXT_BUBBLE_EXTERNAL_HOVER_CLASS
@@ -1500,7 +1499,13 @@ const ChatItemOptimizedComponent = ({
                 {!isCompact && (!groupedTextBubble || showGroupedHeader) && (
                   <div
                     data-chat-item-block="text-header"
-                    className="flex items-center gap-1 mb-0"
+                    className={cn(
+                      "flex items-center gap-1 mb-0",
+                      groupedTextBubble &&
+                        showGroupedHeader &&
+                        authorProfile?.badgeStickerUrl &&
+                        "min-h-[28.5px]",
+                    )}
                   >
                     {(authorProfile?.badge ||
                       authorProfile?.badgeStickerUrl) && (
