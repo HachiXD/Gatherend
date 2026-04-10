@@ -1565,12 +1565,12 @@ const ChatItemOptimizedComponent = ({
                       "self-start max-w-full bg-theme-bg-overlay-primary/72 px-3 pt-1 pb-2",
                     !groupedTextBubble &&
                       textBubbleGroupPosition === "single" &&
-                      "mt-1 self-start max-w-full rounded-md bg-theme-bg-overlay-primary/72 px-3 py-2",
+                      "mt-[5px] self-start max-w-full rounded-md bg-theme-bg-overlay-primary/72 px-3 py-2",
                     !groupedTextBubble &&
                       textBubbleGroupPosition === undefined &&
                       (isCompact
                         ? "mt-0"
-                        : "mt-1 self-start max-w-full rounded-md bg-theme-bg-overlay-primary/72 px-3 py-2"),
+                        : "mt-[5px] self-start max-w-full rounded-md bg-theme-bg-overlay-primary/72 px-3 py-2"),
                   )}
                 >
                   {replyTo && shouldRenderReplyPreviewInsideTextBubble && (
