@@ -1,6 +1,7 @@
 "use client";
 
 import { create } from "zustand";
+import type { BoardViewTarget } from "@/stores/board-navigation-store";
 
 /**
  * Store global para navegación SPA
@@ -14,6 +15,7 @@ import { create } from "zustand";
 
 type SwitchBoardOptions = {
   history?: "push" | "replace";
+  persist?: boolean;
 };
 
 interface NavigationState {
@@ -23,12 +25,22 @@ interface NavigationState {
     channelId?: string,
     options?: SwitchBoardOptions,
   ) => void) | null;
+  switchBoardView: ((
+    boardId: string,
+    view: BoardViewTarget,
+    options?: SwitchBoardOptions,
+  ) => void) | null;
 
   // Registrar función (llamado por BoardSwitchProvider)
   registerNavigation: (fns: {
     switchBoard: (
       boardId: string,
       channelId?: string,
+      options?: SwitchBoardOptions,
+    ) => void;
+    switchBoardView: (
+      boardId: string,
+      view: BoardViewTarget,
       options?: SwitchBoardOptions,
     ) => void;
   }) => void;
@@ -42,15 +54,18 @@ interface NavigationState {
 
 export const useNavigationStore = create<NavigationState>((set, get) => ({
   switchBoard: null,
+  switchBoardView: null,
 
   registerNavigation: (fns) =>
     set({
       switchBoard: fns.switchBoard,
+      switchBoardView: fns.switchBoardView,
     }),
 
   unregisterNavigation: () =>
     set({
       switchBoard: null,
+      switchBoardView: null,
     }),
 
   isNavigationReady: () => {

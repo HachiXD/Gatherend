@@ -12,7 +12,8 @@ import {
   type PointerEvent as ReactPointerEvent,
   type RefObject,
 } from "react";
-import { Member, MemberRole } from "@prisma/client";
+import { MemberRole } from "@prisma/client";
+import type { BoardCurrentMember } from "@/components/providers/board-provider";
 import { UserAvatarMenu } from "../user-avatar-menu";
 import { AvatarGroupHoverContext, UserAvatar } from "../user-avatar";
 import { FileIcon } from "lucide-react";
@@ -23,7 +24,7 @@ import { parseMentions } from "@/lib/parse-mentions";
 import { ParsedMessageContent } from "@/lib/parse-invite-links";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useTranslation } from "@/i18n";
-import { useTheme } from "next-themes";
+import { useEffectiveThemeMode } from "@/hooks/use-effective-theme-config";
 import {
   getUsernameColorStyle,
   getGradientAnimationClass,
@@ -45,6 +46,7 @@ import type {
 } from "@/types/uploaded-assets";
 import { isMissingMessageAuthor } from "@/hooks/chat/message-author";
 import { GROUPED_TEXT_BUBBLE_EXTERNAL_HOVER_CLASS } from "./chat-grouped-layout";
+import { getChatBubbleSurfaceStyle } from "./chat-bubble-style-render";
 
 // Lazy load heavy components - only loaded when needed
 const ChatItemActions = lazy(() =>
@@ -80,7 +82,7 @@ interface ChatItemOptimizedProps {
   }>;
   deleted: boolean;
   currentProfile: ClientProfile;
-  currentMember?: Member | null;
+  currentMember?: BoardCurrentMember | null;
   isUpdated: boolean;
   isOptimistic?: boolean;
   isFailed?: boolean;
@@ -529,7 +531,7 @@ const ChatItemOptimizedComponent = ({
     } | null>(null);
 
   const { t } = useTranslation();
-  const { resolvedTheme } = useTheme();
+  const resolvedTheme = useEffectiveThemeMode();
   const getToken = useTokenGetter();
   const getRetryData = useMessageRetryStore((state) => state.getRetryData);
   const removeRetryData = useMessageRetryStore(
@@ -1132,6 +1134,20 @@ const ChatItemOptimizedComponent = ({
       !sticker &&
       !isEditing,
   );
+  const canRenderCustomTextBubbleSurface =
+    !groupedTextBubble && !(textBubbleGroupPosition === undefined && isCompact);
+  const textBubbleSurfaceStyle = useMemo(() => {
+    if (!canRenderCustomTextBubbleSurface) return undefined;
+    return getChatBubbleSurfaceStyle(authorProfile?.chatBubbleStyle, {
+      position: textBubbleGroupPosition,
+      themeMode: (resolvedTheme as "dark" | "light") || "dark",
+    });
+  }, [
+    authorProfile?.chatBubbleStyle,
+    canRenderCustomTextBubbleSurface,
+    textBubbleGroupPosition,
+    resolvedTheme,
+  ]);
   const effectiveHovered = isHovered || forcedHovered;
 
   return (
@@ -1556,22 +1572,43 @@ const ChatItemOptimizedComponent = ({
                       "px-3",
                     !groupedTextBubble &&
                       textBubbleGroupPosition === "start" &&
-                      "mt-1 self-start max-w-full bg-theme-bg-overlay-primary/72 px-3 pt-2 pb-1",
+                      cn(
+                        "mt-1 self-start max-w-full px-3 pt-2 pb-1",
+                        !textBubbleSurfaceStyle &&
+                          "bg-theme-bg-overlay-primary/72",
+                      ),
                     !groupedTextBubble &&
                       textBubbleGroupPosition === "middle" &&
-                      "self-start max-w-full bg-theme-bg-overlay-primary/72 px-3 py-1",
+                      cn(
+                        "self-start max-w-full px-3 py-1",
+                        !textBubbleSurfaceStyle &&
+                          "bg-theme-bg-overlay-primary/72",
+                      ),
                     !groupedTextBubble &&
                       textBubbleGroupPosition === "end" &&
-                      "self-start max-w-full bg-theme-bg-overlay-primary/72 px-3 pt-1 pb-2",
+                      cn(
+                        "self-start max-w-full px-3 pt-1 pb-2",
+                        !textBubbleSurfaceStyle &&
+                          "bg-theme-bg-overlay-primary/72",
+                      ),
                     !groupedTextBubble &&
                       textBubbleGroupPosition === "single" &&
-                      "mt-[5px] self-start max-w-full rounded-md bg-theme-bg-overlay-primary/72 px-3 py-2",
+                      cn(
+                        "mt-[5px] self-start max-w-full px-3 py-2",
+                        !textBubbleSurfaceStyle &&
+                          "rounded-md bg-theme-bg-overlay-primary/72",
+                      ),
                     !groupedTextBubble &&
                       textBubbleGroupPosition === undefined &&
                       (isCompact
                         ? "mt-0"
-                        : "mt-[5px] self-start max-w-full rounded-md bg-theme-bg-overlay-primary/72 px-3 py-2"),
+                        : cn(
+                            "mt-[5px] self-start max-w-full px-3 py-2",
+                            !textBubbleSurfaceStyle &&
+                              "rounded-md bg-theme-bg-overlay-primary/72",
+                          )),
                   )}
+                  style={textBubbleSurfaceStyle}
                 >
                   {replyTo && shouldRenderReplyPreviewInsideTextBubble && (
                     <ReplyPreview
@@ -1729,6 +1766,8 @@ export const ChatItemOptimized = memo(
       prevProfile?.avatarAsset?.id === nextProfile?.avatarAsset?.id &&
       prevProfile?.badge === nextProfile?.badge &&
       prevProfile?.badgeSticker?.id === nextProfile?.badgeSticker?.id &&
+      JSON.stringify(prevProfile?.chatBubbleStyle) ===
+        JSON.stringify(nextProfile?.chatBubbleStyle) &&
       JSON.stringify(prevProfile?.usernameColor) ===
         JSON.stringify(nextProfile?.usernameColor) &&
       JSON.stringify(prevProfile?.usernameFormat) ===

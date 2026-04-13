@@ -5,33 +5,149 @@ import { subscribeWithSelector } from "zustand/middleware";
 import { logger } from "@/lib/logger";
 import { useNavigationStore } from "@/hooks/use-navigation-store";
 
-// LocalStorage helpers para memoria de último channel por board
+// LocalStorage helpers para memoria de ultima vista por board
+const LAST_BOARD_VIEW_STORAGE_KEY = "gatherend:lastBoardView:v2";
+const MAX_LAST_BOARD_VIEW_ENTRIES = 20;
 
-const LAST_CHANNEL_STORAGE_KEY = "gatherend:lastChannel";
+export type BoardViewTarget =
+  | { kind: "forum" }
+  | { kind: "rules" }
+  | { kind: "channels:list" }
+  | { kind: "channels:channel"; channelId: string };
 
-function saveLastChannelForBoard(boardId: string, channelId: string): void {
-  if (typeof window === "undefined") return;
+// Sub-vistas dentro de la sección Chats
+type ChatsViewTarget =
+  | { kind: "channels:list" }
+  | { kind: "channels:channel"; channelId: string };
+
+// Entrada persistida por board: sección activa + última sub-vista de chats (independiente)
+interface PersistedBoardEntry {
+  updatedAt: number;
+  activeSection: "forum" | "rules" | "channels";
+  // Solo presente cuando el usuario ha visitado chats al menos una vez
+  chatsView?: ChatsViewTarget;
+}
+
+function isChatsViewTarget(value: unknown): value is ChatsViewTarget {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Partial<ChatsViewTarget & { channelId?: unknown }>;
+  if (candidate.kind === "channels:list") return true;
+  return (
+    candidate.kind === "channels:channel" &&
+    typeof candidate.channelId === "string" &&
+    candidate.channelId.length > 0
+  );
+}
+
+function isPersistedBoardEntry(value: unknown): value is PersistedBoardEntry {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Partial<PersistedBoardEntry>;
+  if (typeof candidate.updatedAt !== "number") return false;
+  if (
+    candidate.activeSection !== "forum" &&
+    candidate.activeSection !== "rules" &&
+    candidate.activeSection !== "channels"
+  )
+    return false;
+  if (
+    candidate.chatsView !== undefined &&
+    !isChatsViewTarget(candidate.chatsView)
+  )
+    return false;
+  return true;
+}
+
+function readLastBoardEntries(): Record<string, PersistedBoardEntry> {
+  if (typeof window === "undefined") return {};
   try {
-    const stored = localStorage.getItem(LAST_CHANNEL_STORAGE_KEY);
-    const data: Record<string, string> = stored ? JSON.parse(stored) : {};
-    data[boardId] = channelId;
-    localStorage.setItem(LAST_CHANNEL_STORAGE_KEY, JSON.stringify(data));
+    const stored = localStorage.getItem(LAST_BOARD_VIEW_STORAGE_KEY);
+    if (!stored) return {};
+    const parsed: unknown = JSON.parse(stored);
+    if (typeof parsed !== "object" || parsed === null) return {};
+
+    return Object.fromEntries(
+      Object.entries(parsed as Record<string, unknown>).filter((entry) =>
+        isPersistedBoardEntry(entry[1]),
+      ),
+    ) as Record<string, PersistedBoardEntry>;
   } catch (error) {
-    logger.warn("Failed to save last channel to localStorage:", error);
+    logger.warn("Failed to read last board views from localStorage:", error);
+    return {};
   }
 }
 
-export function getLastChannelForBoard(boardId: string): string | null {
+export function saveLastBoardViewForBoard(
+  boardId: string,
+  view: BoardViewTarget,
+): void {
+  if (typeof window === "undefined") return;
+  try {
+    const data = readLastBoardEntries();
+    const existing = data[boardId];
+
+    let activeSection: "forum" | "rules" | "channels";
+    let chatsView: ChatsViewTarget | undefined = existing?.chatsView;
+
+    if (view.kind === "forum") {
+      activeSection = "forum";
+    } else if (view.kind === "rules") {
+      activeSection = "rules";
+    } else if (view.kind === "channels:list") {
+      activeSection = "channels";
+      chatsView = { kind: "channels:list" };
+    } else {
+      activeSection = "channels";
+      chatsView = { kind: "channels:channel", channelId: view.channelId };
+    }
+
+    data[boardId] = { updatedAt: Date.now(), activeSection, chatsView };
+
+    const limitedEntries = Object.entries(data)
+      .sort(([, a], [, b]) => b.updatedAt - a.updatedAt)
+      .slice(0, MAX_LAST_BOARD_VIEW_ENTRIES);
+
+    localStorage.setItem(
+      LAST_BOARD_VIEW_STORAGE_KEY,
+      JSON.stringify(Object.fromEntries(limitedEntries)),
+    );
+  } catch (error) {
+    logger.warn("Failed to save last board view to localStorage:", error);
+  }
+}
+
+export function getLastBoardViewForBoard(
+  boardId: string,
+): BoardViewTarget | null {
   if (typeof window === "undefined") return null;
   try {
-    const stored = localStorage.getItem(LAST_CHANNEL_STORAGE_KEY);
-    if (!stored) return null;
-    const data: Record<string, string> = JSON.parse(stored);
-    return data[boardId] || null;
+    const entry = readLastBoardEntries()[boardId];
+    if (!entry) return null;
+    if (entry.activeSection === "forum") return { kind: "forum" };
+    if (entry.activeSection === "rules") return { kind: "rules" };
+    // channels: devuelve la última sub-vista de chats, o la lista como fallback
+    return entry.chatsView ?? { kind: "channels:list" };
   } catch (error) {
-    logger.warn("Failed to read last channel from localStorage:", error);
+    logger.warn("Failed to read last board view from localStorage:", error);
     return null;
   }
+}
+
+export function getLastChatsViewForBoard(
+  boardId: string,
+): BoardViewTarget | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const entry = readLastBoardEntries()[boardId];
+    // Devuelve la sub-vista de chats independientemente de la sección activa
+    return entry?.chatsView ?? null;
+  } catch (error) {
+    logger.warn("Failed to read last chats view from localStorage:", error);
+    return null;
+  }
+}
+
+export function resolveLastBoardViewForBoard(boardId: string): BoardViewTarget {
+  return getLastBoardViewForBoard(boardId) ?? { kind: "channels:list" };
 }
 
 // Types
@@ -41,13 +157,14 @@ interface NavigationState {
   currentChannelId: string | null;
   currentConversationId: string | null;
   isDiscovery: boolean;
+  isChannels: boolean;
   isForum: boolean;
   isRules: boolean;
-  isMembers: boolean;
 }
 
 type SwitchBoardOptions = {
   history?: "push" | "replace";
+  persist?: boolean;
 };
 
 interface BoardNavigationStore extends NavigationState {
@@ -63,12 +180,18 @@ interface BoardNavigationStore extends NavigationState {
     channelId?: string,
     options?: SwitchBoardOptions,
   ) => void;
+  switchBoardView: (
+    boardId: string,
+    view: BoardViewTarget,
+    options?: SwitchBoardOptions,
+  ) => void;
   switchChannel: (channelId: string) => void;
   switchConversation: (conversationId: string) => void;
   switchToDiscovery: () => void;
+  switchToChannels: (boardId?: string) => void;
+  switchToChannelList: (boardId?: string) => void;
   switchToForum: (boardId?: string) => void;
   switchToRules: (boardId?: string) => void;
-  switchToMembers: (boardId?: string) => void;
   registerActiveDiscoveryScrollPersistence: (
     persist: (() => void) | null,
   ) => void;
@@ -81,15 +204,15 @@ interface BoardNavigationStore extends NavigationState {
 
 function parseUrlToState(): NavigationState {
   if (typeof window === "undefined") {
-      return {
-        currentBoardId: "",
-        currentChannelId: null,
-        currentConversationId: null,
-        isDiscovery: false,
-        isForum: false,
-        isRules: false,
-        isMembers: false,
-      };
+    return {
+      currentBoardId: "",
+      currentChannelId: null,
+      currentConversationId: null,
+      isDiscovery: false,
+      isChannels: false,
+      isForum: false,
+      isRules: false,
+    };
   }
 
   const pathParts = window.location.pathname.split("/");
@@ -101,9 +224,9 @@ function parseUrlToState(): NavigationState {
       currentChannelId: null,
       currentConversationId: null,
       isDiscovery: false,
+      isChannels: false,
       isForum: false,
       isRules: false,
-      isMembers: false,
     };
   }
 
@@ -113,17 +236,17 @@ function parseUrlToState(): NavigationState {
     currentChannelId: null,
     currentConversationId: null,
     isDiscovery: false,
+    isChannels: false,
     isForum: false,
     isRules: false,
-    isMembers: false,
   };
 
   if (pathParts.indexOf("discovery") !== -1) {
     state.isDiscovery = true;
+  } else if (pathParts.indexOf("channels") !== -1) {
+    state.isChannels = true;
   } else if (pathParts.indexOf("rules") !== -1) {
     state.isRules = true;
-  } else if (pathParts.indexOf("members") !== -1) {
-    state.isMembers = true;
   } else if (pathParts.indexOf("forum") !== -1) {
     state.isForum = true;
   } else {
@@ -146,16 +269,73 @@ function parseUrlToState(): NavigationState {
 // Parse URL immediately on module load (client-side only)
 const initialState: NavigationState =
   typeof window !== "undefined"
-     ? parseUrlToState()
-      : {
-          currentBoardId: "",
-         currentChannelId: null,
-         currentConversationId: null,
-         isDiscovery: false,
-         isForum: false,
-         isRules: false,
-         isMembers: false,
-       };
+    ? parseUrlToState()
+    : {
+        currentBoardId: "",
+        currentChannelId: null,
+        currentConversationId: null,
+        isDiscovery: false,
+        isChannels: false,
+        isForum: false,
+        isRules: false,
+      };
+
+function getBoardViewFromNavigationState(
+  state: NavigationState,
+): BoardViewTarget | null {
+  if (state.currentChannelId) {
+    return { kind: "channels:channel", channelId: state.currentChannelId };
+  }
+  if (state.isChannels) return { kind: "channels:list" };
+  if (state.isRules) return { kind: "rules" };
+  if (state.isForum) return { kind: "forum" };
+  return null;
+}
+
+function getNavigationStateForBoardView(
+  boardId: string,
+  view: BoardViewTarget,
+): NavigationState {
+  return {
+    currentBoardId: boardId,
+    currentChannelId:
+      view.kind === "channels:channel" ? view.channelId : null,
+    currentConversationId: null,
+    isDiscovery: false,
+    isChannels: view.kind === "channels:list",
+    isForum: view.kind === "forum",
+    isRules: view.kind === "rules",
+  };
+}
+
+function getUrlForBoardView(boardId: string, view: BoardViewTarget): string {
+  switch (view.kind) {
+    case "forum":
+      return `/boards/${boardId}/forum`;
+    case "rules":
+      return `/boards/${boardId}/rules`;
+    case "channels:list":
+      return `/boards/${boardId}/channels`;
+    case "channels:channel":
+      return `/boards/${boardId}/rooms/${view.channelId}`;
+  }
+}
+
+function getHistoryStateForBoardView(
+  boardId: string,
+  view: BoardViewTarget,
+): Record<string, unknown> {
+  switch (view.kind) {
+    case "forum":
+      return { boardId, isForum: true };
+    case "rules":
+      return { boardId, isRules: true };
+    case "channels:list":
+      return { boardId, isChannels: true };
+    case "channels:channel":
+      return { boardId, channelId: view.channelId };
+  }
+}
 
 export const useBoardNavigationStore = create<BoardNavigationStore>()(
   subscribeWithSelector((set, get) => ({
@@ -175,15 +355,20 @@ export const useBoardNavigationStore = create<BoardNavigationStore>()(
         state.currentChannelId !== urlState.currentChannelId ||
         state.currentConversationId !== urlState.currentConversationId ||
         state.isDiscovery !== urlState.isDiscovery ||
+        state.isChannels !== urlState.isChannels ||
         state.isForum !== urlState.isForum ||
-        state.isRules !== urlState.isRules ||
-        state.isMembers !== urlState.isMembers;
+        state.isRules !== urlState.isRules;
 
       if (needsSync) {
         set({
           ...urlState,
           isInitialized: true,
         });
+      }
+
+      const urlView = getBoardViewFromNavigationState(urlState);
+      if (urlState.currentBoardId && urlView) {
+        saveLastBoardViewForBoard(urlState.currentBoardId, urlView);
       }
 
       if (state.isClientNavigationEnabled) return;
@@ -201,9 +386,9 @@ export const useBoardNavigationStore = create<BoardNavigationStore>()(
             currentChannelId: event.state.channelId || null,
             currentConversationId: event.state.conversationId || null,
             isDiscovery: event.state.isDiscovery || false,
+            isChannels: event.state.isChannels || false,
             isForum: event.state.isForum || false,
             isRules: event.state.isRules || false,
-            isMembers: event.state.isMembers || false,
           });
         } else {
           // Fallback: parse URL
@@ -218,35 +403,39 @@ export const useBoardNavigationStore = create<BoardNavigationStore>()(
       const actions = get();
       useNavigationStore.getState().registerNavigation({
         switchBoard: actions.switchBoard,
+        switchBoardView: actions.switchBoardView,
       });
-
     },
 
     registerActiveDiscoveryScrollPersistence: (persist) => {
       set({ persistActiveDiscoveryScroll: persist });
     },
 
-    switchBoard: (boardId, channelId, options) => {
+    switchBoardView: (boardId, view, options) => {
       const state = get();
-      if (boardId === state.currentBoardId && !channelId) return;
+      const nextState = getNavigationStateForBoardView(boardId, view);
+      const isSameRoutingState =
+        state.currentBoardId === nextState.currentBoardId &&
+        state.currentChannelId === nextState.currentChannelId &&
+        state.currentConversationId === nextState.currentConversationId &&
+        state.isDiscovery === nextState.isDiscovery &&
+        state.isChannels === nextState.isChannels &&
+        state.isForum === nextState.isForum &&
+        state.isRules === nextState.isRules;
+
+      if (isSameRoutingState && options?.history !== "replace") return;
       if (state.isDiscovery) {
         state.persistActiveDiscoveryScroll?.();
       }
 
-      set({
-        currentBoardId: boardId,
-        currentChannelId: channelId || null,
-        currentConversationId: null,
-        isDiscovery: false,
-        isForum: !channelId,
-        isRules: false,
-        isMembers: false,
-      });
+      set(nextState);
 
-      const targetUrl = channelId
-        ? `/boards/${boardId}/rooms/${channelId}`
-        : `/boards/${boardId}/forum`;
-      const targetState = channelId ? { boardId, channelId } : { boardId };
+      if (options?.persist !== false) {
+        saveLastBoardViewForBoard(boardId, view);
+      }
+
+      const targetUrl = getUrlForBoardView(boardId, view);
+      const targetState = getHistoryStateForBoardView(boardId, view);
       const historyMode = options?.history ?? "push";
       const shouldReplace = historyMode === "replace";
       const isSamePath = window.location.pathname === targetUrl;
@@ -254,55 +443,39 @@ export const useBoardNavigationStore = create<BoardNavigationStore>()(
         string,
         unknown
       >;
-      const isSameHistoryState =
-        currentHistoryState.boardId === boardId &&
-        (channelId ? currentHistoryState.channelId === channelId : true);
+      const isSameHistoryState = Object.entries(targetState).every(
+        ([key, value]) => currentHistoryState[key] === value,
+      );
 
-      // Avoid duplicate history entries when URL was already updated optimistically.
       if (!isSamePath) {
         if (shouldReplace) {
           window.history.replaceState(targetState, "", targetUrl);
         } else {
           window.history.pushState(targetState, "", targetUrl);
         }
-      } else if (shouldReplace) {
-        // Keep history.state in sync even if path did not change, but avoid
-        // redundant writes that overwrite Next's internal router state.
-        if (!isSameHistoryState) {
-          // Preserve Next's internal router fields (e.g. __NA / __PRIVATE_NEXTJS_INTERNALS_TREE)
-          // so we don't trigger a follow-up replaceState from Next.
-          const mergedState: Record<string, unknown> = {
-            ...currentHistoryState,
-            ...targetState,
-          };
-          window.history.replaceState(mergedState, "", targetUrl);
-        }
+      } else if (shouldReplace && !isSameHistoryState) {
+        window.history.replaceState(
+          { ...currentHistoryState, ...targetState },
+          "",
+          targetUrl,
+        );
       }
+    },
+
+    switchBoard: (boardId, channelId, options) => {
+      const view: BoardViewTarget = channelId
+        ? { kind: "channels:channel", channelId }
+        : resolveLastBoardViewForBoard(boardId);
+      get().switchBoardView(boardId, view, options);
     },
 
     switchChannel: (channelId) => {
       const state = get();
       if (channelId === state.currentChannelId && !state.isDiscovery) return;
-      if (state.isDiscovery) {
-        state.persistActiveDiscoveryScroll?.();
-      }
-
-      set({
-        currentChannelId: channelId,
-        currentConversationId: null,
-        isDiscovery: false,
-        isForum: false,
-        isRules: false,
-        isMembers: false,
+      get().switchBoardView(state.currentBoardId, {
+        kind: "channels:channel",
+        channelId,
       });
-
-      window.history.pushState(
-        { boardId: state.currentBoardId, channelId },
-        "",
-        `/boards/${state.currentBoardId}/rooms/${channelId}`,
-      );
-
-      saveLastChannelForBoard(state.currentBoardId, channelId);
     },
 
     switchConversation: (conversationId) => {
@@ -317,9 +490,9 @@ export const useBoardNavigationStore = create<BoardNavigationStore>()(
         currentConversationId: conversationId,
         currentChannelId: null,
         isDiscovery: false,
+        isChannels: false,
         isForum: false,
         isRules: false,
-        isMembers: false,
       });
 
       window.history.pushState(
@@ -337,9 +510,9 @@ export const useBoardNavigationStore = create<BoardNavigationStore>()(
         currentChannelId: null,
         currentConversationId: null,
         isDiscovery: true,
+        isChannels: false,
         isForum: false,
         isRules: false,
-        isMembers: false,
       });
 
       window.history.pushState(
@@ -352,71 +525,36 @@ export const useBoardNavigationStore = create<BoardNavigationStore>()(
     switchToForum: (boardId?: string) => {
       const state = get();
       const targetBoardId = boardId ?? state.currentBoardId;
-      if (state.isForum && targetBoardId === state.currentBoardId) return;
+      get().switchBoardView(targetBoardId, { kind: "forum" });
+    },
 
-      set({
-        currentBoardId: targetBoardId,
-        currentChannelId: null,
-        currentConversationId: null,
-        isDiscovery: false,
-        isForum: true,
-        isRules: false,
-        isMembers: false,
-      });
-
-      window.history.pushState(
-        { boardId: targetBoardId, isForum: true },
-        "",
-        `/boards/${targetBoardId}/forum`,
+    switchToChannels: (boardId?: string) => {
+      const state = get();
+      const targetBoardId = boardId ?? state.currentBoardId;
+      get().switchBoardView(
+        targetBoardId,
+        getLastChatsViewForBoard(targetBoardId) ?? { kind: "channels:list" },
       );
+    },
+
+    switchToChannelList: (boardId?: string) => {
+      const state = get();
+      const targetBoardId = boardId ?? state.currentBoardId;
+      get().switchBoardView(targetBoardId, { kind: "channels:list" });
     },
 
     switchToRules: (boardId?: string) => {
       const state = get();
       const targetBoardId = boardId ?? state.currentBoardId;
-      if (state.isRules && targetBoardId === state.currentBoardId) return;
-
-      set({
-        currentBoardId: targetBoardId,
-        currentChannelId: null,
-        currentConversationId: null,
-        isDiscovery: false,
-        isForum: false,
-        isRules: true,
-        isMembers: false,
-      });
-
-      window.history.pushState(
-        { boardId: targetBoardId, isRules: true },
-        "",
-        `/boards/${targetBoardId}/rules`,
-      );
-    },
-
-    switchToMembers: (boardId?: string) => {
-      const state = get();
-      const targetBoardId = boardId ?? state.currentBoardId;
-      if (state.isMembers && targetBoardId === state.currentBoardId) return;
-
-      set({
-        currentBoardId: targetBoardId,
-        currentChannelId: null,
-        currentConversationId: null,
-        isDiscovery: false,
-        isForum: false,
-        isRules: false,
-        isMembers: true,
-      });
-
-      window.history.pushState(
-        { boardId: targetBoardId, isMembers: true },
-        "",
-        `/boards/${targetBoardId}/members`,
-      );
+      get().switchBoardView(targetBoardId, { kind: "rules" });
     },
 
     _syncFromPopstate: (newState) => {
       set(newState);
+      const view = getBoardViewFromNavigationState(newState);
+      if (newState.currentBoardId && view) {
+        saveLastBoardViewForBoard(newState.currentBoardId, view);
+      }
     },
   })),
 );
@@ -432,9 +570,9 @@ export const selectRouting = (state: BoardNavigationStore) => ({
   currentChannelId: state.currentChannelId,
   currentConversationId: state.currentConversationId,
   isDiscovery: state.isDiscovery,
+  isChannels: state.isChannels,
   isForum: state.isForum,
   isRules: state.isRules,
-  isMembers: state.isMembers,
 });
 
 /**
@@ -443,12 +581,14 @@ export const selectRouting = (state: BoardNavigationStore) => ({
  */
 export const selectActions = (state: BoardNavigationStore) => ({
   switchBoard: state.switchBoard,
+  switchBoardView: state.switchBoardView,
   switchChannel: state.switchChannel,
   switchConversation: state.switchConversation,
   switchToDiscovery: state.switchToDiscovery,
+  switchToChannels: state.switchToChannels,
+  switchToChannelList: state.switchToChannelList,
   switchToForum: state.switchToForum,
   switchToRules: state.switchToRules,
-  switchToMembers: state.switchToMembers,
   isClientNavigationEnabled: state.isClientNavigationEnabled,
 });
 
@@ -463,6 +603,8 @@ export const selectCurrentConversationId = (state: BoardNavigationStore) =>
   state.currentConversationId;
 export const selectIsDiscovery = (state: BoardNavigationStore) =>
   state.isDiscovery;
+export const selectIsChannels = (state: BoardNavigationStore) =>
+  state.isChannels;
 export const selectIsForum = (state: BoardNavigationStore) =>
   state.isForum;
 export const selectIsInitialized = (state: BoardNavigationStore) =>

@@ -33,6 +33,10 @@ export function useMobileTitle(): string | undefined {
       if (channel) return `/ ${channel.name}`;
     }
 
+    if (context.isChannels && board) {
+      return `Chats de ${board.name}`;
+    }
+
     // Fallback al nombre del board
     if (board) return board.name;
 

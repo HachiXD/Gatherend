@@ -1,6 +1,5 @@
 "use client";
 
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { UserAvatar } from "@/components/user-avatar";
 import {
   Check,
@@ -29,11 +28,17 @@ import { useTranslation } from "@/i18n";
 import { cn } from "@/lib/utils";
 import type { BoardWithData } from "@/components/providers/board-provider";
 import { toast } from "sonner";
+import { useBoardMembers } from "@/hooks/use-board-members";
+import {
+  boardQueryKey,
+  patchBoardMemberInCache,
+  removeBoardMemberFromCache,
+} from "@/hooks/board-cache";
 
 const roleIconMap = {
   GUEST: null,
   MODERATOR: <Ghost className="ml-2 h-4 w-4 text-indigo-500" />,
-  ADMIN: <HardHat className="h-4 w-4 text-rose-500" />,
+  ADMIN: <HardHat className="ml-2 h-4 w-4 text-rose-500" />,
   OWNER: <Crown className="ml-2 h-4 w-4 text-[#FFD700]" />,
 };
 
@@ -73,7 +78,10 @@ const menuIconShellClass =
   " flex h-6 w-6 items-center justify-center rounded-none border border-theme-border bg-theme-bg-primary/55 text-theme-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]";
 
 interface MembersTabProps {
-  board: Pick<BoardWithData, "id" | "profileId" | "members">;
+  board: Pick<
+    BoardWithData,
+    "id" | "profileId" | "currentMember" | "memberCount"
+  >;
   currentProfileId?: string;
 }
 
@@ -81,11 +89,25 @@ export const MembersTab = ({ board, currentProfileId }: MembersTabProps) => {
   const queryClient = useQueryClient();
   const [loadingId, setLoadingId] = useState("");
   const { t } = useTranslation();
+  const {
+    pageSlots,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+    containerRef,
+    bottomSentinelRef,
+  } = useBoardMembers(board.id, {
+    rowHeight: 58,
+    rowGap: 8,
+    maxRenderedPages: 5,
+  });
 
   // Find current user's member record and role
-  const currentMember = board.members.find(
-    (m) => m.profile.id === currentProfileId,
-  );
+  const currentMember =
+    board.currentMember?.profileId === currentProfileId
+      ? board.currentMember
+      : null;
   const currentRole = currentMember?.role || "GUEST";
 
   // What roles can the current user assign?
@@ -116,10 +138,15 @@ export const MembersTab = ({ board, currentProfileId }: MembersTabProps) => {
     onMutate: ({ memberId }) => {
       setLoadingId(memberId);
     },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["board", board.id],
+    onSuccess: async (memberId, { targetProfileId }) => {
+      removeBoardMemberFromCache(queryClient, board.id, {
+        memberId,
+        profileId: targetProfileId,
+      });
+      await queryClient.refetchQueries({
+        queryKey: boardQueryKey(board.id),
         exact: true,
+        type: "active",
       });
     },
     onError: (error: unknown) => {
@@ -147,8 +174,27 @@ export const MembersTab = ({ board, currentProfileId }: MembersTabProps) => {
     onMutate: ({ memberId }) => {
       setLoadingId(memberId);
     },
-    onSuccess: async () => {
-      await queryClient.refetchQueries({ queryKey: ["board", board.id] });
+    onSuccess: async ({ memberId, role }) => {
+      patchBoardMemberInCache(queryClient, board.id, memberId, (member) => ({
+        ...member,
+        role,
+      }));
+
+      if (board.currentMember?.id === memberId) {
+        queryClient.setQueryData<BoardWithData>(
+          boardQueryKey(board.id),
+          (old) =>
+            old?.currentMember
+              ? {
+                  ...old,
+                  currentMember: {
+                    ...old.currentMember,
+                    role,
+                  },
+                }
+              : old,
+        );
+      }
     },
     onError: (error: unknown) => {
       console.error(error);
@@ -172,9 +218,17 @@ export const MembersTab = ({ board, currentProfileId }: MembersTabProps) => {
     onMutate: ({ memberId }) => {
       setLoadingId(memberId);
     },
-    onSuccess: async () => {
+    onSuccess: async (memberId, { targetProfileId }) => {
+      removeBoardMemberFromCache(queryClient, board.id, {
+        memberId,
+        profileId: targetProfileId,
+      });
       await Promise.all([
-        queryClient.refetchQueries({ queryKey: ["board", board.id] }),
+        queryClient.refetchQueries({
+          queryKey: boardQueryKey(board.id),
+          exact: true,
+          type: "active",
+        }),
         queryClient.refetchQueries({ queryKey: ["boardBans", board.id] }),
       ]);
     },
@@ -197,16 +251,41 @@ export const MembersTab = ({ board, currentProfileId }: MembersTabProps) => {
       const response = await axios.post(`/api/boards/${board.id}/warning`, {
         targetProfileId,
       });
-      return { memberId, data: response.data as { autoBanned?: boolean } };
+      return {
+        memberId,
+        targetProfileId,
+        data: response.data as {
+          autoBanned?: boolean;
+          warning?: { id?: string };
+        },
+      };
     },
     onMutate: ({ memberId }) => {
       setLoadingId(memberId);
     },
-    onSuccess: async ({ data }) => {
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ["board", board.id] }),
-        queryClient.refetchQueries({ queryKey: ["boardBans", board.id] }),
-      ]);
+    onSuccess: async ({ memberId, targetProfileId, data }) => {
+      if (data.autoBanned) {
+        removeBoardMemberFromCache(queryClient, board.id, {
+          memberId,
+          profileId: targetProfileId,
+        });
+        await Promise.all([
+          queryClient.refetchQueries({
+            queryKey: boardQueryKey(board.id),
+            exact: true,
+            type: "active",
+          }),
+          queryClient.refetchQueries({ queryKey: ["boardBans", board.id] }),
+        ]);
+      } else {
+        patchBoardMemberInCache(queryClient, board.id, memberId, (member) => ({
+          ...member,
+          activeWarningCount: member.activeWarningCount + 1,
+          latestActiveWarningId:
+            data.warning?.id ?? member.latestActiveWarningId,
+        }));
+      }
+
       toast.success(
         data.autoBanned
           ? `${t.overlays.boardSettings.members.warnSuccess} (${t.overlays.boardSettings.members.autoBanTriggered})`
@@ -236,11 +315,16 @@ export const MembersTab = ({ board, currentProfileId }: MembersTabProps) => {
     onMutate: ({ memberId }) => {
       setLoadingId(memberId);
     },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ["board", board.id] }),
-        queryClient.refetchQueries({ queryKey: ["boardBans", board.id] }),
-      ]);
+    onSuccess: async (memberId, { warningId }) => {
+      patchBoardMemberInCache(queryClient, board.id, memberId, (member) => ({
+        ...member,
+        activeWarningCount: Math.max(0, member.activeWarningCount - 1),
+        latestActiveWarningId:
+          member.latestActiveWarningId === warningId
+            ? null
+            : member.latestActiveWarningId,
+      }));
+      await queryClient.refetchQueries({ queryKey: ["boardBans", board.id] });
       toast.success(t.overlays.boardSettings.members.removeWarningSuccess);
     },
     onError: (error: unknown) => {
@@ -260,242 +344,295 @@ export const MembersTab = ({ board, currentProfileId }: MembersTabProps) => {
             {t.overlays.boardSettings.members.title}
           </h2>
           <p className="-mt-1 text-sm text-theme-text-tertiary">
-            {board?.members?.length}{" "}
-            {board?.members?.length === 1 ? t.common.member : t.common.members}
+            {board.memberCount}{" "}
+            {board.memberCount === 1 ? t.common.member : t.common.members}
           </p>
         </div>
       </div>
 
-      <ScrollArea className="max-h-[500px] pr-6 -mt-4">
+      <div
+        ref={containerRef}
+        className="scrollbar-ultra-thin overflow-y-auto pr-6 -mt-4"
+      >
         <div className="space-y-2 ">
-          {board?.members?.map((member) => {
-            // Check if current user can modify this member
-            const canModify = canModifyMember(member.role);
-            const showActions =
-              member.profile.id !== currentProfileId &&
-              loadingId !== member.id &&
-              canModify &&
-              (canAssignRoles || canKick || canWarn || canBan);
+          {isLoading ? (
+            <div className="flex items-center gap-2 text-sm text-theme-text-tertiary">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Loading members...</span>
+            </div>
+          ) : null}
 
-            return (
-              <div key={member.id} className={cn(MEMBER_ROW_CLASS, "gap-2")}>
-                <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <UserAvatar
-                    src={member.profile.avatarAsset?.url || ""}
-                    profileId={member.profile.id}
-                    showStatus={false}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-0 text-sm font-semibold text-theme-text-primary">
-                      <span className="truncate">
-                        {member.profile.username}
-                      </span>
-                      {roleIconMap[member.role]}
-                    </div>
-                    <p className="truncate text-[11px] text-theme-text-tertiary">
-                      /{member.profile.discriminator}
-                    </p>
-                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                      <span className={memberMetaBadgeClass}>
-                        Lv. {member.level}
-                      </span>
-                      <span
-                        className={cn(
-                          memberMetaBadgeClass,
-                          member.activeWarningCount >= 2 &&
-                            "border-[#8a5a2c] bg-[#5a3a14]/25 text-[#f2c084]",
-                        )}
-                      >
-                        {t.moderation.warnings}: {member.activeWarningCount}/3
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                {showActions && (
-                  <div className="ml-auto">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button className={actionButtonClass}>
-                          {t.overlays.boardSettings.members.actions}
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        side="left"
-                        className={`z-10000 w-48 !animate-none rounded-none border-theme-border bg-theme-bg-dropdown-menu-primary px-1 py-0.5 text-xs font-medium text-theme-text-secondary ${menuPanelShadow}`}
-                      >
-                        {canAssignRoles && (
-                          <>
-                            {assignableRoles.includes("GUEST") && (
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  roleChangeMutation.mutate({
-                                    memberId: member.id,
-                                    role: "GUEST",
-                                  })
-                                }
-                                className={cn(
-                                  menuRowClass,
-                                  member.role === "GUEST" &&
-                                    "border-theme-border bg-theme-channel-type-active-bg text-theme-text-light hover:bg-theme-tab-button-bg focus:bg-theme-tab-button-bg",
-                                )}
-                              >
-                                <span className={menuIconShellClass}>
-                                  <User className="h-3.5 w-3.5" />
-                                </span>
-                                {t.overlays.boardSettings.members.roles.guest}
-                                {member.role === "GUEST" && (
-                                  <Check className="ml-auto h-4 w-4" />
-                                )}
-                              </DropdownMenuItem>
-                            )}
-                            {assignableRoles.includes("MODERATOR") && (
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  roleChangeMutation.mutate({
-                                    memberId: member.id,
-                                    role: "MODERATOR",
-                                  })
-                                }
-                                className={cn(
-                                  menuRowClass,
-                                  member.role === "MODERATOR" &&
-                                    "border-theme-border bg-theme-channel-type-active-bg text-theme-text-light hover:bg-theme-tab-button-bg focus:bg-theme-tab-button-bg",
-                                )}
-                              >
-                                <span className={menuIconShellClass}>
-                                  <Ghost className="h-3.5 w-3.5" />
-                                </span>
-                                {
-                                  t.overlays.boardSettings.members.roles
-                                    .moderator
-                                }
-                                {member.role === "MODERATOR" && (
-                                  <Check className="ml-auto h-4 w-4" />
-                                )}
-                              </DropdownMenuItem>
-                            )}
-                            {assignableRoles.includes("ADMIN") && (
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  roleChangeMutation.mutate({
-                                    memberId: member.id,
-                                    role: "ADMIN",
-                                  })
-                                }
-                                className={cn(
-                                  menuRowClass,
-                                  member.role === "ADMIN" &&
-                                    "border-theme-border bg-theme-channel-type-active-bg text-theme-text-light hover:bg-theme-tab-button-bg focus:bg-theme-tab-button-bg",
-                                )}
-                              >
-                                <span className={menuIconShellClass}>
-                                  <HardHat className="h-3.5 w-3.5" />
-                                </span>
-                                {t.overlays.boardSettings.members.roles.admin}
-                                {member.role === "ADMIN" && (
-                                  <Check className="ml-auto h-4 w-4" />
-                                )}
-                              </DropdownMenuItem>
-                            )}
-                          </>
-                        )}
-                        {canAssignRoles && (canKick || canBan) && (
-                          <DropdownMenuSeparator
-                            className={menuSectionSeparatorClass}
-                          />
-                        )}
-                        {canKick && (
-                          <DropdownMenuItem
-                            onClick={() =>
-                              kickMutation.mutate({
-                                memberId: member.id,
-                                targetProfileId: member.profile.id,
-                              })
-                            }
-                            className={menuRowClass}
-                          >
-                            <span className={menuIconShellClass}>
-                              <UserMinus className="h-3.5 w-3.5" />
+          {pageSlots.map((slot) =>
+            slot.type === "virtualized" ? (
+              <div
+                key={`members-placeholder-${slot.pageIndex}`}
+                style={{ height: slot.height }}
+              />
+            ) : (
+              <div key={`members-page-${slot.pageIndex}`} className="space-y-2">
+                {slot.page.items.map((member) => {
+                  // Check if current user can modify this member
+                  const canModify = canModifyMember(member.role);
+                  const showActions =
+                    member.profile.id !== currentProfileId &&
+                    loadingId !== member.id &&
+                    canModify &&
+                    (canAssignRoles || canKick || canWarn || canBan);
+
+                  return (
+                    <div
+                      key={member.id}
+                      className={cn(MEMBER_ROW_CLASS, "gap-2")}
+                    >
+                      <div className="flex min-w-0 flex-1 items-center gap-3">
+                        <UserAvatar
+                          src={member.profile.avatarAsset?.url || ""}
+                          profileId={member.profile.id}
+                          showStatus={false}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-0 text-sm font-semibold text-theme-text-primary">
+                            <span className="truncate">
+                              {member.profile.username}
                             </span>
-                            {t.overlays.boardSettings.members.kick}
-                          </DropdownMenuItem>
-                        )}
-                        {canKick && canBan && (
-                          <DropdownMenuSeparator
-                            className={menuSectionSeparatorClass}
-                          />
-                        )}
-                        {canWarn && (
-                          <>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                warnMutation.mutate({
-                                  memberId: member.id,
-                                  targetProfileId: member.profile.id,
-                                })
-                              }
-                              className={menuRowClass}
-                            >
-                              <span className={menuIconShellClass}>
-                                <Plus className="h-3.5 w-3.5" />
-                              </span>
-                              {t.overlays.boardSettings.members.warn}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                if (!member.latestActiveWarningId) return;
-                                removeWarningMutation.mutate({
-                                  memberId: member.id,
-                                  warningId: member.latestActiveWarningId,
-                                });
-                              }}
-                              disabled={!member.latestActiveWarningId}
+                            {roleIconMap[member.role]}
+                          </div>
+                          <p className="truncate text-[11px] text-theme-text-tertiary">
+                            /{member.profile.discriminator}
+                          </p>
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                            <span className={memberMetaBadgeClass}>
+                              Lv. {member.level}
+                            </span>
+                            <span
                               className={cn(
-                                menuRowClass,
-                                !member.latestActiveWarningId &&
-                                  "cursor-not-allowed opacity-50 hover:border-transparent hover:bg-transparent hover:shadow-none focus:border-transparent focus:bg-transparent focus:shadow-none",
+                                memberMetaBadgeClass,
+                                member.activeWarningCount >= 2 &&
+                                  "border-[#8a5a2c] bg-[#5a3a14]/25 text-[#f2c084]",
                               )}
                             >
-                              <span className={menuIconShellClass}>
-                                <Minus className="h-3.5 w-3.5" />
-                              </span>
-                              {t.overlays.boardSettings.members.removeWarning}
-                            </DropdownMenuItem>
-                            {canBan && (
-                              <DropdownMenuSeparator
-                                className={menuSectionSeparatorClass}
-                              />
-                            )}
-                          </>
-                        )}
-                        {canBan && (
-                          <DropdownMenuItem
-                            onClick={() =>
-                              banMutation.mutate({
-                                memberId: member.id,
-                                targetProfileId: member.profile.id,
-                              })
-                            }
-                            className={cn(menuRowClass, "text-[#d36a6a]")}
-                          >
-                            <span className={cn(menuIconShellClass)}>
-                              <Gavel className="h-3.5 w-3.5 text-[#d36a6a]" />
+                              {t.moderation.warnings}:{" "}
+                              {member.activeWarningCount}/3
                             </span>
-                            {t.overlays.boardSettings.members.ban}
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                )}
-                {loadingId === member.id && (
-                  <Loader2 className="animate-spin text-theme-text-tertiary ml-auto w-4 h-4" />
-                )}
+                          </div>
+                        </div>
+                      </div>
+                      {showActions && (
+                        <div className="ml-auto">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button className={actionButtonClass}>
+                                {t.overlays.boardSettings.members.actions}
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                              side="left"
+                              className={`z-10000 w-48 !animate-none rounded-none border-theme-border bg-theme-bg-dropdown-menu-primary px-1 py-0.5 text-xs font-medium text-theme-text-secondary ${menuPanelShadow}`}
+                            >
+                              {canAssignRoles && (
+                                <>
+                                  {assignableRoles.includes("GUEST") && (
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        roleChangeMutation.mutate({
+                                          memberId: member.id,
+                                          role: "GUEST",
+                                        })
+                                      }
+                                      className={cn(
+                                        menuRowClass,
+                                        member.role === "GUEST" &&
+                                          "border-theme-border bg-theme-channel-type-active-bg text-theme-text-light hover:bg-theme-tab-button-bg focus:bg-theme-tab-button-bg",
+                                      )}
+                                    >
+                                      <span className={menuIconShellClass}>
+                                        <User className="h-3.5 w-3.5" />
+                                      </span>
+                                      {
+                                        t.overlays.boardSettings.members.roles
+                                          .guest
+                                      }
+                                      {member.role === "GUEST" && (
+                                        <Check className="ml-auto h-4 w-4" />
+                                      )}
+                                    </DropdownMenuItem>
+                                  )}
+                                  {assignableRoles.includes("MODERATOR") && (
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        roleChangeMutation.mutate({
+                                          memberId: member.id,
+                                          role: "MODERATOR",
+                                        })
+                                      }
+                                      className={cn(
+                                        menuRowClass,
+                                        member.role === "MODERATOR" &&
+                                          "border-theme-border bg-theme-channel-type-active-bg text-theme-text-light hover:bg-theme-tab-button-bg focus:bg-theme-tab-button-bg",
+                                      )}
+                                    >
+                                      <span className={menuIconShellClass}>
+                                        <Ghost className="h-3.5 w-3.5" />
+                                      </span>
+                                      {
+                                        t.overlays.boardSettings.members.roles
+                                          .moderator
+                                      }
+                                      {member.role === "MODERATOR" && (
+                                        <Check className="ml-auto h-4 w-4" />
+                                      )}
+                                    </DropdownMenuItem>
+                                  )}
+                                  {assignableRoles.includes("ADMIN") && (
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        roleChangeMutation.mutate({
+                                          memberId: member.id,
+                                          role: "ADMIN",
+                                        })
+                                      }
+                                      className={cn(
+                                        menuRowClass,
+                                        member.role === "ADMIN" &&
+                                          "border-theme-border bg-theme-channel-type-active-bg text-theme-text-light hover:bg-theme-tab-button-bg focus:bg-theme-tab-button-bg",
+                                      )}
+                                    >
+                                      <span className={menuIconShellClass}>
+                                        <HardHat className="h-3.5 w-3.5" />
+                                      </span>
+                                      {
+                                        t.overlays.boardSettings.members.roles
+                                          .admin
+                                      }
+                                      {member.role === "ADMIN" && (
+                                        <Check className="ml-auto h-4 w-4" />
+                                      )}
+                                    </DropdownMenuItem>
+                                  )}
+                                </>
+                              )}
+                              {canAssignRoles && (canKick || canBan) && (
+                                <DropdownMenuSeparator
+                                  className={menuSectionSeparatorClass}
+                                />
+                              )}
+                              {canKick && (
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    kickMutation.mutate({
+                                      memberId: member.id,
+                                      targetProfileId: member.profile.id,
+                                    })
+                                  }
+                                  className={menuRowClass}
+                                >
+                                  <span className={menuIconShellClass}>
+                                    <UserMinus className="h-3.5 w-3.5" />
+                                  </span>
+                                  {t.overlays.boardSettings.members.kick}
+                                </DropdownMenuItem>
+                              )}
+                              {canKick && canBan && (
+                                <DropdownMenuSeparator
+                                  className={menuSectionSeparatorClass}
+                                />
+                              )}
+                              {canWarn && (
+                                <>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      warnMutation.mutate({
+                                        memberId: member.id,
+                                        targetProfileId: member.profile.id,
+                                      })
+                                    }
+                                    className={menuRowClass}
+                                  >
+                                    <span className={menuIconShellClass}>
+                                      <Plus className="h-3.5 w-3.5" />
+                                    </span>
+                                    {t.overlays.boardSettings.members.warn}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      if (!member.latestActiveWarningId) return;
+                                      removeWarningMutation.mutate({
+                                        memberId: member.id,
+                                        warningId: member.latestActiveWarningId,
+                                      });
+                                    }}
+                                    disabled={!member.latestActiveWarningId}
+                                    className={cn(
+                                      menuRowClass,
+                                      !member.latestActiveWarningId &&
+                                        "cursor-not-allowed opacity-50 hover:border-transparent hover:bg-transparent hover:shadow-none focus:border-transparent focus:bg-transparent focus:shadow-none",
+                                    )}
+                                  >
+                                    <span className={menuIconShellClass}>
+                                      <Minus className="h-3.5 w-3.5" />
+                                    </span>
+                                    {
+                                      t.overlays.boardSettings.members
+                                        .removeWarning
+                                    }
+                                  </DropdownMenuItem>
+                                  {canBan && (
+                                    <DropdownMenuSeparator
+                                      className={menuSectionSeparatorClass}
+                                    />
+                                  )}
+                                </>
+                              )}
+                              {canBan && (
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    banMutation.mutate({
+                                      memberId: member.id,
+                                      targetProfileId: member.profile.id,
+                                    })
+                                  }
+                                  className={cn(menuRowClass, "text-[#d36a6a]")}
+                                >
+                                  <span className={cn(menuIconShellClass)}>
+                                    <Gavel className="h-3.5 w-3.5 text-[#d36a6a]" />
+                                  </span>
+                                  {t.overlays.boardSettings.members.ban}
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      )}
+                      {loadingId === member.id && (
+                        <Loader2 className="animate-spin text-theme-text-tertiary ml-auto w-4 h-4" />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
+            ),
+          )}
+
+          <div ref={bottomSentinelRef} className="h-1" />
+
+          {hasNextPage ? (
+            <div className="flex justify-center pt-2">
+              <button
+                type="button"
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                className={actionButtonClass}
+              >
+                {isFetchingNextPage ? (
+                  <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+                ) : (
+                  "Load more"
+                )}
+              </button>
+            </div>
+          ) : null}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 };

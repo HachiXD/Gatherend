@@ -20,7 +20,7 @@ import {
 import axios from "axios";
 import { useTheme } from "next-themes";
 import { AnimatedSticker } from "@/components/ui/animated-sticker";
-import { Edit, Lock, Pin, RefreshCw, Siren, Trash } from "lucide-react";
+import { Lock, Pin, RefreshCw } from "lucide-react";
 import { parsePostContent } from "@/lib/parse-post-formatting";
 import { DiscoverySkeleton } from "@/components/discovery/discovery-skeleton";
 import { FeedBottomSkeleton } from "@/components/discovery/feed-bottom-skeleton";
@@ -38,7 +38,7 @@ import {
 } from "@/lib/username-color";
 import { getUsernameFormatClasses } from "@/lib/username-format";
 import { cn } from "@/lib/utils";
-import { ActionTooltip } from "@/components/action-tooltip";
+
 import { useModal } from "@/hooks/use-modal-store";
 import { useCurrentMemberRole } from "@/hooks/use-board-data";
 import { MemberRole } from "@prisma/client";
@@ -1117,70 +1117,10 @@ function CommunityPostsSectionInner({
                       return (
                         <article
                           key={post.id}
-                          className="-mx-6 group border-b border-theme-border px-3 py-2 transition-colors hover:bg-theme-bg-secondary/35"
+                          className="-mx-6 border-b border-theme-border px-3 py-2 transition-colors hover:bg-theme-bg-secondary/35"
                         >
                           <div className="relative bg-theme-bg-edit-form/95 px-4 pt-3 pb-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.16),inset_-1px_-1px_0_rgba(0,0,0,0.38)]">
-                            {!isEditing && (
-                              <div className="absolute right-1 top-0.5 z-10 hidden items-center gap-x-2 rounded-none border border-theme-toolbar-border bg-theme-toolbar-bg p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)] group-hover:flex hover:flex">
-                                {isOwnPost && (
-                                  <ActionTooltip label={t.posts.editPost}>
-                                    <button
-                                      type="button"
-                                      onClick={() => setEditingPostId(post.id)}
-                                      className="cursor-pointer"
-                                      aria-label={t.posts.editPost}
-                                    >
-                                      <Edit className="h-5 w-5 text-theme-toolbar-icon transition hover:text-theme-text-light" />
-                                    </button>
-                                  </ActionTooltip>
-                                )}
-                                {canDeletePost && (
-                                  <ActionTooltip label={t.posts.deletePost}>
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        onOpen("deleteCommunityPost", {
-                                          deleteCommunityPostId: post.id,
-                                          deleteCommunityPostCommunityId:
-                                            communityId,
-                                        })
-                                      }
-                                      className="cursor-pointer"
-                                      aria-label={t.posts.deletePost}
-                                    >
-                                      <Trash className="h-5 w-5 text-theme-toolbar-icon transition hover:text-theme-text-light" />
-                                    </button>
-                                  </ActionTooltip>
-                                )}
-                                {!isOwnPost && (
-                                  <ActionTooltip label={t.posts.reportPost}>
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        onOpen("reportCommunityPost", {
-                                          profileId: profile.id,
-                                          reportCommunityPostId: post.id,
-                                          reportCommunityPostContent:
-                                            post.content,
-                                          reportCommunityPostImageUrl:
-                                            postImageUrl,
-                                          reportCommunityPostAuthorId:
-                                            post.author.id,
-                                          reportCommunityPostAuthorUsername:
-                                            post.author.username,
-                                          reportCommunityPostAuthorDiscriminator:
-                                            post.author.discriminator,
-                                        })
-                                      }
-                                      className="cursor-pointer"
-                                      aria-label={t.posts.reportPost}
-                                    >
-                                      <Siren className="h-5 w-5 text-theme-toolbar-icon transition hover:text-theme-text-light" />
-                                    </button>
-                                  </ActionTooltip>
-                                )}
-                              </div>
-                            )}
+
                             <div className="flex items-start gap-2 -ml-1.5">
                               <div className="shrink-0">
                                 <UserAvatarMenu
@@ -1492,6 +1432,54 @@ function CommunityPostsSectionInner({
                                             : t.posts.expandOmittedComments(
                                                 omittedCount,
                                               )}
+                                      </button>
+                                    )}
+                                    {isOwnPost && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setEditingPostId(post.id)}
+                                        className="cursor-pointer text-[14px] text-theme-text-tertiary transition hover:underline"
+                                      >
+                                        {t.posts.editPost}
+                                      </button>
+                                    )}
+                                    {canDeletePost && (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          onOpen("deleteCommunityPost", {
+                                            deleteCommunityPostId: post.id,
+                                            deleteCommunityPostCommunityId:
+                                              communityId,
+                                          })
+                                        }
+                                        className="cursor-pointer text-[14px] text-theme-text-tertiary transition hover:underline"
+                                      >
+                                        {t.posts.deletePost}
+                                      </button>
+                                    )}
+                                    {!isOwnPost && (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          onOpen("reportCommunityPost", {
+                                            profileId: profile.id,
+                                            reportCommunityPostId: post.id,
+                                            reportCommunityPostContent:
+                                              post.content,
+                                            reportCommunityPostImageUrl:
+                                              postImageUrl,
+                                            reportCommunityPostAuthorId:
+                                              post.author.id,
+                                            reportCommunityPostAuthorUsername:
+                                              post.author.username,
+                                            reportCommunityPostAuthorDiscriminator:
+                                              post.author.discriminator,
+                                          })
+                                        }
+                                        className="cursor-pointer text-[14px] text-theme-text-tertiary transition hover:underline"
+                                      >
+                                        {t.posts.reportPost}
                                       </button>
                                     )}
                                   </div>

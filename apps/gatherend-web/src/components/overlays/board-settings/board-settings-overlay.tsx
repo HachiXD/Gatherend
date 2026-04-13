@@ -35,9 +35,10 @@ export const BoardSettingsOverlay = ({
   } = useBoardData(boardId, { enableFetch: true });
   const overlayShellShadow =
     "shadow-[0_18px_40px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.08),inset_1px_0_0_rgba(255,255,255,0.06),inset_-1px_0_0_rgba(0,0,0,0.42),inset_0_-1px_0_rgba(0,0,0,0.42)]";
-  const currentMember = board?.members.find(
-    (member) => member.profile.id === currentProfileId,
-  );
+  const currentMember =
+    board?.currentMember?.profileId === currentProfileId
+      ? board?.currentMember ?? null
+      : null;
   const currentRole = currentMember?.role;
   const canViewGeneral = currentRole === "OWNER" || currentRole === "ADMIN";
   const canViewMembers =
@@ -47,6 +48,19 @@ export const BoardSettingsOverlay = ({
   const canViewBans = currentRole === "OWNER" || currentRole === "ADMIN";
   const canViewHistory = currentRole === "OWNER" || currentRole === "ADMIN";
   const canSeeDangerZone = currentMember?.role === "OWNER";
+  const fallbackTab = canViewMembers ? "members" : "general";
+  const activeTab =
+    tab === "danger" && !canSeeDangerZone
+      ? fallbackTab
+      : tab === "bans" && !canViewBans
+        ? fallbackTab
+        : tab === "history" && !canViewHistory
+          ? fallbackTab
+          : tab === "general" && !canViewGeneral
+            ? fallbackTab
+            : tab === "members" && !canViewMembers
+              ? "general"
+              : tab;
 
   useEffect(() => {
     if (isError || (!isLoading && !isFetching && !board)) {
@@ -61,27 +75,6 @@ export const BoardSettingsOverlay = ({
       onClose();
     }
   }, [board, currentMember, currentProfileId, onClose]);
-
-  useEffect(() => {
-    if (tab === "danger" && !canSeeDangerZone) {
-      setTab(canViewMembers ? "members" : "general");
-    } else if (tab === "bans" && !canViewBans) {
-      setTab(canViewMembers ? "members" : "general");
-    } else if (tab === "history" && !canViewHistory) {
-      setTab(canViewMembers ? "members" : "general");
-    } else if (tab === "general" && !canViewGeneral) {
-      setTab(canViewMembers ? "members" : "general");
-    } else if (tab === "members" && !canViewMembers) {
-      setTab("general");
-    }
-  }, [
-    canSeeDangerZone,
-    canViewBans,
-    canViewGeneral,
-    canViewHistory,
-    canViewMembers,
-    tab,
-  ]);
 
   if (typeof document === "undefined") {
     return null;
@@ -100,7 +93,7 @@ export const BoardSettingsOverlay = ({
       >
         {/* SIDEBAR */}
         <SettingsSidebar
-          tab={tab}
+          tab={activeTab}
           setTab={setTab}
           onClose={onClose}
           showGeneralTab={canViewGeneral}
@@ -121,19 +114,19 @@ export const BoardSettingsOverlay = ({
             </div>
           )}
 
-          {board && tab === "general" && canViewGeneral && (
+          {board && activeTab === "general" && canViewGeneral && (
             <GeneralTab board={board} />
           )}
-          {board && tab === "members" && canViewMembers && (
+          {board && activeTab === "members" && canViewMembers && (
             <MembersTab board={board} currentProfileId={currentProfileId} />
           )}
-          {board && tab === "bans" && canViewBans && (
+          {board && activeTab === "bans" && canViewBans && (
             <BansTab boardId={board.id} />
           )}
-          {board && tab === "history" && canViewHistory && (
+          {board && activeTab === "history" && canViewHistory && (
             <ModerationHistoryTab boardId={board.id} />
           )}
-          {board && tab === "danger" && canSeeDangerZone && (
+          {board && activeTab === "danger" && canSeeDangerZone && (
             <DangerZoneTab board={board} />
           )}
         </div>

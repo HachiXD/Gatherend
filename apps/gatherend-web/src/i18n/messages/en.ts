@@ -255,9 +255,9 @@ export const en: TranslationKeys = {
     noPostsInCommunity: "No posts in this community.",
     pinned: "Pinned",
     closed: "Closed",
-    editPost: "Edit post",
-    deletePost: "Delete post",
-    reportPost: "Report post",
+    editPost: "Edit",
+    deletePost: "Delete",
+    reportPost: "Report",
     editPostPlaceholder: "Edit post content",
     editCommentPlaceholder: "Edit comment",
     writeCommentPlaceholder: "Write a comment...",
@@ -514,8 +514,7 @@ export const en: TranslationKeys = {
       inviteSeatsDescription: "Joinable only through an invitation",
       publicOptionLabel: "Public",
       privateOptionLabel: "Private",
-      privacyPermanentNotice:
-        "This privacy choice is permanent and cannot be changed after the board is created.",
+
       success: "Board created successfully!",
       error: "Something went wrong creating the board.",
       moderationError: "Please modify your board name or description.",
@@ -726,24 +725,80 @@ export const en: TranslationKeys = {
         childSafety: "Child Safety",
         childSafetyDescription:
           "The board title, image, or description involves minors",
+        childSafetyMessageDescription:
+          "This message contains content involving minors",
+        childSafetyProfileDescription:
+          "This user's profile or content involves minors",
+        childSafetyPostDescription:
+          "This post contains content involving minors",
+        childSafetyCommentDescription:
+          "This comment contains content involving minors",
         sexualContent: "Sexual Content",
         sexualContentDescription:
           "The board title, image, or description contains sexual content",
+        sexualContentMessageDescription:
+          "This message contains sexual content",
+        sexualContentProfileDescription:
+          "This user's profile or content contains sexual material",
+        sexualContentPostDescription:
+          "This post contains sexual content",
+        sexualContentCommentDescription:
+          "This comment contains sexual content",
         harassment: "Harassment",
         harassmentDescription:
           "The board title, image, or description is abusive or targeted",
+        harassmentMessageDescription:
+          "This message is abusive or targeted at someone",
+        harassmentProfileDescription:
+          "This user is harassing or targeting others",
+        harassmentPostDescription:
+          "This post is abusive or targeted at someone",
+        harassmentCommentDescription:
+          "This comment is abusive or targeted at someone",
         hateSpeech: "Hate Speech",
         hateSpeechDescription:
           "The board title, image, or description includes hateful content",
+        hateSpeechMessageDescription:
+          "This message includes hateful language or content",
+        hateSpeechProfileDescription:
+          "This user is posting hateful language or content",
+        hateSpeechPostDescription:
+          "This post includes hateful language or content",
+        hateSpeechCommentDescription:
+          "This comment includes hateful language or content",
         spam: "Spam",
         spamDescription:
           "The board title, image, or description promotes spam or scams",
+        spamMessageDescription:
+          "This message promotes spam, scams, or unwanted content",
+        spamProfileDescription:
+          "This user is promoting spam, scams, or unwanted content",
+        spamPostDescription:
+          "This post promotes spam, scams, or unwanted content",
+        spamCommentDescription:
+          "This comment promotes spam, scams, or unwanted content",
         impersonation: "Impersonation",
         impersonationDescription:
           "The board title, image, or description impersonates someone else",
+        impersonationMessageDescription:
+          "This message is sent by someone impersonating another person",
+        impersonationProfileDescription:
+          "This user is impersonating another person",
+        impersonationPostDescription:
+          "This post is from someone impersonating another person",
+        impersonationCommentDescription:
+          "This comment is from someone impersonating another person",
         other: "Other",
         otherDescription:
           "Another issue with the board title, image, or description",
+        otherMessageDescription:
+          "Another issue with this message",
+        otherProfileDescription:
+          "Another issue with this user's profile or behavior",
+        otherPostDescription:
+          "Another issue with this post",
+        otherCommentDescription:
+          "Another issue with this comment",
       },
     },
   },

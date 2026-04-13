@@ -149,6 +149,7 @@ interface UserAvatarProps {
   memberRole?: MemberRole;
   showRole?: boolean;
   statusOffset?: string;
+  statusClassName?: string;
   ringColorClass?: string;
   // Color del ring superpuesto (por defecto bg-theme-bg-secondary)
   overlayRingColorClass?: string;
@@ -175,6 +176,7 @@ export const UserAvatar = ({
   memberRole,
   showRole = false,
   statusOffset = "right-0",
+  statusClassName,
   ringColorClass,
   overlayRingColorClass = "bg-theme-bg-secondary",
   disableInternalIndicators = false,
@@ -383,6 +385,7 @@ export const UserAvatar = ({
             "bottom-0",
             statusOffset,
             ringColorClass || "indicator-ring",
+            statusClassName,
           )}
         >
           {/* Ring superpuesto - mismo tamaño, posición absolute */}

@@ -1,4 +1,5 @@
 import type { JsonValue } from "@prisma/client/runtime/library";
+import type { ChatBubbleStyle } from "@/lib/chat-bubble-style";
 
 export interface ClientPublicAsset {
   id: string;
@@ -38,6 +39,7 @@ export interface ClientProfileSummary {
   profileTags: string[];
   badge: string | null;
   usernameFormat: JsonValue;
+  chatBubbleStyle?: ChatBubbleStyle | null;
   avatarAsset: ClientPublicAsset | null;
   badgeSticker: ClientStickerAssetRef | null;
 }

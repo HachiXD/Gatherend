@@ -33,6 +33,7 @@ const PROFILE_SELECT = {
   username: true,
   discriminator: true,
   usernameColor: true,
+  chatBubbleStyle: true,
   profileTags: true,
   badge: true,
   usernameFormat: true,
@@ -132,6 +133,7 @@ interface CachedMemberProfile {
   username: string;
   discriminator: string | null;
   usernameColor: Prisma.JsonValue | null;
+  chatBubbleStyle: Prisma.JsonValue | null;
   profileTags: string[];
   badge: string | null;
   usernameFormat: Prisma.JsonValue | null;
@@ -325,6 +327,7 @@ interface CachedConversationProfile {
   id: string;
   username: string;
   discriminator: string;
+  chatBubbleStyle: Prisma.JsonValue | null;
   avatarAsset: {
     id: string;
     key: string;
@@ -396,6 +399,7 @@ export async function findConversationForProfileCached(
           id: true,
           username: true,
           discriminator: true,
+          chatBubbleStyle: true,
           avatarAsset: {
             select: uploadedAssetSelect,
           },
@@ -406,6 +410,7 @@ export async function findConversationForProfileCached(
           id: true,
           username: true,
           discriminator: true,
+          chatBubbleStyle: true,
           avatarAsset: {
             select: uploadedAssetSelect,
           },
@@ -452,6 +457,7 @@ interface CachedProfile {
   username: string;
   discriminator: string;
   usernameColor: Prisma.JsonValue | null;
+  chatBubbleStyle: Prisma.JsonValue | null;
   profileTags: string[];
   badge: string | null;
   usernameFormat: Prisma.JsonValue | null;

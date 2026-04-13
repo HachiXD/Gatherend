@@ -1,5 +1,5 @@
 # BUILDER: Compiles Next.js app and generates Prisma client
-FROM node:20-alpine AS builder
+FROM node:22.22.2-alpine AS builder
 
 WORKDIR /app
 
@@ -64,7 +64,7 @@ RUN npm run build
 # 
 # 2) RUNNER
 # 
-FROM node:20-alpine AS runner
+FROM node:22.22.2-alpine AS runner
 
 WORKDIR /app
 ENV NODE_ENV=production

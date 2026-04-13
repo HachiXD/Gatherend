@@ -6,6 +6,7 @@ import {
   serializeProfileSummary,
   uploadedAssetSummarySelect,
 } from "@/lib/uploaded-assets";
+import { normalizeChatBubbleStyle } from "@/lib/chat-bubble-style";
 
 // UUID validation regex
 const UUID_REGEX =
@@ -19,6 +20,7 @@ const PROFILE_SELECT = {
   discriminator: true,
   usernameColor: true,
   usernameFormat: true,
+  chatBubbleStyle: true,
   badge: true,
   profileTags: true,
   avatarAsset: {
@@ -33,6 +35,17 @@ const PROFILE_SELECT = {
     },
   },
 } as const;
+
+function serializeChatProfileSummary(
+  profile: Parameters<typeof serializeProfileSummary>[0] & {
+    chatBubbleStyle: unknown;
+  },
+) {
+  return {
+    ...serializeProfileSummary(profile),
+    chatBubbleStyle: normalizeChatBubbleStyle(profile.chatBubbleStyle),
+  };
+}
 
 // No cache
 export const dynamic = "force-dynamic";
@@ -79,7 +92,7 @@ export async function POST(req: Request) {
       select: PROFILE_SELECT,
     });
 
-    return NextResponse.json(profiles.map(serializeProfileSummary));
+    return NextResponse.json(profiles.map(serializeChatProfileSummary));
   } catch (error) {
     console.error("[PROFILES_BATCH]", error);
     return NextResponse.json({ error: "Internal Error" }, { status: 500 });

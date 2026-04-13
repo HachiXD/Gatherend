@@ -136,13 +136,14 @@ function DiscoveryBoardCardComponent({ board }: DiscoveryBoardCardProps) {
 
         startTransition(() => {
           if (boardSwitch?.isClientNavigationEnabled) {
-            boardSwitch.switchBoard(board.id, targetChannelId ?? undefined);
+            if (success && !alreadyMember) {
+              boardSwitch.switchToRules(board.id);
+            } else {
+              boardSwitch.switchBoard(board.id);
+            }
           } else {
             router.push(
-              redirectUrl ??
-                (targetChannelId
-                  ? `/boards/${board.id}/rooms/${targetChannelId}`
-                  : `/boards/${board.id}`),
+              redirectUrl ?? `/boards/${board.id}/rules`,
             );
           }
         });

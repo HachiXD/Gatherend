@@ -22,6 +22,11 @@ import {
   profileCardConfigSchema,
   type ProfileCardConfig,
 } from "@/lib/profile-card-config";
+import {
+  normalizeChatBubbleStyle,
+  nullableChatBubbleStyleSchema,
+  type ChatBubbleStyle,
+} from "@/lib/chat-bubble-style";
 import { normalizeUsernameGradientStops } from "@/lib/username-gradient-stops";
 import {
   UUID_REGEX,
@@ -41,6 +46,7 @@ const profileResponseSelect = {
   languages: true,
   badge: true,
   themeConfig: true,
+  chatBubbleStyle: true,
   banReason: true,
   banned: true,
   bannedAt: true,
@@ -135,6 +141,7 @@ async function emitProfileUpdated(
 function serializeProfileResponse(profile: ProfileResponseRecord) {
   return {
     ...profile,
+    chatBubbleStyle: normalizeChatBubbleStyle(profile.chatBubbleStyle),
     avatarAsset: serializePublicAsset(profile.avatarAsset),
     bannerAsset: serializePublicAsset(profile.bannerAsset),
     profileCardLeftTopImageAsset: serializePublicAsset(
@@ -195,6 +202,7 @@ function buildRealtimeProfilePatch(profile: ProfileResponseRecord) {
     ),
     usernameColor: profile.usernameColor,
     usernameFormat: profile.usernameFormat,
+    chatBubbleStyle: normalizeChatBubbleStyle(profile.chatBubbleStyle),
     badge: profile.badge,
     badgeStickerId: profile.badgeStickerId,
     badgeSticker: profile.badgeSticker
@@ -329,6 +337,7 @@ export async function PATCH(req: Request) {
       avatarAssetId,
       bannerAssetId,
       languages,
+      chatBubbleStyle,
       usernameColor,
       profileTags,
       badge,
@@ -604,6 +613,24 @@ export async function PATCH(req: Request) {
       }
     }
 
+    let validatedChatBubbleStyle: ChatBubbleStyle | null | undefined = undefined;
+    if (chatBubbleStyle !== undefined) {
+      const parsedChatBubbleStyle =
+        nullableChatBubbleStyleSchema.safeParse(chatBubbleStyle);
+      if (!parsedChatBubbleStyle.success) {
+        return NextResponse.json(
+          {
+            error:
+              parsedChatBubbleStyle.error.issues[0]?.message ||
+              "Invalid chatBubbleStyle",
+          },
+          { status: 400 },
+        );
+      }
+
+      validatedChatBubbleStyle = parsedChatBubbleStyle.data;
+    }
+
     let resolvedAvatarAssetId: string | null | undefined = undefined;
     {
       const resolvedAvatar = await resolveOwnedAssetId({
@@ -825,6 +852,12 @@ export async function PATCH(req: Request) {
           ? Prisma.JsonNull
           : (validatedProfileCardConfig as Prisma.InputJsonValue);
     }
+    if (validatedChatBubbleStyle !== undefined) {
+      updateData.chatBubbleStyle =
+        validatedChatBubbleStyle === null
+          ? Prisma.JsonNull
+          : (validatedChatBubbleStyle as Prisma.InputJsonValue);
+    }
 
     if (resolvedUsername !== undefined) {
       await changeUsername(profile.id, resolvedUsername);
@@ -917,6 +950,7 @@ export async function DELETE() {
         badgeStickerId: null,
         usernameFormat: Prisma.JsonNull,
         themeConfig: Prisma.JsonNull,
+        chatBubbleStyle: Prisma.JsonNull,
         languages: ["EN"],
         reportAccuracy: null,
         falseReports: 0,

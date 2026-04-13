@@ -8,7 +8,7 @@ import { BoardView } from "./views/board-view";
 import { DiscoveryCommunityView } from "./views/discovery-community-view";
 import { ForumView } from "./views/forum-view";
 import { RulesView } from "./views/rules-view";
-import { MembersView } from "./views/members-view";
+import { ChannelsView } from "./views/channels-view";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ViewLoadingFallback, ViewErrorFallback } from "./views/view-fallbacks";
 
@@ -43,9 +43,9 @@ function CenterContentRouterInner() {
     currentChannelId,
     currentConversationId,
     isDiscovery,
+    isChannels,
     isForum,
     isRules,
-    isMembers,
   } = useBoardSwitchRouting();
 
   // Memoizar la vista para evitar recrear JSX innecesariamente
@@ -78,14 +78,14 @@ function CenterContentRouterInner() {
       );
     }
 
-    // 4. Reglas del board
-    if (isRules) {
-      return <RulesView key={`rules-${currentBoardId}`} />;
+    // 4. Channels del board
+    if (isChannels) {
+      return <ChannelsView key={`channels-${currentBoardId}`} />;
     }
 
-    // 5. Miembros del board
-    if (isMembers) {
-      return <MembersView key={`members-${currentBoardId}`} />;
+    // 5. Reglas del board
+    if (isRules) {
+      return <RulesView key={`rules-${currentBoardId}`} />;
     }
 
     // 6. Foro del board
@@ -93,32 +93,32 @@ function CenterContentRouterInner() {
       return <ForumView key={`forum-${currentBoardId}`} />;
     }
 
-    // 6. BoardView (fallback - redirige al foro)
+    // 7. BoardView (fallback - redirige al foro)
     return <BoardView key={`board-${currentBoardId}`} />;
   }, [
     currentBoardId,
     currentChannelId,
     currentConversationId,
     isDiscovery,
+    isChannels,
     isForum,
     isRules,
-    isMembers,
   ]);
 
   const routeKey = useMemo(
     () => {
       return `${currentBoardId}:${currentChannelId ?? "none"}:${
         currentConversationId ?? "none"
-      }:${isDiscovery ? "discovery" : isRules ? "rules" : isMembers ? "members" : isForum ? "forum" : "other"}`;
+      }:${isDiscovery ? "discovery" : isChannels ? "channels" : isRules ? "rules" : isForum ? "forum" : "other"}`;
     },
     [
       currentBoardId,
       currentChannelId,
       currentConversationId,
       isDiscovery,
+      isChannels,
       isForum,
       isRules,
-      isMembers,
     ],
   );
 

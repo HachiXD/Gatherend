@@ -1,6 +1,6 @@
 # BUILDER: Compile TS and generate Prisma client
 # I have had serious issues with alpine, so I suggest keeping bookworm-slim
-FROM node:20-bookworm-slim AS builder
+FROM node:22.22.2-bookworm-slim AS builder
 
 WORKDIR /app
 RUN apt-get update -y && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
@@ -29,7 +29,7 @@ RUN npm install --legacy-peer-deps
 RUN npm run build
 
 # RUNNER: Final image for production
-FROM node:20-bookworm-slim AS runner
+FROM node:22.22.2-bookworm-slim AS runner
 
 WORKDIR /app
 RUN apt-get update -y && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*

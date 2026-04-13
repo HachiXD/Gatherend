@@ -152,57 +152,36 @@ const InviteCodePage = async ({ params }: InviteCodePageProps) => {
   });
 
   if (existingMember) {
-    const targetChannel = await db.channel.findFirst({
-      where: { boardId },
-      orderBy: { position: "asc" },
-      select: { id: true },
-    });
-
-    return redirect(
-      targetChannel
-        ? `/boards/${boardId}/rooms/${targetChannel.id}`
-        : `/boards/${boardId}`,
-    );
+    return redirect(`/boards/${boardId}/rules`);
   }
 
   // --- LÓGICA DE UNIÓN ---
 
-  let targetChannelId: string | null = null;
-
   try {
     // 2. Transacción atómica
-    const { targetChannelId: joinedTargetChannelId, newMember } =
-      await db.$transaction(async (tx) => {
-        // Verificar ban dentro de la transacción (TOCTOU)
-        const banned = await tx.boardBan.findFirst({
-          where: { boardId, profileId: profile.id },
-          select: { id: true },
-        });
-        if (banned) throw new Error("BANNED");
-
-        const newMember = await tx.member.create({
-          data: {
-            boardId,
-            profileId: profile.id,
-            role: MemberRole.GUEST,
-          },
-        });
-
-        const targetChannel = await tx.channel.findFirst({
-          where: { boardId },
-          orderBy: { position: "asc" },
-          select: { id: true },
-        });
-
-        return {
-          newMember,
-          targetChannelId: targetChannel?.id ?? null,
-        };
+    const { newMember } = await db.$transaction(async (tx) => {
+      // Verificar ban dentro de la transacción (TOCTOU)
+      const banned = await tx.boardBan.findFirst({
+        where: { boardId, profileId: profile.id },
+        select: { id: true },
       });
+      if (banned) throw new Error("BANNED");
+
+      const newMember = await tx.member.create({
+        data: {
+          boardId,
+          profileId: profile.id,
+          role: MemberRole.GUEST,
+        },
+      });
+
+      return {
+        newMember,
+      };
+    });
 
     // Notificar a los miembros existentes que alguien se unió
     // (fire-and-forget, no bloquea el redirect)
-    targetChannelId = joinedTargetChannelId;
     await expressMemberCache.invalidate(boardId, profile.id);
     expressMemberCache.invalidateBoardIds(profile.id);
 
@@ -233,11 +212,7 @@ const InviteCodePage = async ({ params }: InviteCodePageProps) => {
     // Si falló la transacción (ej. alguien tomó el slot milisegundos antes)
     return <InviteStatus status="invalid" />;
   }
-  return redirect(
-    targetChannelId
-      ? `/boards/${boardId}/rooms/${targetChannelId}`
-      : `/boards/${boardId}`,
-  );
+  return redirect(`/boards/${boardId}/rules`);
 };
 
 export default InviteCodePage;

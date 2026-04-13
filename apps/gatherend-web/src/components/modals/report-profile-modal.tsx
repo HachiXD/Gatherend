@@ -37,37 +37,37 @@ export const ReportProfileModal = () => {
     {
       value: "CSAM" as ReportCategory,
       label: t.modals.report.categories.childSafety,
-      description: t.modals.report.categories.childSafetyDescription,
+      description: t.modals.report.categories.childSafetyProfileDescription,
     },
     {
       value: "SEXUAL_CONTENT" as ReportCategory,
       label: t.modals.report.categories.sexualContent,
-      description: t.modals.report.categories.sexualContentDescription,
+      description: t.modals.report.categories.sexualContentProfileDescription,
     },
     {
       value: "HARASSMENT" as ReportCategory,
       label: t.modals.report.categories.harassment,
-      description: t.modals.report.categories.harassmentDescription,
+      description: t.modals.report.categories.harassmentProfileDescription,
     },
     {
       value: "HATE_SPEECH" as ReportCategory,
       label: t.modals.report.categories.hateSpeech,
-      description: t.modals.report.categories.hateSpeechDescription,
+      description: t.modals.report.categories.hateSpeechProfileDescription,
     },
     {
       value: "SPAM" as ReportCategory,
       label: t.modals.report.categories.spam,
-      description: t.modals.report.categories.spamDescription,
+      description: t.modals.report.categories.spamProfileDescription,
     },
     {
       value: "IMPERSONATION" as ReportCategory,
       label: t.modals.report.categories.impersonation,
-      description: t.modals.report.categories.impersonationDescription,
+      description: t.modals.report.categories.impersonationProfileDescription,
     },
     {
       value: "OTHER" as ReportCategory,
       label: t.modals.report.categories.other,
-      description: t.modals.report.categories.otherDescription,
+      description: t.modals.report.categories.otherProfileDescription,
     },
   ];
 

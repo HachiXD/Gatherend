@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import axios from "axios";
 import { Conversation } from "@prisma/client";
 import type { UsernameColor, UsernameFormatConfig } from "../../types";
+import type { ChatBubbleStyle } from "@/lib/chat-bubble-style";
 import type {
   ClientAttachmentAsset,
   ClientUploadedAsset,
@@ -16,6 +17,7 @@ type ConversationProfile = {
   discriminator?: string;
   usernameColor?: UsernameColor;
   usernameFormat?: UsernameFormatConfig;
+  chatBubbleStyle?: ChatBubbleStyle | null;
   avatarAsset?: ClientUploadedAsset | null;
 };
 

@@ -2,7 +2,8 @@
 
 import { memo, useCallback, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Member, MemberRole } from "@prisma/client";
+import { MemberRole } from "@prisma/client";
+import type { BoardCurrentMember } from "@/components/providers/board-provider";
 import type { ClientProfile } from "@/hooks/use-current-profile";
 import {
   Edit,
@@ -50,7 +51,7 @@ interface ChatItemActionsProps {
   }>;
   deleted: boolean;
   currentProfile: ClientProfile;
-  currentMember?: Member | null;
+  currentMember?: BoardCurrentMember | null;
   member?: {
     id: string;
     role: MemberRole;
@@ -91,7 +92,6 @@ export const ChatItemActions = memo(function ChatItemActions({
   deleted,
   currentProfile,
   currentMember,
-  member,
   authorProfile,
   apiUrl,
   socketQuery,

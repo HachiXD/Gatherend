@@ -925,7 +925,7 @@ const ChatInputComponent = ({
               <div className="flex min-w-0 flex-1 items-stretch border border-theme-border-subtle bg-theme-chat-input-surface-bg shadow-[inset_0_1px_0_rgba(0,0,0,0.2),inset_0_-1px_0_rgba(255,255,255,0.08),inset_1px_0_0_rgba(0,0,0,0.2),inset_-1px_0_0_rgba(255,255,255,0.08)] focus-within:border-theme-border-accent">
                 <textarea
                   aria-disabled={isLoading}
-                  className="w-full min-h-[46px] max-h-[225px] resize-none overflow-y-auto border-0 bg-transparent px-3 py-3 text-[14px] text-theme-text-secondary placeholder:text-white/65 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                  className="w-full min-h-[46px] max-h-[225px] resize-none overflow-y-auto border-0 bg-transparent px-3 py-3 text-[14px] text-theme-text-secondary placeholder:text-theme-text-secondary/65 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
                   placeholder={
                     isNarrowScreen
                       ? t.chat.messagePlaceholderShort

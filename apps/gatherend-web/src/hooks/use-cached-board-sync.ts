@@ -4,8 +4,13 @@ import { useSocketClient, useSocketRecoveryVersion } from "@/components/provider
 import { acquireBoardRoom, releaseBoardRoom, rejoinBoardRooms } from "@/hooks/board-room-subscriptions";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
-import type { BoardWithData, BoardChannel, BoardMember } from "@/components/providers/board-provider";
+import type { BoardWithData, BoardChannel, BoardCurrentMember } from "@/components/providers/board-provider";
 import { useEffect, useRef } from "react";
+import {
+  boardQueryKey,
+  patchBoardMemberByProfileIdInCache,
+  removeBoardMemberFromCache,
+} from "@/hooks/board-cache";
 
 interface MemberJoinedPayload {
   boardId: string;
@@ -102,6 +107,30 @@ function getCachedBoardIds(queryClient: ReturnType<typeof useQueryClient>): Set<
   return cachedBoardIds;
 }
 
+function toCurrentMember(
+  member: MemberJoinedPayload["member"],
+): BoardCurrentMember {
+  return {
+    id: member.id,
+    role: member.role as BoardCurrentMember["role"],
+    profileId: member.profileId,
+    boardId: member.boardId,
+    createdAt: new Date(member.createdAt),
+    updatedAt: new Date(member.updatedAt),
+  };
+}
+
+function refetchActiveBoardShell(
+  queryClient: ReturnType<typeof useQueryClient>,
+  boardId: string,
+) {
+  void queryClient.refetchQueries({
+    queryKey: boardQueryKey(boardId),
+    exact: true,
+    type: "active",
+  });
+}
+
 export function useCachedBoardSync(currentProfileId?: string): void {
   const { socket } = useSocketClient();
   const reconnectVersion = useSocketRecoveryVersion();
@@ -111,9 +140,10 @@ export function useCachedBoardSync(currentProfileId?: string): void {
   useEffect(() => {
     if (!socket) return;
 
+    const observedBoardIds = observedBoardIdsRef.current;
+
     const syncObservedRooms = () => {
       const cachedBoardIds = getCachedBoardIds(queryClient);
-      const observedBoardIds = observedBoardIdsRef.current;
 
       observedBoardIds.forEach((boardId) => {
         if (!cachedBoardIds.has(boardId)) {
@@ -131,44 +161,58 @@ export function useCachedBoardSync(currentProfileId?: string): void {
     };
 
     const handleMemberJoined = (payload: MemberJoinedPayload) => {
-      queryClient.setQueryData<BoardWithData>(["board", payload.boardId], (old) => {
-        if (!old) return old;
-        if (old.members.some((m) => m.profileId === payload.member.profileId)) return old;
-        const newMember = {
-          ...payload.member,
-          activeWarningCount: 0,
-          latestActiveWarningId: null,
-          role: payload.member.role as BoardMember["role"],
-          createdAt: new Date(payload.member.createdAt),
-          updatedAt: new Date(payload.member.updatedAt),
-        } as BoardMember;
-        return { ...old, members: [...old.members, newMember] };
-      });
+      if (currentProfileId === payload.member.profileId) {
+        queryClient.setQueryData<BoardWithData>(
+          boardQueryKey(payload.boardId),
+          (old) =>
+            old
+              ? { ...old, currentMember: toCurrentMember(payload.member) }
+              : old,
+        );
+      }
+
+      refetchActiveBoardShell(queryClient, payload.boardId);
     };
 
     const handleMemberLeft = (payload: MemberLeftPayload) => {
-      queryClient.setQueryData<BoardWithData>(["board", payload.boardId], (old) => {
-        if (!old) return old;
-        return { ...old, members: old.members.filter((m) => m.profileId !== payload.profileId) };
+      removeBoardMemberFromCache(queryClient, payload.boardId, {
+        profileId: payload.profileId,
       });
+      queryClient.setQueryData<BoardWithData>(
+        boardQueryKey(payload.boardId),
+        (old) =>
+          old?.currentMember?.profileId === payload.profileId
+            ? { ...old, currentMember: null }
+            : old,
+      );
+      refetchActiveBoardShell(queryClient, payload.boardId);
     };
 
     const handleMemberRoleChanged = (payload: MemberRoleChangedPayload) => {
-      queryClient.setQueryData<BoardWithData>(["board", payload.boardId], (old) => {
+      patchBoardMemberByProfileIdInCache(
+        queryClient,
+        payload.boardId,
+        payload.profileId,
+        (member) => ({
+          ...member,
+          role: payload.role as BoardCurrentMember["role"],
+        }),
+      );
+      queryClient.setQueryData<BoardWithData>(boardQueryKey(payload.boardId), (old) => {
         if (!old) return old;
+        if (old.currentMember?.profileId !== payload.profileId) return old;
         return {
           ...old,
-          members: old.members.map((m) =>
-            m.profileId === payload.profileId
-              ? { ...m, role: payload.role as BoardMember["role"] }
-              : m,
-          ),
+          currentMember: {
+            ...old.currentMember,
+            role: payload.role as BoardCurrentMember["role"],
+          },
         };
       });
     };
 
     const handleChannelCreated = (payload: ChannelCreatedPayload) => {
-      queryClient.setQueryData<BoardWithData>(["board", payload.boardId], (old) => {
+      queryClient.setQueryData<BoardWithData>(boardQueryKey(payload.boardId), (old) => {
         if (!old) return old;
         // Deduplicate: the creator already has the channel via the modal's optimistic update
         if (old.channels.some((ch) => ch.id === payload.channel.id)) return old;
@@ -185,14 +229,14 @@ export function useCachedBoardSync(currentProfileId?: string): void {
     };
 
     const handleChannelDeleted = (payload: ChannelDeletedPayload) => {
-      queryClient.setQueryData<BoardWithData>(["board", payload.boardId], (old) => {
+      queryClient.setQueryData<BoardWithData>(boardQueryKey(payload.boardId), (old) => {
         if (!old) return old;
         return { ...old, channels: old.channels.filter((ch) => ch.id !== payload.channelId) };
       });
     };
 
     const handleChannelUpdated = (payload: ChannelUpdatedPayload) => {
-      queryClient.setQueryData<BoardWithData>(["board", payload.boardId], (old) => {
+      queryClient.setQueryData<BoardWithData>(boardQueryKey(payload.boardId), (old) => {
         if (!old) return old;
         return {
           ...old,
@@ -217,7 +261,7 @@ export function useCachedBoardSync(currentProfileId?: string): void {
       payload: ChannelMembershipChangedPayload,
     ) => {
       queryClient.setQueryData<BoardWithData>(
-        ["board", payload.boardId],
+        boardQueryKey(payload.boardId),
         (old) => {
           if (!old) return old;
 
@@ -299,10 +343,10 @@ export function useCachedBoardSync(currentProfileId?: string): void {
         handleChannelMembershipChanged,
       );
 
-      observedBoardIdsRef.current.forEach((boardId) => {
+      observedBoardIds.forEach((boardId) => {
         releaseBoardRoom(socket, boardId);
       });
-      observedBoardIdsRef.current.clear();
+      observedBoardIds.clear();
     };
   }, [socket, queryClient, currentProfileId]);
 
@@ -311,7 +355,7 @@ export function useCachedBoardSync(currentProfileId?: string): void {
 
     getCachedBoardIds(queryClient).forEach((boardId) => {
       void queryClient.refetchQueries({
-        queryKey: ["board", boardId],
+        queryKey: boardQueryKey(boardId),
         exact: true,
         type: "all",
       });

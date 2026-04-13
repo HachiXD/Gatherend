@@ -1,13 +1,15 @@
 "use client";
 
 import { memo, type CSSProperties } from "react";
-import { SocketIndicator } from "@/components/socket-indicator";
 import { ChatVideoButton } from "./chat-video-button";
 import { PinnedMessagesButton } from "./pinned-messages-button";
 import { ChatHeaderClient } from "./chat-header-client";
 import { ChannelType } from "@prisma/client";
 import { ChatFullscreenButton } from "./chat-fullscreen-button";
 import { useVoiceStore } from "@/hooks/use-voice-store";
+import { ArrowLeft } from "lucide-react";
+import { useBoardSwitchNavigation } from "@/contexts/board-switch-context";
+import { ActionTooltip } from "@/components/action-tooltip";
 
 // Nota: MobileToggle fue removido porque en la arquitectura SPA,
 // los sidebars están siempre disponibles en el layout.
@@ -63,6 +65,7 @@ const ChatHeaderComponent = ({
     channelId: activeVoiceChannelId,
     context: voiceContext,
   } = useVoiceStore();
+  const { switchToChannelList } = useBoardSwitchNavigation();
 
   const isVoiceChannel =
     type === "channel" && channelType === ChannelType.VOICE;
@@ -73,12 +76,24 @@ const ChatHeaderComponent = ({
     activeVoiceChannelId === channelId &&
     (isVoiceConnected || isVoiceConnecting);
 
-    return (
-      <div
+  return (
+    <div
       className="hidden h-12 shrink-0 items-center border-b border-theme-border-primary bg-theme-bg-quaternary px-3 md:flex"
       style={resolvedStyle}
     >
       {/* MobileToggle removido - sidebars disponibles en layout SPA */}
+      {type === "channel" && (
+        <ActionTooltip side="bottom" label="Volver a la lista de chats">
+          <button
+            type="button"
+            onClick={() => switchToChannelList(boardId)}
+            className="mr-2 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center border border-[var(--community-header-btn-ring)] bg-[var(--community-header-btn-bg,var(--theme-bg-secondary))] text-theme-text-subtle shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)] transition hover:bg-[var(--community-header-btn-hover)] hover:text-theme-text-light"
+            aria-label="Volver a la lista de chats"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+        </ActionTooltip>
+      )}
       <ChatHeaderClient
         boardId={boardId}
         name={name}

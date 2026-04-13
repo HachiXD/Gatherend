@@ -1,0 +1,43 @@
+.git
+.gitignore
+.dockerignore
+
+# Local environment and secrets
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
+
+# Dependencies
+node_modules
+**/node_modules
+.pnp
+.pnp.*
+
+# Build output
+.next
+**/.next
+out
+**/out
+build
+**/build
+dist
+**/dist
+coverage
+**/coverage
+
+# Logs and local tooling
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+lerna-debug.log*
+.DS_Store
+.vscode
+.idea
+
+# Secrets/certs/backups
+*.pem
+certs
+**/certs

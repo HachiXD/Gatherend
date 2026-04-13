@@ -14,6 +14,10 @@ import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
 import { moderateDescription } from "@/lib/text-moderation";
 import { createDefaultBoardChannelsForOwner } from "@/lib/boards/default-channels";
+import {
+  serializeUploadedAsset,
+  uploadedAssetSummarySelect,
+} from "@/lib/uploaded-assets";
 
 const IDEMPOTENCY_EXPIRATION_HOURS = 24;
 const IDEMPOTENCY_STATUS_PENDING = 0;
@@ -29,6 +33,68 @@ function isUniqueConstraintError(error: unknown): boolean {
     error instanceof Prisma.PrismaClientKnownRequestError &&
     error.code === "P2002"
   );
+}
+
+function getBoardShell(
+  tx: Prisma.TransactionClient,
+  boardId: string,
+  profileId: string,
+) {
+  return tx.board.findUniqueOrThrow({
+    where: { id: boardId },
+    include: {
+      imageAsset: { select: uploadedAssetSummarySelect },
+      _count: { select: { members: true } },
+      members: {
+        where: { profileId },
+        select: {
+          id: true,
+          role: true,
+          profileId: true,
+          boardId: true,
+          level: true,
+          xp: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+        take: 1,
+      },
+      channels: {
+        orderBy: { position: "asc" },
+        include: {
+          imageAsset: { select: uploadedAssetSummarySelect },
+          _count: { select: { channelMembers: true } },
+          channelMembers: {
+            where: { profileId },
+            select: { id: true },
+            take: 1,
+          },
+        },
+      },
+    },
+  });
+}
+
+type BoardShell = Awaited<ReturnType<typeof getBoardShell>>;
+
+function serializeBoardShell(board: BoardShell) {
+  const { members, _count, channels, imageAsset, ...boardData } = board;
+  const currentMember = members[0] ?? null;
+
+  return {
+    ...boardData,
+    imageAsset: serializeUploadedAsset(imageAsset),
+    memberCount: _count.members,
+    currentMember,
+    channels: channels.map((channel) => ({
+      ...channel,
+      imageAsset: serializeUploadedAsset(channel.imageAsset),
+      channelMemberCount: channel._count.channelMembers,
+      isJoined: channel.channelMembers.length > 0,
+      _count: undefined,
+      channelMembers: undefined,
+    })),
+  };
 }
 
 export async function POST(req: Request) {
@@ -208,10 +274,12 @@ export async function POST(req: Request) {
         where: {
           members: { some: { profileId: profile.id } },
         },
+        select: { id: true },
       });
 
       if (existingBoard) {
-        return { board: existingBoard, created: false };
+        const board = await getBoardShell(tx, existingBoard.id, profile.id);
+        return { board, created: false };
       }
 
       // Create new board
@@ -244,20 +312,13 @@ export async function POST(req: Request) {
         ownerProfileId: profile.id,
       });
 
-      const hydratedBoard = await tx.board.findUniqueOrThrow({
-        where: { id: newBoard.id },
-        include: {
-          members: true,
-          channels: {
-            orderBy: { position: "asc" },
-          },
-        },
-      });
+      const hydratedBoard = await getBoardShell(tx, newBoard.id, profile.id);
 
       return { board: hydratedBoard, created: true };
     });
 
-    const json = JSON.stringify(result.board);
+    const responseBody = serializeBoardShell(result.board);
+    const json = JSON.stringify(responseBody);
     const statusCode = result.created ? 201 : 200;
 
     // 6. Update idempotency key with final result

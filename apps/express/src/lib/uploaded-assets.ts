@@ -36,6 +36,7 @@ export const profileSelect = {
   username: true,
   discriminator: true,
   usernameColor: true,
+  chatBubbleStyle: true,
   profileTags: true,
   badge: true,
   usernameFormat: true,

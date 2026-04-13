@@ -9,9 +9,15 @@ import axios from "axios";
 import type {
   BoardWithData,
   BoardChannel,
+  BoardCurrentMember,
 } from "@/components/providers/board-provider";
 import { useBoardNavigationStore } from "@/stores/board-navigation-store";
 import { syncUserBoardFromBoardData } from "@/hooks/use-user-boards";
+import {
+  BOARD_CACHE_GC_TIME_MS,
+  BOARD_CACHE_STALE_TIME_MS,
+  boardQueryKey,
+} from "@/hooks/board-cache";
 
 /**
  * Hook para obtener datos del board desde React Query cache
@@ -29,7 +35,7 @@ export function useBoardData(
   const queryClient = useQueryClient();
 
   return useQuery<BoardWithData>({
-    queryKey: ["board", boardId],
+    queryKey: boardQueryKey(boardId),
     queryFn: async (): Promise<BoardWithData> => {
       // Hacer fetch solo si enableFetch está habilitado
       const response = await fetch(`/api/boards/${boardId}`, {
@@ -47,7 +53,8 @@ export function useBoardData(
     // Habilitar query solo si enableFetch es true
     enabled: enableFetch,
     // Mantener datos por 5 minutos antes de considerarlos stale
-    staleTime: 1000 * 60 * 5,
+    staleTime: BOARD_CACHE_STALE_TIME_MS,
+    gcTime: BOARD_CACHE_GC_TIME_MS,
     // Mantener datos anteriores mientras carga nuevos
     placeholderData: (previousData) => previousData,
   });
@@ -66,7 +73,7 @@ export function useCurrentBoardData() {
   const queryClient = useQueryClient();
 
   return useQuery<BoardWithData>({
-    queryKey: ["board", boardId],
+    queryKey: boardQueryKey(boardId),
     queryFn: async (): Promise<BoardWithData> => {
       const response = await fetch(`/api/boards/${boardId}`, {
         credentials: "include",
@@ -82,7 +89,8 @@ export function useCurrentBoardData() {
     },
     // Solo habilitar si tenemos un boardId válido
     enabled: !!boardId,
-    staleTime: 1000 * 60 * 5, // 5 minutos
+    staleTime: BOARD_CACHE_STALE_TIME_MS,
+    gcTime: BOARD_CACHE_GC_TIME_MS,
     // Mantener datos del board anterior mientras carga el nuevo
     // Esto evita skeletons durante transiciones entre boards
     placeholderData: keepPreviousData,
@@ -115,14 +123,14 @@ export function useBoardMutations(boardId: string) {
 
   // Helper para obtener el board actual del cache
   const getBoard = useCallback(() => {
-    return queryClient.getQueryData<BoardWithData>(["board", boardId]);
+    return queryClient.getQueryData<BoardWithData>(boardQueryKey(boardId));
   }, [queryClient, boardId]);
 
   //  CHANNELS
 
   const addChannel = useCallback(
     (channel: BoardChannel) => {
-      queryClient.setQueryData<BoardWithData>(["board", boardId], (old) => {
+      queryClient.setQueryData<BoardWithData>(boardQueryKey(boardId), (old) => {
         if (!old) return old;
 
         return {
@@ -136,7 +144,7 @@ export function useBoardMutations(boardId: string) {
 
   const updateChannel = useCallback(
     (channelId: string, updates: Partial<BoardChannel>) => {
-      queryClient.setQueryData<BoardWithData>(["board", boardId], (old) => {
+      queryClient.setQueryData<BoardWithData>(boardQueryKey(boardId), (old) => {
         if (!old) return old;
 
         return {
@@ -153,7 +161,7 @@ export function useBoardMutations(boardId: string) {
 
   const removeChannel = useCallback(
     (channelId: string) => {
-      queryClient.setQueryData<BoardWithData>(["board", boardId], (old) => {
+      queryClient.setQueryData<BoardWithData>(boardQueryKey(boardId), (old) => {
         if (!old) return old;
 
         return {
@@ -170,7 +178,7 @@ export function useBoardMutations(boardId: string) {
   const updateBoard = useCallback(
     (updates: Partial<BoardWithData>) => {
       // Actualizar el cache del board específico
-      queryClient.setQueryData<BoardWithData>(["board", boardId], (old) => {
+      queryClient.setQueryData<BoardWithData>(boardQueryKey(boardId), (old) => {
         if (!old) return old;
         return { ...old, ...updates };
       });
@@ -204,40 +212,10 @@ export function useBoardMutations(boardId: string) {
     [queryClient, boardId],
   );
 
-  //  MEMBERS
-
-  const updateMember = useCallback(
-    (memberId: string, updates: Partial<BoardWithData["members"][0]>) => {
-      queryClient.setQueryData<BoardWithData>(["board", boardId], (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          members: old.members.map((m) =>
-            m.id === memberId ? { ...m, ...updates } : m,
-          ),
-        };
-      });
-    },
-    [queryClient, boardId],
-  );
-
-  const removeMember = useCallback(
-    (memberId: string) => {
-      queryClient.setQueryData<BoardWithData>(["board", boardId], (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          members: old.members.filter((m) => m.id !== memberId),
-        };
-      });
-    },
-    [queryClient, boardId],
-  );
-
   //  INVALIDATE (forzar refetch)
 
   const invalidateBoard = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ["board", boardId] });
+    queryClient.invalidateQueries({ queryKey: boardQueryKey(boardId) });
   }, [queryClient, boardId]);
 
   return {
@@ -248,9 +226,6 @@ export function useBoardMutations(boardId: string) {
     removeChannel,
     // Board
     updateBoard,
-    // Members
-    updateMember,
-    removeMember,
     // Utils
     invalidateBoard,
   };
@@ -284,16 +259,15 @@ export function useDeleteChannel() {
     // Optimistic update: actualiza el cache ANTES de que la API responda
     onMutate: async ({ channelId, boardId }) => {
       // Cancelar queries en progreso para evitar overwrites
-      await queryClient.cancelQueries({ queryKey: ["board", boardId] });
+      await queryClient.cancelQueries({ queryKey: boardQueryKey(boardId) });
 
       // Snapshot del estado anterior (para rollback)
-      const previousBoard = queryClient.getQueryData<BoardWithData>([
-        "board",
-        boardId,
-      ]);
+      const previousBoard = queryClient.getQueryData<BoardWithData>(
+        boardQueryKey(boardId),
+      );
 
       // Actualización optimista
-      queryClient.setQueryData<BoardWithData>(["board", boardId], (old) => {
+      queryClient.setQueryData<BoardWithData>(boardQueryKey(boardId), (old) => {
         if (!old) return old;
         return {
           ...old,
@@ -309,7 +283,7 @@ export function useDeleteChannel() {
     onError: (_error, _variables, context) => {
       if (context?.previousBoard) {
         queryClient.setQueryData(
-          ["board", context.boardId],
+          boardQueryKey(context.boardId),
           context.previousBoard,
         );
       }
@@ -339,26 +313,6 @@ function createChannelsMap(
 }
 
 /**
- * Crea un Map de profileId -> member para lookup O(1)
- * @param board - Board data
- * @returns Map de profileId -> BoardMember
- */
-function createMembersMap(
-  board: BoardWithData | undefined,
-): Map<string, BoardWithData["members"][number]> {
-  const map = new Map<string, BoardWithData["members"][number]>();
-  if (!board) return map;
-
-  board.members.forEach((m) => {
-    if (m.profileId) {
-      map.set(m.profileId, m);
-    }
-  });
-
-  return map;
-}
-
-/**
  * Hook para obtener un Map de canales desde un board ya resuelto.
  * Evita suscripciones duplicadas al query cuando el board ya fue leido
  * en un componente padre.
@@ -367,17 +321,6 @@ export function useBoardChannelsMap(
   board: BoardWithData | undefined,
 ): Map<string, BoardChannel> {
   return useMemo(() => createChannelsMap(board), [board]);
-}
-
-/**
- * Hook para obtener un Map de miembros desde un board ya resuelto.
- * Evita suscripciones duplicadas al query cuando el board ya fue leido
- * en un componente padre.
- */
-export function useBoardMembersMap(
-  board: BoardWithData | undefined,
-): Map<string, BoardWithData["members"][number]> {
-  return useMemo(() => createMembersMap(board), [board]);
 }
 
 /**
@@ -392,32 +335,23 @@ export function useCurrentBoardChannelsMap(): Map<string, BoardChannel> {
 }
 
 /**
- * Hook para obtener un Map de miembros del board actual.
- * Permite lookup O(1) para encontrar member por profileId.
- *
- * @returns Map de profileId -> BoardMember
- */
-export function useCurrentBoardMembersMap(): Map<
-  string,
-  BoardWithData["members"][number]
-> {
-  const { data: board } = useCurrentBoardData();
-  return useBoardMembersMap(board);
-}
-
-/**
  * Hook para obtener el member del usuario actual en el board.
- * Usa Map interno para lookup O(1).
  *
  * @param profileId - ID del perfil del usuario actual
  * @returns Member del usuario actual o undefined
  */
 export function useCurrentMember(
-  profileId: string,
-): BoardWithData["members"][number] | undefined {
-  const membersMap = useCurrentBoardMembersMap();
+  profileId?: string,
+): BoardCurrentMember | undefined {
+  const { data: board } = useCurrentBoardData();
 
-  return useMemo(() => membersMap.get(profileId), [membersMap, profileId]);
+  return useMemo(() => {
+    if (!board?.currentMember) return undefined;
+    if (profileId && board.currentMember.profileId !== profileId) {
+      return undefined;
+    }
+    return board.currentMember;
+  }, [board?.currentMember, profileId]);
 }
 
 /**
@@ -429,26 +363,9 @@ export function useCurrentMember(
  */
 export function useCurrentMemberRole(
   profileId: string,
-): BoardWithData["members"][number]["role"] | undefined {
+): BoardCurrentMember["role"] | undefined {
   const member = useCurrentMember(profileId);
   return member?.role;
-}
-
-/**
- * Hook para obtener IDs de miembros del board actual.
- * Los IDs son estables (no cambian referencia si los valores son iguales).
- *
- * @returns Array de profile IDs de los miembros
- */
-export function useBoardMemberIds(): string[] {
-  const { data: board } = useCurrentBoardData();
-
-  return useMemo(() => {
-    if (!board?.members) return [];
-    return board.members
-      .map((m) => m.profileId)
-      .filter((id): id is string => id !== null);
-  }, [board?.members]);
 }
 
 /**

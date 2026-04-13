@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import { Channel, ChannelType, Board } from "@prisma/client";
+import { Channel, ChannelType } from "@prisma/client";
+import type { BoardWithData } from "@/components/providers/board-provider";
 import type {
   ClientAttachmentAsset,
   ClientProfileSummary,
@@ -36,7 +37,7 @@ interface ModalData {
   categoryId?: string | null;
   categoryName?: string;
   profileId?: string;
-  board?: Board;
+  board?: BoardWithData;
   boardId?: string; // Alternativa a board completo para evitar re-renders
   channel?: Partial<Channel>;
   channelType?: ChannelType;

@@ -22,6 +22,7 @@ import {
 } from "@/hooks/use-user-boards";
 import { useUnreadStore } from "@/hooks/use-unread-store";
 import { useMentionStore } from "@/hooks/use-mention-store";
+import { boardQueryKey, removeBoardMembersCache } from "@/hooks/board-cache";
 
 export const LeaveBoardModal = () => {
   const { isOpen, onClose, type, data } = useModal();
@@ -61,7 +62,8 @@ export const LeaveBoardModal = () => {
         : (queryClient.getQueryData<UserBoard[]>(["user-boards"]) ?? []);
 
       if (board?.id) {
-        queryClient.removeQueries({ queryKey: ["board", board.id] });
+        queryClient.removeQueries({ queryKey: boardQueryKey(board.id) });
+        removeBoardMembersCache(queryClient, board.id);
       }
 
       onClose();

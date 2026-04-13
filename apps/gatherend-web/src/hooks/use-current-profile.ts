@@ -6,6 +6,7 @@ import { JsonValue } from "@prisma/client/runtime/library";
 import { fetchWithRetry } from "@/lib/fetch-with-retry";
 import { useTokenReady } from "@/components/providers/token-manager-provider";
 import { useSession } from "@/lib/better-auth-client";
+import type { ChatBubbleStyle } from "@/lib/chat-bubble-style";
 import type { ProfileCardConfig } from "@/lib/profile-card-config";
 import type {
   ClientStickerAssetRef,
@@ -40,6 +41,7 @@ export interface ClientProfile {
   badge: string | null;
   usernameFormat: JsonValue;
   themeConfig: JsonValue;
+  chatBubbleStyle: ChatBubbleStyle | null;
 }
 
 export function useCurrentProfile() {

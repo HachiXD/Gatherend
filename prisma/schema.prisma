@@ -93,6 +93,7 @@ model Profile {
   profileTags                     String[]                   @default([])
   usernameColor                   Json?
   usernameFormat                  Json?
+  chatBubbleStyle                 Json? 
   // `profileCardConfig` stores the fixed-layout mini profile page state:
   // - style: backgroundColor, boxColor, rounded, shadows
   // - content: pageTitle, leftTopText, leftBottomText sections, right image titles

@@ -137,16 +137,14 @@ const LeftbarChannelComponent = ({
       <button
         onClick={onClick}
         onMouseEnter={enableTooltipsOnce}
-        style={
-          {
-            ...(accentVars ?? {}),
-            ...(channelImageUrl
-              ? { backgroundImage: `url(${channelImageUrl})` }
-              : {}),
-          }
-        }
+        style={{
+          ...(accentVars ?? {}),
+          ...(channelImageUrl
+            ? { backgroundImage: `url(${channelImageUrl})` }
+            : {}),
+        }}
         className={cn(
-          "group relative flex h-12 w-full min-w-0 max-w-full cursor-pointer items-center overflow-hidden rounded-none border border-theme-channel-type-active-border px-0 text-left transition",
+          "group relative flex h-20 w-full min-w-0 max-w-full cursor-pointer items-center overflow-hidden rounded-none border border-theme-channel-type-active-border px-0 text-left transition",
           channelImageUrl
             ? [
                 "bg-cover bg-center bg-no-repeat",
@@ -154,14 +152,16 @@ const LeftbarChannelComponent = ({
                 isActive &&
                   "shadow-[inset_0_1px_0_rgba(0,0,0,0.42),inset_1px_0_0_rgba(0,0,0,0.36),inset_-1px_0_0_rgba(255,255,255,0.14),inset_0_-1px_0_rgba(255,255,255,0.18)]",
               ]
-             : [
-                  "bg-theme-channel-type-active-border shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_-1px_0_rgba(0,0,0,0.38)]",
-                  !isActive && "hover:bg-theme-channel-type-active-border",
-                  isActive && "bg-theme-button-primary",
-                  isActive &&
-                    "shadow-[inset_0_1px_0_rgba(0,0,0,0.42),inset_1px_0_0_rgba(0,0,0,0.36),inset_-1px_0_0_rgba(255,255,255,0.14),inset_0_-1px_0_rgba(255,255,255,0.18)]",
-                ],
-          channelImageUrl && isActive && "border-l-4 border-theme-channel-type-active-border",
+            : [
+                "bg-theme-channel-type-active-border shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_-1px_0_rgba(0,0,0,0.38)]",
+                !isActive && "hover:bg-theme-channel-type-active-border",
+                isActive && "bg-theme-button-primary",
+                isActive &&
+                  "shadow-[inset_0_1px_0_rgba(0,0,0,0.42),inset_1px_0_0_rgba(0,0,0,0.36),inset_-1px_0_0_rgba(255,255,255,0.14),inset_0_-1px_0_rgba(255,255,255,0.18)]",
+              ],
+          channelImageUrl &&
+            isActive &&
+            "border-l-4 border-theme-channel-type-active-border",
         )}
       >
         {/* Overlay oscuro cuando hay imagen de fondo */}
@@ -184,33 +184,33 @@ const LeftbarChannelComponent = ({
                 {isText ? (
                   <SlashSVG
                     className={cn(
-                      "w-5 h-5 shrink-0 text-theme-text-tertiary",
+                      "w-7 h-7 shrink-0 text-theme-text-tertiary",
                       isActive && "text-theme-accent-primary",
                     )}
                   />
                 ) : (
                   <Mic
                     className={cn(
-                      "w-5 h-5 shrink-0 ml-0.5 text-theme-text-tertiary",
+                      "w-7 h-7 shrink-0 ml-0.5 text-theme-text-tertiary",
                       isActive && "text-theme-accent-primary",
                     )}
                   />
                 )}
                 <p
-                    className={cn(
-                      "min-w-0 flex-1 truncate font-medium text-[14.5px] text-theme-text-primary transition",
-                      isText ? "-ml-0.5" : "ml-0.5",
-                      !isActive && "group-hover:underline underline-offset-4",
-                      isActive &&
-                        "font-semibold text-theme-accent-primary underline underline-offset-4",
-                    )}
+                  className={cn(
+                    "min-w-0 flex-1 truncate font-medium text-[20px] text-theme-text-primary transition",
+                    isText ? "-ml-0.5" : "ml-0.5",
+                    !isActive && "group-hover:underline underline-offset-4",
+                    isActive &&
+                      "font-semibold text-theme-accent-primary underline underline-offset-4",
+                  )}
                 >
                   {channel.name}
                 </p>
               </div>
               {isText && (
-                <span className="flex ml-2 items-center gap-1 text-[12px] text-theme-text-muted">
-                  <Users className="w-3.5 h-3.5" />
+                <span className="flex ml-2 items-center gap-1 text-[16px] text-theme-text-muted">
+                  <Users className="w-5 h-5" />
                   {channel.channelMemberCount == null ||
                   channel.channelMemberCount === 0
                     ? "Sin miembros"
@@ -243,13 +243,13 @@ const LeftbarChannelComponent = ({
               <ActionTooltip label={t.board.editChannel}>
                 <Edit
                   onClick={(e) => onAction(e, "editChannel")}
-                  className="w-4 h-4 text-theme-text-tertiary hover:text-theme-text-primary transition"
+                  className="w-6 h-6 text-theme-text-tertiary hover:text-theme-text-primary transition"
                 />
               </ActionTooltip>
             ) : (
               <Edit
                 onClick={(e) => onAction(e, "editChannel")}
-                className="w-4 h-4 text-theme-text-tertiary hover:text-theme-text-primary transition"
+                className="w-6 h-6 text-theme-text-tertiary hover:text-theme-text-primary transition"
               />
             )}
 

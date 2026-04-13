@@ -7,10 +7,16 @@ import {
   selectRouting,
   selectActions,
   selectIsInitialized,
-  getLastChannelForBoard,
+  getLastBoardViewForBoard,
+  getLastChatsViewForBoard,
+  resolveLastBoardViewForBoard,
 } from "@/stores/board-navigation-store";
 // Re-export utility function for backward compatibility
-export { getLastChannelForBoard };
+export {
+  getLastBoardViewForBoard,
+  getLastChatsViewForBoard,
+  resolveLastBoardViewForBoard,
+};
 
 /**
  *

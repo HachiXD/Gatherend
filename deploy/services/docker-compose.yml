@@ -1,7 +1,15 @@
+x-logging: &default-logging
+  driver: "local"
+  options:
+    max-size: "10m"
+    max-file: "5"
+    compress: "true"
+
 services:
   imgproxy:
-    image: ghcr.io/imgproxy/imgproxy:latest
+    image: ghcr.io/imgproxy/imgproxy:v3.31.2
     restart: always
+    logging: *default-logging
     profiles: [images]
     cpus: "1"
     expose:
@@ -20,6 +28,7 @@ services:
   dicebear:
     image: dicebear/api:3
     restart: always
+    logging: *default-logging
     profiles: [images]
     expose:
       - "3000"
@@ -37,6 +46,7 @@ services:
   nsfwjs:
     build: ./nsfwjs-service
     restart: always
+    logging: *default-logging
     profiles: [moderation]
     expose:
       - "5000"
@@ -64,6 +74,7 @@ services:
   minio:
     image: minio/minio:latest
     restart: always
+    logging: *default-logging
     profiles: [minio]
     command: server /data --console-address ":9001"
     expose:
@@ -81,8 +92,9 @@ services:
       - internal
 
   livekit:
-    image: livekit/livekit-server:latest
+    image: livekit/livekit-server:v1.10.1
     restart: always
+    logging: *default-logging
     profiles: [livekit]
     ports:
       - "7880:7880"
@@ -99,8 +111,9 @@ services:
       - internal
 
   livekit-redis:
-    image: redis:7-alpine
+    image: redis:7.4.8-alpine
     restart: always
+    logging: *default-logging
     profiles: [livekit]
     volumes:
       - livekitredis:/data
@@ -117,6 +130,7 @@ services:
       context: .
       dockerfile: Dockerfile.caddy
     restart: always
+    logging: *default-logging
     ports:
       - "80:80"
       - "443:443"

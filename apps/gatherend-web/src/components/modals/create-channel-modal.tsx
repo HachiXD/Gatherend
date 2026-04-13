@@ -64,20 +64,12 @@ function getOptimisticChannelImageAsset(
 function getOptimisticChannelMemberCount(
   board: BoardWithData | undefined,
 ) {
-  const autoJoinedProfileIds = new Set<string>();
-
-  board?.members.forEach((member) => {
-    if (
-      member.profileId &&
-      (member.role === MemberRole.OWNER ||
-        member.role === MemberRole.ADMIN ||
-        member.role === MemberRole.MODERATOR)
-    ) {
-      autoJoinedProfileIds.add(member.profileId);
-    }
-  });
-
-  return autoJoinedProfileIds.size;
+  const currentRole = board?.currentMember?.role;
+  return currentRole === MemberRole.OWNER ||
+    currentRole === MemberRole.ADMIN ||
+    currentRole === MemberRole.MODERATOR
+    ? 1
+    : 0;
 }
 
 export const CreateChannelModal = () => {

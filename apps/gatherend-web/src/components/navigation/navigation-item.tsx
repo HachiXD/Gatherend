@@ -8,13 +8,13 @@ import { ActionTooltip } from "@/components/action-tooltip";
 import { useUnreadStore } from "@/hooks/use-unread-store";
 import { useMentionStore } from "@/hooks/use-mention-store";
 import { useNavigationStore } from "@/hooks/use-navigation-store";
-import { getLastChannelForBoard } from "@/contexts/board-switch-context";
+import { resolveLastBoardViewForBoard } from "@/contexts/board-switch-context";
 import { AtSign } from "lucide-react";
 import { fetchWithRetry } from "@/lib/fetch-with-retry";
 import { getOptimizedStaticUiImageUrl } from "@/lib/ui-image-optimizer";
-import { resolveInitialChannelId } from "@/lib/boards/resolve-initial-channel";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 import type { BoardWithData } from "@/components/providers/board-provider";
+import type { BoardViewTarget } from "@/stores/board-navigation-store";
 
 const STORAGE_DOMAIN = process.env.NEXT_PUBLIC_STORAGE_DOMAIN || "";
 
@@ -70,6 +70,9 @@ const NavigationItemComponent = ({
   // Solo re-renderiza si la referencia de switchBoard cambia (prácticamente nunca)
   const switchBoard = useNavigationStore(
     useCallback((state) => state.switchBoard, []),
+  );
+  const switchBoardView = useNavigationStore(
+    useCallback((state) => state.switchBoardView, []),
   );
   const isNavigationReady = switchBoard !== null;
 
@@ -173,61 +176,81 @@ const NavigationItemComponent = ({
     [displayImageUrl, fallbackLabel, isGatherendCdnUrl, name], // Solo dependencias que REALMENTE cambian el contenido
   );
 
-  // Helper para resolver el canal inicial para navegación normal de miembros
-  const getInitialChannelFromBoard = useCallback(
-    (board: BoardWithData): string | null => {
-      return resolveInitialChannelId(
-        board.channels,
-        getLastChannelForBoard(board.id),
-      );
+  // Resuelve la ultima vista recordada sin romper si el canal guardado ya no existe.
+  const resolveBoardViewFromMemory = useCallback(
+    (board: BoardWithData): BoardViewTarget => {
+      const view = resolveLastBoardViewForBoard(board.id);
+      if (
+        view.kind === "channels:channel" &&
+        !board.channels.some((channel) => channel.id === view.channelId)
+      ) {
+        return { kind: "channels:list" };
+      }
+
+      return view;
     },
     [],
   );
 
   const pushOptimisticBoardUrl = useCallback(
-    (boardId: string, channelId?: string | null) => {
-      const targetUrl = channelId
-        ? `/boards/${boardId}/rooms/${channelId}`
-        : `/boards/${boardId}`;
-      const targetState = channelId ? { boardId, channelId } : { boardId };
+    (boardId: string, view: BoardViewTarget) => {
+      const targetUrl =
+        view.kind === "forum"
+          ? `/boards/${boardId}/forum`
+          : view.kind === "rules"
+            ? `/boards/${boardId}/rules`
+            : view.kind === "channels:list"
+              ? `/boards/${boardId}/channels`
+              : `/boards/${boardId}/rooms/${view.channelId}`;
+      const targetState =
+        view.kind === "forum"
+          ? { boardId, isForum: true }
+          : view.kind === "rules"
+            ? { boardId, isRules: true }
+            : view.kind === "channels:list"
+              ? { boardId, isChannels: true }
+              : { boardId, channelId: view.channelId };
       window.history.pushState(targetState, "", targetUrl);
     },
     [],
   );
 
+  const navigateBoardView = useCallback(
+    (
+      boardId: string,
+      view: BoardViewTarget,
+      options?: { history?: "push" | "replace" },
+    ) => {
+      if (switchBoardView) {
+        switchBoardView(boardId, view, options);
+        return;
+      }
+
+      if (view.kind === "channels:channel") {
+        switchBoard?.(boardId, view.channelId, options);
+      } else {
+        switchBoard?.(boardId, undefined, options);
+      }
+    },
+    [switchBoard, switchBoardView],
+  );
+
   const onClick = useCallback(async () => {
     if (!isNavigationReady || !switchBoard) {
-      router.push(`/boards/${id}`);
+      router.push(`/boards/${id}/rules`);
       return;
     }
 
-    // 1. Intentar obtener último canal del localStorage
-    const lastChannelId = getLastChannelForBoard(id);
-    if (lastChannelId) {
-      // Verificar que el board esté en cache de React Query
-      const cachedBoard = queryClient.getQueryData<BoardWithData>([
-        "board",
-        id,
-      ]);
-      if (cachedBoard) {
-        // Cache completo disponible - navegar directo
-        switchBoard(id, lastChannelId);
-        return;
-      }
-    }
+    const optimisticView = resolveLastBoardViewForBoard(id);
 
-    // 2. Verificar si hay board en cache de React Query (sin localStorage)
     const cachedBoard = queryClient.getQueryData<BoardWithData>(["board", id]);
     if (cachedBoard) {
-      const channelId = getInitialChannelFromBoard(cachedBoard);
-      if (channelId) {
-        switchBoard(id, channelId);
-        return;
-      }
+      navigateBoardView(id, resolveBoardViewFromMemory(cachedBoard));
+      return;
     }
 
-    // 3. No hay cache - URL optimista inmediata, pero mantener UI actual hasta tener datos.
-    pushOptimisticBoardUrl(id, lastChannelId ?? null);
+    // Sin cache: URL optimista inmediata, pero mantenemos la UI actual hasta tener datos.
+    pushOptimisticBoardUrl(id, optimisticView);
     setIsNavigating(true);
     try {
       const response = await fetchWithRetry(`/api/boards/${id}`, {
@@ -240,17 +263,14 @@ const NavigationItemComponent = ({
         const board: BoardWithData = await response.json();
         // Guardar en cache para que los componentes tengan datos al instante
         queryClient.setQueryData(["board", id], board);
-        const channelId = getInitialChannelFromBoard(board);
-        if (channelId) {
-          switchBoard(id, channelId, { history: "replace" });
-        } else {
-          switchBoard(id, undefined, { history: "replace" });
-        }
+        navigateBoardView(id, resolveBoardViewFromMemory(board), {
+          history: "replace",
+        });
       } else {
-        switchBoard(id, undefined, { history: "replace" });
+        navigateBoardView(id, optimisticView, { history: "replace" });
       }
     } catch {
-      switchBoard(id, undefined, { history: "replace" });
+      navigateBoardView(id, optimisticView, { history: "replace" });
     } finally {
       setIsNavigating(false);
     }
@@ -260,8 +280,9 @@ const NavigationItemComponent = ({
     router,
     id,
     queryClient,
-    getInitialChannelFromBoard,
+    navigateBoardView,
     pushOptimisticBoardUrl,
+    resolveBoardViewFromMemory,
   ]);
 
   return (

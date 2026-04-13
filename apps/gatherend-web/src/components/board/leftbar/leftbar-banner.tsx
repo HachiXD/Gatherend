@@ -13,7 +13,7 @@ import { LogOut, PlusCircle, Settings, UserPlus } from "lucide-react";
 import { useModal } from "@/hooks/use-modal-store";
 import { useOverlayStore } from "@/hooks/use-overlay-store";
 import { FEATURES } from "@/lib/features";
-import { BoardWithMembersWithProfiles } from "../../../../types";
+import type { BoardWithData } from "@/components/providers/board-provider";
 import { getBoardImageUrl, isDicebearUrl } from "@/lib/avatar-utils";
 import { useTranslation } from "@/i18n";
 import { getOptimizedStaticUiImageUrl } from "@/lib/ui-image-optimizer";
@@ -25,7 +25,7 @@ interface LeftbarBannerProps {
   imageAsset?: ClientUploadedAsset | null;
   boardName: string;
   boardId: string;
-  board: BoardWithMembersWithProfiles;
+  board: BoardWithData;
   role?: MemberRole;
   currentProfileId: string;
 }

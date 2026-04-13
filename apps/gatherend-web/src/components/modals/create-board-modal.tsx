@@ -120,18 +120,14 @@ export const CreateBoardModal = () => {
       // Navegar al nuevo board usando navegación SPA
       // El board tiene channels[] con el primer canal creado
       const boardId = data.id;
-      const firstChannelId = data.channels?.[0]?.id;
-
-      if (isNavigationReady() && switchBoard && firstChannelId) {
+      if (isNavigationReady() && switchBoard) {
         // Navegación SPA pura: actualiza contexto + URL sin reload
         // Los componentes cliente se re-renderizan via React Query
-        switchBoard(boardId, firstChannelId);
-      } else if (firstChannelId) {
+        switchBoard(boardId);
+      } else {
         // Fallback: si no estamos en un board (navegación SPA no disponible)
         // Esto solo ocurre si el modal se abre desde fuera del layout de boards
-        window.location.href = `/boards/${boardId}/rooms/${firstChannelId}`;
-      } else {
-        window.location.href = `/boards/${boardId}`;
+        window.location.href = `/boards/${boardId}/rules`;
       }
     },
     onError: (error: AxiosError<{ error?: string; message?: string }>) => {
@@ -318,9 +314,7 @@ export const CreateBoardModal = () => {
                     </span>
                   </button>
                 </div>
-                <p className="px-1 text-[11px] text-theme-text-tertiary">
-                  {t.modals.createBoard.privacyPermanentNotice}
-                </p>
+
                 <DialogFooter
                   className={cn(
                     "border-t border-theme-border bg-theme-bg-secondary/20 px-4 py-1.5",

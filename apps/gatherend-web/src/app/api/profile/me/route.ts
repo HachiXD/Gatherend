@@ -47,6 +47,7 @@ export async function GET() {
       badge: profile.badge,
       usernameFormat: profile.usernameFormat,
       themeConfig: profile.themeConfig,
+      chatBubbleStyle: profile.chatBubbleStyle,
     });
   } catch (error) {
     console.error("[PROFILE_ME_GET]", error);

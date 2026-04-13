@@ -4,6 +4,7 @@ import { useModal } from "@/hooks/use-modal-store";
 import { useOverlayStore } from "@/hooks/use-overlay-store";
 import { useUnreadStore } from "@/hooks/use-unread-store";
 import { useMentionStore } from "@/hooks/use-mention-store";
+import { boardQueryKey, removeBoardMembersCache } from "@/hooks/board-cache";
 
 interface BoardSwitchLike {
   isClientNavigationEnabled: boolean;
@@ -39,7 +40,8 @@ export function exitBoardWithSpaFallback({
   }
 
   const remainingBoards = removeUserBoardFromCache(queryClient, boardId);
-  queryClient.removeQueries({ queryKey: ["board", boardId] });
+  queryClient.removeQueries({ queryKey: boardQueryKey(boardId) });
+  removeBoardMembersCache(queryClient, boardId);
 
   if (boardId !== currentBoardId) {
     return;

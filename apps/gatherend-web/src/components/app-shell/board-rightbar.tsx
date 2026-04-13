@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, memo } from "react";
-import { RightbarSkeleton as _RightbarSkeleton } from "@/components/board/board-skeletons";
 import { Separator } from "@/components/ui/separator";
 import { DirectMessages } from "@/components/board/rightbar/rightbar-direct-messages-list";
 import { VoiceControlBar } from "@/components/voice-control-bar";
@@ -11,16 +10,10 @@ import {
 } from "@/hooks/use-conversations";
 import { usePresence } from "@/hooks/use-presence";
 import { useBoardDataWithStaleness } from "@/hooks/use-board-data-with-staleness";
-import {
-  useBoardMemberIds,
-  useCurrentMemberRole,
-} from "@/hooks/use-board-data";
 import { useProfileRoomSubscriptions } from "@/hooks/use-profile-room-subscriptions";
 import { useProfile } from "@/components/app-shell/providers/profile-provider";
-import { useTranslation } from "@/i18n";
-import { cn as _cn } from "@/lib/utils";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { LeftbarClient } from "@/components/board/leftbar/board-leftbar-client";
+import { BoardMembersSection } from "@/components/app-shell/board-members-section";
+import { MembersSkeleton } from "@/components/app-shell/board-members-section";
 
 /**
  *
@@ -51,13 +44,13 @@ function BoardRightbarClientInner() {
       {/* Presencia centralizada - invisible, no causa re-renders visuales */}
       <PresenceManager profileId={profile.id} />
 
-      {/* Channels Section - canales del board activo */}
-      <ChannelsSectionClient />
+      {/* Members Section - miembros del board activo */}
+      <MembersSectionClient />
 
       <Separator className="bg-theme-border-primary rounded-md mt-0 mb-2" />
 
       {/* Direct Messages - independiente del board, memoizado */}
-      <div className="h-[47%] shrink-0 flex flex-col min-h-0">
+      <div className="h-[50%] shrink-0 flex flex-col min-h-0">
         <DirectMessagesSectionClient profileId={profile.id} />
       </div>
 
@@ -76,12 +69,11 @@ const PresenceManager = memo(function PresenceManager({
 }: {
   profileId: string;
 }) {
-  const memberIds = useBoardMemberIds();
   const conversationProfileIds = useConversationProfileIds();
 
   const allProfileIds = useMemo(() => {
-    return [...new Set([profileId, ...memberIds, ...conversationProfileIds])];
-  }, [profileId, memberIds, conversationProfileIds]);
+    return [...new Set([profileId, ...conversationProfileIds])];
+  }, [profileId, conversationProfileIds]);
 
   usePresence(allProfileIds);
 
@@ -89,52 +81,25 @@ const PresenceManager = memo(function PresenceManager({
 });
 
 /**
- * ChannelsSectionClient - Canales del board activo.
+ * MembersSectionClient - Miembros del board activo.
  * Se re-renderiza cuando cambia el board.
  */
-const ChannelsSectionClient = memo(function ChannelsSectionClient() {
-  const { t } = useTranslation();
+const MembersSectionClient = memo(function MembersSectionClient() {
   const { board, showSkeleton } = useBoardDataWithStaleness();
-  const profile = useProfile();
-  const role = useCurrentMemberRole(profile.id);
 
   if (showSkeleton || !board) {
-    return <ChannelsSkeleton />;
+    return <MembersSkeleton />;
   }
 
   return (
-    <div className="flex flex-col flex-1 min-h-0">
-      <div className="px-3 pt-2 pb-1 shrink-0">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-theme-text-tertiary">
-          {t.board.boardChats(board.name)}
-        </h2>
-      </div>
-      <ScrollArea className="flex-1 min-h-0 px-1">
-        <div className="px-1 pb-2">
-          <LeftbarClient
-            boardId={board.id}
-            role={role}
-            dominantColor={board.imageAsset?.dominantColor}
-          />
-        </div>
-      </ScrollArea>
+    <div className="flex min-h-0 flex-1 flex-col">
+      <BoardMembersSection
+        boardId={board.id}
+        boardName={board.name}
+      />
     </div>
   );
 });
-
-function ChannelsSkeleton() {
-  return (
-    <div className="px-4 pt-3 flex-1">
-      <div className="h-3 w-16 bg-theme-bg-tertiary rounded animate-pulse mb-3" />
-      {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="flex items-center gap-2 py-1.5">
-          <div className="h-4 w-4 rounded bg-theme-bg-tertiary animate-pulse shrink-0" />
-          <div className="h-3 flex-1 rounded bg-theme-bg-tertiary animate-pulse" />
-        </div>
-      ))}
-    </div>
-  );
-}
 
 /**
  * Sección de DMs - NO SE RE-RENDERIZA cuando cambia el board.

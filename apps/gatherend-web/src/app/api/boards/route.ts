@@ -261,10 +261,39 @@ export async function POST(req: Request) {
           imageAsset: {
             select: uploadedAssetSummarySelect,
           },
-          members: true,
+          _count: {
+            select: { members: true },
+          },
+          members: {
+            where: { profileId: profile.id },
+            select: {
+              id: true,
+              role: true,
+              profileId: true,
+              boardId: true,
+              level: true,
+              xp: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+            take: 1,
+          },
           channels: {
             orderBy: {
               position: "asc",
+            },
+            include: {
+              imageAsset: {
+                select: uploadedAssetSummarySelect,
+              },
+              _count: {
+                select: { channelMembers: true },
+              },
+              channelMembers: {
+                where: { profileId: profile.id },
+                select: { id: true },
+                take: 1,
+              },
             },
           },
         },
@@ -277,9 +306,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Board not found" }, { status: 404 });
     }
 
+    const { members, _count, channels, imageAsset, ...boardData } = board;
+    const currentMember = members[0] ?? null;
+
     return NextResponse.json({
-      ...board,
-      imageAsset: serializeUploadedAsset(board.imageAsset),
+      ...boardData,
+      imageAsset: serializeUploadedAsset(imageAsset),
+      memberCount: _count.members,
+      currentMember,
+      channels: channels.map((channel) => ({
+        ...channel,
+        imageAsset: serializeUploadedAsset(channel.imageAsset),
+        channelMemberCount: channel._count.channelMembers,
+        isJoined: channel.channelMembers.length > 0,
+        _count: undefined,
+        channelMembers: undefined,
+      })),
     });
   } catch (error) {
     if (

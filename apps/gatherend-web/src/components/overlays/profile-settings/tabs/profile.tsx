@@ -15,8 +15,16 @@ import { useInvalidateProfileCard } from "@/hooks/use-profile-card";
 import { applyProfilePatchToAllCaches } from "@/hooks/profile-patch-utils";
 import { useTranslation, localeToLanguage, languageToLocale } from "@/i18n";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  EDITOR_DEFAULT_CHAT_BUBBLE_STYLE,
+  normalizeChatBubbleStyle,
+  type ChatBubbleStyle,
+} from "@/lib/chat-bubble-style";
 import type { ProfileCardConfig } from "@/lib/profile-card-config";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
+import { cn } from "@/lib/utils";
+import { getBubbleBorderColor } from "@/components/chat/chat-bubble-style-render";
 
 // Import optimized hooks
 import {
@@ -66,6 +74,287 @@ const DEFAULT_PROFILE_CARD_STYLE = {
   rounded: false,
   shadows: true,
 } as const;
+const CHAT_BUBBLE_PREVIEW_TEXT =
+  "Hola esto es Gatherend :D, espero que la pases bien, trata bien a la gente y vive la vida";
+const editorFieldClass =
+  "h-8 rounded-none border-theme-border-subtle bg-theme-bg-edit-form/50 text-theme-text-light placeholder:text-theme-text-muted focus-visible:border-theme-border-subtle";
+const controlButtonActiveClass =
+  "border-theme-channel-type-active-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text hover:bg-theme-channel-type-active-bg";
+const controlButtonInactiveClass =
+  "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border";
+const segmentedButtonBaseClass =
+  "flex h-8 w-full cursor-pointer items-center justify-center rounded-none border px-3 text-[13px] transition";
+
+function clampHexColor(value: string, fallback: string | null): string | null {
+  const trimmed = value.trim();
+  if (/^#(?:[A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  return fallback;
+}
+
+function buildChatBubblePreviewStyle(
+  style: ChatBubbleStyle,
+): React.CSSProperties {
+  const bg =
+    style.background ??
+    "color-mix(in srgb, var(--color-theme-bg-overlay-primary) 72%, transparent)";
+  return {
+    backgroundColor: bg,
+    borderStyle: "solid",
+    borderWidth: `${style.borderWidth}px`,
+    borderColor: style.background
+      ? getBubbleBorderColor(style.background)
+      : "rgba(0,0,0,0.3)",
+    borderRadius: style.roundedEnabled ? "16px" : "0px",
+    boxShadow: style.shadowEnabled
+      ? "inset 0 1px 0 rgba(255,255,255,0.16), inset -1px -1px 0 rgba(0,0,0,0.38)"
+      : "none",
+  };
+}
+
+function ChatBubbleStyleEditor({
+  value,
+  isSaving,
+  onChange,
+}: {
+  value: ChatBubbleStyle;
+  isSaving: boolean;
+  onChange: (next: ChatBubbleStyle) => void;
+}) {
+  const previewStyle = useMemo(
+    () => buildChatBubblePreviewStyle(value),
+    [value],
+  );
+
+  return (
+    <div className="border border-theme-border bg-theme-bg-overlay-primary/78 px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.26)]">
+      <div className="space-y-1.5">
+        <div className="space-y-1">
+          <div className="uppercase text-xs font-bold text-theme-text-subtle underline underline-offset-2">
+            Estilo de burbuja del chat
+          </div>
+          <p className="text-xs text-theme-text-muted">
+            Ajusta el color, el borde, la sombra y la forma de tu burbuja del
+            chat.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 mt-2 md:grid-cols-[minmax(0,1fr)_288px]">
+          <div className="space-y-1.5">
+            <label
+              htmlFor="chat-bubble-bg-hex"
+              className="block text-[11px] leading-none font-semibold uppercase tracking-[0.06em] text-theme-text-subtle"
+            >
+              Fondo
+            </label>
+            <div className="flex items-center gap-2">
+              <div
+                className="relative h-8 w-8 shrink-0 cursor-pointer overflow-hidden rounded-none border border-theme-border-subtle"
+                style={value.background !== null ? { backgroundColor: value.background } : undefined}
+              >
+                {value.background === null && (
+                  <div className="absolute inset-0 flex items-center justify-center text-theme-text-muted">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                      <line x1="1" y1="1" x2="13" y2="13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                      <line x1="13" y1="1" x2="1" y2="13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    </svg>
+                  </div>
+                )}
+                <input
+                  id="chat-bubble-bg-picker"
+                  name="chat-bubble-bg-picker"
+                  type="color"
+                  disabled={isSaving}
+                  value={value.background ?? "#374151"}
+                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+                  onChange={(e) =>
+                    onChange({
+                      ...value,
+                      background: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <Input
+                id="chat-bubble-bg-hex"
+                name="chat-bubble-bg-hex"
+                disabled={isSaving}
+                className={editorFieldClass}
+                placeholder="Sin color"
+                value={value.background ?? ""}
+                onChange={(e) =>
+                  onChange({
+                    ...value,
+                    background: e.target.value || null,
+                  })
+                }
+                onBlur={(e) => {
+                  const clamped = e.target.value
+                    ? clampHexColor(e.target.value, null)
+                    : null;
+                  onChange({ ...value, background: clamped });
+                }}
+              />
+            </div>
+            <button
+              type="button"
+              disabled={isSaving || value.background === null}
+              onClick={() => onChange({ ...value, background: null })}
+              className="self-start text-xs text-theme-text-muted hover:text-theme-text-secondary underline cursor-pointer disabled:cursor-default disabled:opacity-40"
+            >
+              Sin color
+            </button>
+          </div>
+
+          <div className="relative space-y-1.5">
+            <label
+              htmlFor="chat-bubble-border-width"
+              className="block text-[11px] leading-none font-semibold uppercase tracking-[0.06em] text-theme-text-subtle"
+            >
+              Grosor del borde
+            </label>
+            <span className="absolute top-0 right-0 -translate-y-2.5 border border-theme-border-subtle bg-theme-bg-edit-form/50 px-2 py-0.5 text-[11px] font-mono text-theme-text-muted">
+              {value.borderWidth}px
+            </span>
+            <div className="flex h-8 items-center border border-theme-border-subtle bg-theme-bg-edit-form/35 px-3">
+              <input
+                id="chat-bubble-border-width"
+                name="chat-bubble-border-width"
+                type="range"
+                min="0"
+                max="5"
+                step="1"
+                disabled={isSaving}
+                value={value.borderWidth}
+                onChange={(e) =>
+                  onChange({
+                    ...value,
+                    borderWidth: Math.max(
+                      0,
+                      Math.min(5, Number.parseInt(e.target.value, 10)),
+                    ),
+                  })
+                }
+                className="h-2 w-full cursor-pointer appearance-none rounded-none bg-theme-bg-edit-form accent-theme-accent-primary disabled:cursor-not-allowed"
+                aria-label="Grosor del borde"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div className="space-y-0.5">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-theme-text-subtle">
+              Esquinas
+            </div>
+            <div className="grid grid-cols-2">
+              <button
+                type="button"
+                disabled={isSaving}
+                onClick={() =>
+                  onChange({
+                    ...value,
+                    roundedEnabled: true,
+                  })
+                }
+                className={cn(
+                  segmentedButtonBaseClass,
+                  "border-r-0",
+                  value.roundedEnabled
+                    ? controlButtonActiveClass
+                    : controlButtonInactiveClass,
+                )}
+              >
+                Redondeadas
+              </button>
+              <button
+                type="button"
+                disabled={isSaving}
+                onClick={() =>
+                  onChange({
+                    ...value,
+                    roundedEnabled: false,
+                  })
+                }
+                className={cn(
+                  segmentedButtonBaseClass,
+                  !value.roundedEnabled
+                    ? controlButtonActiveClass
+                    : controlButtonInactiveClass,
+                )}
+              >
+                Cuadradas
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-0.5">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-theme-text-subtle">
+              Sombra
+            </div>
+            <div className="grid grid-cols-2">
+              <button
+                type="button"
+                disabled={isSaving}
+                onClick={() =>
+                  onChange({
+                    ...value,
+                    shadowEnabled: true,
+                  })
+                }
+                className={cn(
+                  segmentedButtonBaseClass,
+                  "border-r-0",
+                  value.shadowEnabled
+                    ? controlButtonActiveClass
+                    : controlButtonInactiveClass,
+                )}
+              >
+                Con sombra
+              </button>
+              <button
+                type="button"
+                disabled={isSaving}
+                onClick={() =>
+                  onChange({
+                    ...value,
+                    shadowEnabled: false,
+                  })
+                }
+                className={cn(
+                  segmentedButtonBaseClass,
+                  !value.shadowEnabled
+                    ? controlButtonActiveClass
+                    : controlButtonInactiveClass,
+                )}
+              >
+                Sin sombra
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-theme-text-subtle">
+            Vista previa
+          </div>
+          <div className="border border-theme-border-subtle bg-theme-bg-edit-form/35 p-3">
+            <div className="flex justify-start">
+              <div
+                className="max-w-[320px] text-sm leading-6 text-white/92"
+                style={previewStyle}
+              >
+                <div className="px-3 py-2.5">{CHAT_BUBBLE_PREVIEW_TEXT}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function trimToNull(value: string) {
   const trimmed = value.trim();
@@ -95,7 +384,8 @@ function createInitialProfileCardDraft(
   return {
     style: {
       backgroundColor:
-        config?.style.backgroundColor ?? DEFAULT_PROFILE_CARD_STYLE.backgroundColor,
+        config?.style.backgroundColor ??
+        DEFAULT_PROFILE_CARD_STYLE.backgroundColor,
       boxColor: config?.style.boxColor ?? DEFAULT_PROFILE_CARD_STYLE.boxColor,
       rounded: config?.style.rounded ?? DEFAULT_PROFILE_CARD_STYLE.rounded,
       shadows: config?.style.shadows ?? DEFAULT_PROFILE_CARD_STYLE.shadows,
@@ -161,7 +451,8 @@ function buildProfileCardConfigFromDraft(draft: ProfileCardEditorDraft): {
     };
   }
 
-  const hasPartialSectionA = Boolean(sectionATitle) !== Boolean(sectionAContent);
+  const hasPartialSectionA =
+    Boolean(sectionATitle) !== Boolean(sectionAContent);
   if (hasPartialSectionA) {
     return {
       config: {
@@ -173,7 +464,8 @@ function buildProfileCardConfigFromDraft(draft: ProfileCardEditorDraft): {
     };
   }
 
-  const hasPartialSectionB = Boolean(sectionBTitle) !== Boolean(sectionBContent);
+  const hasPartialSectionB =
+    Boolean(sectionBTitle) !== Boolean(sectionBContent);
   if (hasPartialSectionB) {
     return {
       config: {
@@ -226,7 +518,8 @@ function buildProfileCardConfigFromDraft(draft: ProfileCardEditorDraft): {
               },
             }
           : {}),
-        ...((sectionATitle && sectionAContent) || (sectionBTitle && sectionBContent)
+        ...((sectionATitle && sectionAContent) ||
+        (sectionBTitle && sectionBContent)
           ? {
               leftBottomText: {
                 ...(sectionATitle && sectionAContent
@@ -297,6 +590,9 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
     useState<ProfileCardEditorDraft>(() =>
       createInitialProfileCardDraft(extendedUser),
     );
+  const [chatBubbleStyle, setChatBubbleStyle] = useState<ChatBubbleStyle>(() =>
+    normalizeChatBubbleStyle(extendedUser.chatBubbleStyle) ?? { ...EDITOR_DEFAULT_CHAT_BUBBLE_STYLE },
+  );
   const [activeProfileCardUploadSlot, setActiveProfileCardUploadSlot] =
     useState<ProfileCardImageSlot | null>(null);
 
@@ -511,23 +807,26 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
     [],
   );
 
-  const handleProfileCardClearImage = useCallback((slot: ProfileCardImageSlot) => {
-    setProfileCardDraft((current) => ({
-      ...current,
-      content: {
-        ...current.content,
-        ...(slot === "rightTopImage" ? { rightTopImageTitle: "" } : {}),
-        ...(slot === "rightBottomImage" ? { rightBottomImageTitle: "" } : {}),
-      },
-      images: {
-        ...current.images,
-        [slot]: {
-          assetId: null,
-          asset: null,
+  const handleProfileCardClearImage = useCallback(
+    (slot: ProfileCardImageSlot) => {
+      setProfileCardDraft((current) => ({
+        ...current,
+        content: {
+          ...current.content,
+          ...(slot === "rightTopImage" ? { rightTopImageTitle: "" } : {}),
+          ...(slot === "rightBottomImage" ? { rightBottomImageTitle: "" } : {}),
         },
-      },
-    }));
-  }, []);
+        images: {
+          ...current.images,
+          [slot]: {
+            assetId: null,
+            asset: null,
+          },
+        },
+      }));
+    },
+    [],
+  );
 
   const handleProfileCardImageUpload = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -588,6 +887,7 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
           avatarAssetId: values.avatarAssetId,
           bannerAssetId: values.bannerAssetId,
           languages: selectedLanguages,
+          chatBubbleStyle,
           usernameColor: usernameColor.buildColor(),
           profileTags: profileTags.state.tags,
           badge: values.badge || null,
@@ -609,6 +909,9 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
         const response = await axios.patch("/api/profile", updatedProfileData);
         const serverProfile = response.data;
         setProfileCardDraft(createInitialProfileCardDraft(serverProfile));
+        setChatBubbleStyle(
+          normalizeChatBubbleStyle(serverProfile.chatBubbleStyle) ?? { ...EDITOR_DEFAULT_CHAT_BUBBLE_STYLE },
+        );
 
         // Update React Query cache (simplified - let invalidation handle the rest)
         queryClient.setQueryData(
@@ -623,6 +926,7 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
           discriminator: serverProfile.discriminator,
           avatarAsset: serverProfile.avatarAsset,
           bannerAsset: serverProfile.bannerAsset,
+          chatBubbleStyle: serverProfile.chatBubbleStyle,
           usernameColor: serverProfile.usernameColor,
           usernameFormat: serverProfile.usernameFormat,
           profileTags: serverProfile.profileTags,
@@ -652,6 +956,7 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
     },
     [
       selectedLanguages,
+      chatBubbleStyle,
       usernameColor,
       profileTags.state.tags,
       usernameFormat,
@@ -736,7 +1041,7 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
         {/* SECTION 1: PROFILE PAGE LAYOUT */}
         <section className={panelShellClass}>
           <h3 className={sectionTitleClass}>Detalles del Perfil</h3>
-          <div className="mt-4">
+          <div className="mt-3 -mb-2">
             <ProfileCardEditorShell
               bannerUrl={bannerPreview}
               draft={profileCardDraft}
@@ -790,8 +1095,14 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
 
         {/* SECTION 2: DETAILS */}
         <section className={panelShellClass}>
-          <h3 className={sectionTitleClass}>Datos adicionales</h3>
-          <div className="mt-1 space-y-1.5">
+          <h3 className={sectionTitleClass}>Estilos y Datos adicionales</h3>
+          <div className="mt-2.5 space-y-1.5">
+            <ChatBubbleStyleEditor
+              value={chatBubbleStyle}
+              isSaving={isSaving}
+              onChange={setChatBubbleStyle}
+            />
+
             <BadgeSection
               badgeText={badge}
               badgeStickerId={badgeStickerId}

@@ -3,6 +3,10 @@
 import { QueryClient, useQuery } from "@tanstack/react-query";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 import type { BoardWithData } from "@/components/providers/board-provider";
+import {
+  BOARD_CACHE_GC_TIME_MS,
+  BOARD_CACHE_STALE_TIME_MS,
+} from "@/hooks/board-cache";
 
 export interface UserBoard {
   id: string;
@@ -99,6 +103,7 @@ export function useUserBoards() {
 
       return response.json();
     },
-    staleTime: 1000 * 60 * 5, // 5 minutos
+    staleTime: BOARD_CACHE_STALE_TIME_MS,
+    gcTime: BOARD_CACHE_GC_TIME_MS,
   });
 }

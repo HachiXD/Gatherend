@@ -3,6 +3,11 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import type { BoardWithData } from "@/components/providers/board-provider";
+import {
+  BOARD_CACHE_GC_TIME_MS,
+  BOARD_CACHE_STALE_TIME_MS,
+  boardQueryKey,
+} from "@/hooks/board-cache";
 
 /**
  * Hook para prefetch de datos del board usando TanStack Query
@@ -19,16 +24,15 @@ export function useBoardPrefetch() {
   const prefetchBoard = useCallback(
     async (boardId: string) => {
       // Verificar si ya tenemos los datos en cache y no están stale
-      const existingData = queryClient.getQueryData<BoardWithData>([
-        "board",
-        boardId,
-      ]);
+      const existingData = queryClient.getQueryData<BoardWithData>(
+        boardQueryKey(boardId),
+      );
 
       // Si ya tenemos datos frescos, no hacer prefetch
-      const queryState = queryClient.getQueryState(["board", boardId]);
+      const queryState = queryClient.getQueryState(boardQueryKey(boardId));
       const isFresh =
         queryState?.dataUpdatedAt &&
-        Date.now() - queryState.dataUpdatedAt < 1000 * 60; // 1 minuto
+        Date.now() - queryState.dataUpdatedAt < BOARD_CACHE_STALE_TIME_MS;
 
       if (existingData && isFresh) {
         return;
@@ -36,7 +40,7 @@ export function useBoardPrefetch() {
 
       // Prefetch los datos del board (usa cookies de sesión automáticamente)
       await queryClient.prefetchQuery({
-        queryKey: ["board", boardId],
+        queryKey: boardQueryKey(boardId),
         queryFn: async (): Promise<BoardWithData> => {
           const response = await fetch(`/api/boards/${boardId}`, {
             credentials: "include", // Incluir cookies de autenticación
@@ -48,7 +52,8 @@ export function useBoardPrefetch() {
 
           return response.json();
         },
-        staleTime: 1000 * 60, // 1 minuto
+        staleTime: BOARD_CACHE_STALE_TIME_MS,
+        gcTime: BOARD_CACHE_GC_TIME_MS,
       });
     },
     [queryClient]
@@ -59,7 +64,7 @@ export function useBoardPrefetch() {
    */
   const getBoardFromCache = useCallback(
     (boardId: string): BoardWithData | undefined => {
-      return queryClient.getQueryData<BoardWithData>(["board", boardId]);
+      return queryClient.getQueryData<BoardWithData>(boardQueryKey(boardId));
     },
     [queryClient]
   );
@@ -69,10 +74,10 @@ export function useBoardPrefetch() {
    */
   const hasFreshBoardData = useCallback(
     (boardId: string): boolean => {
-      const queryState = queryClient.getQueryState(["board", boardId]);
+      const queryState = queryClient.getQueryState(boardQueryKey(boardId));
       const isFresh =
         queryState?.dataUpdatedAt &&
-        Date.now() - queryState.dataUpdatedAt < 1000 * 60; // 1 minuto
+        Date.now() - queryState.dataUpdatedAt < BOARD_CACHE_STALE_TIME_MS;
       return !!isFresh;
     },
     [queryClient]

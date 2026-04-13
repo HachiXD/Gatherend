@@ -31,6 +31,30 @@ function trimToNull(value: string | null | undefined) {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+function getForegroundFromBg(bgHex: string): {
+  fg: string;
+  fgSubtle: string;
+  fgMuted: string;
+} {
+  const r = parseInt(bgHex.slice(1, 3), 16);
+  const g = parseInt(bgHex.slice(3, 5), 16);
+  const b = parseInt(bgHex.slice(5, 7), 16);
+  if (isNaN(r) || isNaN(g) || isNaN(b)) {
+    return {
+      fg: "#ffffff",
+      fgSubtle: "rgba(255,255,255,0.65)",
+      fgMuted: "rgba(255,255,255,0.45)",
+    };
+  }
+  const luma = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  const onDark = luma <= 0.5;
+  return {
+    fg: onDark ? "#ffffff" : "#1a1a1a",
+    fgSubtle: onDark ? "rgba(255,255,255,0.65)" : "rgba(0,0,0,0.55)",
+    fgMuted: onDark ? "rgba(255,255,255,0.45)" : "rgba(0,0,0,0.40)",
+  };
+}
+
 function buildEffectiveProfileCardConfig(
   profileCard: Pick<ProfileCard, "profileCardConfig">,
 ): ProfileCardConfig {
@@ -88,6 +112,7 @@ function CardShellBox({
   className?: string;
   children: React.ReactNode;
 }) {
+  const { fg, fgSubtle, fgMuted } = getForegroundFromBg(boxColor);
   return (
     <div
       className={cn(
@@ -98,10 +123,15 @@ function CardShellBox({
           : "shadow-none",
         className,
       )}
-      style={{ backgroundColor: boxColor }}
+      style={{
+        backgroundColor: boxColor,
+        "--box-fg": fg,
+        "--box-fg-subtle": fgSubtle,
+        "--box-fg-muted": fgMuted,
+      } as React.CSSProperties}
     >
       {!hideTitle && title ? (
-        <div className="border-b border-theme-border/80 pb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-theme-text-subtle">
+        <div className="border-b border-theme-border/80 pb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-(--box-fg-subtle)">
           {title}
         </div>
       ) : null}
@@ -140,7 +170,7 @@ function TextBox({
       boxColor={boxColor}
       className={className}
     >
-      <p className="whitespace-pre-wrap break-words text-[13px] leading-5 text-theme-text-primary">
+      <p className="whitespace-pre-wrap break-words text-[13px] leading-5 text-(--box-fg)">
         {content}
       </p>
     </CardShellBox>
@@ -222,10 +252,10 @@ function DualTextBox({
             )}
             style={{ backgroundColor: boxColor }}
           >
-            <div className="border-b border-theme-border/80 pb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-theme-text-subtle">
+            <div className="border-b border-theme-border/80 pb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-(--box-fg-subtle)">
               {sectionA.title}
             </div>
-            <p className="mt-2 whitespace-pre-wrap break-words text-[13px] leading-5 text-theme-text-primary">
+            <p className="mt-2 whitespace-pre-wrap break-words text-[13px] leading-5 text-(--box-fg)">
               {sectionA.content}
             </p>
           </div>
@@ -239,10 +269,10 @@ function DualTextBox({
             )}
             style={{ backgroundColor: boxColor }}
           >
-            <div className="border-b border-theme-border/80 pb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-theme-text-subtle">
+            <div className="border-b border-theme-border/80 pb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-(--box-fg-subtle)">
               {sectionB.title}
             </div>
-            <p className="mt-2 whitespace-pre-wrap break-words text-[13px] leading-5 text-theme-text-primary">
+            <p className="mt-2 whitespace-pre-wrap break-words text-[13px] leading-5 text-(--box-fg)">
               {sectionB.content}
             </p>
           </div>
@@ -443,7 +473,7 @@ export const ProfileCardRenderer = memo(function ProfileCardRenderer({
               shadows={style.shadows}
               boxColor={style.boxColor}
             >
-              <div className="text-md font-semibold text-theme-text-primary">
+              <div className="text-md font-semibold text-(--box-fg)">
                 {content.pageTitle}
               </div>
             </CardShellBox>

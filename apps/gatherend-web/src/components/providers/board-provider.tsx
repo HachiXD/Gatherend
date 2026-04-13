@@ -9,6 +9,7 @@ import type {
   ClientStickerAssetRef,
   ClientUploadedAsset,
 } from "@/types/uploaded-assets";
+import { boardQueryKey } from "@/hooks/board-cache";
 
 // Tipos para el board con todas sus relaciones
 export type BoardChannel = {
@@ -33,17 +34,23 @@ export type BoardMember = Member & {
     discriminator: string;
     avatarAsset: ClientUploadedAsset | null;
     usernameColor: UsernameColor;
-      profileTags: string[];
-      badge: string | null;
-      badgeSticker: ClientStickerAssetRef | null;
-      usernameFormat: UsernameFormatConfig | null;
-    };
+    profileTags: string[];
+    badge: string | null;
+    badgeSticker: ClientStickerAssetRef | null;
+    usernameFormat: UsernameFormatConfig | null;
   };
+};
 
-export type BoardWithData = Board & {
+export type BoardCurrentMember = Pick<
+  Member,
+  "id" | "role" | "profileId" | "boardId" | "level" | "xp" | "createdAt" | "updatedAt"
+>;
+
+export type BoardWithData = Omit<Board, "memberCount"> & {
   imageAsset: ClientUploadedAsset | null;
   channels: BoardChannel[];
-  members: BoardMember[];
+  currentMember: BoardCurrentMember | null;
+  memberCount: number;
 };
 
 interface BoardContextValue {
@@ -72,9 +79,9 @@ export const BoardProvider = ({
   // Hidratar React Query con datos del server SOLO si no hay datos existentes
   // Esto evita sobrescribir datos actualizados por WebSocket
   useEffect(() => {
-    const existingData = queryClient.getQueryData(["board", initialBoard.id]);
+    const existingData = queryClient.getQueryData(boardQueryKey(initialBoard.id));
     if (!existingData) {
-      queryClient.setQueryData(["board", initialBoard.id], initialBoard);
+      queryClient.setQueryData(boardQueryKey(initialBoard.id), initialBoard);
     }
 
     syncUserBoardFromBoardData(queryClient, initialBoard);

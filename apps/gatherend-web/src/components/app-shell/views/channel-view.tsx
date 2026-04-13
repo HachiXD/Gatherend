@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChannelType } from "@prisma/client";
 import { ChatHeader } from "@/components/chat/chat-header";
 import { ChatInput } from "@/components/chat/chat-input";
@@ -11,10 +11,10 @@ import { useAutoMarkAsRead } from "@/hooks/use-auto-mark-as-read";
 import {
   useCurrentBoardData,
   useBoardChannelsMap,
-  useBoardMembersMap,
 } from "@/hooks/use-board-data";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCommunityHeaderStyle } from "@/hooks/use-community-header-style";
+import { useBoardSwitchNavigation } from "@/contexts/board-switch-context";
 
 interface ChannelViewProps {
   /** ID del canal (desde CenterContentRouter via BoardSwitchContext) */
@@ -33,16 +33,17 @@ export function ChannelView({ channelId, boardId }: ChannelViewProps) {
   const profile = useProfile();
   const queryClient = useQueryClient();
   const [isJoining, setIsJoining] = useState(false);
+  const { switchBoardView } = useBoardSwitchNavigation();
 
   useAutoMarkAsRead(channelId, false);
 
   const { data: board, isLoading: boardLoading } = useCurrentBoardData();
 
   const channelsMap = useBoardChannelsMap(board);
-  const membersMap = useBoardMembersMap(board);
 
   const channel = channelsMap.get(channelId);
-  const member = useMemo(() => membersMap.get(profile.id), [membersMap, profile.id]);
+  const member =
+    board?.currentMember?.profileId === profile.id ? board.currentMember : null;
 
   const isStaleBoard = Boolean(board && board.id !== boardId);
 
@@ -87,6 +88,12 @@ export function ChannelView({ channelId, boardId }: ChannelViewProps) {
       setIsJoining(false);
     }
   }, [isJoining, board, channel, queryClient]);
+
+  useEffect(() => {
+    if (boardLoading || !board || isStaleBoard || channel) return;
+
+    switchBoardView(boardId, { kind: "channels:list" }, { history: "replace" });
+  }, [boardLoading, board, isStaleBoard, channel, switchBoardView, boardId]);
 
   if (boardLoading || !channel || !board || isStaleBoard) {
     return null;

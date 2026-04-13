@@ -174,9 +174,7 @@ export async function POST(
       return NextResponse.json({
         alreadyMember: true,
         targetChannelId: targetChannel?.id ?? null,
-        redirectUrl: targetChannel
-          ? `/boards/${boardId}/rooms/${targetChannel.id}`
-          : `/boards/${boardId}`,
+        redirectUrl: `/boards/${boardId}/rules`,
       });
     }
 
@@ -246,9 +244,7 @@ export async function POST(
     return NextResponse.json({
       success: true,
       targetChannelId,
-      redirectUrl: targetChannelId
-        ? `/boards/${boardId}/rooms/${targetChannelId}`
-        : `/boards/${boardId}`,
+      redirectUrl: `/boards/${boardId}/rules`,
     });
   } catch (error) {
     console.error("[BOARD_JOIN] Error:", error);

@@ -110,7 +110,7 @@ function toCommunityTabsFallbackActiveBg(hex: string): string {
  * Light: colores claros (65-92%)
  */
 const GRADIENT_LIGHTNESS_RANGES = {
-  dark: { min: 8, max: 30 },
+  dark: { min: 8, max: 24 },
   light: { min: 65, max: 92 },
 } as const;
 
@@ -191,11 +191,7 @@ export function generatePaletteFromBase(baseColor: string): ThemeColors {
 
     // Buttons
     buttonPrimary: hslToHex(h, clampS(0.9, 50, 80), clampL(1.0, 36, 44)),
-    buttonPrimaryActive: hslToHex(
-      h,
-      clampS(0.9, 50, 80),
-      clampL(1.08, 39, 47),
-    ),
+    buttonPrimaryActive: hslToHex(h, clampS(0.9, 50, 80), clampL(1.08, 39, 47)),
     buttonHover: hslToHex(h, clampS(1.0, 55, 85), clampL(1.12, 41, 49)),
     buttonSendHover: hslToHex(h, clampS(0.75, 40, 50), clampL(1.1, 40, 46)),
 

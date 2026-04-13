@@ -94,7 +94,10 @@ export interface ChatPagesProps {
 export interface ChatMessagesProps {
   name: string;
   currentProfile: ClientProfile;
-  currentMember?: Member | null;
+  currentMember?: Pick<
+    Member,
+    "id" | "role" | "profileId" | "boardId" | "createdAt" | "updatedAt"
+  > | null;
   board?: Board;
   apiUrl: string;
   socketQuery: Record<string, string>;

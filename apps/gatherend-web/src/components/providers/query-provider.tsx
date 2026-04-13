@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { useFeedScrollStoreSync } from "@/hooks/use-feed-scroll-store-sync";
 import { useChatScrollDimensionsSync } from "@/hooks/use-chat-scroll-dimensions-sync";
+import { useBoardMembersCacheSync } from "@/hooks/use-board-members-cache-sync";
 /**
  * QueryProvider optimizado para Gatherend
  *
@@ -52,6 +53,7 @@ export const QueryProvider = ({ children }: { children: React.ReactNode }) => {
 function QueryStoreSync() {
   useFeedScrollStoreSync();
   useChatScrollDimensionsSync();
+  useBoardMembersCacheSync();
 
   return null;
 }

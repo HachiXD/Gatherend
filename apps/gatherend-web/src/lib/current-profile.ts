@@ -9,6 +9,10 @@ import { AssetContext, AssetVisibility, Languages } from "@prisma/client";
 import { db } from "@/lib/db";
 import { profileCache } from "@/lib/redis";
 import { normalizeLanguages } from "@/lib/detect-language";
+import {
+  normalizeChatBubbleStyle,
+  type ChatBubbleStyle,
+} from "@/lib/chat-bubble-style";
 import type { ProfileCardConfig } from "@/lib/profile-card-config";
 import {
   generateUniqueDiscriminator,
@@ -59,6 +63,7 @@ export type ProfileData = {
   badge: string | null;
   usernameFormat: unknown;
   themeConfig: unknown;
+  chatBubbleStyle: ChatBubbleStyle | null;
   profileCardConfig: ProfileCardConfig | null;
   banned: boolean;
   bannedAt: Date | null;
@@ -101,6 +106,7 @@ const profileSelect = {
   badge: true,
   usernameFormat: true,
   themeConfig: true,
+  chatBubbleStyle: true,
   profileCardConfig: true,
   banned: true,
   bannedAt: true,
@@ -159,6 +165,7 @@ type ProfileRecord = {
   badge: string | null;
   usernameFormat: unknown;
   themeConfig: unknown;
+  chatBubbleStyle: unknown;
   profileCardConfig: ProfileCardConfig | null;
   banned: boolean;
   bannedAt: Date | null;
@@ -214,6 +221,7 @@ function serializeProfileRecord(profile: ProfileRecord): ProfileData {
           asset: serializePublicAsset(profile.badgeSticker.asset),
         }
       : null,
+    chatBubbleStyle: normalizeChatBubbleStyle(profile.chatBubbleStyle),
   };
 }
 
@@ -412,7 +420,10 @@ export const currentProfile = cache(async (): Promise<ProfileData | null> => {
     const cachedProfile = await profileCache.get<ProfileData>(cacheKey);
     if (cachedProfile) {
       devLog("[CURRENT_PROFILE] Redis cache hit");
-      return cachedProfile;
+      return {
+        ...cachedProfile,
+        chatBubbleStyle: normalizeChatBubbleStyle(cachedProfile.chatBubbleStyle),
+      };
     }
 
     let profile = await findProfileBySession(session);

@@ -11,39 +11,31 @@ import {
 import { useModal } from "@/hooks/use-modal-store";
 import { Button } from "@/components/ui/button";
 import { useRouter, useParams } from "next/navigation";
-import { useDeleteChannel, useBoardData } from "@/hooks/use-board-data";
-import { ChannelType } from "@prisma/client";
+import { useDeleteChannel } from "@/hooks/use-board-data";
 import { logger } from "@/lib/logger";
 import { useTranslation } from "@/i18n";
+import { useBoardSwitchSafe } from "@/contexts/board-switch-context";
 
 export const DeleteChannelModal = () => {
   const { isOpen, onClose, type, data } = useModal();
   const router = useRouter();
   const params = useParams();
   const { t } = useTranslation();
+  const boardSwitch = useBoardSwitchSafe();
 
   const isModalOpen = isOpen && type === "deleteChannel";
   const { board, boardId: dataBoardId, channel } = data;
-
-  // Usar boardId del data (preferir boardId directo sobre board.id)
   const boardId = dataBoardId || board?.id;
 
-  // Obtener datos del board desde React Query cache
-  const { data: boardData } = useBoardData(boardId || "");
-
-  // Usar useMutation con optimistic update
   const { mutate: deleteChannel, isPending } = useDeleteChannel();
 
-  // Detectar si el usuario está actualmente en el canal que se va a borrar
   const currentChannelId = params?.roomId as string | undefined;
   const isInDeletedChannel = currentChannelId === channel?.id;
 
   const onClick = () => {
     if (!channel?.id || !boardId) return;
 
-    // Calcular el primer canal DENTRO del onClick para tener los datos más frescos
-    // y antes de que el optimistic update los modifique
-    const targetChannel = findFirstTextChannel(boardData, channel.id);
+    const shouldGoToChannelsList = isInDeletedChannel;
 
     deleteChannel(
       { channelId: channel.id, boardId },
@@ -51,12 +43,15 @@ export const DeleteChannelModal = () => {
         onSuccess: () => {
           onClose();
 
-          // Solo navegar si el usuario está en el canal que se borró
-          if (isInDeletedChannel) {
-            if (targetChannel) {
-              router.push(`/boards/${boardId}/rooms/${targetChannel.id}`);
+          if (shouldGoToChannelsList) {
+            if (boardSwitch?.isClientNavigationEnabled) {
+              boardSwitch.switchBoardView(
+                boardId,
+                { kind: "channels:list" },
+                { history: "replace" },
+              );
             } else {
-              router.push(`/boards/${boardId}`);
+              router.push(`/boards/${boardId}/channels`);
             }
           }
         },
@@ -103,8 +98,8 @@ export const DeleteChannelModal = () => {
             type="button"
             variant="ghost"
             disabled={isPending}
-            onClick={handleClose}
             className="h-6.5 cursor-pointer rounded-none bg-theme-bg-cancel-button px-3 text-[14px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+            onClick={handleClose}
           >
             {t.common.cancel}
           </Button>
@@ -121,25 +116,3 @@ export const DeleteChannelModal = () => {
     </Dialog>
   );
 };
-
-/**
- * Encuentra el primer canal de texto disponible en el board
- * Busca el canal TEXT con la posición más baja (excluyendo el que se borra)
- */
-function findFirstTextChannel(
-  boardData: ReturnType<typeof useBoardData>["data"],
-  excludeChannelId: string,
-): { id: string; name: string } | null {
-  if (!boardData) return null;
-
-  // Buscar el canal TEXT con la posición más baja
-  const firstTextChannel = boardData.channels
-    .filter((ch) => ch.type === ChannelType.TEXT && ch.id !== excludeChannelId)
-    .sort((a, b) => a.position - b.position)[0];
-
-  if (firstTextChannel) {
-    return { id: firstTextChannel.id, name: firstTextChannel.name };
-  }
-
-  return null;
-}

@@ -37,6 +37,7 @@ import { useTranslation } from "@/i18n";
 import { useMountedChatRoom } from "@/hooks/use-chat-room-lifecycle-store";
 import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
 import { useChannelData } from "@/hooks/use-board-data";
+import { cn } from "@/lib/utils";
 import {
   GROUPED_TEXT_BUBBLE_LEFT_SPACER_CLASS,
   GROUPED_TEXT_BUBBLE_ROW_CLASS,
@@ -45,6 +46,8 @@ import {
   canUsePretextForGroupedBubbleMessage,
   measureGroupedTextBubbleGroup,
 } from "./chat-text-bubble-pretext";
+import { getChatBubbleSurfaceStyle } from "./chat-bubble-style-render";
+import { useEffectiveThemeMode } from "@/hooks/use-effective-theme-config";
 
 // CONSTANTS
 
@@ -318,6 +321,19 @@ function GroupedTextBubbleRun({
     stickerLabel,
   ]);
 
+  const resolvedTheme = useEffectiveThemeMode();
+  const groupedBubbleSurfaceStyle = useMemo(() => {
+    const author = getMessageAuthor(items[0]?.message, {
+      fallbackLabel: deletedMemberLabel,
+      includeFallback: false,
+    });
+
+    return getChatBubbleSurfaceStyle(author?.chatBubbleStyle, {
+      groupedSurface: true,
+      themeMode: (resolvedTheme as "dark" | "light") || "dark",
+    });
+  }, [deletedMemberLabel, items, resolvedTheme]);
+
   const bubbleBounds = pretextBubbleBounds ?? domBubbleBounds;
 
   useEffect(() => {
@@ -409,12 +425,17 @@ function GroupedTextBubbleRun({
         {bubbleBounds ? (
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute rounded-md bg-theme-bg-overlay-primary/72"
+            className={cn(
+              "pointer-events-none absolute",
+              !groupedBubbleSurfaceStyle &&
+                "rounded-md bg-theme-bg-overlay-primary/72",
+            )}
             style={{
               left: `${bubbleBounds.left}px`,
               top: `${bubbleBounds.top}px`,
               width: `${bubbleBounds.width}px`,
               height: `${bubbleBounds.height}px`,
+              ...groupedBubbleSurfaceStyle,
             }}
           />
         ) : null}

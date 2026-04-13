@@ -255,9 +255,9 @@ export const es: TranslationKeys = {
     noPostsInCommunity: "No hay posts en esta comunidad.",
     pinned: "Fijado",
     closed: "Cerrado",
-    editPost: "Editar post",
-    deletePost: "Eliminar post",
-    reportPost: "Reportar post",
+    editPost: "Editar",
+    deletePost: "Eliminar",
+    reportPost: "Reportar",
     editPostPlaceholder: "Editar contenido del post",
     editCommentPlaceholder: "Editar comentario",
     writeCommentPlaceholder: "Escribe un comentario...",
@@ -519,8 +519,7 @@ export const es: TranslationKeys = {
       inviteSeatsDescription: "Unibles solo mediante invitación",
       publicOptionLabel: "Público",
       privateOptionLabel: "Privado",
-      privacyPermanentNotice:
-        "Esta decisión de privacidad es permanente y no podrá cambiarse después de crear el board.",
+
       success: "Board creado exitosamente!",
       error: "Algo salió mal al crear el board :C.",
       moderationError:
@@ -734,24 +733,80 @@ export const es: TranslationKeys = {
         childSafety: "Seguridad Infantil",
         childSafetyDescription:
           "El título, imagen o descripción del board involucra menores",
+        childSafetyMessageDescription:
+          "Este mensaje contiene contenido que involucra menores",
+        childSafetyProfileDescription:
+          "El perfil o contenido de este usuario involucra menores",
+        childSafetyPostDescription:
+          "Este post contiene contenido que involucra menores",
+        childSafetyCommentDescription:
+          "Este comentario contiene contenido que involucra menores",
         sexualContent: "Contenido Sexual",
         sexualContentDescription:
           "El título, imagen o descripción del board contiene contenido sexual",
+        sexualContentMessageDescription:
+          "Este mensaje contiene contenido sexual",
+        sexualContentProfileDescription:
+          "El perfil o contenido de este usuario contiene material sexual",
+        sexualContentPostDescription:
+          "Este post contiene contenido sexual",
+        sexualContentCommentDescription:
+          "Este comentario contiene contenido sexual",
         harassment: "Acoso",
         harassmentDescription:
           "El título, imagen o descripción del board es abusivo o dirigido",
+        harassmentMessageDescription:
+          "Este mensaje es abusivo o está dirigido a alguien",
+        harassmentProfileDescription:
+          "Este usuario está acosando o atacando a otros",
+        harassmentPostDescription:
+          "Este post es abusivo o está dirigido a alguien",
+        harassmentCommentDescription:
+          "Este comentario es abusivo o está dirigido a alguien",
         hateSpeech: "Discurso de Odio",
         hateSpeechDescription:
           "El título, imagen o descripción del board incluye contenido de odio",
+        hateSpeechMessageDescription:
+          "Este mensaje contiene lenguaje o contenido de odio",
+        hateSpeechProfileDescription:
+          "Este usuario publica lenguaje o contenido de odio",
+        hateSpeechPostDescription:
+          "Este post contiene lenguaje o contenido de odio",
+        hateSpeechCommentDescription:
+          "Este comentario contiene lenguaje o contenido de odio",
         spam: "Spam",
         spamDescription:
           "El título, imagen o descripción del board promueve spam o estafas",
+        spamMessageDescription:
+          "Este mensaje promueve spam, estafas o contenido no deseado",
+        spamProfileDescription:
+          "Este usuario promueve spam, estafas o contenido no deseado",
+        spamPostDescription:
+          "Este post promueve spam, estafas o contenido no deseado",
+        spamCommentDescription:
+          "Este comentario promueve spam, estafas o contenido no deseado",
         impersonation: "Suplantación",
         impersonationDescription:
           "El título, imagen o descripción del board suplanta a otra persona",
+        impersonationMessageDescription:
+          "Este mensaje fue enviado por alguien que suplanta a otra persona",
+        impersonationProfileDescription:
+          "Este usuario está suplantando a otra persona",
+        impersonationPostDescription:
+          "Este post es de alguien que suplanta a otra persona",
+        impersonationCommentDescription:
+          "Este comentario es de alguien que suplanta a otra persona",
         other: "Otro",
         otherDescription:
           "Otro problema con el título, imagen o descripción del board",
+        otherMessageDescription:
+          "Otro problema con este mensaje",
+        otherProfileDescription:
+          "Otro problema con el perfil o comportamiento de este usuario",
+        otherPostDescription:
+          "Otro problema con este post",
+        otherCommentDescription:
+          "Otro problema con este comentario",
       },
     },
   },

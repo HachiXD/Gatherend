@@ -6,6 +6,7 @@ import {
   serializePublicAsset,
   uploadedAssetSummarySelect,
 } from "@/lib/uploaded-assets";
+import { normalizeChatBubbleStyle } from "@/lib/chat-bubble-style";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -21,6 +22,7 @@ const conversationProfileSelect = {
   userId: true,
   usernameColor: true,
   usernameFormat: true,
+  chatBubbleStyle: true,
   avatarAsset: {
     select: uploadedAssetSummarySelect,
   },
@@ -34,6 +36,7 @@ function serializeConversationProfile(profile: {
   userId: string;
   usernameColor: unknown;
   usernameFormat: unknown;
+  chatBubbleStyle: unknown;
   avatarAsset: Parameters<typeof serializePublicAsset>[0];
 } | null) {
   if (!profile) {
@@ -42,6 +45,7 @@ function serializeConversationProfile(profile: {
 
   return {
     ...profile,
+    chatBubbleStyle: normalizeChatBubbleStyle(profile.chatBubbleStyle),
     avatarAsset: serializePublicAsset(profile.avatarAsset),
   };
 }

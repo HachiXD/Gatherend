@@ -1,7 +1,7 @@
-FROM caddy:2-builder AS builder
+FROM caddy:2.11.2-builder-alpine AS builder
 RUN xcaddy build --with github.com/mholt/caddy-ratelimit --with github.com/mholt/caddy-l4
 
-FROM caddy:2-alpine
+FROM caddy:2.11.2-alpine
 COPY --from=builder /usr/bin/caddy /usr/bin/caddy
 
 # Railway terminates TLS before reaching the container; Caddy runs HTTP only.

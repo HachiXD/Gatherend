@@ -4,15 +4,17 @@ import {
   type FormattedConversation,
 } from "./use-conversations";
 import { chatMessageWindowStore } from "@/hooks/chat/chat-message-window-store";
-import type { BoardWithData } from "@/components/providers/board-provider";
+import { patchBoardMemberProfileInCache } from "@/hooks/board-cache";
 
 export type ProfilePatch = Record<string, unknown>;
 
-export function applyPatch<T extends Record<string, any>>(
+export function applyPatch<T extends object>(
   obj: T,
   patch: ProfilePatch,
 ): T {
-  const next: Record<string, any> = { ...obj };
+  const next: Record<string, unknown> = {
+    ...(obj as Record<string, unknown>),
+  };
   let changed = false;
 
   for (const [key, value] of Object.entries(patch)) {
@@ -40,40 +42,21 @@ export function patchConversationProfiles(
   return {
     ...conversation,
     otherProfile: shouldPatchOther
-      ? applyPatch(conversation.otherProfile as any, patch)
+      ? applyPatch(conversation.otherProfile, patch)
       : conversation.otherProfile,
     profileOne: shouldPatchOne
-      ? applyPatch(conversation.profileOne as any, patch)
+      ? applyPatch(conversation.profileOne, patch)
       : conversation.profileOne,
     profileTwo: shouldPatchTwo
-      ? applyPatch(conversation.profileTwo as any, patch)
+      ? applyPatch(conversation.profileTwo, patch)
       : conversation.profileTwo,
   };
 }
 
-export function patchBoardProfiles(
-  board: BoardWithData,
-  profileId: string,
-  patch: ProfilePatch,
-): BoardWithData {
-  let changed = false;
-
-  const nextMembers = board.members.map((m) => {
-    const pid = m.profile?.id;
-    if (pid !== profileId || !m.profile) return m;
-    const nextProfile = applyPatch(m.profile as any, patch);
-    if (nextProfile === m.profile) return m;
-    changed = true;
-    return { ...m, profile: nextProfile };
-  });
-
-  if (!changed) return board;
-
-  return {
-    ...board,
-    members: nextMembers,
-  };
-}
+type ConversationDetailCache = {
+  profileOne?: ({ id?: string } & Record<string, unknown>) | null;
+  profileTwo?: ({ id?: string } & Record<string, unknown>) | null;
+};
 
 // Apply a profile patch to all relevant caches
 export function applyProfilePatchToAllCaches(
@@ -101,7 +84,7 @@ export function applyProfilePatchToAllCaches(
     .getQueryCache()
     .findAll({ queryKey: ["conversation"] });
   for (const q of conversationQueries) {
-    queryClient.setQueryData(q.queryKey, (old: any) => {
+    queryClient.setQueryData<ConversationDetailCache>(q.queryKey, (old) => {
       if (!old) return old;
       const oneId = old?.profileOne?.id;
       const twoId = old?.profileTwo?.id;
@@ -109,33 +92,29 @@ export function applyProfilePatchToAllCaches(
       return {
         ...old,
         profileOne:
-          oneId === profileId
+          oneId === profileId && old.profileOne
             ? applyPatch(old.profileOne, patch)
             : old.profileOne,
         profileTwo:
-          twoId === profileId
+          twoId === profileId && old.profileTwo
             ? applyPatch(old.profileTwo, patch)
             : old.profileTwo,
       };
     });
   }
 
-  // Boards (multiple cached boards)
-  const boardQueries = queryClient
-    .getQueryCache()
-    .findAll({ queryKey: ["board"] });
-  for (const q of boardQueries) {
-    queryClient.setQueryData<BoardWithData>(q.queryKey, (old) => {
-      if (!old) return old;
-      return patchBoardProfiles(old, profileId, patch);
-    });
-  }
+  patchBoardMemberProfileInCache(queryClient, profileId, (profile) =>
+    applyPatch(profile, patch),
+  );
 
   // Profile card
-  queryClient.setQueryData(["profile-card", profileId], (old: any) => {
+  queryClient.setQueryData<Record<string, unknown>>(
+    ["profile-card", profileId],
+    (old) => {
     if (!old) return old;
     return applyPatch(old, patch);
-  });
+    },
+  );
 
   // Chat windows
   chatMessageWindowStore.patchProfile(profileId, patch);

@@ -2,7 +2,6 @@ import {
   MemberRole,
   AssetContext,
   AssetVisibility,
-  BoardWarningStatus,
 } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
@@ -74,32 +73,22 @@ export async function GET(
             },
           },
         },
+        _count: {
+          select: { members: true },
+        },
         members: {
-          orderBy: { role: "asc" },
-          include: {
-            profile: {
-              select: {
-                id: true,
-                username: true,
-                discriminator: true,
-                usernameColor: true,
-                profileTags: true,
-                badge: true,
-                usernameFormat: true,
-                avatarAsset: {
-                  select: uploadedAssetSummarySelect,
-                },
-                badgeSticker: {
-                  select: {
-                    id: true,
-                    asset: {
-                      select: uploadedAssetSummarySelect,
-                    },
-                  },
-                },
-              },
-            },
+          where: { profileId: profile.id },
+          select: {
+            id: true,
+            role: true,
+            profileId: true,
+            boardId: true,
+            level: true,
+            xp: true,
+            createdAt: true,
+            updatedAt: true,
           },
+          take: 1,
         },
       },
     });
@@ -108,94 +97,21 @@ export async function GET(
       return NextResponse.json({ error: "Board not found" }, { status: 404 });
     }
 
-    const memberProfileIds = board.members.map((member) => member.profileId);
-
-    const activeWarnings =
-      memberProfileIds.length > 0
-        ? await db.boardWarning.findMany({
-            where: {
-              boardId,
-              status: BoardWarningStatus.ACTIVE,
-              profileId: {
-                in: memberProfileIds,
-              },
-            },
-            select: {
-              id: true,
-              profileId: true,
-              createdAt: true,
-            },
-            orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-          })
-        : [];
-
-    const activeWarningCounts =
-      board.members.length > 0
-        ? await db.boardWarning.groupBy({
-            by: ["profileId"],
-            where: {
-              boardId,
-              status: BoardWarningStatus.ACTIVE,
-              profileId: {
-                in: memberProfileIds,
-              },
-            },
-            _count: {
-              _all: true,
-            },
-          })
-        : [];
-
-    const activeWarningCountByProfileId = new Map(
-      activeWarningCounts.map((warningCount) => [
-        warningCount.profileId,
-        warningCount._count._all,
-      ]),
-    );
-    const latestActiveWarningIdByProfileId = new Map<string, string>();
-
-    for (const warning of activeWarnings) {
-      if (!latestActiveWarningIdByProfileId.has(warning.profileId)) {
-        latestActiveWarningIdByProfileId.set(warning.profileId, warning.id);
-      }
-    }
-
-    const serializeProfile = <
-      T extends {
-        avatarAsset: (typeof board.members)[number]["profile"]["avatarAsset"];
-        badgeSticker: (typeof board.members)[number]["profile"]["badgeSticker"];
-      },
-    >(
-      targetProfile: T,
-    ) => ({
-      ...targetProfile,
-      avatarAsset: serializeUploadedAsset(targetProfile.avatarAsset),
-      badgeSticker: targetProfile.badgeSticker
-        ? {
-            id: targetProfile.badgeSticker.id,
-            asset: serializeUploadedAsset(targetProfile.badgeSticker.asset),
-          }
-        : null,
-    });
+    const { members, _count, channels, imageAsset, ...boardData } = board;
+    const currentMember = members[0] ?? null;
 
     return NextResponse.json({
-      ...board,
-      imageAsset: serializeUploadedAsset(board.imageAsset),
-      channels: board.channels.map((channel) => ({
+      ...boardData,
+      imageAsset: serializeUploadedAsset(imageAsset),
+      memberCount: _count.members,
+      currentMember,
+      channels: channels.map((channel) => ({
         ...channel,
         imageAsset: serializeUploadedAsset(channel.imageAsset),
         channelMemberCount: channel._count.channelMembers,
         isJoined: channel.channelMembers.length > 0,
         _count: undefined,
         channelMembers: undefined,
-      })),
-      members: board.members.map((member) => ({
-        ...member,
-        activeWarningCount:
-          activeWarningCountByProfileId.get(member.profileId) ?? 0,
-        latestActiveWarningId:
-          latestActiveWarningIdByProfileId.get(member.profileId) ?? null,
-        profile: serializeProfile(member.profile),
       })),
     });
   } catch (error) {
