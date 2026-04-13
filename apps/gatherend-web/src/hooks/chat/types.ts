@@ -96,7 +96,7 @@ export interface ChatMessagesProps {
   currentProfile: ClientProfile;
   currentMember?: Pick<
     Member,
-    "id" | "role" | "profileId" | "boardId" | "createdAt" | "updatedAt"
+    "id" | "role" | "profileId" | "boardId" | "xp" | "level" | "createdAt" | "updatedAt"
   > | null;
   board?: Board;
   apiUrl: string;

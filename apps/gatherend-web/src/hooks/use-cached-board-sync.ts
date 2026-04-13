@@ -19,6 +19,8 @@ interface MemberJoinedPayload {
     role: string;
     profileId: string;
     boardId: string;
+    xp: number;
+    level: number;
     createdAt: string;
     updatedAt: string;
     profile: {
@@ -115,6 +117,8 @@ function toCurrentMember(
     role: member.role as BoardCurrentMember["role"],
     profileId: member.profileId,
     boardId: member.boardId,
+    xp: member.xp,
+    level: member.level,
     createdAt: new Date(member.createdAt),
     updatedAt: new Date(member.updatedAt),
   };

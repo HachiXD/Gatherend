@@ -41,6 +41,8 @@ async function notifyMemberJoined(
     role: string;
     profileId: string;
     boardId: string;
+    xp: number;
+    level: number;
     createdAt: string;
     updatedAt: string;
     profile: {
@@ -225,6 +227,8 @@ export async function POST(
       role: newMember.role,
       profileId: newMember.profileId,
       boardId: newMember.boardId,
+      xp: newMember.xp,
+      level: newMember.level,
       createdAt: newMember.createdAt.toISOString(),
       updatedAt: newMember.updatedAt.toISOString(),
       profile: {

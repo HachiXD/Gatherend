@@ -44,6 +44,8 @@ async function notifyMemberJoined(
     role: string;
     profileId: string;
     boardId: string;
+    xp: number;
+    level: number;
     createdAt: string;
     updatedAt: string;
     profile: {
@@ -191,6 +193,8 @@ const InviteCodePage = async ({ params }: InviteCodePageProps) => {
       role: newMember.role,
       profileId: newMember.profileId,
       boardId: newMember.boardId,
+      xp: newMember.xp,
+      level: newMember.level,
       createdAt: newMember.createdAt.toISOString(),
       updatedAt: newMember.updatedAt.toISOString(),
       profile: {
