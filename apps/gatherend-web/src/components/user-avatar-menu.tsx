@@ -163,7 +163,7 @@ export const UserAvatarMenu = memo(function UserAvatarMenu({
         {hideAvatar ? (
           <span
             className={cn(
-              "inline-flex cursor-pointer transition",
+              "inline-flex min-w-0 max-w-full cursor-pointer transition",
               !disableHoverShadow && "hover:drop-shadow-md",
             )}
             onClick={(e) => {

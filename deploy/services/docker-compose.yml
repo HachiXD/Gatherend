@@ -5,11 +5,18 @@ x-logging: &default-logging
     max-file: "5"
     compress: "true"
 
+x-runtime-hardening: &runtime-hardening
+  security_opt:
+    - no-new-privileges:true
+
 services:
   imgproxy:
+    <<: *runtime-hardening
     image: ghcr.io/imgproxy/imgproxy:v3.31.2
     restart: always
     logging: *default-logging
+    pids_limit: 128
+    mem_reservation: 256m
     profiles: [images]
     cpus: "1"
     expose:
@@ -24,11 +31,20 @@ services:
     mem_limit: 512m
     networks:
       - internal
+    healthcheck:
+      test: ["CMD", "imgproxy", "health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   dicebear:
+    <<: *runtime-hardening
     image: dicebear/api:3
     restart: always
     logging: *default-logging
+    pids_limit: 128
+    mem_reservation: 128m
     profiles: [images]
     expose:
       - "3000"
@@ -42,11 +58,26 @@ services:
     cpus: "0.5"
     networks:
       - internal
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:3000/', (res) => process.exit(res.statusCode >= 200 && res.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
   nsfwjs:
+    <<: *runtime-hardening
     build: ./nsfwjs-service
     restart: always
     logging: *default-logging
+    pids_limit: 512
+    mem_reservation: 1g
     profiles: [moderation]
     expose:
       - "5000"
@@ -72,9 +103,12 @@ services:
       start_period: 60s
 
   minio:
+    <<: *runtime-hardening
     image: minio/minio:latest
     restart: always
     logging: *default-logging
+    pids_limit: 256
+    mem_reservation: 512m
     profiles: [minio]
     command: server /data --console-address ":9001"
     expose:
@@ -92,9 +126,12 @@ services:
       - internal
 
   livekit:
+    <<: *runtime-hardening
     image: livekit/livekit-server:v1.10.1
     restart: always
     logging: *default-logging
+    pids_limit: 512
+    mem_reservation: 512m
     profiles: [livekit]
     ports:
       - "7880:7880"
@@ -111,9 +148,12 @@ services:
       - internal
 
   livekit-redis:
+    <<: *runtime-hardening
     image: redis:7.4.8-alpine
     restart: always
     logging: *default-logging
+    pids_limit: 128
+    mem_reservation: 128m
     profiles: [livekit]
     volumes:
       - livekitredis:/data
@@ -126,11 +166,14 @@ services:
       - internal
 
   caddy:
+    <<: *runtime-hardening
     build:
       context: .
       dockerfile: Dockerfile.caddy
     restart: always
     logging: *default-logging
+    pids_limit: 128
+    mem_reservation: 128m
     ports:
       - "80:80"
       - "443:443"
@@ -142,6 +185,12 @@ services:
       - caddy_config:/config
     networks:
       - internal
+    healthcheck:
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
 volumes:
   caddy_data:

@@ -5,6 +5,7 @@ import { useUserBoards } from "@/hooks/use-user-boards";
 import { useCurrentBoardId } from "@/contexts/board-switch-context";
 import { NavigationAction } from "@/components/navigation/navigation-action";
 import { NavigationItem } from "@/components/navigation/navigation-item";
+import { BoardDiscovery } from "@/components/board/header/board-discovery";
 import { getBoardImageUrl } from "@/lib/avatar-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
@@ -53,11 +54,10 @@ function NavigationSidebarClientInner() {
   }
 
   return (
-    <div className="w-full h-full overflow-y-auto pt-3 pb-3 scrollbar-hidden">
-      <div className="grid grid-cols-5 gap-x-0 gap-y-3 place-items-center -translate-x-2">
-        <div className="translate-x-1.5">
-          <NavigationAction />
-        </div>
+    <div className="w-full h-full overflow-y-auto py-3 scrollbar-hidden">
+      <div className="flex flex-col items-center  gap-3 ">
+        <NavigationAction />
+        <BoardDiscovery />
         {boardItems.map((board) => (
           <NavigationItem
             key={board.id}
@@ -79,8 +79,8 @@ export const NavigationSidebarClient = memo(NavigationSidebarClientInner);
 
 function NavigationSidebarSkeleton() {
   return (
-    <div className="w-full h-full overflow-y-auto pt-3 pb-3 scrollbar-hidden">
-      <div className="grid grid-cols-4 gap-3 place-items-center -translate-x-2">
+    <div className="w-full h-full overflow-y-auto py-3 scrollbar-hidden">
+      <div className="flex flex-col items-center gap-3">
         {Array.from({ length: 8 }).map((_, i) => (
           <Skeleton key={i} className="h-12 w-12 rounded-full" />
         ))}

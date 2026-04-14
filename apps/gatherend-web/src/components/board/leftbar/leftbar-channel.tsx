@@ -14,7 +14,6 @@ import { useBoardNavigationStore } from "@/stores/board-navigation-store";
 import { useTranslation } from "@/i18n";
 import { useVoiceStore } from "@/hooks/use-voice-store";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
-import { useBoardAccent } from "@/hooks/use-board-accent";
 
 interface LeftbarChannelProps {
   channel: {
@@ -28,7 +27,6 @@ interface LeftbarChannelProps {
   };
   boardId: string;
   role?: MemberRole;
-  dominantColor?: string | null;
 }
 
 // Optimización #6: Memoizar componente
@@ -36,7 +34,6 @@ const LeftbarChannelComponent = ({
   channel,
   boardId,
   role,
-  dominantColor,
 }: LeftbarChannelProps) => {
   const { onOpen } = useModal();
   const [, startTransition] = useTransition();
@@ -130,21 +127,19 @@ const LeftbarChannelComponent = ({
   // Esto evita que el canal anterior aparezca como activo cuando navegamos a discovery o conversación
   const isVoiceChannel = channel.type === ChannelType.VOICE;
   const channelImageUrl = channel.imageAsset?.url ?? null;
-  const accentVars = useBoardAccent(dominantColor);
 
   return (
     <div className="w-full min-w-0">
       <button
         onClick={onClick}
         onMouseEnter={enableTooltipsOnce}
-        style={{
-          ...(accentVars ?? {}),
-          ...(channelImageUrl
+        style={
+          channelImageUrl
             ? { backgroundImage: `url(${channelImageUrl})` }
-            : {}),
-        }}
+            : undefined
+        }
         className={cn(
-          "group relative flex h-20 w-full min-w-0 max-w-full cursor-pointer items-center overflow-hidden rounded-none border border-theme-channel-type-active-border px-0 text-left transition",
+          "group relative flex h-26 w-full min-w-0 max-w-full cursor-pointer items-center overflow-hidden rounded-sm border border-theme-channel-type-active-border px-0 text-left transition",
           channelImageUrl
             ? [
                 "bg-cover bg-center bg-no-repeat",
@@ -184,7 +179,7 @@ const LeftbarChannelComponent = ({
                 {isText ? (
                   <SlashSVG
                     className={cn(
-                      "w-7 h-7 shrink-0 text-theme-text-tertiary",
+                      "w-7 h-7 shrink-0 text-theme-text-subtle",
                       isActive && "text-theme-accent-primary",
                     )}
                   />
@@ -209,7 +204,7 @@ const LeftbarChannelComponent = ({
                 </p>
               </div>
               {isText && (
-                <span className="flex ml-2 items-center gap-1 text-[16px] text-theme-text-muted">
+                <span className="flex ml-2 items-center gap-1 text-[16px] text-theme-text-subtle">
                   <Users className="w-5 h-5" />
                   {channel.channelMemberCount == null ||
                   channel.channelMemberCount === 0
@@ -257,13 +252,13 @@ const LeftbarChannelComponent = ({
               <ActionTooltip label={t.board.deleteChannel}>
                 <Trash
                   onClick={(e) => onAction(e, "deleteChannel")}
-                  className="w-4 h-4 text-theme-text-tertiary hover:text-red-400 transition"
+                  className="w-6 h-6 text-theme-text-tertiary hover:text-red-400 transition"
                 />
               </ActionTooltip>
             ) : (
               <Trash
                 onClick={(e) => onAction(e, "deleteChannel")}
-                className="w-4 h-4 text-theme-text-tertiary hover:text-red-400 transition"
+                className="w-6 h-6 text-theme-text-tertiary hover:text-red-400 transition"
               />
             )}
           </div>

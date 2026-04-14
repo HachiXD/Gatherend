@@ -26,28 +26,27 @@ export const ChatHeaderClient = ({
 
   // Usar el nombre del cache si está disponible, sino usar el prop inicial
   const name = type === "channel" && channel ? channel.name : initialName;
-  const isConversation = type === "conversation";
-
   return (
     <div
-      className={`flex min-w-[160px] items-center justify-center gap-2 border border-[var(--community-header-btn-ring)] px-3 py-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)] ${isConversation ? "bg-theme-bg-secondary/40" : ""}`}
-      style={isConversation ? undefined : { backgroundColor: "var(--community-header-btn-bg, var(--theme-bg-secondary))" }}
+      className={`flex min-w-[160px] items-center justify-center gap-2 rounded-sm border border-[var(--community-header-btn-ring)] bg-theme-bg-secondary/40 px-3 py-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]`}
+      style={undefined}
     >
       {type === "channel" && (
-        <SlashSVG className="h-4 w-4 -mr-2 text-theme-text-tertiary" />
+        <SlashSVG className="h-6 w-6 -mr-2 text-theme-text-tertiary" />
       )}
       {type === "conversation" && (
         <UserAvatar
           src={avatarUrl}
           profileId={profileId}
-          className="h-5 w-5 md:h-5 md:w-5"
+          className="h-6.5 w-6.5"
           statusOffset="right-0"
+          statusClassName="w-2.5 h-2.5"
           ringColorClass="indicator-ring"
           overlayRingColorClass="bg-theme-bg-tertiary"
           animationMode="never"
         />
       )}
-      <p className="text-center text-[16px] font-semibold text-theme-text-subtle">
+      <p className="text-center text-[20px] font-semibold text-theme-text-subtle">
         {name}
       </p>
     </div>

@@ -51,28 +51,28 @@ export const AppShell = memo(function AppShell({
           rightDrawerContent={mobileRightDrawerContent}
         />
 
-        {/* Navigation Sidebar (top) - Solo desktop */}
-        <div className="hidden md:flex fixed top-0 left-0 w-[312px] h-[192px] z-30 flex-col bg-theme-bg-primary border-[3px] border-theme-border-primary">
+        {/* Navigation Sidebar - Solo desktop */}
+        <div className="hidden md:flex fixed top-0  left-0 w-[72px] h-screen z-30 flex-col bg-theme-bg-primary border-[3px] border-theme-border-primary">
           {navigationSidebar}
         </div>
 
-        {/* Board Leftbar (bottom) - Solo desktop */}
-        <div className="hidden md:flex fixed left-0 bottom-0 w-[312px] h-[calc(100vh-192px)] z-20 flex-col bg-theme-bg-secondary border-b-[3px] border-x-[3px] border-theme-border-primary">
+        {/* Board Leftbar - Solo desktop */}
+        <div className="hidden md:flex fixed left-[72px] top-0 w-[312px] h-screen z-20 flex-col bg-theme-bg-secondary border-r-[3px] border-y-[3px] border-theme-border-primary">
           {leftbar}
         </div>
 
         {/* Main header - Solo desktop */}
         <div
-          className="hidden md:flex fixed items-center top-0 left-[312px] right-0 h-12 
+          className="hidden md:flex fixed items-center top-0 w-64 right-0 h-12 
           bg-theme-bg-quinary
-          border-y-[3px] border-r-[3px] border-theme-border-primary z-30"
+          border-t-[3px] border-b-[1px] border-x-[3px] border-theme-border-primary z-30"
         >
           {header}
         </div>
 
         {/* Content - Con padding-top en móvil para el header fijo */}
         {/* El gradiente se aplica aquí cuando está habilitado, sino usa bgTertiary */}
-        <main className="app-shell-main h-full pt-14 md:pt-12 md:pl-[312px] md:pr-64 bg-theme-bg-tertiary flex flex-col overflow-hidden">
+        <main className="app-shell-main h-full pt-14 md:pt-0 md:pl-[384px] md:pr-64 bg-theme-bg-tertiary flex flex-col overflow-hidden  border-t-[3px] border-theme-border-primary">
           <div className="flex-1 min-h-0 overflow-hidden">{children}</div>
         </main>
 

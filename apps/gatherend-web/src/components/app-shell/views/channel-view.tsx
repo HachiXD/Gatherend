@@ -50,9 +50,7 @@ export function ChannelView({ channelId, boardId }: ChannelViewProps) {
   const resolvedChannelId = channel?.id ?? "";
   const resolvedBoardId = board?.id ?? "";
 
-  const headerStyle = useCommunityHeaderStyle(
-    board?.imageAsset?.dominantColor ?? null,
-  );
+  const headerStyle = useCommunityHeaderStyle();
 
   const socketQuery = useMemo(
     () => ({

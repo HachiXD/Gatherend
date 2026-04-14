@@ -262,7 +262,7 @@ const MessageContent = memo(function MessageContent({
     <div
       data-chat-item-block="message-content"
       className={cn(
-        "text-sm text-theme-text-secondary whitespace-pre-wrap [overflow-wrap:anywhere]",
+        "text-[15px] text-theme-text-secondary whitespace-pre-wrap [overflow-wrap:anywhere]",
         deleted && "italic text-theme-text-tertiary text-xs mt-1",
         isOptimistic && !isFailed && "text-theme-text-muted italic",
         isFailed && "text-red-400",
@@ -306,8 +306,8 @@ const ProfileNameTrigger = memo(function ProfileNameTrigger({
 }) {
   const usernameClasses = cn(
     canOpenAuthorProfile
-      ? "text-sm font-semibold text-white cursor-pointer hover:underline"
-      : "text-sm font-semibold text-theme-text-tertiary",
+      ? "text-[15px] font-semibold text-white cursor-pointer hover:underline"
+      : "text-[15px] font-semibold text-theme-text-tertiary",
     getUsernameFormatClasses(authorProfile?.usernameFormat),
     isOptimistic && !isFailed && "text-theme-text-muted",
     isFailed && "text-red-400",
@@ -349,7 +349,7 @@ const ProfileNameTrigger = memo(function ProfileNameTrigger({
       )}
       <span
         className={cn(
-          "text-sm font-semibold",
+          "text-[15px] font-semibold",
           getGradientAnimationClass(authorProfile?.usernameColor),
         )}
         style={usernameStyles}
@@ -1192,13 +1192,14 @@ const ChatItemOptimizedComponent = ({
                 usernameColor={authorProfile?.usernameColor}
                 usernameFormat={authorProfile?.usernameFormat}
                 avatarAnimationMode="onHover"
+                className="h-9 w-9"
               />
             ) : (
               <UserAvatar
                 src={authorProfile?.imageUrl || undefined}
                 profileId={authorProfile?.id}
                 showStatus={false}
-                className="h-10 w-10"
+                className="h-9 w-9"
               />
             )}
           </div>
@@ -1227,20 +1228,21 @@ const ChatItemOptimizedComponent = ({
                   usernameColor={authorProfile?.usernameColor}
                   usernameFormat={authorProfile?.usernameFormat}
                   avatarAnimationMode="onHover"
+                  className="h-9 w-9"
                 />
               ) : (
                 <UserAvatar
                   src={authorProfile?.imageUrl || undefined}
                   profileId={authorProfile?.id}
                   showStatus={false}
-                  className="h-10 w-10"
+                  className="h-9 w-9"
                 />
               )}
             </div>
           ) : !hideAvatarColumn ? (
             <div
               data-chat-item-block="avatar-placeholder"
-              className="w-10 shrink-0"
+              className="w-9 shrink-0"
             />
           ) : null}
 

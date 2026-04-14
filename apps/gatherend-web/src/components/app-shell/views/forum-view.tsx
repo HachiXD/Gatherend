@@ -34,9 +34,7 @@ function ForumViewInner() {
   const [showPostForm, setShowPostForm] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const headerButtonStyles = useCommunityHeaderStyle(
-    board?.imageAsset?.dominantColor ?? null,
-  );
+  const headerButtonStyles = useCommunityHeaderStyle();
 
   const handleRefresh = useCallback(async () => {
     if (isRefreshing) return;

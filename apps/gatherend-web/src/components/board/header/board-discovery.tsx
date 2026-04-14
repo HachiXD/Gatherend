@@ -1,10 +1,10 @@
 "use client";
 
-import { Users } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { memo, useTransition } from "react";
+import { Globe } from "lucide-react";
+import { memo, useCallback, useTransition } from "react";
 import { useBoardSwitchNavigation } from "@/contexts/board-switch-context";
 import { useBoardNavigationStore } from "@/stores/board-navigation-store";
+import { ActionTooltip } from "@/components/action-tooltip";
 import { useTranslation } from "@/i18n";
 
 /**
@@ -16,7 +16,7 @@ export const BoardDiscovery = memo(function BoardDiscovery() {
   const [isPending, startTransition] = useTransition();
   const { t } = useTranslation();
 
-  const handleClick = () => {
+  const handleClick = useCallback(() => {
     startTransition(() => {
       if (isClientNavigationEnabled) {
         switchToDiscovery();
@@ -25,27 +25,22 @@ export const BoardDiscovery = memo(function BoardDiscovery() {
         window.location.href = `/boards/${boardId}/discovery`;
       }
     });
-  };
+  }, [isClientNavigationEnabled, switchToDiscovery]);
 
   return (
-    <button
-      onClick={handleClick}
-      disabled={isPending}
-      className={cn(
-        "h-8 px-3 w-full",
-        "flex items-center justify-center gap-2",
-        "text-base font-semibold tracking-wide",
-        "bg-theme-button-primary text-white",
-        "border border-white/10",
-        "shadow-sm transition-all duration-150",
-        "hover:bg-theme-button-hover hover:text-white hover:border-white/20 hover:shadow-md",
-        "active:scale-[0.98] cursor-pointer",
-        "[clip-path:polygon(0_0,100%_0,97%_50%,100%_100%,0_100%,3%_50%)]",
-        isPending && "opacity-50 cursor-not-allowed",
-      )}
+    <ActionTooltip
+      side="right"
+      align="center"
+      label={t.discovery.meetNewFriends}
     >
-      <Users className="w-5.5 h-5.5" />
-      {t.discovery.meetNewFriends}
-    </button>
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={isPending}
+        className="flex h-12 w-12  rounded-2xl cursor-pointer items-center justify-center border-2 border-theme-border bg-theme-tab-button-bg px-1 py-0.5 text-theme-text-light transition hover:bg-theme-tab-button-hover hover:text-theme-text-light disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <Globe className="h-6 w-6" />
+      </button>
+    </ActionTooltip>
   );
 });

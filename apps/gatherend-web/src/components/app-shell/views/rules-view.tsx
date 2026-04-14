@@ -136,7 +136,6 @@ interface RulesFormProps {
   initialImageUrl?: string | null;
   initialImageAssetId?: string | null;
   isEdit: boolean;
-  hasDominantColor: boolean;
   onCancel: () => void;
   onSuccess: (rules: ClientBoardRules) => void;
 }
@@ -148,7 +147,6 @@ function RulesForm({
   initialImageUrl,
   initialImageAssetId,
   isEdit,
-  hasDominantColor,
   onCancel,
   onSuccess,
 }: RulesFormProps) {
@@ -265,21 +263,13 @@ function RulesForm({
     }
   };
 
-  const uploadBtnClass = hasDominantColor
-    ? "h-28 w-35 rounded-none text-[11px] transition-colors duration-150 border-[var(--community-header-btn-ring)] bg-[var(--community-header-btn-bg)]/25 text-[var(--community-header-btn-muted)] hover:border-[var(--community-header-btn-text)]/45 hover:bg-[var(--community-header-btn-hover)]/35 hover:text-[var(--community-header-btn-text)]"
-    : "h-28 w-35 rounded-none text-[11px] transition-colors duration-150 border-white/30 bg-theme-bg-cancel-button text-theme-text-subtle hover:border-white/50 hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light";
+  const uploadBtnClass = "h-28 w-35 rounded-none text-[11px] transition-colors duration-150 border-white/30 bg-theme-bg-cancel-button text-theme-text-subtle hover:border-white/50 hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light";
 
-  const removeBtnClass = hasDominantColor
-    ? "bg-transparent p-1 mr-4 shadow-none cursor-pointer hover:bg-transparent transition-colors duration-150 text-[var(--community-header-btn-muted)] hover:text-[var(--community-header-btn-text)]"
-    : "bg-transparent p-1 mr-4 shadow-none cursor-pointer hover:bg-transparent transition-colors duration-150 text-theme-text-tertiary hover:text-theme-text-light";
+  const removeBtnClass = "bg-transparent p-1 mr-4 shadow-none cursor-pointer hover:bg-transparent transition-colors duration-150 text-theme-text-tertiary hover:text-theme-text-light";
 
-  const cancelBtnClass = hasDominantColor
-    ? "h-6.5 w-full cursor-pointer rounded-none border-0 px-3 text-[12px] transition-colors duration-150 bg-[var(--community-header-btn-bg)]/40 text-[var(--community-header-btn-muted)] hover:bg-[var(--community-header-btn-hover)]/50 hover:text-[var(--community-header-btn-text)]"
-    : "h-6.5 w-full cursor-pointer rounded-none border-0 px-3 text-[12px] transition-colors duration-150 bg-theme-bg-cancel-button text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light";
+  const cancelBtnClass = "h-6.5 w-full cursor-pointer rounded-none border-0 px-3 text-[12px] transition-colors duration-150 bg-theme-bg-cancel-button text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light";
 
-  const publishBtnClass = hasDominantColor
-    ? "h-6.5 w-full cursor-pointer rounded-none border-0 px-3 text-[12px] font-semibold transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-70 bg-[var(--community-header-btn-bg)] text-[var(--community-header-btn-text)] hover:bg-[var(--community-header-btn-hover)]"
-    : "h-6.5 w-full cursor-pointer rounded-none border-0 px-3 text-[12px] font-semibold transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-70 bg-theme-tab-button-bg text-theme-text-light hover:bg-theme-tab-button-hover";
+  const publishBtnClass = "h-6.5 w-full cursor-pointer rounded-none border-0 px-3 text-[12px] font-semibold transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-70 bg-theme-tab-button-bg text-theme-text-light hover:bg-theme-tab-button-hover";
 
   return (
     <div className="border border-theme-border/40 p-3">
@@ -403,9 +393,7 @@ function RulesViewInner() {
 
   // ── Header colors (same logic as forum-view) ───────────────────────────────
 
-  const headerButtonStyles = useCommunityHeaderStyle(
-    board?.imageAsset?.dominantColor ?? null,
-  );
+  const headerButtonStyles = useCommunityHeaderStyle();
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -520,7 +508,6 @@ function RulesViewInner() {
                   initialImageUrl={mode === "edit" ? (rules?.imageAsset?.url ?? null) : null}
                   initialImageAssetId={mode === "edit" ? (rules?.imageAsset?.id ?? null) : null}
                   isEdit={mode === "edit"}
-                  hasDominantColor={!!board?.imageAsset?.dominantColor}
                   onCancel={() => setMode("view")}
                   onSuccess={handleFormSuccess}
                 />

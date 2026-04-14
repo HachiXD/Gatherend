@@ -190,15 +190,15 @@ export const DiscoveryCommunityView = memo(function DiscoveryCommunityView() {
         className="sticky top-0 z-20 shrink-0 border-b border-theme-border-primary bg-theme-bg-quaternary transition-colors duration-300"
         style={discoveryHeaderStyle}
       >
-        <div className="px-0 pt-2 pb-2">
+        <div className="px-0 h-12 flex items-center">
           <div className="ml-3 mr-3 flex items-center gap-2">
-            <div className="flex min-w-0 items-center justify-center gap-2 border border-[var(--community-header-btn-ring)] bg-theme-bg-secondary/40 px-3 py-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]">
-              <p className="min-w-0 truncate text-center text-[16px] font-semibold text-theme-text-subtle">
+            <div className="flex min-w-0 items-center justify-center gap-2 rounded-sm border border-[var(--community-header-btn-ring)] bg-theme-bg-secondary/40 px-3 py-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]">
+              <p className="min-w-0 truncate text-center text-[20px] font-semibold text-theme-text-subtle">
                 Feed de boards
               </p>
             </div>
-            <div className="ml-auto flex max-w-[min(56vw,480px)] shrink items-center justify-center border border-[var(--community-header-btn-ring)] bg-theme-bg-secondary/40 px-3 py-0.5 text-right shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]">
-              <p className="min-w-0 truncate text-[16px] font-medium text-theme-text-muted">
+            <div className="ml-auto flex max-w-[min(56vw,480px)] shrink items-center justify-center rounded-sm border border-[var(--community-header-btn-ring)] bg-theme-bg-secondary/40 px-3 py-0.5 text-right shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]">
+              <p className="min-w-0 truncate text-right text-[16px] font-medium text-theme-text-muted">
                 Clickea cualquiera de los boards para unirte a esa comunidad!
               </p>
             </div>

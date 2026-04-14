@@ -6,21 +6,18 @@ import {
   prepareWithSegments,
   type PreparedTextWithSegments,
 } from "@chenglou/pretext";
-import {
-  extractUrls,
-  containsInviteLink,
-} from "@/lib/parse-invite-links";
+import { extractUrls, containsInviteLink } from "@/lib/parse-invite-links";
 import { formatMentionsForDisplay } from "@/lib/parse-mentions";
 import { GROUPED_TEXT_BUBBLE_LEFT_PX } from "./chat-grouped-layout";
 
 const FONT_FAMILY = "Arial, Helvetica, sans-serif";
-const MESSAGE_FONT = `14px ${FONT_FAMILY}`;
-const MESSAGE_FONT_BOLD = `600 14px ${FONT_FAMILY}`;
+const MESSAGE_FONT = `15px ${FONT_FAMILY}`;
+const MESSAGE_FONT_BOLD = `600 15px ${FONT_FAMILY}`;
 const MESSAGE_EDITED_FONT = `10px ${FONT_FAMILY}`;
 const REPLY_FONT = `12px ${FONT_FAMILY}`;
 const REPLY_FONT_BOLD = `600 12px ${FONT_FAMILY}`;
 
-const MESSAGE_LINE_HEIGHT_PX = 20;
+const MESSAGE_LINE_HEIGHT_PX = 22;
 const REPLY_LINE_HEIGHT_PX = 16;
 const GROUPED_BUBBLE_MARGIN_TOP_PX = 4;
 const GROUPED_BUBBLE_HORIZONTAL_PADDING_PX = 24;
@@ -279,8 +276,10 @@ export function measureGroupedTextBubbleGroup({
       : 0;
     const editedSuffixWidthPx =
       item.isUpdated && !item.deleted
-        ? measureNaturalTextWidth(` (${item.editedLabel})`, MESSAGE_EDITED_FONT) +
-          16
+        ? measureNaturalTextWidth(
+            ` (${item.editedLabel})`,
+            MESSAGE_EDITED_FONT,
+          ) + 16
         : 0;
 
     const messageTextMetrics = measurePreparedParagraph({
@@ -338,14 +337,13 @@ export function measureGroupedTextBubbleGroup({
       messageTextMetrics.height +
       GROUPED_BUBBLE_PADDING_BOTTOM_BY_POSITION[item.position];
 
-    const bubbleOffsetTopWithinRowPx =
-      item.showGroupedHeader
-        ? GROUPED_START_COLUMN_TOP_PADDING_PX +
-          (item.authorHasBadgeSticker
-            ? GROUPED_START_HEADER_WITH_STICKER_HEIGHT_PX
-            : GROUPED_START_HEADER_HEIGHT_PX) +
-          GROUPED_BUBBLE_MARGIN_TOP_PX
-        : GROUPED_BUBBLE_MARGIN_TOP_PX;
+    const bubbleOffsetTopWithinRowPx = item.showGroupedHeader
+      ? GROUPED_START_COLUMN_TOP_PADDING_PX +
+        (item.authorHasBadgeSticker
+          ? GROUPED_START_HEADER_WITH_STICKER_HEIGHT_PX
+          : GROUPED_START_HEADER_HEIGHT_PX) +
+        GROUPED_BUBBLE_MARGIN_TOP_PX
+      : GROUPED_BUBBLE_MARGIN_TOP_PX;
 
     groupWidth = Math.max(groupWidth, bubbleWidthPx);
 

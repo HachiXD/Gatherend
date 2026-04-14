@@ -11,6 +11,7 @@ import {
 import {
   SortableContext,
   verticalListSortingStrategy,
+  rectSortingStrategy,
 } from "@dnd-kit/sortable";
 
 import { LeftbarChannel } from "./leftbar-channel";
@@ -27,7 +28,7 @@ import {
 interface LeftbarClientProps {
   role?: MemberRole;
   boardId: string;
-  dominantColor?: string | null;
+  twoColumns?: boolean;
 }
 
 const canReorder = (role?: MemberRole) =>
@@ -42,10 +43,14 @@ const canReorder = (role?: MemberRole) =>
 export const LeftbarClient = ({
   role,
   boardId,
-  dominantColor,
+  twoColumns = false,
 }: LeftbarClientProps) => {
   // false on server, true on client — avoids DnD hydration mismatch
-  const isMounted = useSyncExternalStore(() => () => {}, () => true, () => false);
+  const isMounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
   const { data: board } = useBoardData(boardId);
 
@@ -92,38 +97,42 @@ export const LeftbarClient = ({
     [activeId, rootChannels],
   );
 
+  const listClassName = twoColumns
+    ? "grid grid-cols-2 gap-1.5"
+    : "flex flex-col gap-1";
+
   // Pre-render without DnD to avoid hydration mismatch
   if (!isMounted) {
     return (
-        <div className="flex flex-col gap-1">
-          {sortedRootChannels.map((ch) => (
-            <LeftbarChannel
-              key={ch.id}
-              channel={ch}
-              boardId={boardId}
-              role={role}
-              dominantColor={dominantColor}
-            />
-          ))}
-        </div>
+      <div className={listClassName}>
+        {sortedRootChannels.map((ch) => (
+          <LeftbarChannel
+            key={ch.id}
+            channel={ch}
+            boardId={boardId}
+            role={role}
+          />
+        ))}
+      </div>
     );
   }
 
   return (
-    <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
+    <DndContext
+      sensors={sensors}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+    >
       <SortableContext
         items={sortedRootChannels.map((c) => c.id)}
-        strategy={verticalListSortingStrategy}
+        strategy={
+          twoColumns ? rectSortingStrategy : verticalListSortingStrategy
+        }
       >
-        <div className="flex flex-col gap-1">
+        <div className={listClassName}>
           {sortedRootChannels.map((ch) => (
             <SortableItem key={ch.id} id={ch.id} disableDrag={dragDisabled}>
-              <LeftbarChannel
-                channel={ch}
-                boardId={boardId}
-                role={role}
-                dominantColor={dominantColor}
-              />
+              <LeftbarChannel channel={ch} boardId={boardId} role={role} />
             </SortableItem>
           ))}
         </div>
@@ -135,7 +144,6 @@ export const LeftbarClient = ({
             channel={activeChannel}
             boardId={boardId}
             role={role}
-            dominantColor={dominantColor}
           />
         ) : null}
       </DragOverlay>

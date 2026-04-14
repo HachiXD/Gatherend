@@ -201,7 +201,7 @@ export function generatePaletteFromBase(baseColor: string): ThemeColors {
     textLight: hslToHex(h, clampS(0.43, 20, 40), clampL(2.32, 90, 96)),
     textSubtle: hslToHex(h, clampS(0.29, 14, 26), clampL(2.0, 76, 84)),
     textPrimary: "#ffffff",
-    textSecondary: hslToHex(h + 70, clampS(0.14, 6, 14), clampL(1.87, 84, 89)), // Mensajes de chat
+    textSecondary: hslToHex(h + 70, clampS(0.14, 6, 14), clampL(1.87, 96, 100)), // Mensajes de chat
     textTertiary: hslToHex(h + 70, clampS(0.12, 5, 12), clampL(1.5, 65, 73)), // timestamp
     textInverse: hslToHex(h, clampS(0.22, 10, 20), clampL(0.37, 12, 18)),
 

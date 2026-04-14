@@ -78,13 +78,13 @@ export const DirectMessages = ({
       )}
     >
       <div className="flex items-center justify-between pl-3 pr-1">
-        <div className="text-xs uppercase text-theme-text-tertiary">
+        <div className="text-[14px]  uppercase text-theme-text-tertiary">
           {t.dm.social}
         </div>
         <button
           onClick={() => onOpen("addFriend")}
           className="
-            p-1.5
+            py-1.5 pr-0 pl-1.5
             text-theme-add-friend-icon
             hover:text-theme-add-friend-hover
             rounded-full
@@ -93,7 +93,7 @@ export const DirectMessages = ({
           "
           title={t.dm.addFriend}
         >
-          <UserPlus className="w-4.5 h-4.5" />
+          <UserPlus className="w-5.5 h-5.5" />
         </button>
       </div>
 

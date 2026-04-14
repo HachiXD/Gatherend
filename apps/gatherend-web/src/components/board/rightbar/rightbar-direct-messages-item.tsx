@@ -139,7 +139,7 @@ export const DirectMessageItem = memo(function DirectMessageItemComponent({
           onClick={onClick}
           disabled={isPending || isHiding}
           className={cn(
-            "group flex items-center gap-x-2 w-full cursor-pointer transition mb-1 ml-1 py-1.5 px-2 rounded-none relative",
+            "group flex items-center gap-x-2 w-full cursor-pointer transition mb-1 ml-1 py-1.5 px-2 rounded-sm relative",
             "border border-transparent",
             !isActive &&
               "hover:border-theme-border hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_-1px_0_rgba(0,0,0,0.38)]",
@@ -161,7 +161,7 @@ export const DirectMessageItem = memo(function DirectMessageItemComponent({
             src={otherProfile.avatarAsset?.url || undefined}
             profileId={otherProfile.id}
             usernameColor={otherProfile.usernameColor}
-            className="h-8 w-8 md:h-8 md:w-8"
+            className="h-9 w-9 "
             ringColorClass="indicator-ring"
             overlayRingColorClass={cn(
               "bg-theme-bg-secondary",
@@ -176,7 +176,7 @@ export const DirectMessageItem = memo(function DirectMessageItemComponent({
           <div className="flex flex-col items-start gap-y-0 flex-1">
             <p
               className={cn(
-                "text-[14.5px] transition -mb-0.5",
+                "text-[16px] transition -mb-0.5",
                 getUsernameFormatClasses(otherProfile.usernameFormat),
                 getGradientAnimationClass(otherProfile.usernameColor),
                 // Si no tiene color personalizado, usar estilos por defecto
@@ -197,7 +197,7 @@ export const DirectMessageItem = memo(function DirectMessageItemComponent({
               {otherProfile.username}
             </p>
 
-            <span className="text-[13px] text-theme-text-tertiary truncate w-[140px] text-left">
+            <span className="text-[15px] text-theme-text-tertiary truncate w-[140px] text-left">
               {lastMessagePreview}
             </span>
           </div>

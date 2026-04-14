@@ -379,16 +379,16 @@ const ChatInputComponent = ({
 
   const isLoading = isSubmitting;
   const composerToolButtonClass =
-    "inline-flex min-h-[46px] w-11 shrink-0 items-center justify-center self-stretch rounded-none border border-theme-border bg-theme-chat-input-button-bg text-theme-text-secondary transition hover:bg-theme-chat-input-surface-bg hover:text-theme-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50";
-  const composerToolIconClass = "h-4 w-4 text-current";
+    "inline-flex min-h-[52px] w-11 shrink-0 items-center justify-center self-stretch rounded-sm border border-theme-border bg-theme-chat-input-button-bg text-theme-text-secondary transition hover:bg-theme-chat-input-surface-bg hover:text-theme-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50";
+  const composerToolIconClass = "h-6 w-6 text-current";
   const composerSendButtonClass =
-    "inline-flex min-h-[46px] w-11 shrink-0 items-center justify-center self-stretch rounded-none bg-theme-button-primary text-white transition hover:bg-theme-button-send-hover shadow-[inset_0_1px_0_rgba(255,255,255,0.14),inset_1px_0_0_rgba(255,255,255,0.1),inset_-1px_0_0_rgba(0,0,0,0.3),inset_0_-1px_0_rgba(0,0,0,0.34)] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50";
+    "inline-flex min-h-[52px] w-11 shrink-0 items-center justify-center self-stretch rounded-sm bg-theme-button-primary text-white transition hover:bg-theme-button-send-hover shadow-[inset_0_1px_0_rgba(255,255,255,0.14),inset_1px_0_0_rgba(255,255,255,0.1),inset_-1px_0_0_rgba(0,0,0,0.3),inset_0_-1px_0_rgba(0,0,0,0.34)] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50";
 
   const resetTextareaHeight = () => {
     const textarea = inputRef.current;
     if (!textarea) return;
     textarea.style.height = "auto";
-    textarea.style.height = "46px";
+    textarea.style.height = "52px";
   };
 
   const resizeTextareaToFit = () => {
@@ -798,7 +798,7 @@ const ChatInputComponent = ({
         >
           {/* Reply Preview - Outside relative container to affect layout flow */}
           {isReplyingInThisRoom && replyingTo && (
-            <div className="border-t border-theme-border-primary bg-theme-bg-tertiary p-2 px-5 flex items-center justify-between rounded-none">
+            <div className="border-t border-theme-border-primary bg-theme-bg-tertiary p-2 px-5 flex items-center justify-between rounded-sm">
               <div className="flex-1 text-sm min-w-0">
                 <span className="font-semibold text-theme-text-secondary">
                   {t.chat.replyingTo} {replyingTo.sender.username}
@@ -822,10 +822,7 @@ const ChatInputComponent = ({
               </button>
             </div>
           )}
-          <div
-            className="relative px-0 pt-[13px] pb-2 "
-            suppressHydrationWarning
-          >
+          <div className="relative px-0 pt-2 pb-1.5 " suppressHydrationWarning>
             {/* Typing Indicator - Absolute overlay, doesn't affect layout */}
             {typingText && (
               <div className="absolute -top-2 left-4 right-4 pointer-events-none z-10">
@@ -839,11 +836,11 @@ const ChatInputComponent = ({
 
             {/* File Preview */}
             {filePreview && (
-              <div className="absolute -top-26 left-4 right-4 border border-theme-border-primary bg-theme-bg-secondary p-3 shadow-lg rounded-none">
+              <div className="absolute -top-26 left-4 right-4 border border-theme-border-primary bg-theme-bg-secondary p-3 shadow-lg rounded-sm">
                 <div className="flex items-start gap-3">
                   {/* Preview Thumbnail */}
                   {filePreview.type.startsWith("image/") ? (
-                    <div className="relative h-20 w-20 overflow-hidden flex-shrink-0 rounded-none">
+                    <div className="relative h-20 w-20 overflow-hidden flex-shrink-0 rounded-sm">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={filePreview.url}
@@ -854,7 +851,7 @@ const ChatInputComponent = ({
                       />
                     </div>
                   ) : (
-                    <div className="h-20 w-20 flex items-center justify-center bg-theme-bg-secondary flex-shrink-0 rounded-none">
+                    <div className="h-20 w-20 flex items-center justify-center bg-theme-bg-secondary flex-shrink-0 rounded-sm">
                       <FileIcon className="h-10 w-10 text-theme-text-tertiary" />
                     </div>
                   )}
@@ -908,7 +905,7 @@ const ChatInputComponent = ({
               onChange={handleFileUpload}
               accept="image/*,.pdf"
             />
-            <div className="mx-3 -mt-2 mb-0.5 flex min-h-[46px] items-stretch gap-1.5">
+            <div className="mx-3 -mt-2 mb-0.5 flex min-h-[52px] items-stretch gap-1.5">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -916,16 +913,16 @@ const ChatInputComponent = ({
                 className={composerToolButtonClass}
               >
                 {isUploading ? (
-                  <Loader2 className="h-4 w-4 animate-spin text-current" />
+                  <Loader2 className="h-6 w-6 animate-spin text-current" />
                 ) : (
                   <Plus className={composerToolIconClass} />
                 )}
               </button>
 
-              <div className="flex min-w-0 flex-1 items-stretch border border-theme-border-subtle bg-theme-chat-input-surface-bg shadow-[inset_0_1px_0_rgba(0,0,0,0.2),inset_0_-1px_0_rgba(255,255,255,0.08),inset_1px_0_0_rgba(0,0,0,0.2),inset_-1px_0_0_rgba(255,255,255,0.08)] focus-within:border-theme-border-accent">
+              <div className="flex min-w-0 flex-1 items-stretch rounded-sm border border-theme-border-subtle bg-theme-chat-input-surface-bg shadow-[inset_0_1px_0_rgba(0,0,0,0.2),inset_0_-1px_0_rgba(255,255,255,0.08),inset_1px_0_0_rgba(0,0,0,0.2),inset_-1px_0_0_rgba(255,255,255,0.08)] focus-within:border-theme-border-accent">
                 <textarea
                   aria-disabled={isLoading}
-                  className="w-full min-h-[46px] max-h-[225px] resize-none overflow-y-auto border-0 bg-transparent px-3 py-3 text-[14px] text-theme-text-secondary placeholder:text-theme-text-secondary/65 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                  className="w-full min-h-[52px] max-h-[225px] resize-none overflow-y-auto border-0 bg-transparent px-3 py-3.5 text-[15px] text-theme-text-secondary placeholder:text-theme-text-secondary/70 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
                   placeholder={
                     isNarrowScreen
                       ? t.chat.messagePlaceholderShort

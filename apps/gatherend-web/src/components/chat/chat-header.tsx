@@ -78,7 +78,7 @@ const ChatHeaderComponent = ({
 
   return (
     <div
-      className="hidden h-12 shrink-0 items-center border-b border-theme-border-primary bg-theme-bg-quaternary px-3 md:flex"
+      className="hidden h-[45px] shrink-0 items-center border-b border-theme-border-primary bg-theme-bg-quaternary px-3 md:flex"
       style={resolvedStyle}
     >
       {/* MobileToggle removido - sidebars disponibles en layout SPA */}
@@ -87,10 +87,10 @@ const ChatHeaderComponent = ({
           <button
             type="button"
             onClick={() => switchToChannelList(boardId)}
-            className="mr-2 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center border border-[var(--community-header-btn-ring)] bg-[var(--community-header-btn-bg,var(--theme-bg-secondary))] text-theme-text-subtle shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)] transition hover:bg-[var(--community-header-btn-hover)] hover:text-theme-text-light"
+            className="mr-2 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-sm border border-[var(--community-header-btn-ring)] bg-theme-bg-secondary/40 text-theme-text-subtle shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)] transition hover:bg-[var(--community-header-btn-hover)] hover:text-theme-text-light"
             aria-label="Volver a la lista de chats"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-6 w-6" />
           </button>
         </ActionTooltip>
       )}

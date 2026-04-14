@@ -5,11 +5,18 @@ x-logging: &default-logging
     max-file: "5"
     compress: "true"
 
+x-runtime-hardening: &runtime-hardening
+  security_opt:
+    - no-new-privileges:true
+
 services:
   postgres:
+    <<: *runtime-hardening
     image: postgres:17.9-alpine
     restart: unless-stopped
     logging: *default-logging
+    pids_limit: 512
+    mem_reservation: 512m
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-gatherend}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required}
@@ -30,9 +37,12 @@ services:
       - internal
 
   redis:
+    <<: *runtime-hardening
     image: redis:7.4.8-alpine
     restart: unless-stopped
     logging: *default-logging
+    pids_limit: 128
+    mem_reservation: 128m
     command: redis-server --requirepass ${REDIS_PASSWORD:?required}
     volumes:
       - redisdata:/data
@@ -46,11 +56,14 @@ services:
       - internal
 
   express:
+    <<: *runtime-hardening
     build:
       context: ..
       dockerfile: apps/express/Dockerfile
     restart: unless-stopped
     logging: *default-logging
+    pids_limit: 256
+    mem_reservation: 512m
     depends_on:
       postgres:
         condition: service_healthy
@@ -86,9 +99,22 @@ services:
       MEDIA_ALLOWED_HOSTNAMES: ${MEDIA_ALLOWED_HOSTNAMES:-}
     networks:
       - internal
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:3001/health', (res) => process.exit(res.statusCode >= 200 && res.statusCode < 400 ? 0 : 1)).on('error', () => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   # prisma migrate deploy runs before the server starts (check CMD in apps/gatherend-web/Dockerfile)
   web:
+    <<: *runtime-hardening
     build:
       context: ..
       dockerfile: apps/gatherend-web/Dockerfile
@@ -103,6 +129,8 @@ services:
         NEXT_PUBLIC_DICEBEAR_URL: ${NEXT_PUBLIC_DICEBEAR_URL:-}
     restart: unless-stopped
     logging: *default-logging
+    pids_limit: 256
+    mem_reservation: 512m
     depends_on:
       postgres:
         condition: service_healthy
@@ -139,11 +167,26 @@ services:
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET}
     networks:
       - internal
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:3000/api/health', (res) => process.exit(res.statusCode >= 200 && res.statusCode < 400 ? 0 : 1)).on('error', () => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
 
   imgproxy:
+    <<: *runtime-hardening
     image: ghcr.io/imgproxy/imgproxy:v3.31.2
     restart: unless-stopped
     logging: *default-logging
+    pids_limit: 128
+    mem_reservation: 256m
     profiles: [images]
     cpus: "1"
     expose:
@@ -158,11 +201,20 @@ services:
     mem_limit: 512m
     networks:
       - internal
+    healthcheck:
+      test: ["CMD", "imgproxy", "health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   dicebear:
+    <<: *runtime-hardening
     image: dicebear/api:3
     restart: unless-stopped
     logging: *default-logging
+    pids_limit: 128
+    mem_reservation: 128m
     profiles: [images]
     expose:
       - "3000"
@@ -176,12 +228,27 @@ services:
     cpus: "0.5"
     networks:
       - internal
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:3000/', (res) => process.exit(res.statusCode >= 200 && res.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
   nsfwjs:
+    <<: *runtime-hardening
     build:
       context: ./services/nsfwjs-service
     restart: unless-stopped
     logging: *default-logging
+    pids_limit: 512
+    mem_reservation: 1g
     profiles: [moderation]
     expose:
       - "5000"
@@ -205,9 +272,12 @@ services:
       start_period: 60s
 
   minio:
+    <<: *runtime-hardening
     image: minio/minio:latest
     restart: unless-stopped
     logging: *default-logging
+    pids_limit: 256
+    mem_reservation: 512m
     profiles: [minio]
     command: server /data --console-address ":9001"
     expose:
@@ -225,9 +295,12 @@ services:
       - internal
 
   livekit:
+    <<: *runtime-hardening
     image: livekit/livekit-server:v1.10.1
     restart: unless-stopped
     logging: *default-logging
+    pids_limit: 512
+    mem_reservation: 512m
     profiles: [livekit]
     ports:
       - "7880:7880"
@@ -244,9 +317,12 @@ services:
       - internal
 
   livekit-redis:
+    <<: *runtime-hardening
     image: redis:7.4.8-alpine
     restart: unless-stopped
     logging: *default-logging
+    pids_limit: 128
+    mem_reservation: 128m
     profiles: [livekit]
     volumes:
       - livekitredis:/data
@@ -259,15 +335,18 @@ services:
       - internal
 
   caddy:
+    <<: *runtime-hardening
     build:
       context: ../apps/gatherend-gateway
     restart: unless-stopped
     logging: *default-logging
+    pids_limit: 128
+    mem_reservation: 128m
     depends_on:
       web:
-        condition: service_started
+        condition: service_healthy
       express:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "80:80"
       - "443:443"
@@ -289,6 +368,12 @@ services:
       - caddy_config:/config
     networks:
       - internal
+    healthcheck:
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
 volumes:
   pgdata:
