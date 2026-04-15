@@ -72,6 +72,40 @@ function isTextBubbleGroupableMessage(message: ChatMessage): boolean {
   );
 }
 
+function continuesTextBubbleFromPrevious(
+  messages: ChatMessage[],
+  index: number,
+  compactById: Record<string, boolean>,
+): boolean {
+  const current = messages[index];
+  const prev = index > 0 ? messages[index - 1] : undefined;
+
+  return Boolean(
+    current &&
+      prev &&
+      isTextBubbleGroupableMessage(current) &&
+      isTextBubbleGroupableMessage(prev) &&
+      (compactById[current.id] ?? false),
+  );
+}
+
+function continuesTextBubbleToNext(
+  messages: ChatMessage[],
+  index: number,
+  compactById: Record<string, boolean>,
+): boolean {
+  const current = messages[index];
+  const next = index < messages.length - 1 ? messages[index + 1] : undefined;
+
+  return Boolean(
+    current &&
+      next &&
+      isTextBubbleGroupableMessage(current) &&
+      isTextBubbleGroupableMessage(next) &&
+      (compactById[next.id] ?? false),
+  );
+}
+
 function getTextBubbleGroupPosition(
   messages: ChatMessage[],
   index: number,
@@ -80,21 +114,21 @@ function getTextBubbleGroupPosition(
   const current = messages[index];
   if (!current || !isTextBubbleGroupableMessage(current)) return undefined;
 
-  const prev = index > 0 ? messages[index - 1] : undefined;
-  const next = index < messages.length - 1 ? messages[index + 1] : undefined;
-
-  const currentCompact = compactById[current.id] ?? false;
-  const continuesFromPrev =
-    currentCompact && Boolean(prev && isTextBubbleGroupableMessage(prev));
-  const nextGroupable = next ? isTextBubbleGroupableMessage(next) : false;
-  const continuesToNext =
-    nextGroupable && next ? (compactById[next.id] ?? false) : false;
+  const continuesFromPrev = continuesTextBubbleFromPrevious(
+    messages,
+    index,
+    compactById,
+  );
+  const continuesToNext = continuesTextBubbleToNext(
+    messages,
+    index,
+    compactById,
+  );
 
   if (continuesFromPrev && continuesToNext) return "middle";
   if (continuesFromPrev) return "end";
   if (continuesToNext) return "start";
-  if (!currentCompact) return "single";
-  return undefined;
+  return "single";
 }
 
 type MessageRenderNode =
@@ -170,6 +204,8 @@ function GroupedTextBubbleRow({
     },
   ) => ReactNode;
 }) {
+  const showGroupedHeader = isStartItem && !(compactById[msg.id] ?? false);
+
   return (
     <div className={GROUPED_TEXT_BUBBLE_ROW_CLASS}>
       <div aria-hidden="true" className={GROUPED_TEXT_BUBBLE_LEFT_SPACER_CLASS} />
@@ -177,7 +213,7 @@ function GroupedTextBubbleRow({
         {renderMessage(msg, index, messages, {
           groupedTextBubble: true,
           hideAvatarColumn: true,
-          showGroupedHeader: isStartItem,
+          showGroupedHeader,
           externalHoverArea: true,
           messageCompactData: compactById[msg.id] ? "1" : "0",
           compactRevisionData: compactRevision,
@@ -300,7 +336,8 @@ function GroupedTextBubbleRun({
               : itemIndex === items.length - 1
                 ? "end"
                 : "middle",
-          showGroupedHeader: itemIndex === 0,
+          showGroupedHeader:
+            itemIndex === 0 && !(compactById[message.id] ?? false),
           authorUsername: author?.username,
           authorHasBadgeSticker: Boolean(author?.badgeSticker?.asset?.url),
           replyTo,
@@ -313,6 +350,7 @@ function GroupedTextBubbleRun({
     });
   }, [
     canUsePretextLayout,
+    compactById,
     contentWidthPx,
     deletedMemberLabel,
     editedLabel,
@@ -471,8 +509,8 @@ function buildMessageRenderNodes(
 
     const canStartTextGroup =
       isTextBubbleGroupableMessage(current) &&
-      !(compactById[current.id] ?? false) &&
-      index < messages.length - 1;
+      continuesTextBubbleToNext(messages, index, compactById) &&
+      !continuesTextBubbleFromPrevious(messages, index, compactById);
 
     if (!canStartTextGroup) {
       nodes.push({ kind: "single", message: current, index });

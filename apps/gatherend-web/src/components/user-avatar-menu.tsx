@@ -301,7 +301,7 @@ function UserAvatarMenuContent({
 
   return (
     <PopoverContent
-      className="w-[22rem] max-w-[calc(100vw-1rem)] overflow-hidden rounded-none border border-theme-border-secondary bg-theme-bg-dropdown-menu-primary p-0"
+      className="w-[22rem] max-w-[calc(100vw-1rem)] overflow-hidden rounded-sm border border-theme-border-secondary bg-theme-bg-dropdown-menu-primary p-0"
       side="right"
       align="start"
       sideOffset={8}

@@ -377,23 +377,27 @@ html[data-theme-gradient="true"] .indicator-ring-slot {
 }
 
 /* Apply custom scrollbar to emoji picker scroll area */
-.EmojiPickerReact .epr-emoji-list {
+.EmojiPickerReact .epr-body {
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-card-thumb, rgba(255, 255, 255, 0.1))
     transparent;
 }
-.EmojiPickerReact .epr-emoji-list::-webkit-scrollbar {
+
+.EmojiPickerReact .epr-body::-webkit-scrollbar {
   width: 8px;
 }
-.EmojiPickerReact .epr-emoji-list::-webkit-scrollbar-track {
+
+.EmojiPickerReact .epr-body::-webkit-scrollbar-track {
   background: transparent;
 }
-.EmojiPickerReact .epr-emoji-list::-webkit-scrollbar-thumb {
+
+.EmojiPickerReact .epr-body::-webkit-scrollbar-thumb {
   background: var(--scrollbar-card-thumb, rgba(255, 255, 255, 0.1));
   border-radius: 3px;
   background-clip: padding-box;
 }
-.EmojiPickerReact .epr-emoji-list::-webkit-scrollbar-thumb:hover {
+
+.EmojiPickerReact .epr-body::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-card-thumb-hover, rgba(255, 255, 255, 0.2));
 }
 

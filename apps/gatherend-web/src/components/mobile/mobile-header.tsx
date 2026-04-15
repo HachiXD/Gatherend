@@ -1,15 +1,11 @@
 "use client";
 
-import { memo, ReactNode, useTransition } from "react";
-import { Menu, Globe, ChevronLeft, Users } from "lucide-react";
+import { memo, ReactNode } from "react";
+import { Menu, ChevronLeft, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import {
-  useBoardSwitchNavigation,
-  useBoardSwitchSafe,
-} from "@/contexts/board-switch-context";
-import { useBoardNavigationStore } from "@/stores/board-navigation-store";
+import { useBoardSwitchSafe } from "@/contexts/board-switch-context";
 import { useMobileTitle } from "@/hooks/use-mobile-title";
 import { useMobileDrawerStore } from "@/stores/mobile-drawer-store";
 
@@ -33,25 +29,11 @@ export const MobileHeader = memo(function MobileHeader({
 }: MobileHeaderProps) {
   const { leftOpen, rightOpen, setLeftOpen, setRightOpen } =
     useMobileDrawerStore();
-  const [isPending, startTransition] = useTransition();
-  const { switchToDiscovery, isClientNavigationEnabled } =
-    useBoardSwitchNavigation();
   const boardSwitch = useBoardSwitchSafe();
   const title = useMobileTitle();
 
   // Usar contexto SPA — no se suscribe a usePathname()
   const isDiscovery = boardSwitch?.isDiscovery ?? false;
-
-  const handleDiscoveryClick = () => {
-    startTransition(() => {
-      if (isClientNavigationEnabled) {
-        switchToDiscovery();
-      } else {
-        const boardId = useBoardNavigationStore.getState().currentBoardId;
-        window.location.href = `/boards/${boardId}/discovery`;
-      }
-    });
-  };
 
   return (
     <>
@@ -76,20 +58,8 @@ export const MobileHeader = memo(function MobileHeader({
           )}
         </div>
 
-        {/* Right side - Discovery button + Right drawer button */}
+        {/* Right side - Right drawer button */}
         <div className="flex items-center gap-1 flex-shrink-0">
-          {!isDiscovery && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleDiscoveryClick}
-              disabled={isPending}
-              className="text-theme-text-primary hover:bg-theme-border-secondary"
-              title="Discovery"
-            >
-              <Globe className="h-5 w-5" />
-            </Button>
-          )}
           <Button
             variant="ghost"
             size="icon"
@@ -107,7 +77,7 @@ export const MobileHeader = memo(function MobileHeader({
         <SheetContent
           side="left"
           hideCloseButton
-          className="p-0 w-[85vw] max-w-[350px] bg-theme-bg-primary border-r border-theme-border-secondary"
+          className="p-0 w-[92vw] max-w-[420px] bg-theme-bg-primary border-r border-theme-border-secondary"
         >
           <VisuallyHidden>
             <SheetTitle>Navigation Menu</SheetTitle>
@@ -125,7 +95,7 @@ export const MobileHeader = memo(function MobileHeader({
             </Button>
           </div>
           {/* Drawer Content */}
-          <div className="h-[calc(100vh)] overflow-y-auto">
+          <div className="min-h-0 flex-1 overflow-hidden">
             {leftDrawerContent}
           </div>
         </SheetContent>
@@ -154,7 +124,7 @@ export const MobileHeader = memo(function MobileHeader({
             </Button>
           </div>
           {/* Drawer Content */}
-          <div className="h-[calc(100vh)] overflow-y-auto">
+          <div className="min-h-0 flex-1 overflow-y-auto">
             {rightDrawerContent}
           </div>
         </SheetContent>

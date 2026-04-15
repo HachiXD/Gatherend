@@ -9,8 +9,11 @@ import {
   Users,
   MessagesSquare,
   MessageSquare,
+  FileText,
   BookOpenText,
   ScrollText,
+  BarChart3,
+  Trophy,
 } from "lucide-react";
 import { useBoardNavigationStore } from "@/stores/board-navigation-store";
 import { cn } from "@/lib/utils";
@@ -121,70 +124,103 @@ export const BoardLeftbar = ({
         currentProfileId={currentProfileId}
       />
 
-      <div className="scrollbar-navigation flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-2 pt-3 pb-2">
-        <div className="shrink-0 flex overflow-hidden rounded-sm border border-theme-channel-type-active-border">
-          <button
-            onClick={handleChannels}
-            data-mentions={hasChatMentions}
-            data-unreads={hasChatUnreads}
-            className={cn(
-              "group/chats relative flex h-14 flex-1 cursor-pointer flex-col items-center justify-center gap-1 bg-theme-channel-type-active-border px-2 text-[14px] font-bold tracking-[0.05em] text-theme-text-primary transition-colors",
-              isChannels
-                ? "bg-[var(--theme-button-primary-active)] shadow-[inset_0_1px_0_rgba(0,0,0,0.42),inset_1px_0_0_rgba(0,0,0,0.36),inset_-1px_0_0_rgba(255,255,255,0.14),inset_0_-1px_0_rgba(255,255,255,0.18)]"
-                : "hover:bg-[var(--theme-channel-type-hover-bg)] shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(0,0,0,0.55)]",
-            )}
-          >
-            <MessagesSquare className="h-6 w-6 shrink-0" />
-            <span className="leading-none group-hover:text-theme-text-strong">
-              Chats
-            </span>
-            <div
+      <div className="scrollbar-navigation flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-2 pt-3 pb-2">
+        <div className="shrink-0 flex flex-col overflow-hidden rounded-sm border border-theme-channel-type-active-border">
+          {/* Row 1: Chats, Reglas, Foro */}
+          <div className="flex">
+            <button
+              onClick={handleChannels}
+              data-mentions={hasChatMentions}
+              data-unreads={hasChatUnreads}
               className={cn(
-                "absolute right-2 top-1.5 hidden h-4 w-4 items-center justify-center rounded-full border border-black/30 bg-theme-notification-bg",
-                "group-data-[mentions=true]/chats:flex",
+                "group/chats relative flex h-14 flex-1 cursor-pointer flex-col items-center justify-center gap-1 bg-theme-channel-type-active-border px-2 text-[14px] font-bold tracking-[0.05em] text-theme-text-primary transition-colors",
+                isChannels
+                  ? "bg-[var(--theme-button-primary-active)] shadow-[inset_0_1px_0_rgba(0,0,0,0.42),inset_1px_0_0_rgba(0,0,0,0.36),inset_-1px_0_0_rgba(255,255,255,0.14),inset_0_-1px_0_rgba(255,255,255,0.18)]"
+                  : "hover:bg-theme-tab-button-hover shadow-[inset_0_1px_0_rgba(255,255,255,0.22)]",
               )}
             >
-              <AtSign
-                className="h-2.5 w-2.5 text-theme-text-tertiary"
-                strokeWidth={3}
+              <MessagesSquare className="h-6 w-6 shrink-0" />
+              <span className="leading-none group-hover:text-theme-text-strong">
+                Chats
+              </span>
+              <div
+                className={cn(
+                  "absolute right-2 top-1.5 hidden h-4 w-4 items-center justify-center rounded-full border border-black/30 bg-theme-notification-bg",
+                  "group-data-[mentions=true]/chats:flex",
+                )}
+              >
+                <AtSign
+                  className="h-2.5 w-2.5 text-theme-text-tertiary"
+                  strokeWidth={3}
+                />
+              </div>
+              <div
+                className={cn(
+                  "absolute bottom-1.5 right-2 hidden h-2.5 w-2.5 rounded-sm bg-theme-unread-bg",
+                  "group-data-[unreads=true]/chats:block group-data-[mentions=true]/chats:hidden",
+                )}
               />
-            </div>
-            <div
+            </button>
+            <button
+              onClick={handleForum}
               className={cn(
-                "absolute bottom-1.5 right-2 hidden h-2.5 w-2.5 rounded-sm bg-theme-unread-bg",
-                "group-data-[unreads=true]/chats:block group-data-[mentions=true]/chats:hidden",
+                "group flex h-14 flex-1 cursor-pointer flex-col items-center justify-center gap-1 border-l border-theme-border/50 bg-theme-channel-type-active-border px-2 text-[14px] font-bold tracking-[0.05em] text-theme-text-primary transition-colors",
+                isForum
+                  ? "bg-[var(--theme-button-primary-active)] shadow-[inset_0_1px_0_rgba(0,0,0,0.42),inset_1px_0_0_rgba(0,0,0,0.36),inset_-1px_0_0_rgba(255,255,255,0.14),inset_0_-1px_0_rgba(255,255,255,0.18)]"
+                  : "hover:bg-theme-tab-button-hover shadow-[inset_0_1px_0_rgba(255,255,255,0.22)]",
               )}
-            />
-          </button>
-          <button
-            onClick={handleRules}
-            className={cn(
-              "group flex h-14 flex-1 cursor-pointer flex-col items-center justify-center gap-1 border-l border-theme-border/50 bg-theme-channel-type-active-border px-2 text-[14px] font-bold tracking-[0.05em] text-theme-text-primary transition-colors",
-              isRules
-                ? "bg-[var(--theme-button-primary-active)] shadow-[inset_0_1px_0_rgba(0,0,0,0.42),inset_1px_0_0_rgba(0,0,0,0.36),inset_-1px_0_0_rgba(255,255,255,0.14),inset_0_-1px_0_rgba(255,255,255,0.18)]"
-                : "hover:bg-[var(--theme-channel-type-hover-bg)] shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(0,0,0,0.55)]",
-            )}
-          >
-            <ScrollText className="h-6 w-6 shrink-0" />
-            <span className="leading-none group-hover:text-theme-text-strong">
-              Reglas
-            </span>
-          </button>
-          <button
-            onClick={handleForum}
-            className={cn(
-              "group flex h-14 flex-1 cursor-pointer flex-col items-center justify-center gap-1 border-l border-theme-border/50 bg-theme-channel-type-active-border px-2 text-[14px] font-bold tracking-[0.05em] text-theme-text-primary transition-colors",
-              isForum
-                ? "bg-[var(--theme-button-primary-active)] shadow-[inset_0_1px_0_rgba(0,0,0,0.42),inset_1px_0_0_rgba(0,0,0,0.36),inset_-1px_0_0_rgba(255,255,255,0.14),inset_0_-1px_0_rgba(255,255,255,0.18)]"
-                : "hover:bg-[var(--theme-channel-type-hover-bg)] shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(0,0,0,0.55)]",
-            )}
-          >
-            <MessageSquare className="h-6 w-6 shrink-0" />
-            <span className="leading-none group-hover:text-theme-text-strong">
-              Foro
-            </span>
-          </button>
+            >
+              <MessageSquare className="h-6 w-6 shrink-0" />
+              <span className="leading-none group-hover:text-theme-text-strong">
+                Foro
+              </span>
+            </button>
+          </div>
+          {/* Row 2: Wiki, Encuestas, Ranking */}
+          <div className="flex border-t border-theme-border/50">
+            <button
+              className={cn(
+                "group flex h-14 flex-1 cursor-pointer flex-col items-center justify-center gap-1 bg-theme-channel-type-active-border px-2 text-[14px] font-bold tracking-[0.05em] text-theme-text-primary transition-colors",
+                "hover:bg-theme-tab-button-hover shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(0,0,0,0.55)]",
+              )}
+              disabled
+            >
+              <BookOpenText className="h-6 w-6 shrink-0" />
+              <span className="leading-none group-hover:text-theme-text-strong">
+                Wiki
+              </span>
+            </button>
+
+            <button
+              onClick={handleRules}
+              className={cn(
+                "group flex h-14 flex-1 cursor-pointer flex-col items-center justify-center gap-1 border-l border-theme-border/50 bg-theme-channel-type-active-border px-2 text-[14px] font-bold tracking-[0.05em] text-theme-text-primary transition-colors",
+                isRules
+                  ? "bg-[var(--theme-button-primary-active)] shadow-[inset_0_1px_0_rgba(0,0,0,0.42),inset_1px_0_0_rgba(0,0,0,0.36),inset_-1px_0_0_rgba(255,255,255,0.14),inset_0_-1px_0_rgba(255,255,255,0.18)]"
+                  : "hover:bg-theme-tab-button-hover shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(0,0,0,0.55)]",
+              )}
+            >
+              <ScrollText className="h-6 w-6 shrink-0" />
+              <span className="leading-none group-hover:text-theme-text-strong">
+                Reglas
+              </span>
+            </button>
+            <button
+              className={cn(
+                "group flex h-14 flex-1 cursor-pointer flex-col items-center justify-center gap-1 border-l border-theme-border/50 bg-theme-channel-type-active-border px-2 text-[14px] font-bold tracking-[0.05em] text-theme-text-primary transition-colors",
+                "hover:bg-theme-tab-button-hover shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(0,0,0,0.55)]",
+              )}
+              disabled
+            >
+              <Trophy className="h-6 w-6 shrink-0" />
+              <span className="leading-none group-hover:text-theme-text-strong">
+                Ranking
+              </span>
+            </button>
+          </div>
         </div>
+
+        <div className="shrink-0 border-t border-theme-border/60" />
 
         <div className="shrink-0 flex flex-col gap-2">
           <div className="grid grid-cols-[1fr_1fr] gap-2">
@@ -238,25 +274,25 @@ export const BoardLeftbar = ({
                 Posts esta semana
               </p>
               <div className="flex items-center gap-2 text-[16px] font-semibold text-theme-text-secondary">
-                <BookOpenText className="h-5 w-5 shrink-0" />
+                <FileText className="h-5 w-5 shrink-0" />
                 <span className="mt-0.5 text-theme-text-strong">
                   {board.recentPostCount7d}
                 </span>
               </div>
             </div>
           </div>
-        </div>
 
-        {board.description && (
-          <div className="mt-1 rounded-sm border border-theme-border bg-theme-bg-overlay-primary/40 px-3 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.1)]">
-            <h3 className="mb-2 text-[10px] font-bold uppercase tracking-[0.06em] text-theme-text-muted">
-              Descripción
-            </h3>
-            <p className="line-clamp-6 text-[12px] leading-relaxed text-theme-text-secondary">
-              {board.description}
-            </p>
-          </div>
-        )}
+          {board.description && (
+            <div className="rounded-sm border border-theme-channel-type-active-border bg-[var(--theme-channel-type-active-soft-bg)] px-3 py-2 text-theme-text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_1px_2px_rgba(0,0,0,0.2)]">
+              <p className="text-[14px] font-bold tracking-[0.06em] text-theme-text-primary/70">
+                Descripción
+              </p>
+              <p className="line-clamp-6 text-[15px] leading-relaxed text-theme-text-secondary">
+                {board.description}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       <VoiceControlBar position="left" />

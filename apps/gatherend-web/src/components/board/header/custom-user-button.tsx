@@ -45,7 +45,7 @@ export function CustomUserButton() {
   const menuPanelShadow =
     "shadow-[0_10px_24px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.1),inset_1px_0_0_rgba(255,255,255,0.08),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]";
   const menuRowClass =
-    "h-8 w-full cursor-pointer rounded-none border border-transparent px-3 py-2 text-left text-sm text-theme-text-secondary hover:border-theme-border hover:bg-theme-bg-secondary/30 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.28)] focus:border-theme-border focus:bg-theme-bg-secondary/30 focus:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.28)]";
+    "h-8 w-full cursor-pointer rounded-sm border border-transparent px-3 py-2 text-left text-sm text-theme-text-secondary hover:border-theme-border hover:bg-theme-bg-secondary/30 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.28)] focus:border-theme-border focus:bg-theme-bg-secondary/30 focus:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.28)]";
   const identityPlateClass =
     "border border-theme-border bg-theme-bg-secondary/25 px-2.5 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.24)]";
 
@@ -89,7 +89,7 @@ export function CustomUserButton() {
         <div
           className={cn(
             "absolute right-0 top-full mt-2",
-            "w-56 rounded-none",
+            "w-56 rounded-sm",
             "bg-theme-bg-dropdown-menu-primary",
             "border border-theme-border",
             "z-50",

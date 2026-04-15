@@ -171,8 +171,7 @@ function StickerPickerPopover({
         side={isNarrowScreen ? "top" : "left"}
         sideOffset={isNarrowScreen ? 12 : -22}
         collisionPadding={isNarrowScreen ? 8 : 0}
-        className="bg-theme-picker-bg border-theme-picker-border rounded-none
-          shadow-lg mb-16 w-[320px] max-[420px]:w-[calc(100vw-16px)] max-[420px]:translate-y-[64px] p-0"
+        className="bg-theme-picker-bg border-theme-picker-border rounded-sm shadow-lg mb-16 w-[320px] max-[420px]:w-[calc(100vw-16px)] max-[420px]:translate-y-[64px] p-0"
       >
         {isLoading ? (
           <div className="flex items-center justify-center p-8">
@@ -193,13 +192,13 @@ function StickerPickerPopover({
             {/* Sticker grid */}
             <div
               ref={attachGridRef}
-              className="grid grid-cols-4 max-[420px]:grid-cols-3 gap-2 p-3 max-h-[300px] overflow-y-auto"
+              className="scrollbar-ultra-thin grid grid-cols-4 max-[420px]:grid-cols-3 gap-2 p-3 max-h-[300px] overflow-y-auto"
             >
               {/* Upload button as first item */}
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={!canUploadMore || isUploading}
-                className="relative aspect-square rounded-none bg-theme-bg-secondary 
+                className="relative aspect-square rounded-sm bg-theme-bg-secondary 
                   hover:bg-theme-bg-tertiary transition p-2 
                   flex items-center cursor-pointer justify-center group disabled:opacity-50 disabled:cursor-not-allowed"
                 title={

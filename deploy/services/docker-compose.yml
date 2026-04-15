@@ -15,6 +15,8 @@ services:
     image: ghcr.io/imgproxy/imgproxy:v3.31.2
     restart: always
     logging: *default-logging
+    cap_drop:
+      - ALL
     pids_limit: 128
     mem_reservation: 256m
     profiles: [images]
@@ -30,7 +32,7 @@ services:
       IMGPROXY_MAX_SRC_RESOLUTION: "50"
     mem_limit: 512m
     networks:
-      - internal
+      - services
     healthcheck:
       test: ["CMD", "imgproxy", "health"]
       interval: 30s
@@ -43,6 +45,8 @@ services:
     image: dicebear/api:3
     restart: always
     logging: *default-logging
+    cap_drop:
+      - ALL
     pids_limit: 128
     mem_reservation: 128m
     profiles: [images]
@@ -57,7 +61,7 @@ services:
     mem_limit: 256m
     cpus: "0.5"
     networks:
-      - internal
+      - services
     healthcheck:
       test:
         [
@@ -76,6 +80,8 @@ services:
     build: ./nsfwjs-service
     restart: always
     logging: *default-logging
+    cap_drop:
+      - ALL
     pids_limit: 512
     mem_reservation: 1g
     profiles: [moderation]
@@ -88,7 +94,7 @@ services:
     mem_limit: 4g
     cpus: "2"
     networks:
-      - internal
+      - services
     healthcheck:
       test:
         [
@@ -123,13 +129,15 @@ services:
     volumes:
       - miniodata:/data
     networks:
-      - internal
+      - services
 
   livekit:
     <<: *runtime-hardening
     image: livekit/livekit-server:v1.10.1
     restart: always
     logging: *default-logging
+    cap_drop:
+      - ALL
     pids_limit: 512
     mem_reservation: 512m
     profiles: [livekit]
@@ -145,7 +153,7 @@ services:
       livekit-redis:
         condition: service_healthy
     networks:
-      - internal
+      - services
 
   livekit-redis:
     <<: *runtime-hardening
@@ -163,7 +171,7 @@ services:
       timeout: 3s
       retries: 5
     networks:
-      - internal
+      - services
 
   caddy:
     <<: *runtime-hardening
@@ -172,6 +180,10 @@ services:
       dockerfile: Dockerfile.caddy
     restart: always
     logging: *default-logging
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
     pids_limit: 128
     mem_reservation: 128m
     ports:
@@ -184,7 +196,8 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     networks:
-      - internal
+      - edge
+      - services
     healthcheck:
       test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
       interval: 30s
@@ -199,5 +212,7 @@ volumes:
   livekitredis:
 
 networks:
-  internal:
+  edge:
+    driver: bridge
+  services:
     driver: bridge

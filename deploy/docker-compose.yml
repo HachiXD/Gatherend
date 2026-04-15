@@ -34,7 +34,7 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      - internal
+      - db
 
   redis:
     <<: *runtime-hardening
@@ -53,7 +53,39 @@ services:
       retries: 5
       start_period: 10s
     networks:
-      - internal
+      - db
+
+  migrate:
+    <<: *runtime-hardening
+    build:
+      context: ..
+      dockerfile: apps/gatherend-web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?required}
+        NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:?required}
+        NEXT_PUBLIC_LIVEKIT_URL: ${NEXT_PUBLIC_LIVEKIT_URL:-}
+        NEXT_PUBLIC_CDN_URL: ${NEXT_PUBLIC_CDN_URL:-}
+        NEXT_PUBLIC_IMGPROXY_URL: ${NEXT_PUBLIC_IMGPROXY_URL:-}
+        NEXT_PUBLIC_STORAGE_DOMAIN: ${NEXT_PUBLIC_STORAGE_DOMAIN:-}
+        NEXT_PUBLIC_BETTER_AUTH_URL: ${NEXT_PUBLIC_BETTER_AUTH_URL:?required}
+        NEXT_PUBLIC_DICEBEAR_URL: ${NEXT_PUBLIC_DICEBEAR_URL:-}
+    profiles: [migrate]
+    restart: "no"
+    logging: *default-logging
+    cap_drop:
+      - ALL
+    pids_limit: 256
+    mem_reservation: 512m
+    command: ["npx", "prisma", "migrate", "deploy"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-gatherend}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-gatherend}
+      DIRECT_URL: postgresql://${POSTGRES_USER:-gatherend}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-gatherend}
+    networks:
+      - db
 
   express:
     <<: *runtime-hardening
@@ -62,6 +94,8 @@ services:
       dockerfile: apps/express/Dockerfile
     restart: unless-stopped
     logging: *default-logging
+    cap_drop:
+      - ALL
     pids_limit: 256
     mem_reservation: 512m
     depends_on:
@@ -72,8 +106,8 @@ services:
     environment:
       NODE_ENV: production
       PORT: "3001"
-      DATABASE_URL: postgresql://${POSTGRES_USER:-gatherend}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-gatherend}
-      DIRECT_URL: postgresql://${POSTGRES_USER:-gatherend}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-gatherend}
+      DATABASE_URL: postgresql://${POSTGRES_APP_USER:-gatherend_app}:${POSTGRES_APP_PASSWORD:?required}@postgres:5432/${POSTGRES_DB:-gatherend}
+      DIRECT_URL: postgresql://${POSTGRES_APP_USER:-gatherend_app}:${POSTGRES_APP_PASSWORD:?required}@postgres:5432/${POSTGRES_DB:-gatherend}
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?required}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:?required}
@@ -98,7 +132,9 @@ services:
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:?required}
       MEDIA_ALLOWED_HOSTNAMES: ${MEDIA_ALLOWED_HOSTNAMES:-}
     networks:
-      - internal
+      - app
+      - db
+      - services
     healthcheck:
       test:
         [
@@ -112,7 +148,6 @@ services:
       retries: 3
       start_period: 30s
 
-  # prisma migrate deploy runs before the server starts (check CMD in apps/gatherend-web/Dockerfile)
   web:
     <<: *runtime-hardening
     build:
@@ -129,6 +164,8 @@ services:
         NEXT_PUBLIC_DICEBEAR_URL: ${NEXT_PUBLIC_DICEBEAR_URL:-}
     restart: unless-stopped
     logging: *default-logging
+    cap_drop:
+      - ALL
     pids_limit: 256
     mem_reservation: 512m
     depends_on:
@@ -138,8 +175,9 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://${POSTGRES_USER:-gatherend}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-gatherend}
-      DIRECT_URL: postgresql://${POSTGRES_USER:-gatherend}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-gatherend}
+      HOSTNAME: "0.0.0.0"
+      DATABASE_URL: postgresql://${POSTGRES_APP_USER:-gatherend_app}:${POSTGRES_APP_PASSWORD:?required}@postgres:5432/${POSTGRES_DB:-gatherend}
+      DIRECT_URL: postgresql://${POSTGRES_APP_USER:-gatherend_app}:${POSTGRES_APP_PASSWORD:?required}@postgres:5432/${POSTGRES_DB:-gatherend}
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL}
@@ -166,7 +204,9 @@ services:
       SOCKET_SERVER_URL: http://express:3001
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET}
     networks:
-      - internal
+      - app
+      - db
+      - services
     healthcheck:
       test:
         [
@@ -185,6 +225,8 @@ services:
     image: ghcr.io/imgproxy/imgproxy:v3.31.2
     restart: unless-stopped
     logging: *default-logging
+    cap_drop:
+      - ALL
     pids_limit: 128
     mem_reservation: 256m
     profiles: [images]
@@ -200,7 +242,7 @@ services:
       IMGPROXY_SALT: ${IMGPROXY_SALT:-}
     mem_limit: 512m
     networks:
-      - internal
+      - services
     healthcheck:
       test: ["CMD", "imgproxy", "health"]
       interval: 30s
@@ -213,6 +255,8 @@ services:
     image: dicebear/api:3
     restart: unless-stopped
     logging: *default-logging
+    cap_drop:
+      - ALL
     pids_limit: 128
     mem_reservation: 128m
     profiles: [images]
@@ -227,7 +271,7 @@ services:
     mem_limit: 256m
     cpus: "0.5"
     networks:
-      - internal
+      - services
     healthcheck:
       test:
         [
@@ -247,6 +291,8 @@ services:
       context: ./services/nsfwjs-service
     restart: unless-stopped
     logging: *default-logging
+    cap_drop:
+      - ALL
     pids_limit: 512
     mem_reservation: 1g
     profiles: [moderation]
@@ -257,7 +303,7 @@ services:
     mem_limit: 4g
     cpus: "2"
     networks:
-      - internal
+      - services
     healthcheck:
       test:
         [
@@ -292,13 +338,15 @@ services:
     volumes:
       - miniodata:/data
     networks:
-      - internal
+      - services
 
   livekit:
     <<: *runtime-hardening
     image: livekit/livekit-server:v1.10.1
     restart: unless-stopped
     logging: *default-logging
+    cap_drop:
+      - ALL
     pids_limit: 512
     mem_reservation: 512m
     profiles: [livekit]
@@ -314,7 +362,7 @@ services:
       livekit-redis:
         condition: service_healthy
     networks:
-      - internal
+      - services
 
   livekit-redis:
     <<: *runtime-hardening
@@ -332,7 +380,7 @@ services:
       timeout: 3s
       retries: 5
     networks:
-      - internal
+      - services
 
   caddy:
     <<: *runtime-hardening
@@ -340,6 +388,10 @@ services:
       context: ../apps/gatherend-gateway
     restart: unless-stopped
     logging: *default-logging
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
     pids_limit: 128
     mem_reservation: 128m
     depends_on:
@@ -367,7 +419,8 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     networks:
-      - internal
+      - app
+      - services
     healthcheck:
       test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
       interval: 30s
@@ -384,5 +437,10 @@ volumes:
   caddy_config:
 
 networks:
-  internal:
+  app:
+    driver: bridge
+  db:
+    driver: bridge
+    internal: true
+  services:
     driver: bridge

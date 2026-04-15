@@ -124,12 +124,12 @@ function CommunityPostCommentItemInner({
   return (
     <article
       className={cn(
-        "block w-fit max-w-full border border-theme-border bg-theme-bg-secondary/20 px-3 py-2",
+        "block w-fit rounded-sm max-w-full border border-theme-border bg-theme-bg-secondary/20 px-3 py-2",
         className,
       )}
     >
       <div
-        className="-mx-3 -mt-2 mb-2 flex flex-wrap items-center gap-1 border-b border-theme-border px-2 py-0.5"
+        className="-mx-3 -mt-2 mb-2 flex rounded-t-sm flex-wrap items-center gap-1 border-b border-theme-border px-2 py-0.5"
         style={commentHeaderTintStyle}
       >
         {(comment.author.badge || authorBadgeStickerUrl) && (
@@ -264,7 +264,7 @@ function CommunityPostCommentItemInner({
           </div>
 
           {!comment.deleted && (
-            <div className="mt-2 flex items-center gap-3">
+            <div className="mt-1 flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => onReply?.(comment.id)}

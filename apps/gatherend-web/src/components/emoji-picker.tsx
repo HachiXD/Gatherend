@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 // Lazy load emoji-picker-react con virtualización built-in
 const EmojiPickerReact = dynamic(() => import("emoji-picker-react"), {
   loading: () => (
-    <div className="w-[350px] max-[420px]:w-[calc(100vw-16px)] h-[400px] flex items-center justify-center rounded-none bg-theme-picker-bg">
+    <div className="w-[350px] max-[420px]:w-[calc(100vw-16px)] h-[400px] flex items-center justify-center rounded-sm bg-theme-picker-bg">
       <Loader2 className="h-6 w-6 animate-spin text-theme-accent-light" />
     </div>
   ),
@@ -80,10 +80,11 @@ function EmojiPickerPopover({
         side={isNarrowScreen ? "top" : "right"}
         sideOffset={isNarrowScreen ? 12 : 40}
         collisionPadding={isNarrowScreen ? 8 : 0}
-        className="bg-transparent border-none shadow-none drop-shadow-none rounded-none mb-16 p-0 max-[420px]:w-[calc(100vw-16px)] max-[420px]:translate-y-[64px]"
+        className="bg-transparent border-none shadow-none drop-shadow-none rounded-sm mb-16 p-0 max-[420px]:w-[calc(100vw-16px)] max-[420px]:translate-y-[64px]"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <EmojiPickerReact
+          className="!rounded-sm"
           onEmojiClick={handleEmojiClick}
           width={isNarrowScreen ? "100%" : 350}
           height={400}
@@ -122,7 +123,7 @@ function EmojiPickerPopover({
               "--epr-category-label-bg-color": "var(--theme-bg-tertiary)",
               "--epr-category-label-text-color": "var(--theme-text-light)",
               "--epr-picker-border-color": "var(--theme-picker-border)",
-              "--epr-border-radius": "0px",
+              "--epr-picker-border-radius": "0.125rem",
             } as React.CSSProperties
           }
           skinTonesDisabled={true}

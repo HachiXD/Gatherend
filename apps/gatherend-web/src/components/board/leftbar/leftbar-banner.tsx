@@ -122,7 +122,7 @@ export const LeftbarBanner = ({
 
   return (
     <div className="w-full border  bg-theme-bg-secondary">
-      <div className="flex h-[44px] items-center gap-2 border-b border-theme-border-primary px-2 py-0">
+      <div className="flex h-[44px] bg-theme-bg-quinary items-center gap-2 border-b border-theme-border-primary px-2 py-0">
         <h2 className="min-w-0 truncate text-[20px] font-semibold text-theme-text-primary">
           {boardName}
         </h2>

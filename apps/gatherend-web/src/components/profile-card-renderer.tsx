@@ -123,12 +123,14 @@ function CardShellBox({
           : "shadow-none",
         className,
       )}
-      style={{
-        backgroundColor: boxColor,
-        "--box-fg": fg,
-        "--box-fg-subtle": fgSubtle,
-        "--box-fg-muted": fgMuted,
-      } as React.CSSProperties}
+      style={
+        {
+          backgroundColor: boxColor,
+          "--box-fg": fg,
+          "--box-fg-subtle": fgSubtle,
+          "--box-fg-muted": fgMuted,
+        } as React.CSSProperties
+      }
     >
       {!hideTitle && title ? (
         <div className="border-b border-theme-border/80 pb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-(--box-fg-subtle)">
@@ -369,7 +371,7 @@ export const ProfileCardRenderer = memo(function ProfileCardRenderer({
   return (
     <div
       className={cn(
-        "overflow-hidden border border-theme-border shadow-[inset_1px_1px_0_rgba(255,255,255,0.08),inset_-1px_-1px_0_rgba(0,0,0,0.28)]",
+        "overflow-hidden rounded-sm border border-theme-border shadow-[inset_1px_1px_0_rgba(255,255,255,0.08),inset_-1px_-1px_0_rgba(0,0,0,0.28)]",
         className,
       )}
       style={{ backgroundColor: style.backgroundColor }}

@@ -1117,10 +1117,9 @@ function CommunityPostsSectionInner({
                       return (
                         <article
                           key={post.id}
-                          className="-mx-6 border-b border-theme-border px-3 py-2 transition-colors hover:bg-theme-bg-secondary/35"
+                          className="-mx-6 border-b border-theme-border px-3 py-2"
                         >
-                          <div className="relative bg-theme-bg-edit-form/95 px-4 pt-3 pb-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.16),inset_-1px_-1px_0_rgba(0,0,0,0.38)]">
-
+                          <div className="relative rounded-sm bg-theme-bg-edit-form/95 px-4 pt-3 pb-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.16),inset_-1px_-1px_0_rgba(0,0,0,0.38)]">
                             <div className="flex items-start gap-2 -ml-1.5">
                               <div className="shrink-0">
                                 <UserAvatarMenu
@@ -1149,7 +1148,7 @@ function CommunityPostsSectionInner({
                                   <>
                                     {post.title ? (
                                       <>
-                                        {/* Con t├¡tulo: fila 1 = badge+timestamp, fila 2 = t├¡tulo */}
+                                        {/* Con titulo: fila 1 = badge+timestamp, fila 2 = título */}
                                         <div className="mb-0 flex flex-wrap items-center gap-1">
                                           {(post.author.badge ||
                                             authorBadgeStickerUrl) && (
@@ -1178,7 +1177,10 @@ function CommunityPostsSectionInner({
                                             </>
                                           )}
                                           <span className="pt-2.5 text-[11px] text-theme-text-tertiary">
-                                            {formatPostDate(post.createdAt, locale)}
+                                            {formatPostDate(
+                                              post.createdAt,
+                                              locale,
+                                            )}
                                           </span>
                                           {post.pinnedAt && (
                                             <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[11px] font-medium leading-none text-theme-text-subtle">
@@ -1199,7 +1201,7 @@ function CommunityPostsSectionInner({
                                       </>
                                     ) : (
                                       <>
-                                        {/* Sin t├¡tulo: badge+timestamp en fila 1 como siempre */}
+                                        {/* Sin título: badge+timestamp en fila 1 como siempre */}
                                         <div className="mb-0 flex flex-wrap items-center gap-1">
                                           {(post.author.badge ||
                                             authorBadgeStickerUrl) && (
@@ -1228,7 +1230,10 @@ function CommunityPostsSectionInner({
                                             </>
                                           )}
                                           <span className="pt-2.5 text-[11px] text-theme-text-tertiary">
-                                            {formatPostDate(post.createdAt, locale)}
+                                            {formatPostDate(
+                                              post.createdAt,
+                                              locale,
+                                            )}
                                           </span>
                                           {post.pinnedAt && (
                                             <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[11px] font-medium leading-none text-theme-text-subtle">
@@ -1399,8 +1404,7 @@ function CommunityPostsSectionInner({
                                 {!isEditing && (
                                   <div
                                     className={cn(
-                                      "clear-left flex items-center gap-x-3 -mb-1",
-                                      postImageUrl ? "pt-1" : "pt-0",
+                                      "clear-left flex items-center gap-x-3 -mb-1 pt-1",
                                     )}
                                   >
                                     <button
@@ -1437,7 +1441,9 @@ function CommunityPostsSectionInner({
                                     {isOwnPost && (
                                       <button
                                         type="button"
-                                        onClick={() => setEditingPostId(post.id)}
+                                        onClick={() =>
+                                          setEditingPostId(post.id)
+                                        }
                                         className="cursor-pointer text-[14px] text-theme-text-tertiary transition hover:underline"
                                       >
                                         {t.posts.editPost}

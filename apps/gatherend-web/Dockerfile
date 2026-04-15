@@ -87,5 +87,4 @@ COPY --from=builder /app/prisma ./prisma
 
 EXPOSE 3000
 
-# Run migrations before starting the application
-CMD ["sh", "-c", "npx prisma migrate deploy && node apps/gatherend-web/server.js"]
+CMD ["node", "apps/gatherend-web/server.js"]

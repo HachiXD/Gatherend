@@ -1,12 +1,7 @@
 "use client";
 
-import {
-  memo,
-  useCallback,
-  useRef,
-  useState,
-} from "react";
-import { Plus, RefreshCw } from "lucide-react";
+import { memo, useCallback, useRef, useState } from "react";
+import { MessageSquare, Plus, RefreshCw } from "lucide-react";
 import { useCommunityHeaderStyle } from "@/hooks/use-community-header-style";
 import { useBoardData, useCurrentMemberRole } from "@/hooks/use-board-data";
 import { useProfile } from "@/components/app-shell/providers/profile-provider";
@@ -77,11 +72,15 @@ function ForumViewInner() {
         className="h-full w-full overflow-y-auto scrollbar-chat"
       >
         <div className="sticky top-0 z-20 shrink-0 border-b border-theme-border transition-colors duration-300">
-          <div className="px-0 pt-2 pb-2 bg-theme-bg-secondary" style={headerButtonStyles}>
-            <div className="ml-3 mr-3 flex items-center gap-2">
+          <div
+            className="px-0 h-11 flex items-center"
+            style={headerButtonStyles}
+          >
+            <div className="ml-3 mr-3 flex w-full items-center gap-2">
               {/* Badge estilo chat-header */}
-              <div className="flex min-w-0 max-w-[min(52vw,420px)] items-center justify-center gap-2 bg-(--community-header-btn-bg) px-3 py-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]">
-                <p className="min-w-0 truncate text-center text-[16px] font-semibold text-theme-text-subtle">
+              <div className="flex min-w-0 max-w-[min(52vw,420px)] items-center justify-center gap-2 rounded-sm border border-[var(--community-header-btn-ring)] bg-theme-bg-secondary/40 px-3 py-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]">
+                <MessageSquare className="h-6 w-6 shrink-0 text-(--community-header-btn-muted)" />
+                <p className="min-w-0 truncate text-center text-[20px] font-semibold text-theme-text-subtle">
                   {board ? `Foro de ${board.name}` : "Foro"}
                 </p>
               </div>
@@ -90,9 +89,9 @@ function ForumViewInner() {
                 <button
                   type="button"
                   onClick={handleCreate}
-                  className="inline-flex  border border-theme-border  h-8 cursor-pointer items-center gap-2 bg-(--community-header-btn-bg) px-3 text-[14px] font-semibold text-(--community-header-btn-text) hover:bg-(--community-header-btn-hover) focus-visible:ring-2 focus-visible:ring-(--community-header-btn-ring) focus-visible:outline-none disabled:opacity-50 rounded-none"
+                  className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-sm border border-[var(--community-header-btn-ring)] bg-theme-bg-secondary/40 px-3 text-[20px] font-semibold text-[var(--community-header-btn-muted)] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)] transition hover:bg-[var(--community-header-btn-hover)] hover:text-[var(--community-header-btn-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--community-header-btn-ring)] disabled:opacity-50"
                 >
-                  <Plus className="h-5 w-5" />
+                  <Plus className="h-6 w-6" />
                   Crear post
                 </button>
 
@@ -100,15 +99,13 @@ function ForumViewInner() {
                   type="button"
                   onClick={handleRefresh}
                   disabled={isRefreshing}
-                  className="inline-flex  border border-theme-border  h-8 cursor-pointer items-center gap-2 bg-(--community-header-btn-bg) px-3 text-[14px] font-semibold text-(--community-header-btn-text) hover:bg-(--community-header-btn-hover) focus-visible:ring-2 focus-visible:ring-(--community-header-btn-ring) focus-visible:outline-none disabled:opacity-50 rounded-none"
+                  className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-sm border border-[var(--community-header-btn-ring)] bg-theme-bg-secondary/40 px-3 text-[20px] font-semibold text-[var(--community-header-btn-muted)] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)] transition hover:bg-[var(--community-header-btn-hover)] hover:text-[var(--community-header-btn-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--community-header-btn-ring)] disabled:opacity-50"
                   title="Refrescar posts"
                 >
                   <RefreshCw
-                    className={`h-5 w-5 text-(--community-header-btn-muted) ${isRefreshing ? "animate-spin" : ""}`}
+                    className={`h-6 w-6 text-(--community-header-btn-muted) ${isRefreshing ? "animate-spin" : ""}`}
                   />
-                  <span className="text-(--community-header-btn-text)">
-                    Refrescar
-                  </span>
+                  Refrescar
                 </button>
               </div>
             </div>

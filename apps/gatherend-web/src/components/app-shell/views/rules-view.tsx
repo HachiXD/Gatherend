@@ -1,13 +1,7 @@
 "use client";
 
-import {
-  memo,
-  useCallback,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { Edit, Plus, Trash2 } from "lucide-react";
+import { memo, useCallback, useMemo, useRef, useState } from "react";
+import { Edit, Plus, ScrollText, Trash2 } from "lucide-react";
 import { useCommunityHeaderStyle } from "@/hooks/use-community-header-style";
 import { useBoardData, useCurrentMemberRole } from "@/hooks/use-board-data";
 import { useProfile } from "@/components/app-shell/providers/profile-provider";
@@ -25,7 +19,14 @@ import {
 import { parsePostContent } from "@/lib/parse-post-formatting";
 import { getOptimizedStaticUiImageUrl } from "@/lib/ui-image-optimizer";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useEffectiveThemeMode } from "@/hooks/use-effective-theme-config";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -65,10 +66,7 @@ function RulesImage({
 
   const maxW = 640;
   const maxH = 480;
-  const scale =
-    width && height
-      ? Math.min(1, maxW / width, maxH / height)
-      : 1;
+  const scale = width && height ? Math.min(1, maxW / width, maxH / height) : 1;
   const displayW = width ? Math.round(width * scale) : maxW;
   const displayH = height ? Math.round(height * scale) : undefined;
 
@@ -76,7 +74,7 @@ function RulesImage({
     if (forceOriginal) return imageUrl;
     return getOptimizedStaticUiImageUrl(imageUrl, {
       w: displayW * 2,
-      h: (displayH ? displayH * 2 : displayW * 2),
+      h: displayH ? displayH * 2 : displayW * 2,
       q: 84,
       resize: "fit",
       gravity: "sm",
@@ -154,7 +152,10 @@ function RulesForm({
   const [content, setContent] = useState(initialContent);
   const [imageUpload, setImageUpload] = useState(() => {
     if (initialImageAssetId && initialImageUrl) {
-      return JSON.stringify({ assetId: initialImageAssetId, url: initialImageUrl });
+      return JSON.stringify({
+        assetId: initialImageAssetId,
+        url: initialImageUrl,
+      });
     }
     return "";
   });
@@ -256,20 +257,28 @@ function RulesForm({
       if (axios.isAxiosError(error) && error.response?.status === 409) {
         toast.error("Ya existen reglas para este board");
       } else {
-        toast.error(isEdit ? "No se pudieron actualizar las reglas" : "No se pudieron crear las reglas");
+        toast.error(
+          isEdit
+            ? "No se pudieron actualizar las reglas"
+            : "No se pudieron crear las reglas",
+        );
       }
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const uploadBtnClass = "h-28 w-35 rounded-none text-[11px] transition-colors duration-150 border-white/30 bg-theme-bg-cancel-button text-theme-text-subtle hover:border-white/50 hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light";
+  const uploadBtnClass =
+    "h-28 w-35 rounded-none text-[11px] transition-colors duration-150 border-white/30 bg-theme-bg-cancel-button text-theme-text-subtle hover:border-white/50 hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light";
 
-  const removeBtnClass = "bg-transparent p-1 mr-4 shadow-none cursor-pointer hover:bg-transparent transition-colors duration-150 text-theme-text-tertiary hover:text-theme-text-light";
+  const removeBtnClass =
+    "bg-transparent p-1 mr-4 shadow-none cursor-pointer hover:bg-transparent transition-colors duration-150 text-theme-text-tertiary hover:text-theme-text-light";
 
-  const cancelBtnClass = "h-6.5 w-full cursor-pointer rounded-none border-0 px-3 text-[12px] transition-colors duration-150 bg-theme-bg-cancel-button text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light";
+  const cancelBtnClass =
+    "h-6.5 w-full cursor-pointer rounded-none border-0 px-3 text-[12px] transition-colors duration-150 bg-theme-bg-cancel-button text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light";
 
-  const publishBtnClass = "h-6.5 w-full cursor-pointer rounded-none border-0 px-3 text-[12px] font-semibold transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-70 bg-theme-tab-button-bg text-theme-text-light hover:bg-theme-tab-button-hover";
+  const publishBtnClass =
+    "h-6.5 w-full cursor-pointer rounded-none border-0 px-3 text-[12px] font-semibold transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-70 bg-theme-tab-button-bg text-theme-text-light hover:bg-theme-tab-button-hover";
 
   return (
     <div className="border border-theme-border/40 p-3">
@@ -364,8 +373,7 @@ function RulesViewInner() {
   const queryClient = useQueryClient();
   const themeMode = useEffectiveThemeMode();
 
-  const canEdit =
-    role === MemberRole.OWNER || role === MemberRole.ADMIN;
+  const canEdit = role === MemberRole.OWNER || role === MemberRole.ADMIN;
 
   const [mode, setMode] = useState<"view" | "create" | "edit">("view");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -375,19 +383,17 @@ function RulesViewInner() {
 
   const rulesQueryKey = useMemo(() => ["boardRules", boardId], [boardId]);
 
-  const {
-    data: rulesData,
-    isLoading: rulesLoading,
-  } = useQuery<BoardRulesResponse>({
-    queryKey: rulesQueryKey,
-    queryFn: async () => {
-      const { data } = await axios.get<BoardRulesResponse>(
-        `/api/boards/${boardId}/rules`,
-      );
-      return data;
-    },
-    enabled: !!boardId,
-  });
+  const { data: rulesData, isLoading: rulesLoading } =
+    useQuery<BoardRulesResponse>({
+      queryKey: rulesQueryKey,
+      queryFn: async () => {
+        const { data } = await axios.get<BoardRulesResponse>(
+          `/api/boards/${boardId}/rules`,
+        );
+        return data;
+      },
+      enabled: !!boardId,
+    });
 
   const rules = rulesData?.rules ?? null;
 
@@ -446,7 +452,7 @@ function RulesViewInner() {
   }
 
   const btnClass =
-    "inline-flex border border-theme-border h-8 cursor-pointer items-center gap-2 bg-(--community-header-btn-bg) px-3 text-[14px] font-semibold text-(--community-header-btn-text) hover:bg-(--community-header-btn-hover) focus-visible:ring-2 focus-visible:ring-(--community-header-btn-ring) focus-visible:outline-none disabled:opacity-50 rounded-none";
+    "inline-flex h-9 cursor-pointer items-center gap-2 rounded-sm border border-[var(--community-header-btn-ring)] bg-theme-bg-secondary/40 px-3 text-[20px] font-semibold text-[var(--community-header-btn-muted)] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)] transition hover:bg-[var(--community-header-btn-hover)] hover:text-[var(--community-header-btn-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--community-header-btn-ring)] disabled:opacity-50";
 
   return (
     <>
@@ -454,11 +460,15 @@ function RulesViewInner() {
         <div className="h-full w-full overflow-y-auto scrollbar-chat">
           {/* Header */}
           <div className="sticky top-0 z-20 shrink-0 border-b border-theme-border transition-colors duration-300">
-            <div className="px-0 pt-2 pb-2" style={headerButtonStyles}>
-              <div className="ml-3 mr-3 flex items-center gap-2">
+            <div
+              className="px-0 h-11 flex items-center"
+              style={headerButtonStyles}
+            >
+              <div className="ml-3 mr-3 flex w-full items-center gap-2">
                 {/* Badge */}
-                <div className="flex min-w-0 max-w-[min(52vw,420px)] items-center justify-center gap-2 bg-(--community-header-btn-bg) px-3 py-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]">
-                  <p className="min-w-0 truncate text-center text-[16px] font-semibold text-theme-text-subtle">
+                <div className="flex min-w-0 max-w-[min(52vw,420px)] items-center justify-center gap-2 rounded-sm border border-[var(--community-header-btn-ring)] bg-theme-bg-secondary/40 px-3 py-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]">
+                  <ScrollText className="h-6 w-6 shrink-0 text-(--community-header-btn-muted)" />
+                  <p className="min-w-0 truncate text-center text-[20px] font-semibold text-theme-text-subtle">
                     {board ? `Reglas de ${board.name}` : "Reglas"}
                   </p>
                 </div>
@@ -470,7 +480,7 @@ function RulesViewInner() {
                       onClick={() => setMode("create")}
                       className={btnClass}
                     >
-                      <Plus className="h-5 w-5" />
+                      <Plus className="h-6 w-6" />
                       Crear Reglas
                     </button>
                   )}
@@ -481,7 +491,7 @@ function RulesViewInner() {
                         onClick={() => setMode("edit")}
                         className={btnClass}
                       >
-                        <Edit className="h-4 w-4" />
+                        <Edit className="h-6 w-6" />
                         Editar Reglas
                       </button>
                       <button
@@ -489,7 +499,7 @@ function RulesViewInner() {
                         onClick={() => setShowDeleteConfirm(true)}
                         className={btnClass}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-6 w-6" />
                         Eliminar Reglas
                       </button>
                     </>
@@ -505,8 +515,12 @@ function RulesViewInner() {
                   boardId={boardId}
                   initialTitle={mode === "edit" ? (rules?.title ?? "") : ""}
                   initialContent={mode === "edit" ? (rules?.content ?? "") : ""}
-                  initialImageUrl={mode === "edit" ? (rules?.imageAsset?.url ?? null) : null}
-                  initialImageAssetId={mode === "edit" ? (rules?.imageAsset?.id ?? null) : null}
+                  initialImageUrl={
+                    mode === "edit" ? (rules?.imageAsset?.url ?? null) : null
+                  }
+                  initialImageAssetId={
+                    mode === "edit" ? (rules?.imageAsset?.id ?? null) : null
+                  }
                   isEdit={mode === "edit"}
                   onCancel={() => setMode("view")}
                   onSuccess={handleFormSuccess}
@@ -564,7 +578,12 @@ function RulesViewInner() {
       </div>
 
       {/* Delete confirmation */}
-      <Dialog open={showDeleteConfirm} onOpenChange={(open) => { if (!isDeleting) setShowDeleteConfirm(open); }}>
+      <Dialog
+        open={showDeleteConfirm}
+        onOpenChange={(open) => {
+          if (!isDeleting) setShowDeleteConfirm(open);
+        }}
+      >
         <DialogContent
           className="max-w-[420px]! overflow-hidden rounded-none border border-theme-border bg-theme-bg-modal p-0 text-theme-text-subtle"
           closeButtonClassName="cursor-pointer rounded-none p-1 text-theme-text-subtle opacity-100 transition hover:text-theme-text-light data-[state=open]:bg-transparent data-[state=open]:text-theme-text-subtle focus:ring-0 focus:ring-offset-0 focus:outline-none"

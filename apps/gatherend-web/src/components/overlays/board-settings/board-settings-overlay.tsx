@@ -104,7 +104,7 @@ export const BoardSettingsOverlay = ({
         />
 
         {/* MAIN PANEL */}
-        <div className="scrollbar-navigation flex-1 overflow-y-auto border-t border-theme-border bg-theme-bg-quaternary/35 p-4 sm:border-t-0 sm:border-l sm:p-6">
+        <div className="scrollbar-navigation flex min-h-0 flex-1 flex-col overflow-y-auto border-t border-theme-border bg-theme-bg-quaternary/35 p-4 sm:border-t-0 sm:border-l sm:p-6">
           {isBoardPending && (
             <div className="flex h-full min-h-[320px] items-center justify-center">
               <div className="flex items-center gap-3 text-theme-text-tertiary">

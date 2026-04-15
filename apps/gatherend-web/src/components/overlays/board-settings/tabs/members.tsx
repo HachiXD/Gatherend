@@ -337,7 +337,7 @@ export const MembersTab = ({ board, currentProfileId }: MembersTabProps) => {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="flex h-full min-h-0 flex-col space-y-6">
       <div className={HEADER_PANEL_SHELL}>
         <div className="border-b border-theme-border pb-0.5 -mb-3 -mt-3">
           <h2 className="text-2xl font-bold text-theme-text-primary">
@@ -352,7 +352,7 @@ export const MembersTab = ({ board, currentProfileId }: MembersTabProps) => {
 
       <div
         ref={containerRef}
-        className="scrollbar-ultra-thin overflow-y-auto pr-6 -mt-4"
+        className="scrollbar-ultra-thin min-h-0 flex-1 overflow-y-auto pr-6 -mt-4"
       >
         <div className="space-y-2 ">
           {isLoading ? (
