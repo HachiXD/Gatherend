@@ -8,6 +8,8 @@ import { BoardView } from "./views/board-view";
 import { DiscoveryCommunityView } from "./views/discovery-community-view";
 import { ForumView } from "./views/forum-view";
 import { RulesView } from "./views/rules-view";
+import { WikiView } from "./views/wiki-view";
+import { RankingView } from "./views/ranking-view";
 import { ChannelsView } from "./views/channels-view";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ViewLoadingFallback, ViewErrorFallback } from "./views/view-fallbacks";
@@ -46,6 +48,8 @@ function CenterContentRouterInner() {
     isChannels,
     isForum,
     isRules,
+    isWiki,
+    isRanking,
   } = useBoardSwitchRouting();
 
   // Memoizar la vista para evitar recrear JSX innecesariamente
@@ -88,12 +92,22 @@ function CenterContentRouterInner() {
       return <RulesView key={`rules-${currentBoardId}`} />;
     }
 
-    // 6. Foro del board
+    // 6. Wiki del board
+    if (isWiki) {
+      return <WikiView key={`wiki-${currentBoardId}`} />;
+    }
+
+    // 7. Ranking del board
+    if (isRanking) {
+      return <RankingView key={`ranking-${currentBoardId}`} />;
+    }
+
+    // 8. Foro del board
     if (isForum) {
       return <ForumView key={`forum-${currentBoardId}`} />;
     }
 
-    // 7. BoardView (fallback - redirige al foro)
+    // 9. BoardView (fallback - redirige al foro)
     return <BoardView key={`board-${currentBoardId}`} />;
   }, [
     currentBoardId,
@@ -103,13 +117,15 @@ function CenterContentRouterInner() {
     isChannels,
     isForum,
     isRules,
+    isWiki,
+    isRanking,
   ]);
 
   const routeKey = useMemo(
     () => {
       return `${currentBoardId}:${currentChannelId ?? "none"}:${
         currentConversationId ?? "none"
-      }:${isDiscovery ? "discovery" : isChannels ? "channels" : isRules ? "rules" : isForum ? "forum" : "other"}`;
+      }:${isDiscovery ? "discovery" : isChannels ? "channels" : isRules ? "rules" : isWiki ? "wiki" : isRanking ? "ranking" : isForum ? "forum" : "other"}`;
     },
     [
       currentBoardId,
@@ -119,6 +135,8 @@ function CenterContentRouterInner() {
       isChannels,
       isForum,
       isRules,
+      isWiki,
+      isRanking,
     ],
   );
 

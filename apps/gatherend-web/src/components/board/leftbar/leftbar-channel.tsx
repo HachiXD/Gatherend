@@ -212,23 +212,23 @@ const LeftbarChannelComponent = ({
                     : `${channel.channelMemberCount} ${channel.channelMemberCount === 1 ? "miembro" : "miembros"}`}
                 </span>
               )}
+              {hasUnread && !isActive && (
+                <span className="ml-1.5 mt-1 w-fit rounded-sm bg-theme-unread-bg px-1.5 py-1.5 text-[14px] font-semibold leading-none text-white">
+                  Nuevos mensajes
+                </span>
+              )}
             </div>
           </div>
         </div>
 
         {/* INDICADOR DE MENCIÓN */}
         {hasMentionInChannel && !isActive && (
-          <div className="relative mr-2 flex h-[18px] w-[18px] pr-0.5  shrink-0 items-center justify-center rounded-full bg-theme-notification-bg">
+          <div className="relative mr-2 flex h-7 w-7 pr-0.5  shrink-0 items-center justify-center rounded-full bg-theme-notification-bg">
             <AtSign
-              className="w-3 h-3 ml-0.5 text-theme-text-tertiary"
+              className="w-5 h-5 ml-0.5 text-theme-text-tertiary"
               strokeWidth={3}
             />
           </div>
-        )}
-
-        {/* INDICADOR DE MENSAJES NO LEÍDOS */}
-        {hasUnread && !isActive && (
-          <div className="relative mr-2 w-2.5 h-2.5 bg-theme-unread-bg rounded-full shrink-0" />
         )}
 
         {/* ACCIONES */}

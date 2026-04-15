@@ -76,6 +76,11 @@ export function useBoardMembers(
   const [containerElement, setContainerElement] =
     useState<HTMLDivElement | null>(null);
 
+  const setContainerRef = useCallback((node: HTMLDivElement | null) => {
+    containerRef.current = node;
+    setContainerElement(node);
+  }, []);
+
   const {
     data,
     isLoading,
@@ -107,13 +112,6 @@ export function useBoardMembers(
     [pages],
   );
   const totalPages = pages.length;
-
-  useEffect(() => {
-    const nextContainer = containerRef.current;
-    if (nextContainer !== containerElement) {
-      setContainerElement(nextContainer);
-    }
-  }, [containerElement]);
 
   const getPageHeight = useCallback(
     (pageIndex: number) => {
@@ -255,7 +253,7 @@ export function useBoardMembers(
     fetchNextPage,
     refetch,
     error,
-    containerRef,
+    containerRef: setContainerRef,
     bottomSentinelRef,
   };
 }

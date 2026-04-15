@@ -111,7 +111,7 @@ function ForumViewInner() {
             </div>
           </div>
           {showPostForm && (
-            <div style={headerButtonStyles} className="pb-2.5 px-3">
+            <div style={{ ...headerButtonStyles, backgroundImage: "none", backgroundColor: "transparent" }} className="pb-2.5 px-3">
               <InlineCommunityPostForm
                 communityId={boardId}
                 communityName={board?.name}

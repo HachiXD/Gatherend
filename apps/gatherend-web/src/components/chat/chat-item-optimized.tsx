@@ -1121,11 +1121,6 @@ const ChatItemOptimizedComponent = ({
         ? fileUrl
         : optimizedStillSrc;
 
-  const isGroupedTextBubble =
-    textBubbleGroupPosition === "start" ||
-    textBubbleGroupPosition === "middle" ||
-    textBubbleGroupPosition === "end";
-  const isMergedCompactText = isCompact && isGroupedTextBubble;
   const showGroupedStartChrome =
     groupedTextBubble && showGroupedHeader && hideAvatarColumn && !isCompact;
   const shouldRenderReplyPreviewInsideTextBubble = Boolean(
@@ -1160,9 +1155,7 @@ const ChatItemOptimizedComponent = ({
             ? GROUPED_TEXT_BUBBLE_EXTERNAL_HOVER_CLASS
             : "w-full py-0 px-0"
           : isCompact
-            ? isMergedCompactText
-              ? "py-0.5 pl-0 pr-2"
-              : cn("py-0.5 pr-2", sticker ? "pl-0" : "pl-0")
+            ? "py-0.5 pl-2 pr-2"
             : cn("w-full px-2", sticker && "pb-1"),
         isOptimistic && !isFailed && "opacity-50",
         isFailed && "bg-red-950/40",
@@ -1452,10 +1445,7 @@ const ChatItemOptimizedComponent = ({
                     />
                   </div>
                 )}
-                <div
-                  className={cn("mt-1", !isCompact && "-ml-2")}
-                  data-chat-item-block="sticker"
-                >
+                <div className="mt-1 -ml-2" data-chat-item-block="sticker">
                   <div
                     className={cn(
                       "relative h-32 w-32",

@@ -91,6 +91,12 @@ export const BoardLeftbar = ({
   const isRules = useBoardNavigationStore(
     useCallback((state) => state.isRules, []),
   );
+  const isWiki = useBoardNavigationStore(
+    useCallback((state) => state.isWiki, []),
+  );
+  const isRanking = useBoardNavigationStore(
+    useCallback((state) => state.isRanking, []),
+  );
   const switchToForum = useBoardNavigationStore(
     useCallback((state) => state.switchToForum, []),
   );
@@ -99,6 +105,12 @@ export const BoardLeftbar = ({
   );
   const switchToRules = useBoardNavigationStore(
     useCallback((state) => state.switchToRules, []),
+  );
+  const switchToWiki = useBoardNavigationStore(
+    useCallback((state) => state.switchToWiki, []),
+  );
+  const switchToRanking = useBoardNavigationStore(
+    useCallback((state) => state.switchToRanking, []),
   );
 
   const handleForum = useCallback(() => {
@@ -112,6 +124,14 @@ export const BoardLeftbar = ({
   const handleRules = useCallback(() => {
     switchToRules(board.id);
   }, [switchToRules, board.id]);
+
+  const handleWiki = useCallback(() => {
+    switchToWiki(board.id);
+  }, [switchToWiki, board.id]);
+
+  const handleRanking = useCallback(() => {
+    switchToRanking(board.id);
+  }, [switchToRanking, board.id]);
 
   return (
     <div className="flex h-full w-full flex-col bg-theme-bg-secondary text-primary">
@@ -145,18 +165,18 @@ export const BoardLeftbar = ({
               </span>
               <div
                 className={cn(
-                  "absolute right-2 top-1.5 hidden h-4 w-4 items-center justify-center rounded-full border border-black/30 bg-theme-notification-bg",
+                  "absolute top-1.5 right-1.5 border border-theme-unread-bg hidden h-5 w-5 items-center justify-center rounded-full  bg-theme-notification-bg",
                   "group-data-[mentions=true]/chats:flex",
                 )}
               >
                 <AtSign
-                  className="h-2.5 w-2.5 text-theme-text-tertiary"
+                  className="h-3.5 w-3.5 text-theme-text-tertiary"
                   strokeWidth={3}
                 />
               </div>
               <div
                 className={cn(
-                  "absolute bottom-1.5 right-2 hidden h-2.5 w-2.5 rounded-sm bg-theme-unread-bg",
+                  "absolute left-0 inset-y-1.5 hidden w-2 rounded-r border border-theme-border-primary/70 bg-theme-unread-bg",
                   "group-data-[unreads=true]/chats:block group-data-[mentions=true]/chats:hidden",
                 )}
               />
@@ -179,11 +199,13 @@ export const BoardLeftbar = ({
           {/* Row 2: Wiki, Encuestas, Ranking */}
           <div className="flex border-t border-theme-border/50">
             <button
+              onClick={handleWiki}
               className={cn(
                 "group flex h-14 flex-1 cursor-pointer flex-col items-center justify-center gap-1 bg-theme-channel-type-active-border px-2 text-[14px] font-bold tracking-[0.05em] text-theme-text-primary transition-colors",
-                "hover:bg-theme-tab-button-hover shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(0,0,0,0.55)]",
+                isWiki
+                  ? "bg-[var(--theme-button-primary-active)] shadow-[inset_0_1px_0_rgba(0,0,0,0.42),inset_1px_0_0_rgba(0,0,0,0.36),inset_-1px_0_0_rgba(255,255,255,0.14),inset_0_-1px_0_rgba(255,255,255,0.18)]"
+                  : "hover:bg-theme-tab-button-hover shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(0,0,0,0.55)]",
               )}
-              disabled
             >
               <BookOpenText className="h-6 w-6 shrink-0" />
               <span className="leading-none group-hover:text-theme-text-strong">
@@ -206,11 +228,13 @@ export const BoardLeftbar = ({
               </span>
             </button>
             <button
+              onClick={handleRanking}
               className={cn(
                 "group flex h-14 flex-1 cursor-pointer flex-col items-center justify-center gap-1 border-l border-theme-border/50 bg-theme-channel-type-active-border px-2 text-[14px] font-bold tracking-[0.05em] text-theme-text-primary transition-colors",
-                "hover:bg-theme-tab-button-hover shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(0,0,0,0.55)]",
+                isRanking
+                  ? "bg-[var(--theme-button-primary-active)] shadow-[inset_0_1px_0_rgba(0,0,0,0.42),inset_1px_0_0_rgba(0,0,0,0.36),inset_-1px_0_0_rgba(255,255,255,0.14),inset_0_-1px_0_rgba(255,255,255,0.18)]"
+                  : "hover:bg-theme-tab-button-hover shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(0,0,0,0.55)]",
               )}
-              disabled
             >
               <Trophy className="h-6 w-6 shrink-0" />
               <span className="leading-none group-hover:text-theme-text-strong">
