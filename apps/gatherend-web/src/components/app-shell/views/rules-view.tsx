@@ -281,7 +281,7 @@ function RulesForm({
     "h-6.5 w-full cursor-pointer rounded-none border-0 px-3 text-[12px] font-semibold transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-70 bg-theme-tab-button-bg text-theme-text-light hover:bg-theme-tab-button-hover";
 
   return (
-    <div className="border border-theme-border/40 p-3">
+    <div className="border border-theme-border/40 bg-theme-bg-secondary p-3">
       <div className="flex items-stretch gap-3">
         {/* Left: image upload */}
         <div className="flex shrink-0 flex-col mt-6.5">
@@ -506,7 +506,9 @@ function RulesViewInner() {
                         title="Eliminar Reglas"
                       >
                         <Trash2 className="h-6 w-6" />
-                        <span className="hidden md:inline">Eliminar Reglas</span>
+                        <span className="hidden md:inline">
+                          Eliminar Reglas
+                        </span>
                       </button>
                     </>
                   )}
@@ -516,7 +518,14 @@ function RulesViewInner() {
 
             {/* Inline form */}
             {(mode === "create" || mode === "edit") && (
-              <div style={headerButtonStyles} className="pb-2.5 px-3">
+              <div
+                style={{
+                  ...headerButtonStyles,
+                  backgroundImage: "none",
+                  backgroundColor: "transparent",
+                }}
+                className="py-2.5 px-3"
+              >
                 <RulesForm
                   boardId={boardId}
                   initialTitle={mode === "edit" ? (rules?.title ?? "") : ""}
@@ -546,11 +555,11 @@ function RulesViewInner() {
 
             {!rulesLoading && !rules && (
               <div className="flex flex-col items-center justify-center py-16 text-center">
-                <p className="text-[15px] text-theme-text-muted">
+                <p className="text-[16px] text-theme-text-muted">
                   Este board no tiene reglas todavía.
                 </p>
                 {canEdit && (
-                  <p className="mt-1 text-[13px] text-theme-text-subtle">
+                  <p className="mt-1 text-[15px] text-theme-text-subtle">
                     Usa el botón &ldquo;Crear Reglas&rdquo; para añadirlas.
                   </p>
                 )}

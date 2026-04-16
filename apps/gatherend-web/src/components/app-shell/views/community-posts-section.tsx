@@ -1045,11 +1045,11 @@ function CommunityPostsSectionInner({
         {isLoading ? (
           <DiscoverySkeleton />
         ) : error ? (
-          <div className="py-8 text-center text-destructive">
+          <div className="py-20 text-center text-[16px] text-destructive">
             {t.common.error}: {String(error)}
           </div>
         ) : allPosts.length === 0 ? (
-          <div className="py-8 text-center text-theme-text-muted">
+          <div className="py-20 text-center text-[16px] text-theme-text-muted">
             {t.posts.noPostsInCommunity}
           </div>
         ) : (

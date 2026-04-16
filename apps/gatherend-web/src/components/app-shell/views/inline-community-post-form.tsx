@@ -2,7 +2,6 @@
 
 import { useRef, useState, useEffect } from "react";
 import axios from "axios";
-import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -17,14 +16,12 @@ import { getStoredUploadAssetId } from "@/lib/upload-values";
 interface InlineCommunityPostFormProps {
   communityId: string;
   communityName?: string;
-  hasDominantColor?: boolean;
   onCancel: () => void;
   onSuccess?: () => void;
 }
 
 export function InlineCommunityPostForm({
   communityId,
-  hasDominantColor = false,
   onCancel,
   onSuccess,
 }: InlineCommunityPostFormProps) {
@@ -145,36 +142,20 @@ export function InlineCommunityPostForm({
     }
   };
 
-  const uploadBtnClass = cn(
-    "h-28 w-35 rounded-none text-[11px] transition-colors duration-150",
-    hasDominantColor
-      ? "border-[var(--community-header-btn-ring)] bg-[var(--community-header-btn-bg)]/25 text-[var(--community-header-btn-muted)] hover:border-[var(--community-header-btn-text)]/45 hover:bg-[var(--community-header-btn-hover)]/35 hover:text-[var(--community-header-btn-text)]"
-      : "border-white/30 bg-theme-bg-cancel-button text-theme-text-subtle hover:border-white/50 hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light",
-  );
+  const uploadBtnClass =
+    "h-28 w-35 rounded-none text-[11px] transition-colors duration-150 border-white/30 bg-theme-bg-cancel-button text-theme-text-subtle hover:border-white/50 hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light";
 
-  const removeBtnClass = cn(
-    "bg-transparent p-1 mr-4 shadow-none cursor-pointer hover:bg-transparent transition-colors duration-150",
-    hasDominantColor
-      ? "text-[var(--community-header-btn-muted)] hover:text-[var(--community-header-btn-text)]"
-      : "text-theme-text-tertiary hover:text-theme-text-light",
-  );
+  const removeBtnClass =
+    "bg-transparent p-1 mr-4 shadow-none cursor-pointer hover:bg-transparent transition-colors duration-150 text-theme-text-tertiary hover:text-theme-text-light";
 
-  const cancelBtnClass = cn(
-    "h-6.5 w-full cursor-pointer rounded-none border-0 px-3 text-[12px] transition-colors duration-150",
-    hasDominantColor
-      ? "bg-[var(--community-header-btn-bg)]/40 text-[var(--community-header-btn-muted)] hover:bg-[var(--community-header-btn-hover)]/50 hover:text-[var(--community-header-btn-text)]"
-      : "bg-theme-bg-cancel-button text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light",
-  );
+  const cancelBtnClass =
+    "h-6.5 w-full cursor-pointer rounded-none border-0 px-3 text-[12px] transition-colors duration-150 bg-theme-bg-cancel-button text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light";
 
-  const publishBtnClass = cn(
-    "h-6.5 w-full cursor-pointer rounded-none border-0 px-3 text-[12px] font-semibold transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-70",
-    hasDominantColor
-      ? "bg-[var(--community-header-btn-bg)] text-[var(--community-header-btn-text)] hover:bg-[var(--community-header-btn-hover)]"
-      : "bg-theme-tab-button-bg text-theme-text-light hover:bg-theme-tab-button-hover",
-  );
+  const publishBtnClass =
+    "h-6.5 w-full cursor-pointer rounded-none border-0 px-3 text-[12px] font-semibold transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-70 bg-theme-tab-button-bg text-theme-text-light hover:bg-theme-tab-button-hover";
 
   return (
-    <div className="border border-theme-border/40 p-3">
+    <div className="border border-theme-border/40 bg-theme-bg-secondary p-3">
       <div className="flex items-stretch gap-3">
         <div className="mt-6.5 flex shrink-0 flex-col">
           <FileUpload
