@@ -146,7 +146,7 @@ export const BoardLeftbar = ({
 
       <div className="scrollbar-navigation flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-2 pt-3 pb-2">
         <div className="shrink-0 flex flex-col overflow-hidden rounded-sm border border-theme-channel-type-active-border">
-          {/* Row 1: Chats, Reglas, Foro */}
+          {/* Row 1: Chats, Foro */}
           <div className="flex">
             <button
               onClick={handleChannels}
@@ -165,7 +165,7 @@ export const BoardLeftbar = ({
               </span>
               <div
                 className={cn(
-                  "absolute top-1.5 right-1.5 border border-theme-unread-bg hidden h-5 w-5 items-center justify-center rounded-full  bg-theme-notification-bg",
+                  "absolute top-1.5 right-1.5 hidden h-5 w-5 items-center justify-center rounded-full  bg-theme-notification-bg",
                   "group-data-[mentions=true]/chats:flex",
                 )}
               >
@@ -184,7 +184,7 @@ export const BoardLeftbar = ({
             <button
               onClick={handleForum}
               className={cn(
-                "group flex h-14 flex-1 cursor-pointer flex-col items-center justify-center gap-1 border-l border-theme-border/50 bg-theme-channel-type-active-border px-2 text-[14px] font-bold tracking-[0.05em] text-theme-text-primary transition-colors",
+                "group flex h-14 flex-1 cursor-pointer flex-col items-center justify-center gap-1 bg-theme-channel-type-active-border px-2 text-[14px] font-bold tracking-[0.05em] text-theme-text-primary transition-colors",
                 isForum
                   ? "bg-[var(--theme-button-primary-active)] shadow-[inset_0_1px_0_rgba(0,0,0,0.42),inset_1px_0_0_rgba(0,0,0,0.36),inset_-1px_0_0_rgba(255,255,255,0.14),inset_0_-1px_0_rgba(255,255,255,0.18)]"
                   : "hover:bg-theme-tab-button-hover shadow-[inset_0_1px_0_rgba(255,255,255,0.22)]",
@@ -196,15 +196,16 @@ export const BoardLeftbar = ({
               </span>
             </button>
           </div>
-          {/* Row 2: Wiki, Encuestas, Ranking */}
-          <div className="flex border-t border-theme-border/50">
+
+          {/* Row 2: Wiki, Reglas, Ranking */}
+          <div className="flex">
             <button
               onClick={handleWiki}
               className={cn(
                 "group flex h-14 flex-1 cursor-pointer flex-col items-center justify-center gap-1 bg-theme-channel-type-active-border px-2 text-[14px] font-bold tracking-[0.05em] text-theme-text-primary transition-colors",
                 isWiki
                   ? "bg-[var(--theme-button-primary-active)] shadow-[inset_0_1px_0_rgba(0,0,0,0.42),inset_1px_0_0_rgba(0,0,0,0.36),inset_-1px_0_0_rgba(255,255,255,0.14),inset_0_-1px_0_rgba(255,255,255,0.18)]"
-                  : "hover:bg-theme-tab-button-hover shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(0,0,0,0.55)]",
+                  : "hover:bg-theme-tab-button-hover shadow-[inset_0_-1px_0_rgba(0,0,0,0.55)]",
               )}
             >
               <BookOpenText className="h-6 w-6 shrink-0" />
@@ -216,10 +217,10 @@ export const BoardLeftbar = ({
             <button
               onClick={handleRules}
               className={cn(
-                "group flex h-14 flex-1 cursor-pointer flex-col items-center justify-center gap-1 border-l border-theme-border/50 bg-theme-channel-type-active-border px-2 text-[14px] font-bold tracking-[0.05em] text-theme-text-primary transition-colors",
+                "group flex h-14 flex-1 cursor-pointer flex-col items-center justify-center gap-1 bg-theme-channel-type-active-border px-2 text-[14px] font-bold tracking-[0.05em] text-theme-text-primary transition-colors",
                 isRules
                   ? "bg-[var(--theme-button-primary-active)] shadow-[inset_0_1px_0_rgba(0,0,0,0.42),inset_1px_0_0_rgba(0,0,0,0.36),inset_-1px_0_0_rgba(255,255,255,0.14),inset_0_-1px_0_rgba(255,255,255,0.18)]"
-                  : "hover:bg-theme-tab-button-hover shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(0,0,0,0.55)]",
+                  : "hover:bg-theme-tab-button-hover shadow-[inset_0_-1px_0_rgba(0,0,0,0.55)]",
               )}
             >
               <ScrollText className="h-6 w-6 shrink-0" />
@@ -230,10 +231,10 @@ export const BoardLeftbar = ({
             <button
               onClick={handleRanking}
               className={cn(
-                "group flex h-14 flex-1 cursor-pointer flex-col items-center justify-center gap-1 border-l border-theme-border/50 bg-theme-channel-type-active-border px-2 text-[14px] font-bold tracking-[0.05em] text-theme-text-primary transition-colors",
+                "group flex h-14 flex-1 cursor-pointer flex-col items-center justify-center gap-1  bg-theme-channel-type-active-border px-2 text-[14px] font-bold tracking-[0.05em] text-theme-text-primary transition-colors",
                 isRanking
                   ? "bg-[var(--theme-button-primary-active)] shadow-[inset_0_1px_0_rgba(0,0,0,0.42),inset_1px_0_0_rgba(0,0,0,0.36),inset_-1px_0_0_rgba(255,255,255,0.14),inset_0_-1px_0_rgba(255,255,255,0.18)]"
-                  : "hover:bg-theme-tab-button-hover shadow-[inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(0,0,0,0.55)]",
+                  : "hover:bg-theme-tab-button-hover shadow-[inset_0_-1px_0_rgba(0,0,0,0.55)]",
               )}
             >
               <Trophy className="h-6 w-6 shrink-0" />
