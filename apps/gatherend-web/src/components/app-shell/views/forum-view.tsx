@@ -89,23 +89,26 @@ function ForumViewInner() {
                 <button
                   type="button"
                   onClick={handleCreate}
-                  className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-sm border border-[var(--community-header-btn-ring)] bg-theme-bg-secondary/40 px-3 text-[20px] font-semibold text-[var(--community-header-btn-muted)] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)] transition hover:bg-[var(--community-header-btn-hover)] hover:text-[var(--community-header-btn-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--community-header-btn-ring)] disabled:opacity-50"
+                  className="inline-flex h-9 w-9 cursor-pointer items-center justify-center gap-2 rounded-sm border border-[var(--community-header-btn-ring)] bg-theme-bg-secondary/40 px-0 text-[20px] font-semibold text-[var(--community-header-btn-muted)] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)] transition hover:bg-[var(--community-header-btn-hover)] hover:text-[var(--community-header-btn-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--community-header-btn-ring)] disabled:opacity-50 md:w-auto md:px-3"
+                  aria-label="Crear post"
+                  title="Crear post"
                 >
                   <Plus className="h-6 w-6" />
-                  Crear post
+                  <span className="hidden md:inline">Crear post</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={handleRefresh}
                   disabled={isRefreshing}
-                  className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-sm border border-[var(--community-header-btn-ring)] bg-theme-bg-secondary/40 px-3 text-[20px] font-semibold text-[var(--community-header-btn-muted)] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)] transition hover:bg-[var(--community-header-btn-hover)] hover:text-[var(--community-header-btn-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--community-header-btn-ring)] disabled:opacity-50"
+                  className="inline-flex h-9 w-9 cursor-pointer items-center justify-center gap-2 rounded-sm border border-[var(--community-header-btn-ring)] bg-theme-bg-secondary/40 px-0 text-[20px] font-semibold text-[var(--community-header-btn-muted)] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)] transition hover:bg-[var(--community-header-btn-hover)] hover:text-[var(--community-header-btn-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--community-header-btn-ring)] disabled:opacity-50 md:w-auto md:px-3"
+                  aria-label="Refrescar posts"
                   title="Refrescar posts"
                 >
                   <RefreshCw
                     className={`h-6 w-6 text-(--community-header-btn-muted) ${isRefreshing ? "animate-spin" : ""}`}
                   />
-                  Refrescar
+                  <span className="hidden md:inline">Refrescar</span>
                 </button>
               </div>
             </div>

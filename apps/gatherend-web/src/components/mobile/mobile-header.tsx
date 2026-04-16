@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, ReactNode } from "react";
-import { Menu, ChevronLeft, Users } from "lucide-react";
+import { Menu, ArrowLeft, ChevronLeft, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
@@ -34,6 +34,12 @@ export const MobileHeader = memo(function MobileHeader({
 
   // Usar contexto SPA — no se suscribe a usePathname()
   const isDiscovery = boardSwitch?.isDiscovery ?? false;
+  const isChannelChat = Boolean(boardSwitch?.currentChannelId);
+
+  const handleChatBackClick = () => {
+    if (!boardSwitch) return;
+    boardSwitch.switchToChannelList(boardSwitch.currentBoardId);
+  };
 
   return (
     <>
@@ -51,6 +57,19 @@ export const MobileHeader = memo(function MobileHeader({
           </Button>
 
           {/* Title (solo cuando no estás en discovery y hay título) */}
+          {isChannelChat && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleChatBackClick}
+              className="text-theme-text-primary hover:bg-theme-border-secondary flex-shrink-0"
+              aria-label="Volver a la lista de chats"
+              title="Volver a la lista de chats"
+            >
+              <ArrowLeft className="h-6 w-6" />
+            </Button>
+          )}
+
           {!isDiscovery && title && (
             <h1 className="text-theme-text-primary font-semibold text-base truncate">
               {title}

@@ -144,8 +144,6 @@ const ENABLE_PRETEXT_GROUPED_BUBBLE_DOM_FALLBACK = true;
 function getGroupedBubbleBoundsFromDom(node: HTMLElement | null) {
   if (!node) return undefined;
 
-  console.log("[grouped-bubble-measure] dom-path:getGroupedBubbleBoundsFromDom");
-
   const containerRect = node.getBoundingClientRect();
   let width = 0;
   let minLeft = Number.POSITIVE_INFINITY;
@@ -283,30 +281,8 @@ function GroupedTextBubbleRun({
 
   const pretextBubbleBounds = useMemo(() => {
     if (!canUsePretextLayout) {
-      console.log("[grouped-bubble-measure] pretext-path:skipped", {
-        reason:
-          contentWidthPx <= 0
-            ? "content-width-not-ready"
-            : "group-not-compatible",
-        contentWidthPx,
-        itemCount: items.length,
-        compat: items.map(({ message }) => ({
-          id: message.id,
-          deleted: message.deleted,
-          compatible: canUsePretextForGroupedBubbleMessage({
-            content: message.content,
-            deleted: message.deleted,
-          }),
-        })),
-      });
       return undefined;
     }
-
-    console.log("[grouped-bubble-measure] pretext-path:measure", {
-      contentWidthPx,
-      itemCount: items.length,
-      itemIds: items.map(({ message }) => message.id),
-    });
 
     return measureGroupedTextBubbleGroup({
       contentWidthPx,
@@ -375,16 +351,6 @@ function GroupedTextBubbleRun({
   const bubbleBounds = pretextBubbleBounds ?? domBubbleBounds;
 
   useEffect(() => {
-    console.log("[grouped-bubble-measure] bubble-bounds:active-path", {
-      path: pretextBubbleBounds ? "pretext" : domBubbleBounds ? "dom" : "none",
-      pretextBubbleBounds,
-      domBubbleBounds,
-      contentWidthPx,
-      itemIds: items.map(({ message }) => message.id),
-    });
-  }, [contentWidthPx, domBubbleBounds, items, pretextBubbleBounds]);
-
-  useEffect(() => {
     const node = contentRef.current;
     if (!node || typeof ResizeObserver === "undefined") return;
 
@@ -393,15 +359,6 @@ function GroupedTextBubbleRun({
       setContentWidthPx((prev) => (prev === nextWidth ? prev : nextWidth));
 
       if (!canUsePretextLayout && ENABLE_PRETEXT_GROUPED_BUBBLE_DOM_FALLBACK) {
-        console.log("[grouped-bubble-measure] dom-path:resize-observer", {
-          reason:
-            nextWidth <= 0
-              ? "content-width-not-ready"
-              : "pretext-disabled-or-incompatible",
-          nextWidth,
-          canUsePretextLayout,
-          itemIds: items.map(({ message }) => message.id),
-        });
         const nextBounds = getGroupedBubbleBoundsFromDom(node);
         setDomBubbleBounds((prev) => {
           if (!nextBounds) return prev;
@@ -424,15 +381,6 @@ function GroupedTextBubbleRun({
     setContentWidthPx((prev) => (prev === nextWidth ? prev : nextWidth));
 
     if (!canUsePretextLayout && ENABLE_PRETEXT_GROUPED_BUBBLE_DOM_FALLBACK) {
-      console.log("[grouped-bubble-measure] dom-path:initial-effect", {
-        reason:
-          nextWidth <= 0
-            ? "content-width-not-ready"
-            : "pretext-disabled-or-incompatible",
-        nextWidth,
-        canUsePretextLayout,
-        itemIds: items.map(({ message }) => message.id),
-      });
       const nextBounds = getGroupedBubbleBoundsFromDom(node);
       setDomBubbleBounds((prev) => {
         if (!nextBounds) return prev;
