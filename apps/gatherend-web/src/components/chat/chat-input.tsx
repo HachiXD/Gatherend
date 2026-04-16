@@ -788,7 +788,7 @@ const ChatInputComponent = ({
         onTypingText={handleTypingText}
         onTypingApi={handleTypingApi}
       />
-      <div className="mt-4 bg-theme-bg-quaternary">
+      <div className="mt-5 bg-theme-bg-quaternary">
         <div className="border-t border-theme-border-primary" />
         <form
           onSubmit={(e) => {
@@ -825,8 +825,8 @@ const ChatInputComponent = ({
           <div className="relative px-0 pt-2 pb-1.5 " suppressHydrationWarning>
             {/* Typing Indicator - Absolute overlay, doesn't affect layout */}
             {typingText && (
-              <div className="absolute -top-2 left-4 right-4 pointer-events-none z-10">
-                <div className="bg-theme-bg-tertiary/95 backdrop-blur-sm px-2 py-0.5">
+              <div className="absolute -top-7 left-4 right-4 pointer-events-none z-10">
+                <div className="bg-theme-bg-tertiary/95 backdrop-blur-sm px-2 py-0">
                   <p className="text-[11px] text-theme-text-tertiary italic truncate">
                     {typingText}
                   </p>
@@ -836,7 +836,7 @@ const ChatInputComponent = ({
 
             {/* File Preview */}
             {filePreview && (
-              <div className="absolute -top-26 left-4 right-4 border border-theme-border-primary bg-theme-bg-secondary p-3 shadow-lg rounded-sm">
+              <div className="absolute -top-30 left-4 right-4 border border-theme-border-primary bg-theme-bg-secondary p-3 shadow-lg rounded-sm">
                 <div className="flex items-start gap-3">
                   {/* Preview Thumbnail */}
                   {filePreview.type.startsWith("image/") ? (
