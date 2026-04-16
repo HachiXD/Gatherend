@@ -16,7 +16,6 @@ import { getDerivedColors } from "@/lib/color-extraction";
 import { getOptimizedStaticUiImageUrl } from "@/lib/ui-image-optimizer";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
-
 const ReportButton = memo(function ReportButton({
   boardId,
   boardName,
@@ -47,7 +46,7 @@ const ReportButton = memo(function ReportButton({
   const buttonElement = (
     <button
       onClick={handleClick}
-      className="cursor-pointer border bg-black/50 p-1.5 text-white/70 transition-colors hover:bg-red-500/30 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/30 rounded-none border-[color:var(--report-border)]"
+      className="cursor-pointer border rounded-sm bg-black/50 p-1.5 text-white/70 transition-colors hover:bg-red-500/30 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/30 border-[color:var(--report-border)]"
       style={{ "--report-border": borderColor } as React.CSSProperties}
     >
       <Siren className="h-4 w-4" />
@@ -101,9 +100,11 @@ function CommunityCardInner({
     return getOptimizedStaticUiImageUrl(imageUrl, { w: 450, h: 180, q: 82 });
   }, [imageUrl]);
 
-  const { dominantColor: extractedColor, handleImageLoad } = useColorExtraction({
-    imageUrl: precomputedColor ? null : (displayImageUrl || imageUrl),
-  });
+  const { dominantColor: extractedColor, handleImageLoad } = useColorExtraction(
+    {
+      imageUrl: precomputedColor ? null : displayImageUrl || imageUrl,
+    },
+  );
 
   const dominantColor = precomputedColor || extractedColor;
   const derivedColors = getDerivedColors(dominantColor || "#1F2D2C");
@@ -112,7 +113,7 @@ function CommunityCardInner({
     <div
       data-community-id={id}
       className={cn(
-        "border-t-1 border-r-2 border-b-2 overflow-hidden",
+        "border-t-1 border-r-2 border-b-2 overflow-hidden rounded-sm",
         "w-full h-fit flex flex-col group cursor-pointer",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20",
         className,
@@ -176,7 +177,8 @@ function CommunityCardInner({
       <div className="flex flex-row items-center px-4 py-2">
         <div className="flex flex-col gap-1">
           <div className="text-[14px] text-white/70 font-medium">
-            {memberCount} miembro{memberCount === 1 ? "" : "s"} — {recentPostCount7d} post
+            {memberCount} miembro{memberCount === 1 ? "" : "s"} —{" "}
+            {recentPostCount7d} post
             {recentPostCount7d === 1 ? "" : "s"} esta semana
           </div>
         </div>
