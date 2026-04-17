@@ -200,7 +200,7 @@ export const LeftbarBanner = ({
       </div>
 
       <div className="p-2">
-        <div className="relative h-[108px] overflow-hidden border border-theme-border-primary bg-theme-bg-secondary">
+        <div className="relative h-[108px] overflow-hidden rounded-sm border border-theme-border-primary bg-theme-bg-secondary">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={displayImageUrl ?? undefined}

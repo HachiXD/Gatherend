@@ -113,7 +113,7 @@ function CommunityCardInner({
     <div
       data-community-id={id}
       className={cn(
-        "border-t-1 border-r-2 border-b-2 overflow-hidden rounded-sm",
+        "border-t-1 border-r-2 border-b-2 overflow-hidden rounded-2xl",
         "w-full h-fit flex flex-col group cursor-pointer",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20",
         className,

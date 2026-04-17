@@ -124,12 +124,12 @@ function CommunityPostCommentItemInner({
   return (
     <article
       className={cn(
-        "block w-fit rounded-sm max-w-full border border-theme-border bg-theme-bg-secondary/20 px-3 py-2",
+        "block w-fit rounded-sm max-w-full border border-theme-border bg-theme-bg-secondary/20 px-3 py-1",
         className,
       )}
     >
       <div
-        className="-mx-3 -mt-2 mb-2 flex rounded-t-sm flex-wrap items-center gap-1 border-b border-theme-border px-2 py-0.5"
+        className="-mx-3 -mt-1 mb-2 flex rounded-t-sm flex-wrap items-center gap-1 border-b border-theme-border px-2 py-[1px]"
         style={commentHeaderTintStyle}
       >
         {(comment.author.badge || authorBadgeStickerUrl) && (
@@ -147,25 +147,25 @@ function CommunityPostCommentItemInner({
                 />
               )}
               {comment.author.badge && (
-                <span className="pt-2 text-[11px] leading-none text-theme-text-tertiary">
+                <span className="pt-2 text-[12px] leading-none text-theme-text-tertiary">
                   {comment.author.badge}
                 </span>
               )}
             </span>
-            <span className="pt-2 text-[11px] text-theme-text-tertiary">|</span>
+            <span className="pt-2 text-[12px] text-theme-text-tertiary">|</span>
           </>
         )}
-        <span className="text-[11px] text-theme-text-tertiary">
+        <span className="text-[12px] text-theme-text-tertiary">
           <span className="inline-block pt-2">
             {formatCommentDate(comment.createdAt, locale)}
           </span>
         </span>
         {comment.replyToCommentId && comment.replyToComment && (
           <>
-            <span className="inline-block pt-2 text-[11px] text-theme-text-tertiary">
+            <span className="inline-block pt-2 text-[12px] text-theme-text-tertiary">
               |
             </span>
-            <span className="inline-block pt-2 text-[11px] text-theme-text-tertiary">
+            <span className="inline-block pt-2 text-[12px] text-theme-text-tertiary">
               {t.chat.replyingTo}{" "}
               {getReplyingToLabel(comment, {
                 replyToOriginalPoster: t.posts.replyToOriginalPoster,
@@ -213,9 +213,9 @@ function CommunityPostCommentItemInner({
 
           <div
             className={cn(
-              "whitespace-pre-wrap break-words text-[14px] leading-5 text-theme-text-secondary [overflow-wrap:anywhere]",
+              "whitespace-pre-wrap break-words text-[15px] leading-5 text-theme-text-secondary [overflow-wrap:anywhere]",
               comment.deleted && "mt-1.5",
-              comment.deleted && "text-[14px] text-theme-text-tertiary",
+              comment.deleted && "text-[15px] text-theme-text-tertiary",
             )}
           >
             <span className="whitespace-nowrap">
@@ -232,7 +232,7 @@ function CommunityPostCommentItemInner({
               >
                 <span
                   className={cn(
-                    "cursor-pointer text-[14px] font-semibold text-white hover:underline",
+                    "cursor-pointer text-[15px] font-semibold text-white hover:underline",
                     getUsernameFormatClasses(comment.author.usernameFormat),
                     getGradientAnimationClass(comment.author.usernameColor),
                   )}
@@ -246,7 +246,7 @@ function CommunityPostCommentItemInner({
               </UserAvatarMenu>
               <span
                 className={cn(
-                  "text-[14px] font-semibold",
+                  "text-[15px] font-semibold",
                   getGradientAnimationClass(comment.author.usernameColor),
                 )}
                 style={getUsernameColorStyle(comment.author.usernameColor, {
@@ -268,7 +268,7 @@ function CommunityPostCommentItemInner({
               <button
                 type="button"
                 onClick={() => onReply?.(comment.id)}
-                className="cursor-pointer text-[14px] text-theme-text-tertiary transition hover:underline"
+                className="cursor-pointer text-[15px] text-theme-text-tertiary transition hover:underline"
               >
                 {t.chat.reply}
               </button>
@@ -277,7 +277,7 @@ function CommunityPostCommentItemInner({
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
-                      className="cursor-pointer text-[14px] leading-none text-theme-text-tertiary transition hover:underline"
+                      className="cursor-pointer text-[15px] leading-none text-theme-text-tertiary transition hover:underline"
                       aria-label={t.posts.openCommentActions}
                     >
                       ...

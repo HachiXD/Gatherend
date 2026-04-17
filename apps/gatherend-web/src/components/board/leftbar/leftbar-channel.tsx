@@ -139,7 +139,7 @@ const LeftbarChannelComponent = ({
             : undefined
         }
         className={cn(
-          "group relative flex h-26 w-full min-w-0 max-w-full cursor-pointer items-center overflow-hidden rounded-sm border border-theme-channel-type-active-border px-0 text-left transition",
+          "group relative flex h-26 w-full min-w-0 max-w-full cursor-pointer items-center overflow-hidden rounded-2xl border border-theme-channel-type-active-border px-0 text-left transition",
           channelImageUrl
             ? [
                 "bg-cover bg-center bg-no-repeat",

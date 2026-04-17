@@ -97,6 +97,8 @@ export function ChannelView({ channelId, boardId }: ChannelViewProps) {
     return null;
   }
 
+  const channelBackgroundImageUrl = channel.imageAsset?.url ?? null;
+
   return (
     <div className="flex flex-col h-full">
       <ChatHeader
@@ -108,40 +110,58 @@ export function ChannelView({ channelId, boardId }: ChannelViewProps) {
         style={headerStyle}
       />
       {channel.type === ChannelType.TEXT && (
-        <>
-          <ChatMessages
-            name={channel.name}
-            currentProfile={profile}
-            currentMember={member}
-            board={board}
-            apiUrl={`${process.env.NEXT_PUBLIC_API_URL}/messages`}
-            socketQuery={socketQuery}
-            paramKey="channelId"
-            paramValue={channel.id}
-            type="channel"
-          />
-          {channel.isJoined ? (
-            <ChatInput
-              name={channel.name}
-              type="channel"
-              apiUrl={`${process.env.NEXT_PUBLIC_API_URL}/messages`}
-              currentProfile={profile}
-              query={inputQuery}
-              chatQueryKey={chatQueryKey}
-              roomId={channel.id}
-            />
-          ) : (
-            <div className="px-4 py-3 border-t border-theme-border">
-              <button
-                onClick={handleJoinChannel}
-                disabled={isJoining}
-                className="w-full h-11 cursor-pointer rounded-none border border-theme-channel-type-active-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text text-sm font-medium transition hover:opacity-90 disabled:opacity-50"
-              >
-                {isJoining ? "Uniéndose..." : "Unirme al chat"}
-              </button>
-            </div>
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+          {channelBackgroundImageUrl && (
+            <>
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat"
+                style={{
+                  backgroundImage: `url(${channelBackgroundImageUrl})`,
+                }}
+              />
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 bg-theme-bg-tertiary/65"
+              />
+            </>
           )}
-        </>
+
+          <div className="relative z-10 flex min-h-0 flex-1 flex-col">
+            <ChatMessages
+              name={channel.name}
+              currentProfile={profile}
+              currentMember={member}
+              board={board}
+              apiUrl={`${process.env.NEXT_PUBLIC_API_URL}/messages`}
+              socketQuery={socketQuery}
+              paramKey="channelId"
+              paramValue={channel.id}
+              type="channel"
+            />
+            {channel.isJoined ? (
+              <ChatInput
+                name={channel.name}
+                type="channel"
+                apiUrl={`${process.env.NEXT_PUBLIC_API_URL}/messages`}
+                currentProfile={profile}
+                query={inputQuery}
+                chatQueryKey={chatQueryKey}
+                roomId={channel.id}
+              />
+            ) : (
+              <div className="px-4 py-3 border-t border-theme-border">
+                <button
+                  onClick={handleJoinChannel}
+                  disabled={isJoining}
+                  className="w-full h-11 cursor-pointer rounded-none border border-theme-channel-type-active-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text text-sm font-medium transition hover:opacity-90 disabled:opacity-50"
+                >
+                  {isJoining ? "Uniéndose..." : "Unirme al chat"}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       )}
       <ConditionalMediaRoom
         channelId={channel.id}

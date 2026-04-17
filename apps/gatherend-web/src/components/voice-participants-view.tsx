@@ -140,7 +140,7 @@ function ParticipantCard({
       className={cn(
         "relative flex flex-col items-center justify-center cursor-pointer",
         "rounded-xl overflow-hidden transition-all duration-300",
-        "bg-theme-bg-tertiary/50 backdrop-blur-sm",
+        "bg-theme-bg-tertiary/65 backdrop-blur-sm",
         "hover:ring-2 hover:ring-theme-accent-primary/50",
         isExpanded ? "w-full h-full" : "w-full aspect-square max-w-[200px]",
         isSpeaking &&

@@ -86,33 +86,39 @@ function formatPostDate(value: string, locale: string) {
   }).format(new Date(value));
 }
 
-const FALLBACK_POST_IMAGE_SIZE = { width: 220, height: 180 };
-const POST_IMAGE_LANDSCAPE_MIN_RATIO = 1.6;
-const POST_IMAGE_PORTRAIT_MAX_RATIO = 0.625;
-const POST_IMAGE_BUCKET_LANDSCAPE = { width: 460, height: 260 };
-const POST_IMAGE_BUCKET_PORTRAIT = { width: 220, height: 370 };
-const POST_IMAGE_BUCKET_SQUAREISH = { width: 210, height: 210 };
+const POST_IMAGE_FRAME_SIZE = { width: 620, height: 420 };
+const POST_IMAGE_ULTRAWIDE_MIN_RATIO = 2.15;
+const POST_IMAGE_LANDSCAPE_MIN_RATIO = 1.35;
+const POST_IMAGE_PORTRAIT_MAX_RATIO = 0.8;
+const POST_IMAGE_TALL_MAX_RATIO = 0.58;
 
-function getPostImageDisplaySize(
+function getPostImageFrameSize(
   originalWidth: number | null | undefined,
   originalHeight: number | null | undefined,
 ): { width: number; height: number } {
-  if (!originalWidth || !originalHeight) return FALLBACK_POST_IMAGE_SIZE;
+  if (!originalWidth || !originalHeight) return POST_IMAGE_FRAME_SIZE;
+
   const ratio = originalWidth / originalHeight;
-  const bucket =
-    ratio >= POST_IMAGE_LANDSCAPE_MIN_RATIO
-      ? POST_IMAGE_BUCKET_LANDSCAPE
-      : ratio <= POST_IMAGE_PORTRAIT_MAX_RATIO
-        ? POST_IMAGE_BUCKET_PORTRAIT
-        : POST_IMAGE_BUCKET_SQUAREISH;
-  const scale = Math.min(
-    bucket.width / originalWidth,
-    bucket.height / originalHeight,
-    1,
-  );
+
+  if (ratio >= POST_IMAGE_ULTRAWIDE_MIN_RATIO) {
+    return { width: POST_IMAGE_FRAME_SIZE.width, height: 280 };
+  }
+
+  if (ratio >= POST_IMAGE_LANDSCAPE_MIN_RATIO) {
+    return { width: POST_IMAGE_FRAME_SIZE.width, height: 350 };
+  }
+
+  if (ratio >= POST_IMAGE_PORTRAIT_MAX_RATIO) {
+    return POST_IMAGE_FRAME_SIZE;
+  }
+
+  if (ratio >= POST_IMAGE_TALL_MAX_RATIO) {
+    return { width: POST_IMAGE_FRAME_SIZE.width, height: 480 };
+  }
+
   return {
-    width: Math.max(1, Math.round(originalWidth * scale)),
-    height: Math.max(1, Math.round(originalHeight * scale)),
+    width: POST_IMAGE_FRAME_SIZE.width,
+    height: 460,
   };
 }
 
@@ -121,29 +127,27 @@ function PostImageAttachment({
   alt,
   imageWidth,
   imageHeight,
-  noFloat,
 }: {
   imageUrl: string;
   alt: string;
   imageWidth?: number | null;
   imageHeight?: number | null;
-  noFloat?: boolean;
 }) {
   const { t } = useTranslation();
-  const displaySize = getPostImageDisplaySize(imageWidth, imageHeight);
+  const frameSize = getPostImageFrameSize(imageWidth, imageHeight);
   const [isOpen, setIsOpen] = useState(false);
   const [forceOriginalInline, setForceOriginalInline] = useState(false);
   const [forceOriginalPreview, setForceOriginalPreview] = useState(false);
   const inlineImageUrl = useMemo(() => {
     if (forceOriginalInline) return imageUrl;
     return getOptimizedStaticUiImageUrl(imageUrl, {
-      w: displaySize.width * 2,
-      h: displaySize.height * 2,
+      w: frameSize.width * 2,
+      h: frameSize.height * 2,
       q: 84,
       resize: "fit",
       gravity: "sm",
     });
-  }, [forceOriginalInline, imageUrl, displaySize.width, displaySize.height]);
+  }, [forceOriginalInline, imageUrl, frameSize.width, frameSize.height]);
   const previewImageUrl = useMemo(() => {
     if (forceOriginalPreview) return imageUrl;
     return getOptimizedStaticUiImageUrl(imageUrl, {
@@ -160,27 +164,36 @@ function PostImageAttachment({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className={cn(
-          "mt-1 block cursor-pointer overflow-hidden rounded-md border bg-black/[0.03]",
-          noFloat ? "" : "float-left mr-3",
-        )}
+        className="mt-2 block w-full max-w-[620px] cursor-pointer overflow-hidden rounded-md border border-theme-border bg-black/[0.03]"
+        style={{ aspectRatio: `${frameSize.width} / ${frameSize.height}` }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={inlineImageUrl}
-          alt={alt}
-          width={displaySize.width}
-          height={displaySize.height}
-          className="block object-contain"
-          style={{ width: displaySize.width, height: displaySize.height }}
-          loading="lazy"
-          decoding="async"
-          onError={() => {
-            if (inlineImageUrl !== imageUrl) {
-              setForceOriginalInline(true);
-            }
-          }}
-        />
+        <span className="relative block h-full w-full overflow-hidden bg-black/15">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={inlineImageUrl}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full scale-110 object-cover opacity-55 blur-xl"
+            loading="lazy"
+            decoding="async"
+          />
+          <span aria-hidden="true" className="absolute inset-0 bg-black/20" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={inlineImageUrl}
+            alt={alt}
+            width={imageWidth || frameSize.width}
+            height={imageHeight || frameSize.height}
+            className="relative z-10 block h-full w-full object-contain"
+            loading="lazy"
+            decoding="async"
+            onError={() => {
+              if (inlineImageUrl !== imageUrl) {
+                setForceOriginalInline(true);
+              }
+            }}
+          />
+        </span>
       </button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -230,84 +243,24 @@ function PostBodyWithImage({
   imageHeight?: number | null;
   themeMode: "dark" | "light";
 }) {
-  const isLandscape =
-    !!imageWidth &&
-    !!imageHeight &&
-    imageWidth / imageHeight >= POST_IMAGE_LANDSCAPE_MIN_RATIO;
-
-  const isPortrait =
-    !!imageWidth &&
-    !!imageHeight &&
-    imageWidth / imageHeight <= POST_IMAGE_PORTRAIT_MAX_RATIO;
-
-  if (isLandscape) {
-    // Landscape: imagen arriba, texto abajo
-    return (
-      <>
-        <div className="mt-1 mb-1">
-          <PostImageAttachment
-            imageUrl={imageUrl}
-            alt={alt}
-            imageWidth={imageWidth}
-            imageHeight={imageHeight}
-            noFloat
-          />
-        </div>
-        <div className="-mt-0.5 whitespace-pre-wrap break-words text-[14px] leading-5 text-theme-text-secondary">
-          <span className="whitespace-nowrap">{usernameSlot}</span>
-          {content && (
-            <>
-              {"\u00A0"}
-              {parsePostContent(content, themeMode)}
-            </>
-          )}
-        </div>
-      </>
-    );
-  }
-
-  if (!isPortrait && !!imageWidth && !!imageHeight) {
-    // Squarish: texto arriba, imagen abajo izquierda
-    return (
-      <>
-        <div className="-mt-0.5 whitespace-pre-wrap break-words text-[14px] leading-5 text-theme-text-secondary">
-          <span className="whitespace-nowrap">{usernameSlot}</span>
-          {content && (
-            <>
-              {"\u00A0"}
-              {parsePostContent(content, themeMode)}
-            </>
-          )}
-        </div>
-        <div className="mt-1">
-          <PostImageAttachment
-            imageUrl={imageUrl}
-            alt={alt}
-            imageWidth={imageWidth}
-            imageHeight={imageHeight}
-            noFloat
-          />
-        </div>
-      </>
-    );
-  }
-
   return (
-    <div className="overflow-hidden mt-0.5 whitespace-pre-wrap break-words text-[14px] leading-5 text-theme-text-secondary">
+    <>
       <PostImageAttachment
         imageUrl={imageUrl}
         alt={alt}
         imageWidth={imageWidth}
         imageHeight={imageHeight}
       />
-      <span className="whitespace-nowrap">{usernameSlot}</span>
-      {content && (
-        <>
-          {"\u00A0"}
-          {parsePostContent(content, themeMode)}
-        </>
-      )}
-    </div>
+      <div className="mt-2 whitespace-pre-wrap break-words text-[15px] leading-5 text-theme-text-secondary">
+        <span className="whitespace-nowrap">{usernameSlot}</span>
+        {content && (
+          <>
+            {"\u00A0"}
+            {parsePostContent(content, themeMode)}
+          </>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -1128,7 +1081,7 @@ function CommunityPostsSectionInner({
                                   username={post.author.username}
                                   discriminator={post.author.discriminator}
                                   currentProfileId={profile.id}
-                                  className="h-8 w-8"
+                                  className="h-9 w-9"
                                   showStatus={false}
                                   disableHoverShadow
                                   avatarAnimationMode="never"
@@ -1166,36 +1119,36 @@ function CommunityPostsSectionInner({
                                                   />
                                                 )}
                                                 {post.author.badge && (
-                                                  <span className="pt-2.5 text-[11px] leading-none text-theme-text-tertiary">
+                                                  <span className="pt-2.5 text-[12px] leading-none text-theme-text-tertiary">
                                                     {post.author.badge}
                                                   </span>
                                                 )}
                                               </span>
-                                              <span className="pt-2.5 text-[11px] text-theme-text-tertiary">
+                                              <span className="pt-2.5 text-[12px] text-theme-text-tertiary">
                                                 |
                                               </span>
                                             </>
                                           )}
-                                          <span className="pt-2.5 text-[11px] text-theme-text-tertiary">
+                                          <span className="pt-2.5 text-[12px] text-theme-text-tertiary">
                                             {formatPostDate(
                                               post.createdAt,
                                               locale,
                                             )}
                                           </span>
                                           {post.pinnedAt && (
-                                            <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[11px] font-medium leading-none text-theme-text-subtle">
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[12px] font-medium leading-none text-theme-text-subtle">
                                               <Pin className="h-3 w-3" />
                                               {t.posts.pinned}
                                             </span>
                                           )}
                                           {post.lockedAt && (
-                                            <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[11px] font-medium leading-none text-theme-text-subtle">
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[12px] font-medium leading-none text-theme-text-subtle">
                                               <Lock className="h-3 w-3" />
                                               {t.posts.closed}
                                             </span>
                                           )}
                                         </div>
-                                        <div className="break-words mt-1 mb-1.5 border-2 border-theme-channel-type-active-border pl-1 text-[18px] font-light leading-snug text-theme-text-primary">
+                                        <div className="break-words mt-1 mb-1.5 rounded-sm bg-theme-channel-type-active-border/20 border-2 border-theme-channel-type-active-border pl-1 text-[20px] font-light leading-snug text-theme-text-primary">
                                           {post.title}
                                         </div>
                                       </>
@@ -1219,30 +1172,30 @@ function CommunityPostsSectionInner({
                                                   />
                                                 )}
                                                 {post.author.badge && (
-                                                  <span className="pt-2.5 text-[11px] leading-none text-theme-text-tertiary">
+                                                  <span className="pt-2.5 text-[12px] leading-none text-theme-text-tertiary">
                                                     {post.author.badge}
                                                   </span>
                                                 )}
                                               </span>
-                                              <span className="pt-2.5 text-[11px] text-theme-text-tertiary">
+                                              <span className="pt-2.5 text-[12px] text-theme-text-tertiary">
                                                 |
                                               </span>
                                             </>
                                           )}
-                                          <span className="pt-2.5 text-[11px] text-theme-text-tertiary">
+                                          <span className="pt-2.5 text-[12px] text-theme-text-tertiary">
                                             {formatPostDate(
                                               post.createdAt,
                                               locale,
                                             )}
                                           </span>
                                           {post.pinnedAt && (
-                                            <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[11px] font-medium leading-none text-theme-text-subtle">
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[12px] font-medium leading-none text-theme-text-subtle">
                                               <Pin className="h-3 w-3" />
                                               {t.posts.pinned}
                                             </span>
                                           )}
                                           {post.lockedAt && (
-                                            <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[11px] font-medium leading-none text-theme-text-subtle">
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[12px] font-medium leading-none text-theme-text-subtle">
                                               <Lock className="h-3 w-3" />
                                               {t.posts.closed}
                                             </span>
@@ -1283,7 +1236,7 @@ function CommunityPostsSectionInner({
                                             >
                                               <span
                                                 className={cn(
-                                                  "cursor-pointer text-[14px] font-semibold text-white hover:underline",
+                                                  "cursor-pointer text-[15px] font-semibold text-white hover:underline",
                                                   getUsernameFormatClasses(
                                                     post.author.usernameFormat,
                                                   ),
@@ -1306,7 +1259,7 @@ function CommunityPostsSectionInner({
                                             </UserAvatarMenu>
                                             <span
                                               className={cn(
-                                                "text-[14px] font-semibold",
+                                                "text-[15px] font-semibold",
                                                 getGradientAnimationClass(
                                                   post.author.usernameColor,
                                                 ),
@@ -1327,7 +1280,7 @@ function CommunityPostsSectionInner({
                                         }
                                       />
                                     ) : (
-                                      <div className="-mt-0.5 whitespace-pre-wrap break-words text-[14px] leading-5 text-theme-text-secondary">
+                                      <div className="mt-0 whitespace-pre-wrap break-words text-[15px] leading-5 text-theme-text-secondary">
                                         <span className="whitespace-nowrap">
                                           <UserAvatarMenu
                                             profileId={post.author.id}
@@ -1349,7 +1302,7 @@ function CommunityPostsSectionInner({
                                           >
                                             <span
                                               className={cn(
-                                                "cursor-pointer text-[14px] font-semibold text-white hover:underline",
+                                                "cursor-pointer text-[15px] font-semibold text-white hover:underline",
                                                 getUsernameFormatClasses(
                                                   post.author.usernameFormat,
                                                 ),
@@ -1372,7 +1325,7 @@ function CommunityPostsSectionInner({
                                           </UserAvatarMenu>
                                           <span
                                             className={cn(
-                                              "text-[14px] font-semibold",
+                                              "text-[15px] font-semibold",
                                               getGradientAnimationClass(
                                                 post.author.usernameColor,
                                               ),
@@ -1404,7 +1357,7 @@ function CommunityPostsSectionInner({
                                 {!isEditing && (
                                   <div
                                     className={cn(
-                                      "clear-left flex items-center gap-x-3 -mb-1 pt-1",
+                                      "clear-left flex items-center gap-x-3 -mb-1 pt-2.5",
                                     )}
                                   >
                                     <button
@@ -1415,7 +1368,7 @@ function CommunityPostsSectionInner({
                                           current === post.id ? null : post.id,
                                         );
                                       }}
-                                      className="cursor-pointer text-[14px] text-theme-text-tertiary transition hover:underline"
+                                      className="cursor-pointer text-[15px] text-theme-text-tertiary transition hover:underline"
                                     >
                                       {t.chat.reply}
                                     </button>
@@ -1427,7 +1380,7 @@ function CommunityPostsSectionInner({
                                             post.id,
                                           )
                                         }
-                                        className="cursor-pointer text-[14px] text-theme-text-tertiary transition hover:underline"
+                                        className="cursor-pointer text-[15px] text-theme-text-tertiary transition hover:underline"
                                       >
                                         {isExpandedCommentsLoading
                                           ? t.posts.loadingComments
@@ -1444,7 +1397,7 @@ function CommunityPostsSectionInner({
                                         onClick={() =>
                                           setEditingPostId(post.id)
                                         }
-                                        className="cursor-pointer text-[14px] text-theme-text-tertiary transition hover:underline"
+                                        className="cursor-pointer text-[15px] text-theme-text-tertiary transition hover:underline"
                                       >
                                         {t.posts.editPost}
                                       </button>
@@ -1459,7 +1412,7 @@ function CommunityPostsSectionInner({
                                               communityId,
                                           })
                                         }
-                                        className="cursor-pointer text-[14px] text-theme-text-tertiary transition hover:underline"
+                                        className="cursor-pointer text-[15px] text-theme-text-tertiary transition hover:underline"
                                       >
                                         {t.posts.deletePost}
                                       </button>
@@ -1483,7 +1436,7 @@ function CommunityPostsSectionInner({
                                               post.author.discriminator,
                                           })
                                         }
-                                        className="cursor-pointer text-[14px] text-theme-text-tertiary transition hover:underline"
+                                        className="cursor-pointer text-[15px] text-theme-text-tertiary transition hover:underline"
                                       >
                                         {t.posts.reportPost}
                                       </button>

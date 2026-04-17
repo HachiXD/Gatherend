@@ -1277,17 +1277,17 @@ const ChatItemOptimizedComponent = ({
                             />
                           )}
                           {authorProfile?.badge && (
-                            <span className="text-[11px] leading-none text-theme-text-tertiary pt-2.5">
+                            <span className="text-[12px] leading-none text-theme-text-tertiary pt-2.5">
                               {authorProfile.badge}
                             </span>
                           )}
                         </span>
-                        <span className="text-[11px] text-theme-text-tertiary pt-2.5">
+                        <span className="text-[12px] text-theme-text-tertiary pt-2.5">
                           |
                         </span>
                       </>
                     )}
-                    <span className="text-[11px] text-theme-text-tertiary pt-2.5">
+                    <span className="text-[12px] text-theme-text-tertiary pt-2.5">
                       {timestamp}
                     </span>
                   </div>
@@ -1412,17 +1412,17 @@ const ChatItemOptimizedComponent = ({
                             />
                           )}
                           {authorProfile?.badge && (
-                            <span className="text-[11px] leading-none text-theme-text-tertiary pt-2.5">
+                            <span className="text-[12px] leading-none text-theme-text-tertiary pt-2.5">
                               {authorProfile.badge}
                             </span>
                           )}
                         </span>
-                        <span className="text-[11px] text-theme-text-tertiary pt-2.5">
+                        <span className="text-[12px] text-theme-text-tertiary pt-2.5">
                           |
                         </span>
                       </>
                     )}
-                    <span className="text-[11px] text-theme-text-tertiary pt-2.5">
+                    <span className="text-[12px] text-theme-text-tertiary pt-2.5">
                       {timestamp}
                     </span>
                   </div>
@@ -1528,17 +1528,17 @@ const ChatItemOptimizedComponent = ({
                             />
                           )}
                           {authorProfile?.badge && (
-                            <span className="text-[11px] leading-none text-theme-text-tertiary pt-2.5">
+                            <span className="text-[12px] leading-none text-theme-text-tertiary pt-2.5">
                               {authorProfile.badge}
                             </span>
                           )}
                         </span>
-                        <span className="text-[11px] text-theme-text-tertiary pt-2.5">
+                        <span className="text-[12px] text-theme-text-tertiary pt-2.5">
                           |
                         </span>
                       </>
                     )}
-                    <span className="text-[11px] text-theme-text-tertiary pt-2.5">
+                    <span className="text-[12px] text-theme-text-tertiary pt-2.5">
                       {timestamp}
                     </span>
                   </div>
