@@ -57,7 +57,6 @@ function toBase64(bytes: Uint8Array): string {
   for (const b of bytes) {
     binary += String.fromCharCode(b);
   }
-  // eslint-disable-next-line no-undef
   return btoa(binary);
 }
 
