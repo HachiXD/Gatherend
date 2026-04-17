@@ -34,7 +34,7 @@ export function getChatBubbleSurfaceStyle(
 
   const adaptedBackground =
     style.background === null
-      ? "color-mix(in srgb, var(--color-theme-bg-overlay-primary) 72%, transparent)"
+      ? "var(--color-theme-bg-overlay-primary)"
       : options?.themeMode
         ? clampGradientColor(style.background, options.themeMode)
         : style.background;

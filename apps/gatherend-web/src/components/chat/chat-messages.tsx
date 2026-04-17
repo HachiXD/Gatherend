@@ -414,7 +414,7 @@ function GroupedTextBubbleRun({
             className={cn(
               "pointer-events-none absolute",
               !groupedBubbleSurfaceStyle &&
-                "rounded-md bg-theme-bg-overlay-primary/72",
+                "rounded-md bg-theme-bg-overlay-primary",
             )}
             style={{
               left: `${bubbleBounds.left}px`,

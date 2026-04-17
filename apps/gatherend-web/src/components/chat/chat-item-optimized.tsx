@@ -1567,28 +1567,28 @@ const ChatItemOptimizedComponent = ({
                       cn(
                         "mt-1 self-start max-w-full px-3 pt-2 pb-1",
                         !textBubbleSurfaceStyle &&
-                          "bg-theme-bg-overlay-primary/72",
+                          "bg-theme-bg-overlay-primary",
                       ),
                     !groupedTextBubble &&
                       textBubbleGroupPosition === "middle" &&
                       cn(
                         "self-start max-w-full px-3 py-1",
                         !textBubbleSurfaceStyle &&
-                          "bg-theme-bg-overlay-primary/72",
+                          "bg-theme-bg-overlay-primary",
                       ),
                     !groupedTextBubble &&
                       textBubbleGroupPosition === "end" &&
                       cn(
                         "self-start max-w-full px-3 pt-1 pb-2",
                         !textBubbleSurfaceStyle &&
-                          "bg-theme-bg-overlay-primary/72",
+                          "bg-theme-bg-overlay-primary",
                       ),
                     !groupedTextBubble &&
                       textBubbleGroupPosition === "single" &&
                       cn(
                         "mt-[5px] self-start max-w-full px-3 py-2",
                         !textBubbleSurfaceStyle &&
-                          "rounded-md bg-theme-bg-overlay-primary/72",
+                          "rounded-md bg-theme-bg-overlay-primary",
                       ),
                     !groupedTextBubble &&
                       textBubbleGroupPosition === undefined &&
@@ -1597,7 +1597,7 @@ const ChatItemOptimizedComponent = ({
                         : cn(
                             "mt-[5px] self-start max-w-full px-3 py-2",
                             !textBubbleSurfaceStyle &&
-                              "rounded-md bg-theme-bg-overlay-primary/72",
+                              "rounded-md bg-theme-bg-overlay-primary",
                           )),
                   )}
                   style={textBubbleSurfaceStyle}
