@@ -5,6 +5,7 @@ const SUPPORTED_LOCALES = ["en", "es"] as const;
 type Locale = (typeof SUPPORTED_LOCALES)[number];
 const DEFAULT_LOCALE: Locale = "en";
 const LOCALE_COOKIE_NAME = "gatherend-locale";
+const TURNSTILE_CSP_SOURCE = "https://challenges.cloudflare.com";
 
 function isApiRoute(pathname: string): boolean {
   return pathname.startsWith("/api");
@@ -138,6 +139,7 @@ function buildContentSecurityPolicy(params: {
     `'self'`,
     `'nonce-${nonce}'`,
     `'strict-dynamic'`,
+    TURNSTILE_CSP_SOURCE,
     ...(isDev ? [`'unsafe-eval'`] : []),
   ].join(" ");
 
@@ -186,6 +188,7 @@ function buildContentSecurityPolicy(params: {
   // NOTE: We allow inline styles because the app uses React `style={...}` in multiple places.
   // Tightening this would require refactors to remove style attributes.
   const styleSrc = [`'self'`, `'unsafe-inline'`, "https:"].join(" ");
+  const frameSrc = [`'self'`, TURNSTILE_CSP_SOURCE].join(" ");
 
   // In dev we load some assets from http://localhost:* (e.g. Express media proxy).
   // Keep production strict (https only).
@@ -210,6 +213,7 @@ function buildContentSecurityPolicy(params: {
     `script-src-elem ${scriptSrc}`,
     `script-src-attr ${scriptSrcAttr}`,
     `connect-src ${connectSrc}`,
+    `frame-src ${frameSrc}`,
     // Avoid upgrading localhost in dev.
     ...(isDev ? [] : ["upgrade-insecure-requests"]),
   ];
