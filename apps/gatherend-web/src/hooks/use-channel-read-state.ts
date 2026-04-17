@@ -1,10 +1,6 @@
 import { useEffect, useCallback, useRef, useMemo } from "react";
 import { useUnreadStore } from "./use-unread-store";
 import { useMentionStore } from "./use-mention-store";
-import {
-  useTokenGetter,
-  useTokenReady,
-} from "@/components/providers/token-manager-provider";
 import { useSocketRecoveryVersion } from "@/components/providers/socket-provider";
 import { getExpressAuthHeaders } from "@/lib/express-fetch";
 
@@ -27,8 +23,6 @@ export function useChannelReadState(
     replaceFromServer: replaceMentionsFromServer,
     clearMention,
   } = useMentionStore();
-  const getToken = useTokenGetter();
-  const tokenReady = useTokenReady();
   const reconnectVersion = useSocketRecoveryVersion();
   const conversationsLoadedRef = useRef(false);
   const conversationUnreadSnapshotRef = useRef<Record<string, number>>({});
@@ -36,15 +30,14 @@ export function useChannelReadState(
   const stableBoardIds = useMemo(() => boardIds.join(","), [boardIds]);
 
   useEffect(() => {
-    if (!profileId || !stableBoardIds || !tokenReady) return;
+    if (!profileId || !stableBoardIds) return;
 
     const loadSidebarState = async () => {
       const socketUrl =
         process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
 
       try {
-        const token = await getToken();
-        const authHeaders = getExpressAuthHeaders(profileId, token);
+        const authHeaders = getExpressAuthHeaders(profileId);
 
         const res = await fetch(`${socketUrl}/channel-read-state/sidebar`, {
           credentials: "include",
@@ -85,9 +78,7 @@ export function useChannelReadState(
   }, [
     profileId,
     stableBoardIds,
-    tokenReady,
     reconnectVersion,
-    getToken,
     initializeChannelStateFromServer,
     initializeMentions,
     replaceChannelStateFromServer,
@@ -95,7 +86,7 @@ export function useChannelReadState(
   ]);
 
   useEffect(() => {
-    if (!profileId || !tokenReady) return;
+    if (!profileId) return;
     if (reconnectVersion === 0 && conversationsLoadedRef.current) return;
 
     const loadConversationUnreads = async () => {
@@ -103,8 +94,7 @@ export function useChannelReadState(
         process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
 
       try {
-        const token = await getToken();
-        const authHeaders = getExpressAuthHeaders(profileId, token);
+        const authHeaders = getExpressAuthHeaders(profileId);
 
         const res = await fetch(
           `${socketUrl}/conversation-read-state/unreads`,
@@ -139,9 +129,7 @@ export function useChannelReadState(
     loadConversationUnreads();
   }, [
     profileId,
-    tokenReady,
     reconnectVersion,
-    getToken,
     initializeDmFromServer,
     replaceDmFromServer,
   ]);
@@ -169,8 +157,7 @@ export function useChannelReadState(
         const socketUrl =
           process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
 
-        const token = await getToken();
-        const authHeaders = getExpressAuthHeaders(profileId, token);
+        const authHeaders = getExpressAuthHeaders(profileId);
 
         const endpoint = isConversation
           ? `${socketUrl}/conversation-read-state/${roomId}/read`
@@ -187,7 +174,6 @@ export function useChannelReadState(
     },
     [
       profileId,
-      getToken,
       clearUnread,
       clearDmUnread,
       clearMention,

@@ -2,6 +2,7 @@ import { currentProfile } from "@/lib/current-profile";
 import { redirect } from "next/navigation";
 import { SessionGuard } from "@/components/auth/session-guard";
 import { getServerSession } from "@/lib/auth/server-session";
+import { AuthenticatedAppProviders } from "@/components/providers/authenticated-app-providers";
 
 /**
  * Main layout auth gate (server-side).
@@ -35,7 +36,11 @@ const MainLayout = async ({ children }: { children: React.ReactNode }) => {
     return redirect(`/banned?${params.toString()}`);
   }
 
-  return <div className="h-full">{children}</div>;
+  return (
+    <AuthenticatedAppProviders>
+      <div className="h-full">{children}</div>
+    </AuthenticatedAppProviders>
+  );
 };
 
 export default MainLayout;

@@ -3,19 +3,17 @@
 import { useEffect, useRef } from "react";
 import { detectBoardLanguages } from "@/lib/detect-language";
 import { fetchWithRetry } from "@/lib/fetch-with-retry";
-import { useTokenReady } from "@/components/providers/token-manager-provider";
 import { useSession } from "@/lib/better-auth-client";
 
 export function useLanguageSync() {
   const { data: session, isPending } = useSession();
-  const tokenReady = useTokenReady();
   const syncedRef = useRef(false);
 
   const isLoaded = !isPending;
   const isSignedIn = Boolean(session?.user?.id);
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn || !tokenReady) return;
+    if (!isLoaded || !isSignedIn) return;
     if (syncedRef.current) return;
 
     const syncLanguages = async () => {
@@ -37,5 +35,5 @@ export function useLanguageSync() {
     };
 
     syncLanguages();
-  }, [isLoaded, isSignedIn, tokenReady]);
+  }, [isLoaded, isSignedIn]);
 }

@@ -20,12 +20,9 @@ interface ExpressFetchOptions extends Omit<RequestInit, "headers"> {
 
 export function getExpressAuthHeaders(
   profileId: string,
-  token?: string | null,
 ): Record<string, string> {
-
   if (IS_PRODUCTION) {
-    // Cookie session is primary; Bearer is optional and only used for legacy compatibility.
-    return token ? { Authorization: `Bearer ${token}` } : {};
+    return {};
   }
 
   // Development: use x-profile-id for faster iteration.
@@ -36,10 +33,9 @@ export function getExpressAuthHeaders(
 export async function expressFetch(
   url: string,
   profileId: string,
-  token?: string | null,
   options: ExpressFetchOptions = {},
 ): Promise<Response> {
-  const authHeaders = getExpressAuthHeaders(profileId, token);
+  const authHeaders = getExpressAuthHeaders(profileId);
 
   return fetch(url, {
     ...options,
@@ -59,13 +55,12 @@ export interface ExpressAxiosConfig {
 
 export function getExpressAxiosConfig(
   profileId: string,
-  token?: string | null,
   additionalHeaders?: Record<string, string>,
 ): ExpressAxiosConfig {
   return {
     withCredentials: true,
     headers: {
-      ...getExpressAuthHeaders(profileId, token),
+      ...getExpressAuthHeaders(profileId),
       ...additionalHeaders,
     },
   };

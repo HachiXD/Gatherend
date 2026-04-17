@@ -6,13 +6,11 @@ import axios from "axios";
 import qs from "query-string";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Profile } from "@prisma/client";
 import type { ClientProfile } from "@/hooks/use-current-profile";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { useTranslation } from "@/i18n";
-import { useTokenGetter } from "@/components/providers/token-manager-provider";
 import { getExpressAxiosConfig } from "@/lib/express-fetch";
 
 const formSchema = z.object({
@@ -37,7 +35,6 @@ export const ChatItemEditForm = memo(function ChatItemEditForm({
   onCancel,
 }: ChatItemEditFormProps) {
   const { t } = useTranslation();
-  const getToken = useTokenGetter();
   const editInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -77,8 +74,7 @@ export const ChatItemEditForm = memo(function ChatItemEditForm({
         query: socketQuery,
       });
 
-      const token = await getToken();
-      await axios.patch(url, values, getExpressAxiosConfig(currentProfile.id, token));
+      await axios.patch(url, values, getExpressAxiosConfig(currentProfile.id));
 
       onCancel();
     } catch (error) {

@@ -2,10 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import { useTokenGetter } from "@/components/providers/token-manager-provider";
 import { getExpressAxiosConfig } from "@/lib/express-fetch";
-
-const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
 interface AddReactionVariables {
   emoji: string;
@@ -25,7 +22,6 @@ interface RemoveReactionVariables {
 
 export const useAddReaction = () => {
   const queryClient = useQueryClient();
-  const getToken = useTokenGetter();
 
   return useMutation({
     mutationFn: async ({
@@ -36,9 +32,6 @@ export const useAddReaction = () => {
       channelId,
       conversationId,
     }: AddReactionVariables) => {
-      // Get token from TokenManager (cached + auto-refresh)
-      const token = IS_PRODUCTION ? await getToken() : undefined;
-
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/reactions`,
         {
@@ -48,7 +41,7 @@ export const useAddReaction = () => {
           channelId,
           conversationId,
         },
-        getExpressAxiosConfig(profileId, token)
+        getExpressAxiosConfig(profileId)
       );
       return response.data;
     },
@@ -73,7 +66,6 @@ export const useAddReaction = () => {
 
 export const useRemoveReaction = () => {
   const queryClient = useQueryClient();
-  const getToken = useTokenGetter();
 
   return useMutation({
     mutationFn: async ({
@@ -82,13 +74,10 @@ export const useRemoveReaction = () => {
       channelId,
       conversationId,
     }: RemoveReactionVariables) => {
-      // Get token in production
-      const token = IS_PRODUCTION ? await getToken() : undefined;
-
       await axios.delete(
         `${process.env.NEXT_PUBLIC_API_URL}/reactions/${reactionId}`,
         {
-          ...getExpressAxiosConfig(profileId, token),
+          ...getExpressAxiosConfig(profileId),
           data: {
             channelId,
             conversationId,

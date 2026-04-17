@@ -28,7 +28,6 @@ import {
   FormattedConversation,
   conversationsQueryKey,
 } from "@/hooks/use-conversations";
-import { useTokenGetter } from "@/components/providers/token-manager-provider";
 import { getExpressAxiosConfig } from "@/lib/express-fetch";
 import type {
   ClientAttachmentAsset,
@@ -164,9 +163,6 @@ const ChatInputComponent = ({
     }
   }, []);
 
-  // Auth for HTTP calls
-  const getToken = useTokenGetter();
-
   // Determine upload context based on chat type
   const uploadContext =
     type === "conversation" ? "dm_attachment" : "message_attachment";
@@ -269,7 +265,6 @@ const ChatInputComponent = ({
   }, []);
 
   const prevCauseRef = useRef<{
-    getToken: unknown;
     startUpload: unknown;
     startTyping: unknown;
     stopTyping: unknown;
@@ -281,7 +276,6 @@ const ChatInputComponent = ({
   } | null>(null);
 
   const currentCause = {
-    getToken,
     startUpload,
     startTyping,
     stopTyping,
@@ -295,8 +289,6 @@ const ChatInputComponent = ({
   const changedCause: string[] = [];
   const prevCause = prevCauseRef.current;
 
-  if (!prevCause || prevCause.getToken !== currentCause.getToken)
-    changedCause.push("getTokenRef");
   if (!prevCause || prevCause.startUpload !== currentCause.startUpload)
     changedCause.push("startUploadRef");
   if (!prevCause || prevCause.startTyping !== currentCause.startTyping)
@@ -465,9 +457,8 @@ const ChatInputComponent = ({
         payload.replyToId = replyingTo.id;
       }
 
-      const token = await getToken();
       await axios
-        .post(url, payload, getExpressAxiosConfig(currentProfile.id, token))
+        .post(url, payload, getExpressAxiosConfig(currentProfile.id))
         .then((response) => {
           // Use HTTP response to confirm the message immediately
           // This prevents the race condition where socket event arrives late
@@ -642,14 +633,13 @@ const ChatInputComponent = ({
         query,
       });
 
-      const token = await getToken();
       await axios.post(
         url,
         {
           attachmentAssetId: fileToSend.assetId,
           content: fileToSend.name,
         },
-        getExpressAxiosConfig(currentProfile.id, token),
+        getExpressAxiosConfig(currentProfile.id),
       );
 
       // Update conversation lastMessage cache for SPA preview
@@ -724,12 +714,11 @@ const ChatInputComponent = ({
         query,
       });
 
-      const token = await getToken();
       await axios
         .post(
           url,
           { stickerId: sticker.id, tempId },
-          getExpressAxiosConfig(currentProfile.id, token),
+          getExpressAxiosConfig(currentProfile.id),
         )
         .then((response) => {
           // Use HTTP response to confirm the message immediately

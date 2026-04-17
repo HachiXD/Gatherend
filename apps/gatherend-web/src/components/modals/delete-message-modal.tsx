@@ -14,13 +14,11 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import axios from "axios";
 import { useTranslation } from "@/i18n";
-import { useTokenGetter } from "@/components/providers/token-manager-provider";
 import { getExpressAxiosConfig } from "@/lib/express-fetch";
 
 export const DeleteMessageModal = () => {
   const { isOpen, onClose, type, data } = useModal();
   const { t } = useTranslation();
-  const getToken = useTokenGetter();
 
   const isModalOpen = isOpen && type === "deleteMessage";
   const { apiUrl, query, profileId } = data;
@@ -35,9 +33,8 @@ export const DeleteMessageModal = () => {
         query: query as StringifiableRecord | undefined,
       });
 
-      const token = await getToken();
       await axios.delete(url, {
-        ...getExpressAxiosConfig(profileId || "", token),
+        ...getExpressAxiosConfig(profileId || ""),
       });
 
       onClose();

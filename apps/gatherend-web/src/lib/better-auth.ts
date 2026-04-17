@@ -1,11 +1,21 @@
 import { betterAuth } from "better-auth";
+import type { BetterAuthPlugin } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
+import { captcha } from "better-auth/plugins";
 import { db } from "./db";
+import { isDisposableEmailAddress } from "./auth/disposable-email";
 import { sendEmail } from "./email/send-email";
 import { generateRandomUsername } from "./username/random";
 
 const isDevelopment = process.env.NODE_ENV === "development";
+const turnstileSecretKey = process.env.TURNSTILE_SECRET_KEY;
+const isProductionBuild = process.env.NEXT_PHASE === "phase-production-build";
+
+if (!isDevelopment && !isProductionBuild && !turnstileSecretKey) {
+  throw new Error("TURNSTILE_SECRET_KEY is required in production.");
+}
 
 function buildDefaultName(email: string): string {
   // `User.name` is required by Better Auth's core user schema, but our product
@@ -45,6 +55,49 @@ const trustedOrigins = Array.from(
 );
 
 const appName = "Gatherend";
+
+function disposableEmailGuard(): BetterAuthPlugin {
+  return {
+    id: "disposable-email-guard",
+    hooks: {
+      before: [
+        {
+          matcher: (context) => context.path === "/sign-up/email",
+          handler: createAuthMiddleware(async (ctx) => {
+            const email =
+              ctx.body &&
+              typeof ctx.body === "object" &&
+              "email" in ctx.body &&
+              typeof ctx.body.email === "string"
+                ? ctx.body.email
+                : "";
+
+            if (email && isDisposableEmailAddress(email)) {
+              throw APIError.from("UNPROCESSABLE_ENTITY", {
+                message: "Failed to create account. Please try again.",
+                code: "FAILED_TO_CREATE_ACCOUNT",
+              });
+            }
+          }),
+        },
+      ],
+    },
+  };
+}
+
+const plugins = [
+  ...(turnstileSecretKey
+    ? [
+        captcha({
+          provider: "cloudflare-turnstile",
+          secretKey: turnstileSecretKey,
+          endpoints: ["/sign-up/email"],
+        }),
+      ]
+    : []),
+  disposableEmailGuard(),
+  nextCookies(),
+];
 
 export const auth = betterAuth({
   database: prismaAdapter(db, {
@@ -165,8 +218,14 @@ export const auth = betterAuth({
     enabled: true,
     window: 60,
     max: 10,
+    customRules: {
+      "/get-session": {
+        window: 60,
+        max: 50,
+      },
+    },
   },
-  plugins: [nextCookies()],
+  plugins,
 });
 
 export type BetterAuthSession = typeof auth.$Infer.Session;

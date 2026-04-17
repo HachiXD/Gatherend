@@ -37,7 +37,6 @@ import {
   type ServerMessage,
 } from "@/hooks/use-optimistic-messages";
 import qs from "query-string";
-import { useTokenGetter } from "@/components/providers/token-manager-provider";
 import { getExpressAuthHeaders } from "@/lib/express-fetch";
 import type {
   ClientAttachmentAsset,
@@ -532,7 +531,6 @@ const ChatItemOptimizedComponent = ({
 
   const { t } = useTranslation();
   const resolvedTheme = useEffectiveThemeMode();
-  const getToken = useTokenGetter();
   const getRetryData = useMessageRetryStore((state) => state.getRetryData);
   const removeRetryData = useMessageRetryStore(
     (state) => state.removeRetryData,
@@ -642,12 +640,11 @@ const ChatItemOptimizedComponent = ({
         }
       }
 
-      const token = await getToken();
       const res = await fetch(url, {
         method: "POST",
         credentials: "include",
         headers: {
-          ...getExpressAuthHeaders(effectiveData.profileId, token),
+          ...getExpressAuthHeaders(effectiveData.profileId),
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
@@ -685,7 +682,6 @@ const ChatItemOptimizedComponent = ({
     removeRetryData,
     addOptimisticMessage,
     setRetryData,
-    getToken,
     confirmOptimisticMessage,
   ]);
 

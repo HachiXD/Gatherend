@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo } from "react";
 import qs from "query-string";
 import { getExpressAuthHeaders } from "@/lib/express-fetch";
-import { useTokenGetter } from "@/components/providers/token-manager-provider";
 import type { ChatMessage } from "./types";
 import {
   chatMessageWindowStore,
@@ -101,7 +100,6 @@ export function useChatMessageWindow({
   profileId,
   boardId,
 }: UseChatMessageWindowProps): ChatMessageWindowApi {
-  const getToken = useTokenGetter();
   const state = useChatMessageWindowStoreSelector(
     windowKey,
     (s) => ({
@@ -167,17 +165,16 @@ export function useChatMessageWindow({
         },
       });
 
-      const token = await getToken();
       const res = await fetch(url, {
         credentials: "include",
-        headers: getExpressAuthHeaders(profileId, token),
+        headers: getExpressAuthHeaders(profileId),
       });
       if (!res.ok) {
         throw new Error(`Failed to fetch: ${res.status}`);
       }
       return res.json();
     },
-    [apiUrl, boardId, getToken, paramKey, paramValue, profileId],
+    [apiUrl, boardId, paramKey, paramValue, profileId],
   );
 
   const fetchVisibleMessagesByIds = useCallback(
@@ -190,12 +187,11 @@ export function useChatMessageWindow({
         },
       });
 
-      const token = await getToken();
       const res = await fetch(url, {
         method: "POST",
         credentials: "include",
         headers: {
-          ...getExpressAuthHeaders(profileId, token),
+          ...getExpressAuthHeaders(profileId),
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ ids }),
@@ -205,7 +201,7 @@ export function useChatMessageWindow({
       }
       return res.json();
     },
-    [apiUrl, boardId, getToken, paramKey, paramValue, profileId],
+    [apiUrl, boardId, paramKey, paramValue, profileId],
   );
 
   const ensureInitial = useCallback(() => {
@@ -385,7 +381,6 @@ export function useChatMessageWindow({
 
       if (startState.after.length > 0) {
         chatMessageWindowStore.restoreNewerFromCache(windowKey, batch);
-        const endState = chatMessageWindowStore.get(windowKey);
         return { ok: true, kind: "cache" as const };
       }
 
@@ -410,7 +405,6 @@ export function useChatMessageWindow({
             previousCursor: page.previousCursor ?? null,
           },
         );
-        const endState = chatMessageWindowStore.get(windowKey);
         return { ok: true, kind: "network" as const };
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);

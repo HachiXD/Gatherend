@@ -25,7 +25,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "@/i18n";
 import { cn } from "@/lib/utils";
 import axios from "axios";
-import { useTokenGetter } from "@/components/providers/token-manager-provider";
 import { getExpressAxiosConfig } from "@/lib/express-fetch";
 import type {
   ClientAttachmentAsset,
@@ -123,7 +122,6 @@ export const ChatItemActions = memo(function ChatItemActions({
   const { t } = useTranslation();
   const { mutate: addReaction } = useAddReaction();
   const { mutate: removeReaction } = useRemoveReaction();
-  const getToken = useTokenGetter();
   const canHover = useMemo(() => {
     const mq = window.matchMedia?.("(hover: hover) and (pointer: fine)");
     return mq?.matches ?? false;
@@ -186,18 +184,17 @@ export const ChatItemActions = memo(function ChatItemActions({
         ? `/api/messages/${id}/pin?channelId=${channelId}`
         : `/api/direct-messages/${id}/pin?conversationId=${conversationId}`;
 
-      const token = await getToken();
       if (isPinned) {
         await axios.delete(
           url,
-          getExpressAxiosConfig(currentProfile.id, token),
+          getExpressAxiosConfig(currentProfile.id),
         );
         setIsPinned(false);
       } else {
         await axios.post(
           url,
           {},
-          getExpressAxiosConfig(currentProfile.id, token),
+          getExpressAxiosConfig(currentProfile.id),
         );
         setIsPinned(true);
       }

@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Languages } from "@prisma/client";
 import { JsonValue } from "@prisma/client/runtime/library";
 import { fetchWithRetry } from "@/lib/fetch-with-retry";
-import { useTokenReady } from "@/components/providers/token-manager-provider";
 import { useSession } from "@/lib/better-auth-client";
 import type { ChatBubbleStyle } from "@/lib/chat-bubble-style";
 import type { ProfileCardConfig } from "@/lib/profile-card-config";
@@ -46,14 +45,13 @@ export interface ClientProfile {
 
 export function useCurrentProfile() {
   const { data: session, isPending } = useSession();
-  const tokenReady = useTokenReady();
   const isSignedIn = Boolean(session?.user?.id);
   const isLoaded = !isPending;
 
   return useQuery<ClientProfile>({
     queryKey: ["current-profile"],
     queryFn: async () => {
-      if (!isLoaded || !tokenReady) {
+      if (!isLoaded) {
         throw new Error("Auth not loaded");
       }
 
@@ -74,6 +72,6 @@ export function useCurrentProfile() {
     },
     staleTime: 1000 * 60 * 5,
     retry: false,
-    enabled: isLoaded && isSignedIn && tokenReady,
+    enabled: isLoaded && isSignedIn,
   });
 }

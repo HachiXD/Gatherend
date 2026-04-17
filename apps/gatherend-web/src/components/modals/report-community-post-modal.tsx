@@ -13,9 +13,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import axios from "axios";
 import { cn } from "@/lib/utils";
-import { FileWarning } from "lucide-react";
 import { useTranslation } from "@/i18n";
-import { useTokenGetter } from "@/components/providers/token-manager-provider";
 import { getExpressAuthHeaders } from "@/lib/express-fetch";
 
 type ReportCategory =
@@ -30,7 +28,6 @@ type ReportCategory =
 export const ReportCommunityPostModal = () => {
   const { isOpen, onClose, type, data } = useModal();
   const { t } = useTranslation();
-  const getToken = useTokenGetter();
 
   const isPostModal = type === "reportCommunityPost";
   const isCommentModal = type === "reportCommunityPostComment";
@@ -135,7 +132,6 @@ export const ReportCommunityPostModal = () => {
       setIsLoading(true);
       setError(null);
 
-      const token = await getToken();
       await axios.post(
         "/api/reports",
         {
@@ -165,7 +161,7 @@ export const ReportCommunityPostModal = () => {
           targetOwnerId,
         },
         {
-          headers: getExpressAuthHeaders(profileId, token),
+          headers: getExpressAuthHeaders(profileId),
         },
       );
 

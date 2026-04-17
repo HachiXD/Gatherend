@@ -15,7 +15,6 @@ import axios from "axios";
 import { cn } from "@/lib/utils";
 
 import { useTranslation } from "@/i18n";
-import { useTokenGetter } from "@/components/providers/token-manager-provider";
 import { getExpressAuthHeaders } from "@/lib/express-fetch";
 
 type ReportCategory =
@@ -30,7 +29,6 @@ type ReportCategory =
 export const ReportMessageModal = () => {
   const { isOpen, onClose, type, data } = useModal();
   const { t } = useTranslation();
-  const getToken = useTokenGetter();
 
   const REPORT_CATEGORIES = [
     {
@@ -108,7 +106,6 @@ export const ReportMessageModal = () => {
       setIsLoading(true);
       setError(null);
 
-      const token = await getToken();
       await axios.post(
         "/api/reports",
         {
@@ -136,7 +133,7 @@ export const ReportMessageModal = () => {
           conversationId,
         },
         {
-          headers: getExpressAuthHeaders(profileId, token),
+          headers: getExpressAuthHeaders(profileId),
         },
       );
 

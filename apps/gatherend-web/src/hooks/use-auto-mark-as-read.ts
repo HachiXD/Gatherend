@@ -4,7 +4,6 @@ import { useEffect, useCallback, useRef } from "react";
 import { useUnreadStore, addPendingRead, removePendingRead } from "./use-unread-store";
 import { useMentionStore } from "./use-mention-store";
 import { useProfile } from "@/components/app-shell/providers/profile-provider";
-import { useTokenGetter } from "@/components/providers/token-manager-provider";
 import { getExpressAuthHeaders } from "@/lib/express-fetch";
 
 /**
@@ -22,7 +21,6 @@ export function useAutoMarkAsRead(
   isConversation: boolean = false,
 ) {
   const profile = useProfile();
-  const getToken = useTokenGetter();
   const clearUnread = useUnreadStore((state) => state.clearUnread);
   const clearDmUnread = useUnreadStore((state) => state.clearDmUnread);
   const setViewingRoom = useUnreadStore((state) => state.setViewingRoom);
@@ -42,8 +40,7 @@ export function useAutoMarkAsRead(
         const socketUrl =
           process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
 
-        const token = await getToken();
-        const authHeaders = getExpressAuthHeaders(profile.id, token);
+        const authHeaders = getExpressAuthHeaders(profile.id);
 
         const endpoint = isConv
           ? `${socketUrl}/conversation-read-state/${roomIdToMark}/read`
@@ -61,7 +58,7 @@ export function useAutoMarkAsRead(
         removePendingRead(roomIdToMark);
       }
     },
-    [profile?.id, getToken],
+    [profile?.id],
   );
 
   // Efecto principal: marcar como leído al entrar, limpiar al salir

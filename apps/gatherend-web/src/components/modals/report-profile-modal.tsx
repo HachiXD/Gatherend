@@ -16,7 +16,6 @@ import { cn } from "@/lib/utils";
 
 import { UserAvatar } from "@/components/user-avatar";
 import { useTranslation } from "@/i18n";
-import { useTokenGetter } from "@/components/providers/token-manager-provider";
 import { getExpressAuthHeaders } from "@/lib/express-fetch";
 
 type ReportCategory =
@@ -31,7 +30,6 @@ type ReportCategory =
 export const ReportProfileModal = () => {
   const { isOpen, onClose, type, data } = useModal();
   const { t } = useTranslation();
-  const getToken = useTokenGetter();
 
   const REPORT_CATEGORIES = [
     {
@@ -105,7 +103,6 @@ export const ReportProfileModal = () => {
       setIsLoading(true);
       setError(null);
 
-      const token = await getToken();
       await axios.post(
         "/api/reports",
         {
@@ -122,7 +119,7 @@ export const ReportProfileModal = () => {
           targetOwnerId: reportProfileId, // The profile owner is the target itself
         },
         {
-          headers: getExpressAuthHeaders(profileId, token),
+          headers: getExpressAuthHeaders(profileId),
         }
       );
 

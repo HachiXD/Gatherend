@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,8 @@ import { signIn, signUp } from "@/lib/better-auth-client";
 import { generateRandomUsername } from "@/lib/username/random";
 
 type SignUpStep = "details" | "verification";
+
+const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 function extractErrorMessage(err: unknown, fallback: string): string {
   if (err instanceof Error && err.message) {
@@ -61,6 +64,13 @@ export const CustomSignUp = () => {
   const [passwordError, setPasswordError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstileRef = useRef<TurnstileInstance | undefined>(undefined);
+
+  const resetTurnstile = () => {
+    setTurnstileToken("");
+    turnstileRef.current?.reset();
+  };
 
   const handleSignUpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,16 +106,26 @@ export const CustomSignUp = () => {
     setIsLoading(true);
 
     try {
-      const result = await signUp.email({
-        name: buildDefaultName(email.trim()),
-        email: email.trim(),
-        password,
-        callbackURL: "/sign-in?verified=1",
-      });
+      const result = await signUp.email(
+        {
+          name: buildDefaultName(email.trim()),
+          email: email.trim(),
+          password,
+          callbackURL: "/sign-in?verified=1",
+        },
+        turnstileToken
+          ? {
+              headers: {
+                "x-captcha-response": turnstileToken,
+              },
+            }
+          : undefined,
+      );
 
       const resultError = (result as { error?: { message?: string } }).error;
       if (resultError?.message) {
-        setError(resultError.message);
+        setError(t.auth.failedToCreateAccount);
+        resetTurnstile();
         return;
       }
 
@@ -123,7 +143,9 @@ export const CustomSignUp = () => {
 
       setStep("verification");
     } catch (err: unknown) {
-      setError(extractErrorMessage(err, t.auth.failedToCreateAccount));
+      void err;
+      setError(t.auth.failedToCreateAccount);
+      resetTurnstile();
     } finally {
       setIsLoading(false);
     }
@@ -167,6 +189,7 @@ export const CustomSignUp = () => {
                 onChange={(e) => {
                   setEmail(e.target.value);
                   setEmailError("");
+                  setError("");
                 }}
                 className="mt-1 bg-zinc-900/50 border-zinc-600 focus-visible:ring-1 focus-visible:border-[#109e92] focus-visible:ring-[#109e92]"
                 disabled={isLoading}
@@ -187,6 +210,7 @@ export const CustomSignUp = () => {
                   onChange={(e) => {
                     setPassword(e.target.value);
                     setPasswordError("");
+                    setError("");
                   }}
                   className="bg-zinc-900/50 border-zinc-600 focus-visible:ring-1 focus-visible:border-[#109e92] focus-visible:ring-[#109e92] pr-10"
                   disabled={isLoading}
@@ -212,10 +236,35 @@ export const CustomSignUp = () => {
               </div>
             )}
 
+            {turnstileSiteKey ? (
+              <div className="flex justify-center">
+                <Turnstile
+                  ref={turnstileRef}
+                  siteKey={turnstileSiteKey}
+                  onSuccess={setTurnstileToken}
+                  onExpire={() => setTurnstileToken("")}
+                  onError={() => setTurnstileToken("")}
+                  onTimeout={() => setTurnstileToken("")}
+                  options={{
+                    action: "sign-up",
+                    appearance: "always",
+                    execution: "render",
+                    size: "normal",
+                    theme: "dark",
+                  }}
+                />
+              </div>
+            ) : null}
+
             <Button
               type="submit"
               className="w-full bg-[#368780] cursor-pointer hover:bg-[#17968b] text-white"
-              disabled={isLoading || !email || !password}
+              disabled={
+                isLoading ||
+                !email ||
+                !password ||
+                Boolean(turnstileSiteKey && !turnstileToken)
+              }
             >
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               {t.auth.continue}

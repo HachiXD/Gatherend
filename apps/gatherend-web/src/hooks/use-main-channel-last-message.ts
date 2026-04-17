@@ -1,14 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { useSocketClient } from "@/components/providers/socket-provider";
-import { useTokenGetter } from "@/components/providers/token-manager-provider";
 import { getExpressAuthHeaders } from "@/lib/express-fetch";
 import type {
   ClientAttachmentAsset,
 } from "@/types/uploaded-assets";
 import type { ChannelMessage } from "@/hooks/chat/types";
-
-const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
 interface LastMessageData extends ChannelMessage {
   hasAttachment?: boolean;
@@ -33,7 +30,6 @@ export const useMainChannelLastMessage = ({
 }: UseMainChannelLastMessageProps) => {
   const { socket } = useSocketClient();
   const queryClient = useQueryClient();
-  const getToken = useTokenGetter();
 
   const queryKey = useMemo(
     () => ["channel-last-message", channelId],
@@ -43,14 +39,12 @@ export const useMainChannelLastMessage = ({
   const { data: lastMessage, isLoading } = useQuery<LastMessageData | null>({
     queryKey,
     queryFn: async () => {
-      // Get token from TokenManager (cached + auto-refresh)
-      const token = IS_PRODUCTION ? await getToken() : undefined;
       if (!boardId) return null;
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/messages?channelId=${channelId}&boardId=${boardId}&limit=1`,
         {
           credentials: "include",
-          headers: getExpressAuthHeaders(profileId, token),
+          headers: getExpressAuthHeaders(profileId),
         },
       );
       if (!response.ok) return null;

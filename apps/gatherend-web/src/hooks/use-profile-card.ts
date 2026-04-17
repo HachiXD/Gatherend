@@ -4,7 +4,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import type { UsernameFormatConfig } from "@/lib/username-format";
 import type { ProfileCardConfig } from "@/lib/profile-card-config";
-import { useTokenGetter } from "@/components/providers/token-manager-provider";
 import { getExpressAxiosConfig } from "@/lib/express-fetch";
 import type {
   ClientStickerAssetRef,
@@ -49,15 +48,12 @@ export const useProfileCard = (
   currentProfileId: string,
   enabled: boolean = false
 ) => {
-  const getToken = useTokenGetter();
-
   return useQuery<ProfileCard>({
     queryKey: ["profile-card", profileId],
     queryFn: async () => {
-      const token = await getToken();
       const response = await axios.get(
         `${SOCKET_URL}/profiles/${profileId}/card`,
-        getExpressAxiosConfig(currentProfileId, token),
+        getExpressAxiosConfig(currentProfileId),
       );
       return response.data;
     },

@@ -3,10 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { logger } from "@/lib/logger";
-import { useTokenGetter } from "@/components/providers/token-manager-provider";
 import { getExpressAxiosConfig } from "@/lib/express-fetch";
-
-const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
 interface UploadStickerVariables {
   formData: FormData;
@@ -15,7 +12,6 @@ interface UploadStickerVariables {
 
 export const useUploadSticker = () => {
   const queryClient = useQueryClient();
-  const getToken = useTokenGetter();
 
   return useMutation({
     mutationFn: async ({ formData, profileId }: UploadStickerVariables) => {
@@ -26,11 +22,8 @@ export const useUploadSticker = () => {
         throw new Error("API URL not configured");
       }
 
-      // Get token from TokenManager (cached + auto-refresh)
-      const token = IS_PRODUCTION ? await getToken() : undefined;
-
       const response = await axios.post(`${apiUrl}/stickers`, formData, {
-        ...getExpressAxiosConfig(profileId, token, {
+        ...getExpressAxiosConfig(profileId, {
           "Content-Type": "multipart/form-data",
         }),
       });
@@ -49,16 +42,12 @@ interface DeleteStickerVariables {
 
 export const useDeleteSticker = () => {
   const queryClient = useQueryClient();
-  const getToken = useTokenGetter();
 
   return useMutation({
     mutationFn: async ({ stickerId, profileId }: DeleteStickerVariables) => {
-      // Get token from TokenManager (cached + auto-refresh)
-      const token = IS_PRODUCTION ? await getToken() : undefined;
-
       await axios.delete(
         `${process.env.NEXT_PUBLIC_API_URL}/stickers/${stickerId}`,
-        getExpressAxiosConfig(profileId, token)
+        getExpressAxiosConfig(profileId)
       );
     },
     onSuccess: () => {

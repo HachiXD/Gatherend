@@ -12,7 +12,6 @@ import {
 import { io as ClientIO, Socket } from "socket.io-client";
 import { logger } from "@/lib/logger";
 import { fetchWithRetry as fetchWithRetryCentral } from "@/lib/fetch-with-retry";
-import { useTokenGetter, useTokenReady } from "./token-manager-provider";
 import { useSession } from "@/lib/better-auth-client";
 import { useProfileUpdatesSocket } from "@/hooks/use-profile-updates-socket";
 
@@ -66,8 +65,6 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const { data: session, isPending } = useSession();
   const isLoaded = !isPending;
   const isSignedIn = Boolean(session?.user?.id);
-  const getToken = useTokenGetter();
-  const tokenManagerReady = useTokenReady();
 
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -126,7 +123,6 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const prevDepsRef = useRef({
     isLoaded: false,
     isSignedIn: false,
-    tokenManagerReady: false,
   });
   useEffect(() => {
     const prev = prevDepsRef.current;
@@ -135,20 +131,10 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       changes.push(`isLoaded: ${prev.isLoaded} → ${isLoaded}`);
     if (prev.isSignedIn !== isSignedIn)
       changes.push(`isSignedIn: ${prev.isSignedIn} → ${isSignedIn}`);
-    if (prev.tokenManagerReady !== tokenManagerReady)
-      changes.push(
-        `tokenManagerReady: ${prev.tokenManagerReady} → ${tokenManagerReady}`,
-      );
     if (changes.length > 0) {
     }
-    prevDepsRef.current = { isLoaded, isSignedIn, tokenManagerReady };
-  }, [isLoaded, isSignedIn, tokenManagerReady]);
-
-  // Ref para getToken para evitar stale closures en el auth callback
-  const getTokenRef = useRef(getToken);
-  useEffect(() => {
-    getTokenRef.current = getToken;
-  }, [getToken, isLoaded, isSignedIn, tokenManagerReady]);
+    prevDepsRef.current = { isLoaded, isSignedIn };
+  }, [isLoaded, isSignedIn]);
 
   // Función para marcar offline explícitamente (logout)
   const goOffline = useCallback(() => {
@@ -158,8 +144,8 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    // No inicializar socket si no está autenticado o token manager no está listo
-    if (!isLoaded || !isSignedIn || !tokenManagerReady) {
+    // No inicializar socket si no está autenticado
+    if (!isLoaded || !isSignedIn) {
       return;
     }
 
@@ -177,14 +163,6 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       try {
-        // Token can be null in BetterAuth mode until Express dual auth is enabled.
-        const token = await getTokenRef.current();
-        if (!token && process.env.NODE_ENV === "production") {
-          logger.warn(
-            "[Socket] Missing bearer token in production; continuing with profile-based auth fallback",
-          );
-        }
-
         // Obtener el profileId del usuario autenticado (with retry for Turbopack)
         const profileResponse = await fetchWithRetry("/api/profile");
 
@@ -234,16 +212,8 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         const newSocket = ClientIO(socketOrigin, {
           path: socketPath,
           addTrailingSlash: false,
-          auth: async (cb) => {
-            // Get fresh token on every connection/reconnection attempt
-            // Use ref to always get the latest getToken function (avoid stale closure)
-            try {
-              const freshToken = await getTokenRef.current();
-              cb({ token: freshToken, profileId: profileData.id });
-            } catch (error) {
-              logger.error("Failed to get fresh token for socket auth:", error);
-              cb({ token: null, profileId: profileData.id });
-            }
+          auth: (cb) => {
+            cb({ profileId: profileData.id });
           },
           transports: ["websocket", "polling"],
           reconnection: true,
@@ -298,7 +268,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
           }
         });
 
-        newSocket.on("reconnect", (attemptNumber: number) => {
+        newSocket.on("reconnect", () => {
           setIsConnected(true);
           // Re-establecer el socket para que los hooks se re-suscriban si es necesario
           setSocket(socketRef.current);
@@ -329,8 +299,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       clearTimeout(initTimeout);
     };
-    // Note: getToken is intentionally NOT in deps - we use getTokenRef to avoid recreating socket
-  }, [isLoaded, isSignedIn, tokenManagerReady, startHeartbeat, stopHeartbeat]);
+  }, [isLoaded, isSignedIn, startHeartbeat, stopHeartbeat]);
 
   // Handler para cierre de página - emitir logout antes de cerrar
   // Uses socketRef.current as single source of truth
