@@ -112,7 +112,7 @@ export async function askModuleConfig(
   console.log("");
   console.log(chalk.cyan.bold("  == Email (SMTP) =="));
   const hasSmtp = await confirm({
-    message: "Do you have SMTP configured? (needed for email verification)",
+    message: "Do you have SMTP configured? (needed for password reset and optional email verification)",
     default: false,
   });
 

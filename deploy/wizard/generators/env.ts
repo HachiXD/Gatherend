@@ -78,6 +78,7 @@ export function generateMainEnv(config: WizardConfig): string {
     `# --- Auth ---`,
     `BETTER_AUTH_SECRET=${config.betterAuthSecret}`,
     `BETTER_AUTH_URL=${url}`,
+    `EMAIL_VERIFICATION_ENABLED=false`,
     `INTERNAL_API_SECRET=${config.internalApiSecret}`,
     ``,
     `# --- Cloudflare ---`,

@@ -22,7 +22,7 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 
 ## Email (SMTP)
 
-Better Auth sends password reset + email verification emails via SMTP. Any provider works (Gmail, Postmark, SES, Resend, Mailpit, etc.).
+Better Auth sends password reset emails via SMTP. Email verification emails also use SMTP when `EMAIL_VERIFICATION_ENABLED=true`. Any provider works (Gmail, Postmark, SES, Resend, Mailpit, etc.).
 
 Add these to `apps/gatherend-web/.env`:
 
@@ -33,6 +33,7 @@ SMTP_USER=you@gmail.com
 SMTP_PASS=your-app-password
 SMTP_FROM=you@gmail.com
 SMTP_FROM_NAME=Gatherend
+EMAIL_VERIFICATION_ENABLED=false
 ```
 
 ## Learn More

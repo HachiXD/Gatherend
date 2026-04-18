@@ -6,6 +6,7 @@ import { nextCookies } from "better-auth/next-js";
 import { captcha } from "better-auth/plugins";
 import { db } from "./db";
 import { isDisposableEmailAddress } from "./auth/disposable-email";
+import { isEmailVerificationEnabled } from "./auth/email-verification-flag";
 import { sendEmail } from "./email/send-email";
 import { generateRandomUsername } from "./username/random";
 
@@ -55,6 +56,7 @@ const trustedOrigins = Array.from(
 );
 
 const appName = "Gatherend";
+const emailVerificationEnabled = isEmailVerificationEnabled();
 
 function disposableEmailGuard(): BetterAuthPlugin {
   return {
@@ -106,21 +108,25 @@ export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
   secret: process.env.BETTER_AUTH_SECRET,
   trustedOrigins,
-  emailVerification: {
-    sendOnSignIn: true,
-    sendVerificationEmail: async ({ user, url }) => {
-      await sendEmail({
-        to: user.email,
-        subject: `Verify your email for ${appName}`,
-        textBody: `Verify your email by opening this link:\n\n${url}\n\nIf you didn't request this, you can ignore this email.`,
-        htmlBody: `<p>Verify your email by opening this link:</p><p><a href="${url}">${url}</a></p><p>If you didn't request this, you can ignore this email.</p>`,
-        tag: "email-verification",
-      });
-    },
-  },
+  ...(emailVerificationEnabled
+    ? {
+        emailVerification: {
+          sendOnSignIn: true,
+          sendVerificationEmail: async ({ user, url }) => {
+            await sendEmail({
+              to: user.email,
+              subject: `Verify your email for ${appName}`,
+              textBody: `Verify your email by opening this link:\n\n${url}\n\nIf you didn't request this, you can ignore this email.`,
+              htmlBody: `<p>Verify your email by opening this link:</p><p><a href="${url}">${url}</a></p><p>If you didn't request this, you can ignore this email.</p>`,
+              tag: "email-verification",
+            });
+          },
+        },
+      }
+    : {}),
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: true,
+    requireEmailVerification: emailVerificationEnabled,
     onExistingUserSignUp: async ({ user }) => {
       const signInUrl = `${process.env.BETTER_AUTH_URL}/sign-in`;
       await sendEmail({
