@@ -1,10 +1,10 @@
 # Gatherend
 
-Hi xD, this is Gatherend, a real-time communication platform designed for micro-communities of 1 to 49 people to make socializing easier.
+Hi xD, this is Gatherend, a real-time communication platform designed for communities.
 
 ## Features
 
-Gatherend provides real-time voice with screen and video sharing, real-time chat organized by channels, image sharing, customizable app themes, custom sticker uploads, direct messaging, and the ability to join or create boards. And the main feature: In Gatherend there are no boards bigger than 49 members :D!
+Gatherend provides real-time voice with screen and video sharing, real-time chat organized by channels, image sharing, customizable app themes, custom sticker uploads, direct messaging, and the ability to join or create boards.
 
 ## Tech Stack and Annotations
 
