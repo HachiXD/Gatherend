@@ -4,17 +4,17 @@ import { useReducer, useCallback, useMemo } from "react";
 import { DEFAULT_USERNAME_COLOR } from "@/lib/theme/presets";
 import { normalizeUsernameGradientStops } from "@/lib/username-gradient-stops";
 import type { GradientColorStop } from "@/components/ui/gradient-slider";
-import type { UsernameColor } from "../types";
+import type {
+  EditableGradientColorStop,
+  UsernameColor,
+  UsernameColorState,
+} from "../username-color-types";
 
 let usernameGradientStopCounter = 0;
 
 function createUsernameGradientStopId(): string {
  usernameGradientStopCounter += 1;
  return `username-gradient-stop-${usernameGradientStopCounter}`;
-}
-
-export interface EditableGradientColorStop extends GradientColorStop {
- editorId: string;
 }
 
 function clampGradientAngle(angle: number): number {
@@ -48,16 +48,6 @@ function stripEditableGradientStops(
  color,
  position,
  }));
-}
-
-export interface UsernameColorState {
- mode: "solid" | "gradient";
- solidColor: string;
- gradientColors: EditableGradientColorStop[];
- gradientAngle: number;
- gradientAnimated: boolean;
- animationType: "shift" | "shimmer" | "pulse";
- selectedGradientId: string | null;
 }
 
 type UsernameColorAction =

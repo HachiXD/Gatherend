@@ -13,7 +13,7 @@ import {
   type RefObject,
 } from "react";
 import { MemberRole } from "@prisma/client";
-import type { BoardCurrentMember } from "@/components/providers/board-provider";
+import type { BoardCurrentMember } from "@/lib/boards/board-types";
 import { UserAvatarMenu } from "../user-avatar-menu";
 import { AvatarGroupHoverContext, UserAvatar } from "../user-avatar";
 import { FileIcon } from "lucide-react";

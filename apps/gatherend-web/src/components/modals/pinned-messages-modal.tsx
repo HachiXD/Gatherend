@@ -124,19 +124,18 @@ export const PinnedMessagesModal = () => {
         className="max-w-[560px]! overflow-hidden rounded-lg border border-theme-border bg-theme-bg-modal p-0 text-theme-text-subtle"
         closeButtonClassName="cursor-pointer rounded-md p-1 text-theme-text-subtle opacity-100 transition hover:bg-theme-bg-cancel-button hover:text-theme-text-light data-[state=open]:bg-transparent data-[state=open]:text-theme-text-subtle focus:ring-0 focus:ring-offset-0 focus:outline-none"
       >
-        <DialogHeader className="px-5 pt-5 -mt-2">
-          <DialogTitle className="flex items-center gap-2 text-[22px] font-medium leading-none text-theme-text-primary">
-            <Pin className="h-4.5 w-4.5 text-theme-text-subtle" />
+        <DialogHeader className="px-5 pt-5 -mt-1 -mb-2 pb-0">
+          <DialogTitle className="flex items-center -mb-2.5 gap-2 text-[22px] font-medium leading-none text-theme-text-primary">
             {t.modals.pinnedMessages.title}
           </DialogTitle>
-          <DialogDescription className="pt-1 text-[14px] leading-5 text-theme-text-subtle">
+          <DialogDescription className="pt-2.5 pb-1.5 text-[14px] leading-5 text-theme-text-subtle">
             {isLoading
               ? t.common.loading
               : `${pinnedMessages.length} ${t.modals.pinnedMessages.messageCount}`}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="px-5 pt-0 pb-4">
+        <div className="px-5 pt-0 pb-0">
           <div className="rounded-lg border border-theme-border bg-theme-bg-edit-form/35 p-2.5">
             <div className="scrollbar-ultra-thin max-h-[420px] overflow-y-auto pr-1">
               {isLoading ? (
@@ -214,7 +213,8 @@ export const PinnedMessagesModal = () => {
                               <img
                                 src={message.attachmentAsset.url}
                                 alt={
-                                  message.attachmentAsset.originalName || "Image"
+                                  message.attachmentAsset.originalName ||
+                                  "Image"
                                 }
                                 className="absolute inset-0 h-full w-full object-cover"
                                 loading="lazy"
@@ -223,7 +223,9 @@ export const PinnedMessagesModal = () => {
                             </div>
                           ) : message.attachmentAsset?.url ? (
                             <div className="mt-1.5 inline-flex max-w-full rounded-md border border-theme-border bg-theme-bg-modal/60 px-2 py-1 text-sm text-theme-accent-primary">
-                              <span className="truncate">{message.fileName}</span>
+                              <span className="truncate">
+                                {message.fileName}
+                              </span>
                             </div>
                           ) : (
                             <p

@@ -4,7 +4,8 @@ import { useModal } from "@/hooks/use-modal-store";
 import { useOverlayStore } from "@/hooks/use-overlay-store";
 import { useUnreadStore } from "@/hooks/use-unread-store";
 import { useMentionStore } from "@/hooks/use-mention-store";
-import { boardQueryKey, removeBoardMembersCache } from "@/hooks/board-cache";
+import { boardQueryKey } from "@/lib/boards/board-query";
+import { removeBoardMembersCache } from "@/hooks/board-cache";
 
 interface BoardSwitchLike {
   isClientNavigationEnabled: boolean;

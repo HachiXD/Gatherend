@@ -14,7 +14,7 @@ import { useState } from "react";
 import axios from "axios";
 import { useQueryClient } from "@tanstack/react-query";
 import { communityPostsKey } from "@/hooks/discovery/posts-feed/use-community-posts-feed";
-import type { BoardWithData } from "@/components/providers/board-provider";
+import type { BoardWithData } from "@/lib/boards/board-types";
 
 import { useTranslation } from "@/i18n";
 

@@ -2,11 +2,11 @@
 
 import { QueryClient, useQuery } from "@tanstack/react-query";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
-import type { BoardWithData } from "@/components/providers/board-provider";
+import type { BoardWithData } from "@/lib/boards/board-types";
 import {
   BOARD_CACHE_GC_TIME_MS,
   BOARD_CACHE_STALE_TIME_MS,
-} from "@/hooks/board-cache";
+} from "@/lib/boards/board-query";
 
 export interface UserBoard {
   id: string;

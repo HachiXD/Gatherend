@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { LeftbarBanner } from "./leftbar-banner";
 import { MemberRole } from "@prisma/client";
-import type { BoardWithData } from "@/components/providers/board-provider";
+import type { BoardWithData } from "@/lib/boards/board-types";
 import { VoiceControlBar } from "@/components/voice-control-bar";
 import {
   Star,

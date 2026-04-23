@@ -43,7 +43,7 @@ export function CustomUserButton() {
   const userName = profile.username || "User";
   const discriminator = profile.discriminator || null;
   const menuRowClass =
-    "h-8 w-full cursor-pointer rounded-lg border border-transparent px-3 py-2 text-left text-sm text-theme-text-secondary hover:border-theme-border hover:bg-theme-bg-secondary/30 focus:border-theme-border focus:bg-theme-bg-secondary/30";
+    "h-8 w-full cursor-pointer rounded-lg border border-transparent px-3 py-2 text-left text-[15px] text-theme-text-secondary hover:border-theme-border hover:bg-theme-bg-secondary/30 focus:border-theme-border focus:bg-theme-bg-secondary/30";
   const identityPlateClass =
     "rounded-lg border border-theme-border bg-theme-bg-secondary/25 px-2.5 py-1";
 
@@ -57,7 +57,9 @@ export function CustomUserButton() {
     setIsThemeModalOpen(true);
   };
 
-  const themeConfig = normalizeThemeConfig(parseThemeConfig(profile.themeConfig));
+  const themeConfig = normalizeThemeConfig(
+    parseThemeConfig(profile.themeConfig),
+  );
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -87,7 +89,7 @@ export function CustomUserButton() {
         <div
           className={cn(
             "absolute right-0 top-full mt-2",
-            "w-56 rounded-lg",
+            "w-64 rounded-lg",
             "bg-theme-bg-dropdown-menu-primary",
             "border border-theme-border",
             "z-50",
@@ -106,7 +108,7 @@ export function CustomUserButton() {
                 animationMode="never"
               />
               <div className={cn("min-w-0 flex-1", identityPlateClass)}>
-                <p className="truncate border-b border-theme-border pb-0.5 text-sm font-semibold text-theme-text-primary">
+                <p className="truncate border-b border-theme-border pb-0.5 text-[15px] font-semibold text-theme-text-primary">
                   {userName}
                   {discriminator && (
                     <span className="text-theme-text-tertiary font-normal">
@@ -114,27 +116,29 @@ export function CustomUserButton() {
                     </span>
                   )}
                 </p>
-                <p className="truncate pt-0.5 text-[11px] text-theme-text-tertiary">
-                  {profile.email}
-                </p>
+                {discriminator && (
+                  <p className="truncate pt-0.5 text-[14px] text-theme-text-tertiary">
+                    /{discriminator}
+                  </p>
+                )}
               </div>
             </div>
           </div>
 
           {/* Menu Options */}
-          <div className="px-1 py-0.5">
+          <div className="p-1">
             <button
               onClick={handleProfileClick}
               className={cn(menuRowClass, "flex items-center gap-2")}
             >
-              <SquarePen className="w-4 h-4" />
+              <SquarePen className="size-4.5" />
               {t.userMenu.profile}
             </button>
             <button
               onClick={handleThemeClick}
               className={cn(menuRowClass, "flex items-center gap-2")}
             >
-              <Palette className="w-4 h-4" />
+              <Palette className="size-4.5" />
               {t.userMenu.myTheme}
             </button>
           </div>
@@ -147,7 +151,6 @@ export function CustomUserButton() {
         onClose={() => setIsThemeModalOpen(false)}
         currentThemeConfig={themeConfig}
       />
-
     </div>
   );
 }

@@ -10,14 +10,14 @@ import type {
   BoardWithData,
   BoardChannel,
   BoardCurrentMember,
-} from "@/components/providers/board-provider";
-import { useBoardNavigationStore } from "@/stores/board-navigation-store";
-import { syncUserBoardFromBoardData } from "@/hooks/use-user-boards";
+} from "@/lib/boards/board-types";
 import {
   BOARD_CACHE_GC_TIME_MS,
   BOARD_CACHE_STALE_TIME_MS,
   boardQueryKey,
-} from "@/hooks/board-cache";
+} from "@/lib/boards/board-query";
+import { useBoardNavigationStore } from "@/stores/board-navigation-store";
+import { syncUserBoardFromBoardData } from "@/hooks/use-user-boards";
 
 /**
  * Hook para obtener datos del board desde React Query cache

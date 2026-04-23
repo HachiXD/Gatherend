@@ -2,13 +2,21 @@
 
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useSocketClient, useSocketRecoveryVersion } from "@/components/providers/socket-provider";
+import {
+  useSocketClient,
+  useSocketRecoveryVersion,
+} from "@/components/providers/socket-context";
 import {
   applyProfilePatchToAllCaches,
   type ProfilePatch,
 } from "./profile-patch-utils";
-import { getTrackedProfileIds } from "./use-profile-room-subscriptions";
+import { getTrackedProfileIds } from "@/lib/profile-watch-registry";
 import axios from "axios";
+
+type ProfileUpdatedPayload = {
+  profileId?: unknown;
+  patch?: unknown;
+};
 
 // Sync profiles from server after reconnection
 async function syncProfilesOnReconnect(
@@ -38,7 +46,7 @@ export function useProfileUpdatesSocket() {
   useEffect(() => {
     if (!socket) return;
 
-    const handleProfileUpdated = (payload: any) => {
+    const handleProfileUpdated = (payload: ProfileUpdatedPayload) => {
       const profileId = payload?.profileId;
       const patch = payload?.patch as ProfilePatch | undefined;
       if (typeof profileId !== "string" || !profileId) return;

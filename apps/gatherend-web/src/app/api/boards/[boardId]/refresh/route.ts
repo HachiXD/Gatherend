@@ -85,7 +85,6 @@ export async function POST(
         select: {
           id: true,
           refreshedAt: true,
-          isPrivate: true,
         },
       });
 
@@ -93,28 +92,6 @@ export async function POST(
     });
 
     // Emitir evento de discovery si el board es público
-    if (result.isPrivate === false) {
-      const socketUrl = `${process.env.SOCKET_SERVER_URL}/emit-to-room`;
-      const roomName = `discovery:board:${result.id}`;
-
-      // Fire-and-forget - no bloquear la respuesta
-      fetch(socketUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Internal-Secret": process.env.INTERNAL_API_SECRET || "",
-        },
-        body: JSON.stringify({
-          room: roomName,
-          event: "discovery:board-bumped",
-          data: { boardId: result.id },
-        }),
-        signal: AbortSignal.timeout(3000),
-      }).catch((err) => {
-        console.error("Error emitiendo discovery:board-bumped:", err);
-      });
-    }
-
     return NextResponse.json({
       success: true,
       boardId: result.id,

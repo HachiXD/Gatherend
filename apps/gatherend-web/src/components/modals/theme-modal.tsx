@@ -17,14 +17,9 @@ import {
   GradientSlider,
   type GradientColorStop,
 } from "@/components/ui/gradient-slider";
-import {
-  isValidHexColor,
-  clampGradientColor,
-} from "@/lib/theme/utils";
+import { isValidHexColor, clampGradientColor } from "@/lib/theme/utils";
 import { normalizeThemeConfig, parseThemeConfig } from "@/lib/theme/runtime";
-import {
-  normalizeThemeGradientColorStops,
-} from "@/lib/theme/gradient-stops";
+import { normalizeThemeGradientColorStops } from "@/lib/theme/gradient-stops";
 import { DEFAULT_BASE_COLOR, THEME_PRESETS } from "@/lib/theme/presets";
 import type { ThemeConfig, ThemeMode } from "@/lib/theme/types";
 import { toast } from "sonner";
@@ -45,11 +40,11 @@ interface EditableGradientColorStop extends GradientColorStop {
 }
 
 const sectionLabelClass =
-  "block uppercase text-xs font-bold text-theme-text-subtle";
+  "block uppercase text-[14px] font-medium text-theme-text-subtle";
 const panelSectionClass =
   "space-y-2 rounded-lg border border-theme-border-subtle bg-theme-bg-edit-form/30 px-3 py-2";
 const fieldInputClass =
-  "h-8 rounded-lg border-theme-border-subtle bg-theme-bg-edit-form/50 text-theme-text-light placeholder:text-theme-text-muted focus-visible:border-theme-border-subtle";
+  "h-8 rounded-lg text-[15px] border-theme-border-subtle bg-theme-bg-edit-form/50 text-theme-text-light placeholder:text-theme-text-muted focus-visible:border-theme-border-subtle";
 const panelToggleActiveClass =
   "border-theme-channel-type-active-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text";
 const panelSelectTriggerClass =
@@ -449,20 +444,23 @@ export function ThemeModal({
   };
 
   // Update gradient color (clamped to mode lightness range)
-  const updateGradientColor = useCallback((editorId: string, color: string) => {
-    const newColors = normalizeEditableGradientColors(
-      gradientColors.map((stop) =>
-        stop.editorId === editorId
-          ? {
-              ...stop,
-              color: clampGradientColor(color, themeMode),
-            }
-          : stop,
-      ),
-    );
-    // Aplicar clamp según el modo del tema
-    setGradientColors(newColors);
-  }, [gradientColors, themeMode]);
+  const updateGradientColor = useCallback(
+    (editorId: string, color: string) => {
+      const newColors = normalizeEditableGradientColors(
+        gradientColors.map((stop) =>
+          stop.editorId === editorId
+            ? {
+                ...stop,
+                color: clampGradientColor(color, themeMode),
+              }
+            : stop,
+        ),
+      );
+      // Aplicar clamp según el modo del tema
+      setGradientColors(newColors);
+    },
+    [gradientColors, themeMode],
+  );
 
   // Handle gradient colors change from slider (with clamping)
   const handleGradientColorsChange = (
@@ -517,12 +515,12 @@ export function ThemeModal({
 
   return (
     <div
-      className="fixed top-16 right-4 z-50 w-[356px] overflow-hidden rounded-lg border border-theme-border bg-theme-bg-dropdown-menu-primary text-theme-text-subtle shadow-xl animate-in fade-in slide-in-from-top-2 duration-200"
+      className="fixed top-12.5 right-4 z-50 w-[356px] overflow-hidden rounded-lg border border-theme-border bg-theme-bg-dropdown-menu-primary text-theme-text-subtle shadow-xl animate-in fade-in slide-in-from-top-2 duration-200"
       onClick={(e) => e.stopPropagation()}
     >
       {/* Header */}
-      <div className="flex items-center justify-between border-b py-0 border-theme-border bg-theme-bg-secondary/40 px-4 h-8">
-        <h3 className="text-[15px] font-bold tracking-[0.04em] text-theme-text-light">
+      <div className="flex items-center justify-between border-b py-5 border-theme-border bg-theme-bg-secondary/40 px-4 h-8">
+        <h3 className="text-[18px] font-bold leading-none tracking-[0.04em] text-theme-text-light">
           {t.modals.theme.title}
         </h3>
         <button
@@ -551,7 +549,7 @@ export function ThemeModal({
                 type="color"
                 value={baseColor}
                 onChange={(e) => setBaseColor(e.target.value)}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                className="absolute  inset-0 w-full h-full opacity-0 cursor-pointer"
                 aria-label="Selector de color base"
               />
             </div>

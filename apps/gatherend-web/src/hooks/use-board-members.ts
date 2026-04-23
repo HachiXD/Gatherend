@@ -13,7 +13,7 @@ import {
   BOARD_CACHE_GC_TIME_MS,
   BOARD_CACHE_STALE_TIME_MS,
   boardMembersQueryKey,
-} from "@/hooks/board-cache";
+} from "@/lib/boards/board-query";
 
 export type BoardMembersPageSlot =
   | { type: "rendered"; pageIndex: number; page: BoardMembersPage }

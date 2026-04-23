@@ -3,7 +3,7 @@
 import { memo, useCallback, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MemberRole } from "@prisma/client";
-import type { BoardCurrentMember } from "@/components/providers/board-provider";
+import type { BoardCurrentMember } from "@/lib/boards/board-types";
 import type { ClientProfile } from "@/hooks/use-current-profile";
 import {
   Edit,

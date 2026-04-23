@@ -13,7 +13,7 @@ import { LogOut, PlusCircle, Settings, UserPlus, Menu } from "lucide-react";
 import { useModal } from "@/hooks/use-modal-store";
 import { useOverlayStore } from "@/hooks/use-overlay-store";
 import { FEATURES } from "@/lib/features";
-import type { BoardWithData } from "@/components/providers/board-provider";
+import type { BoardWithData } from "@/lib/boards/board-types";
 import { getBoardImageUrl, isDicebearUrl } from "@/lib/avatar-utils";
 import { useTranslation } from "@/i18n";
 import { getOptimizedStaticUiImageUrl } from "@/lib/ui-image-optimizer";
@@ -53,7 +53,7 @@ export const LeftbarBanner = ({
   const isModerator = isAdmin || role === MemberRole.MODERATOR;
   const menuPanelShadow = "";
   const menuRowClass =
-    "h-9 cursor-pointer rounded-lg border border-transparent px-3 py-2 text-base hover:border-theme-border hover:bg-theme-bg-secondary/30 focus:border-theme-border focus:bg-theme-bg-secondary/30";
+    "h-9 cursor-pointer rounded-lg border border-transparent px-3 py-2 text-[15px] hover:border-theme-border hover:bg-theme-bg-secondary/30 focus:border-theme-border focus:bg-theme-bg-secondary/30";
   const menuDangerRowClass =
     "h-9 cursor-pointer rounded-lg border border-rose-500/20 bg-rose-500/6 px-3 py-2 text-sm text-rose-400 hover:border-rose-500/35 hover:bg-rose-500/10 focus:border-rose-500/35 focus:bg-rose-500/10";
 
@@ -143,7 +143,7 @@ export const LeftbarBanner = ({
                     className={`${menuRowClass} text-theme-menu-accent-text`}
                   >
                     {t.board.invitePeople}
-                    <UserPlus className="ml-auto size-5.5 text-theme-menu-accent-text" />
+                    <UserPlus className="ml-auto size-5 text-theme-menu-accent-text" />
                   </DropdownMenuItem>
                 )}
                 {isModerator && (
@@ -157,7 +157,7 @@ export const LeftbarBanner = ({
                     className={menuRowClass}
                   >
                     {t.board.boardSettings}
-                    <Settings className="ml-auto size-5.5" />
+                    <Settings className="ml-auto size-5" />
                   </DropdownMenuItem>
                 )}
                 {FEATURES.CATEGORIES_ENABLED && isModerator && (
@@ -166,7 +166,7 @@ export const LeftbarBanner = ({
                     className={menuRowClass}
                   >
                     {t.board.createCategory}
-                    <PlusCircle className="ml-auto size-5.5" />
+                    <PlusCircle className="ml-auto size-5" />
                   </DropdownMenuItem>
                 )}
                 {isAdmin && (
@@ -177,7 +177,7 @@ export const LeftbarBanner = ({
                     className={menuRowClass}
                   >
                     {t.board.createRoom}
-                    <PlusCircle className="ml-auto size-5.5" />
+                    <PlusCircle className="ml-auto size-5" />
                   </DropdownMenuItem>
                 )}
                 {!isOwner && (
@@ -189,7 +189,7 @@ export const LeftbarBanner = ({
                     className={menuDangerRowClass}
                   >
                     {t.board.leaveBoard}
-                    <LogOut className="ml-auto size-5.5 text-rose-400" />
+                    <LogOut className="ml-auto size-5 text-rose-400" />
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>

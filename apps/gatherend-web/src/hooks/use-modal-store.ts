@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { Channel, ChannelType } from "@prisma/client";
-import type { BoardWithData } from "@/components/providers/board-provider";
+import type { BoardWithData } from "@/lib/boards/board-types";
 import type {
   ClientAttachmentAsset,
   ClientProfileSummary,

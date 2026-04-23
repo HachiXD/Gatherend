@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/file-upload";
 import { useUpload } from "@/hooks/use-upload";
 import { communityPostsKey } from "@/hooks/discovery/posts-feed/use-community-posts-feed";
-import type { BoardWithData } from "@/components/providers/board-provider";
+import type { BoardWithData } from "@/lib/boards/board-types";
 import { useTranslation } from "@/i18n";
 
 import { getStoredUploadAssetId } from "@/lib/upload-values";

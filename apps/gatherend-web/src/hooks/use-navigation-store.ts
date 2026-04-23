@@ -1,7 +1,10 @@
 "use client";
 
 import { create } from "zustand";
-import type { BoardViewTarget } from "@/stores/board-navigation-store";
+import type {
+  BoardViewTarget,
+  SwitchBoardOptions,
+} from "@/lib/navigation/navigation-types";
 
 /**
  * Store global para navegación SPA
@@ -12,11 +15,6 @@ import type { BoardViewTarget } from "@/stores/board-navigation-store";
  * El BoardSwitchProvider registra sus funciones de navegación aquí,
  * y otros componentes pueden llamarlas sin necesitar acceso directo al contexto.
  */
-
-type SwitchBoardOptions = {
-  history?: "push" | "replace";
-  persist?: boolean;
-};
 
 interface NavigationState {
   // Función de navegación registrada por BoardSwitchProvider

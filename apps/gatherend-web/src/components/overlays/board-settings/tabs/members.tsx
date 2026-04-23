@@ -26,11 +26,11 @@ import axios from "axios";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "@/i18n";
 import { cn } from "@/lib/utils";
-import type { BoardWithData } from "@/components/providers/board-provider";
+import type { BoardWithData } from "@/lib/boards/board-types";
+import { boardQueryKey } from "@/lib/boards/board-query";
 import { toast } from "sonner";
 import { useBoardMembers } from "@/hooks/use-board-members";
 import {
-  boardQueryKey,
   patchBoardMemberInCache,
   removeBoardMemberFromCache,
 } from "@/hooks/board-cache";

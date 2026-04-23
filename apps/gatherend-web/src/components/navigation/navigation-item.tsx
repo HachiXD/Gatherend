@@ -13,8 +13,8 @@ import { AtSign } from "lucide-react";
 import { fetchWithRetry } from "@/lib/fetch-with-retry";
 import { getOptimizedStaticUiImageUrl } from "@/lib/ui-image-optimizer";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
-import type { BoardWithData } from "@/components/providers/board-provider";
-import type { BoardViewTarget } from "@/stores/board-navigation-store";
+import type { BoardWithData } from "@/lib/boards/board-types";
+import type { BoardViewTarget } from "@/lib/navigation/navigation-types";
 
 const STORAGE_DOMAIN = process.env.NEXT_PUBLIC_STORAGE_DOMAIN || "";
 

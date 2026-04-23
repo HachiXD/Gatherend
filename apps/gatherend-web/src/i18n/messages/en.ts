@@ -279,7 +279,7 @@ export const en: TranslationKeys = {
     deletedComment: "Deleted comment",
     deletedCommentInline: "deleted comment",
     openCommentActions: "Open comment actions",
-    reportComment: "Report comment",
+    reportComment: "Report",
     loadingComments: "Loading comments...",
     hideOmittedComments: "Hide omitted comments",
     expandOmittedComments: (count: number) =>
@@ -669,7 +669,7 @@ export const en: TranslationKeys = {
       save: "Save",
       reset: "Reset",
       mode: "Mode",
-      colors: "Colors",
+      colors: "Gradient",
       angle: "Angle",
       type: "Type",
     },
@@ -736,14 +736,11 @@ export const en: TranslationKeys = {
         sexualContent: "Sexual Content",
         sexualContentDescription:
           "The board title, image, or description contains sexual content",
-        sexualContentMessageDescription:
-          "This message contains sexual content",
+        sexualContentMessageDescription: "This message contains sexual content",
         sexualContentProfileDescription:
           "This user's profile or content contains sexual material",
-        sexualContentPostDescription:
-          "This post contains sexual content",
-        sexualContentCommentDescription:
-          "This comment contains sexual content",
+        sexualContentPostDescription: "This post contains sexual content",
+        sexualContentCommentDescription: "This comment contains sexual content",
         harassment: "Harassment",
         harassmentDescription:
           "The board title, image, or description is abusive or targeted",
@@ -791,14 +788,11 @@ export const en: TranslationKeys = {
         other: "Other",
         otherDescription:
           "Another issue with the board title, image, or description",
-        otherMessageDescription:
-          "Another issue with this message",
+        otherMessageDescription: "Another issue with this message",
         otherProfileDescription:
           "Another issue with this user's profile or behavior",
-        otherPostDescription:
-          "Another issue with this post",
-        otherCommentDescription:
-          "Another issue with this comment",
+        otherPostDescription: "Another issue with this post",
+        otherCommentDescription: "Another issue with this comment",
       },
     },
   },

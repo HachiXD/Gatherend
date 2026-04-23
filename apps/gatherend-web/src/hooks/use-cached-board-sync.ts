@@ -4,10 +4,14 @@ import { useSocketClient, useSocketRecoveryVersion } from "@/components/provider
 import { acquireBoardRoom, releaseBoardRoom, rejoinBoardRooms } from "@/hooks/board-room-subscriptions";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
-import type { BoardWithData, BoardChannel, BoardCurrentMember } from "@/components/providers/board-provider";
+import type {
+  BoardWithData,
+  BoardChannel,
+  BoardCurrentMember,
+} from "@/lib/boards/board-types";
 import { useEffect, useRef } from "react";
+import { boardQueryKey } from "@/lib/boards/board-query";
 import {
-  boardQueryKey,
   patchBoardMemberByProfileIdInCache,
   removeBoardMemberFromCache,
 } from "@/hooks/board-cache";

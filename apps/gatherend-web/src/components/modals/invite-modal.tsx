@@ -102,7 +102,7 @@ export const InviteModal = () => {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="px-5 py-0 -mb-0.5 flex flex-col gap-3">
+        <div className="px-5 py-0 -mb-1 flex flex-col gap-3">
           {/* Toggle invitaciones */}
           <div className="flex flex-col gap-0.5">
             <Label className="text-[14px] uppercase tracking-[0.08em] font-medium text-theme-text-subtle">
@@ -184,7 +184,7 @@ export const InviteModal = () => {
               onClick={onRegenerate}
               disabled={isLoading || !board?.inviteEnabled}
               variant="ghost"
-              className="w-fit h-auto mt-1 cursor-pointer px-0 py-0 gap-1.5 text-[11px] text-theme-text-subtle hover:bg-transparent hover:text-theme-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-fit h-auto -ml-2.5 mt-1 cursor-pointer px-0 py-0 gap-1.5 text-[11px] text-theme-text-subtle hover:bg-transparent hover:text-theme-text-primary disabled:cursor-not-allowed disabled:opacity-50"
             >
               <RefreshCw className="h-3 w-3" />
               {t.modals.invite.generateNewLink}

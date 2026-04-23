@@ -282,7 +282,7 @@ export const es: TranslationKeys = {
     deletedComment: "Comentario eliminado",
     deletedCommentInline: "comentario eliminado",
     openCommentActions: "Abrir acciones del comentario",
-    reportComment: "Reportar comentario",
+    reportComment: "Reportar",
     loadingComments: "Cargando comentarios...",
     hideOmittedComments: "Ocultar comentarios omitidos",
     expandOmittedComments: (count: number) =>
@@ -676,7 +676,7 @@ export const es: TranslationKeys = {
       save: "Guardar",
       reset: "Restablecer",
       mode: "Modo",
-      colors: "Colores",
+      colors: "Degradado",
       angle: "Ángulo",
       type: "Tipo",
     },
@@ -748,8 +748,7 @@ export const es: TranslationKeys = {
           "Este mensaje contiene contenido sexual",
         sexualContentProfileDescription:
           "El perfil o contenido de este usuario contiene material sexual",
-        sexualContentPostDescription:
-          "Este post contiene contenido sexual",
+        sexualContentPostDescription: "Este post contiene contenido sexual",
         sexualContentCommentDescription:
           "Este comentario contiene contenido sexual",
         harassment: "Acoso",
@@ -799,14 +798,11 @@ export const es: TranslationKeys = {
         other: "Otro",
         otherDescription:
           "Otro problema con el título, imagen o descripción del board",
-        otherMessageDescription:
-          "Otro problema con este mensaje",
+        otherMessageDescription: "Otro problema con este mensaje",
         otherProfileDescription:
           "Otro problema con el perfil o comportamiento de este usuario",
-        otherPostDescription:
-          "Otro problema con este post",
-        otherCommentDescription:
-          "Otro problema con este comentario",
+        otherPostDescription: "Otro problema con este post",
+        otherCommentDescription: "Otro problema con este comentario",
       },
     },
   },

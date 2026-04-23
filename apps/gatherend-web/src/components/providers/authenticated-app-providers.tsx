@@ -3,6 +3,7 @@
 import { ModalProvider } from "@/components/providers/modal-provider";
 import { OverlayProvider } from "@/components/providers/overlay-provider";
 import { LanguageSyncProvider } from "@/components/providers/language-sync-provider";
+import { ProfileUpdatesListener } from "@/components/providers/profile-updates-listener";
 import { SocketProvider } from "@/components/providers/socket-provider";
 
 export function AuthenticatedAppProviders({
@@ -14,6 +15,7 @@ export function AuthenticatedAppProviders({
     <>
       <LanguageSyncProvider />
       <SocketProvider>
+        <ProfileUpdatesListener />
         <ModalProvider />
         <OverlayProvider />
         {children}

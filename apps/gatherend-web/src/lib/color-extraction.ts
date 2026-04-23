@@ -257,7 +257,7 @@ export function getButtonColors(dominantColor: string): ButtonColors {
 
 /**
  * Generate all derived colors from a dominant color.
- * Used by DiscoveryBoardCard for badges, buttons, scrollbars, etc.
+ * Used by discovery community cards for badges, buttons, scrollbars, etc.
  */
 export function getDerivedColors(dominantColor: string): DerivedColors {
   const rgb = parseRgb(dominantColor);

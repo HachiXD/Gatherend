@@ -1,5 +1,5 @@
 import { useCurrentBoardData } from "./use-board-data";
-import type { BoardWithData } from "@/components/providers/board-provider";
+import type { BoardWithData } from "@/lib/boards/board-types";
 import { useBoardNavigationStore } from "@/stores/board-navigation-store";
 
 interface UseBoardDataWithStalenessResult {

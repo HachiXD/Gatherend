@@ -38,7 +38,7 @@ import {
 import type {
   BoardWithData,
   BoardChannel,
-} from "@/components/providers/board-provider";
+} from "@/lib/boards/board-types";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 function getOptimisticChannelImageAsset(

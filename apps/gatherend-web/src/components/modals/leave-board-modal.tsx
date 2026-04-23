@@ -22,7 +22,8 @@ import {
 } from "@/hooks/use-user-boards";
 import { useUnreadStore } from "@/hooks/use-unread-store";
 import { useMentionStore } from "@/hooks/use-mention-store";
-import { boardQueryKey, removeBoardMembersCache } from "@/hooks/board-cache";
+import { boardQueryKey } from "@/lib/boards/board-query";
+import { removeBoardMembersCache } from "@/hooks/board-cache";
 
 export const LeaveBoardModal = () => {
   const { isOpen, onClose, type, data } = useModal();

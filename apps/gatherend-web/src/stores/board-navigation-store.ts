@@ -4,18 +4,14 @@ import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import { logger } from "@/lib/logger";
 import { useNavigationStore } from "@/hooks/use-navigation-store";
+import type {
+  BoardViewTarget,
+  SwitchBoardOptions,
+} from "@/lib/navigation/navigation-types";
 
 // LocalStorage helpers para memoria de ultima vista por board
 const LAST_BOARD_VIEW_STORAGE_KEY = "gatherend:lastBoardView:v2";
 const MAX_LAST_BOARD_VIEW_ENTRIES = 20;
-
-export type BoardViewTarget =
-  | { kind: "forum" }
-  | { kind: "rules" }
-  | { kind: "wiki" }
-  | { kind: "ranking" }
-  | { kind: "channels:list" }
-  | { kind: "channels:channel"; channelId: string };
 
 // Sub-vistas dentro de la sección Chats
 type ChatsViewTarget =
@@ -173,11 +169,6 @@ interface NavigationState {
   isWiki: boolean;
   isRanking: boolean;
 }
-
-type SwitchBoardOptions = {
-  history?: "push" | "replace";
-  persist?: boolean;
-};
 
 interface BoardNavigationStore extends NavigationState {
   // Initialization

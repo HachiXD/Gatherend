@@ -1,30 +1,16 @@
 import { Languages } from "@prisma/client";
 import type { UsernameFormatConfig } from "@/lib/username-format";
-import type { GradientColorStop } from "@/components/ui/gradient-slider";
 import type {
- EditableGradientColorStop,
- UsernameColorState,
-} from "./hooks/use-username-color-reducer";
+  EditableGradientColorStop,
+  UsernameColor,
+  UsernameColorState,
+} from "./username-color-types";
 import type { UsernameFormatState } from "./hooks/use-username-format-reducer";
 import type { ProfileTagsState } from "./hooks/use-profile-tags";
 import type { TranslationKeys } from "@/i18n/types";
 import type { ClientProfile } from "@/hooks/use-current-profile";
 
 // Types for Profile Tab Components
-
-export type UsernameColor =
- | {
- type: "solid";
- color: string;
- }
- | {
- type: "gradient";
- colors: GradientColorStop[];
- angle: number;
- animated?: boolean;
- animationType?: "shift" | "shimmer" | "pulse";
- }
- | null;
 
 // Extended profile type that includes customization fields
 export type ExtendedProfile = ClientProfile & {

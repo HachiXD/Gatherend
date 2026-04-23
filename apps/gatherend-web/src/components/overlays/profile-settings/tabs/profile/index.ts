@@ -15,11 +15,11 @@ export {
 } from "./details-sections";
 
 // Export types
+export type { UsernameColor } from "./username-color-types";
 export type {
- UsernameColor,
- ExtendedProfile,
- ProfileSectionProps,
- WithTranslations,
+  ExtendedProfile,
+  ProfileSectionProps,
+  WithTranslations,
  AvatarSectionProps,
  UsernameSectionProps,
  UsernameColorSectionProps,

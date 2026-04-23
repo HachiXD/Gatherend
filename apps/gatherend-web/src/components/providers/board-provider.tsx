@@ -2,56 +2,10 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, ReactNode } from "react";
-import { Board, Member, MemberRole, ChannelType } from "@prisma/client";
+import { MemberRole } from "@prisma/client";
 import { syncUserBoardFromBoardData } from "@/hooks/use-user-boards";
-import type { UsernameColor, UsernameFormatConfig } from "../../../types";
-import type {
-  ClientStickerAssetRef,
-  ClientUploadedAsset,
-} from "@/types/uploaded-assets";
-import { boardQueryKey } from "@/hooks/board-cache";
-
-// Tipos para el board con todas sus relaciones
-export type BoardChannel = {
-  id: string;
-  name: string;
-  type: ChannelType;
-  position: number;
-  boardId: string;
-  imageAsset: ClientUploadedAsset | null;
-  channelMemberCount: number;
-  isJoined: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-export type BoardMember = Member & {
-  activeWarningCount: number;
-  latestActiveWarningId: string | null;
-  profile: {
-    id: string;
-    username: string;
-    discriminator: string;
-    avatarAsset: ClientUploadedAsset | null;
-    usernameColor: UsernameColor;
-    profileTags: string[];
-    badge: string | null;
-    badgeSticker: ClientStickerAssetRef | null;
-    usernameFormat: UsernameFormatConfig | null;
-  };
-};
-
-export type BoardCurrentMember = Pick<
-  Member,
-  "id" | "role" | "profileId" | "boardId" | "level" | "xp" | "createdAt" | "updatedAt"
->;
-
-export type BoardWithData = Omit<Board, "memberCount"> & {
-  imageAsset: ClientUploadedAsset | null;
-  channels: BoardChannel[];
-  currentMember: BoardCurrentMember | null;
-  memberCount: number;
-};
+import type { BoardWithData } from "@/lib/boards/board-types";
+import { boardQueryKey } from "@/lib/boards/board-query";
 
 interface BoardContextValue {
   boardId: string;

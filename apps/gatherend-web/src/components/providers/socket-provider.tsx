@@ -1,9 +1,7 @@
 "use client";
 
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -13,7 +11,11 @@ import { io as ClientIO, Socket } from "socket.io-client";
 import { logger } from "@/lib/logger";
 import { fetchWithRetry as fetchWithRetryCentral } from "@/lib/fetch-with-retry";
 import { useSession } from "@/lib/better-auth-client";
-import { useProfileUpdatesSocket } from "@/hooks/use-profile-updates-socket";
+import {
+  SocketClientContext,
+  SocketConnectionContext,
+  SocketRecoveryContext,
+} from "./socket-context";
 
 // Environment check
 const IS_DEV = process.env.NODE_ENV === "development";
@@ -29,37 +31,12 @@ async function fetchWithRetry(
   return fetchWithRetryCentral(url, options);
 }
 
-type SocketClientContextType = {
-  socket: Socket | null;
-  goOffline: () => void; // Para logout explicito
-};
-
-const SocketClientContext = createContext<SocketClientContextType>({
-  socket: null,
-  goOffline: () => {},
-});
-
-const SocketConnectionContext = createContext<boolean>(false);
-const SocketRecoveryContext = createContext<number>(0);
-
-export const useSocketClient = () => {
-  return useContext(SocketClientContext);
-};
-
-export const useSocketConnection = () => {
-  return useContext(SocketConnectionContext);
-};
-
-export const useSocketRecoveryVersion = () => {
-  return useContext(SocketRecoveryContext);
-};
-
-// Backward-compatible hook for existing callers.
-export const useSocket = () => {
-  const { socket, goOffline } = useSocketClient();
-  const isConnected = useSocketConnection();
-  return { socket, isConnected, goOffline };
-};
+export {
+  useSocket,
+  useSocketClient,
+  useSocketConnection,
+  useSocketRecoveryVersion,
+} from "./socket-context";
 
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const { data: session, isPending } = useSession();
@@ -358,15 +335,9 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     <SocketClientContext.Provider value={socketClientValue}>
       <SocketConnectionContext.Provider value={isConnected}>
         <SocketRecoveryContext.Provider value={reconnectVersion}>
-          <ProfileUpdatesListener />
           {children}
         </SocketRecoveryContext.Provider>
       </SocketConnectionContext.Provider>
     </SocketClientContext.Provider>
   );
 };
-
-function ProfileUpdatesListener() {
-  useProfileUpdatesSocket();
-  return null;
-}

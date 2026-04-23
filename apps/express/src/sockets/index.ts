@@ -8,7 +8,6 @@ import {
 import { registerVoiceHandlers, handleVoiceDisconnect } from "./voice.socket.js";
 import { registerRoomHandlers } from "./rooms.socket.js";
 import { registerProfileHandlers } from "./profile.socket.js";
-import { registerDiscoveryHandlers } from "./discovery.socket.js";
 import { registerMessageSocket } from "../modules/messages/messages.socket.js";
 import { registerDirectMessageSocket } from "../modules/direct-messages/direct-messages.socket.js";
 import { db } from "../lib/db.js";
@@ -135,8 +134,6 @@ export function registerSocketHandlers(io: Server) {
     registerVoiceHandlers(io, socket);
     registerRoomHandlers(io, socket);
     registerProfileHandlers(io, socket);
-    registerDiscoveryHandlers(io, socket);
-
     // Handle disconnection
     socket.on("disconnect", async (reason) => {
       await handleVoiceDisconnect(io, socket, reason);

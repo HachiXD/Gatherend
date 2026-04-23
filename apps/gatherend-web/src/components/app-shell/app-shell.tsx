@@ -57,7 +57,7 @@ export const AppShell = memo(function AppShell({
         </div>
 
         {/* Board Leftbar - Solo desktop */}
-        <div className="hidden md:flex fixed left-[72px] top-0 w-[312px] h-screen z-20 flex-col bg-theme-bg-secondary border-r-[3px] border-y-[3px] border-theme-border-primary">
+        <div className="hidden md:flex fixed left-[72px] top-0 w-[300px] h-screen z-20 flex-col bg-theme-bg-secondary border-r-[3px] border-y-[3px] border-theme-border-primary">
           {leftbar}
         </div>
 
@@ -72,7 +72,7 @@ export const AppShell = memo(function AppShell({
 
         {/* Content - Con padding-top en móvil para el header fijo */}
         {/* El gradiente se aplica aquí cuando está habilitado, sino usa bgTertiary */}
-        <main className="app-shell-main h-full pt-14 md:pt-0 md:pl-[384px] md:pr-64 bg-theme-bg-tertiary flex flex-col overflow-hidden  border-t-[3px] border-theme-border-primary">
+        <main className="app-shell-main h-full pt-14 md:pt-0 md:pl-[372px] md:pr-64 bg-theme-bg-tertiary flex flex-col overflow-hidden  border-t-[3px] border-theme-border-primary">
           <div className="flex-1 min-h-0 overflow-hidden">{children}</div>
         </main>
 

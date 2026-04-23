@@ -2,12 +2,12 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
-import type { BoardWithData } from "@/components/providers/board-provider";
+import type { BoardWithData } from "@/lib/boards/board-types";
 import {
   BOARD_CACHE_GC_TIME_MS,
   BOARD_CACHE_STALE_TIME_MS,
   boardQueryKey,
-} from "@/hooks/board-cache";
+} from "@/lib/boards/board-query";
 
 /**
  * Hook para prefetch de datos del board usando TanStack Query

@@ -64,7 +64,7 @@ export const AddFriendModal = () => {
 
   const isModalOpen = isOpen && type === "addFriend";
   const fieldLabelClassName =
-    "text-[11px] font-semibold uppercase tracking-[0.08em] text-theme-text-subtle";
+    "text-[14px] font-medium uppercase tracking-[0.08em] text-theme-text-subtle";
 
   const [username, setUsername] = useState("");
   const [message, setMessage] = useState<{
@@ -174,36 +174,34 @@ export const AddFriendModal = () => {
         className="max-w-[460px]! overflow-hidden rounded-lg border border-theme-border bg-theme-bg-modal p-0 text-theme-text-subtle"
         closeButtonClassName="cursor-pointer rounded-md p-1 text-theme-text-subtle opacity-100 transition hover:bg-theme-bg-cancel-button hover:text-theme-text-light data-[state=open]:bg-transparent data-[state=open]:text-theme-text-subtle focus:ring-0 focus:ring-offset-0 focus:outline-none"
       >
-        <DialogHeader className="px-5 pt-5 -mt-2">
-          <DialogTitle className="text-[22px] font-medium leading-none text-theme-text-primary">
+        <DialogHeader className="px-5 pt-5 -mt-1 -mb-2 pb-0">
+          <DialogTitle className="text-[22px] -mb-2.5 font-medium leading-none text-theme-text-primary">
             {t.modals.addFriend.title}
           </DialogTitle>
-          <DialogDescription className="pt-1 text-[14px] leading-5 text-theme-text-subtle">
+          <DialogDescription className="pt-2.5 text-[14px] leading-5 text-theme-text-subtle">
             {t.modals.addFriend.subtitle}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
           <div className="flex flex-col gap-3 px-5 pt-0 pb-4">
-            <div className="rounded-lg border border-theme-border bg-theme-bg-edit-form/35 p-3">
-              <div className="space-y-1.5">
-                <Label
-                  htmlFor="add-friend-username"
-                  className={fieldLabelClassName}
-                >
-                  {t.modals.addFriend.inputLabel}
-                </Label>
-                <Input
-                  id="add-friend-username"
-                  name="add-friend-username"
-                  disabled={sendRequestMutation.isPending}
-                  className="h-9 rounded-lg border border-theme-border bg-theme-bg-edit-form/60 px-3 py-2 text-[14px] text-theme-text-primary focus-visible:border-theme-border-accent focus-visible:ring-0 focus-visible:ring-offset-0"
-                  placeholder={t.modals.addFriend.inputPlaceholder}
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  autoComplete="off"
-                />
-              </div>
+            <div className="flex flex-col gap-0.5">
+              <Label
+                htmlFor="add-friend-username"
+                className={fieldLabelClassName}
+              >
+                {t.modals.addFriend.inputLabel}
+              </Label>
+              <Input
+                id="add-friend-username"
+                name="add-friend-username"
+                disabled={sendRequestMutation.isPending}
+                className="h-9 rounded-lg border border-theme-border bg-theme-bg-edit-form/60 px-3 py-2 text-[14px] text-theme-text-primary focus-visible:border-theme-border-accent focus-visible:ring-0 focus-visible:ring-offset-0"
+                placeholder={t.modals.addFriend.inputPlaceholder}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="off"
+              />
 
               {message.type && (
                 <div
@@ -218,17 +216,12 @@ export const AddFriendModal = () => {
               )}
             </div>
 
-            <div className="rounded-lg border border-theme-border bg-theme-bg-edit-form/35 p-2.5">
-              <div className="flex items-center justify-between gap-2 border-b border-theme-border px-0.5 pb-2">
-                <span className={fieldLabelClassName}>
-                  {t.modals.addFriend.pendingRequests}
-                </span>
-                <span className="text-[12px] text-theme-text-muted">
-                  {pendingRequests.length}
-                </span>
-              </div>
+            <div className="flex flex-col gap-0.5">
+              <Label className={fieldLabelClassName}>
+                {t.modals.addFriend.pendingRequests}
+              </Label>
 
-              <div className="scrollbar-ultra-thin mt-2 max-h-[260px] overflow-y-auto pr-1">
+              <div className="scrollbar-ultra-thin max-h-[260px] overflow-y-auto pr-1">
                 {isLoadingRequests ? (
                   <RequestListSkeleton />
                 ) : pendingRequests.length === 0 ? (
