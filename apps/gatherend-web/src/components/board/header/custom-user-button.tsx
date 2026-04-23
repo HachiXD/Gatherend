@@ -110,11 +110,6 @@ export function CustomUserButton() {
               <div className={cn("min-w-0 flex-1", identityPlateClass)}>
                 <p className="truncate border-b border-theme-border pb-0.5 text-[15px] font-semibold text-theme-text-primary">
                   {userName}
-                  {discriminator && (
-                    <span className="text-theme-text-tertiary font-normal">
-                      /{discriminator}
-                    </span>
-                  )}
                 </p>
                 {discriminator && (
                   <p className="truncate pt-0.5 text-[14px] text-theme-text-tertiary">
