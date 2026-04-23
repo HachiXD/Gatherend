@@ -1493,7 +1493,6 @@ function CommunityPostsSectionInner({
                                                 profile.id && !comment.deleted
                                                 ? (commentId) => {
                                                     setReplyingToComment(null);
-                                                    setReplyingToPostId(null);
                                                     setEditingComment({
                                                       postId: post.id,
                                                       commentId,
