@@ -43,7 +43,7 @@ import { useModal } from "@/hooks/use-modal-store";
 import { useCurrentMemberRole } from "@/hooks/use-board-data";
 import { MemberRole } from "@prisma/client";
 import { getOptimizedStaticUiImageUrl } from "@/lib/ui-image-optimizer";
-import { ImagePlus, X } from "lucide-react";
+import { Flag, ImagePlus, Pencil, Send, Trash2, X } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import {
   CommunityPostCommentItem,
@@ -227,7 +227,6 @@ function PostImageAttachment({
 }
 
 function PostBodyWithImage({
-  usernameSlot,
   content,
   imageUrl,
   alt,
@@ -235,7 +234,6 @@ function PostBodyWithImage({
   imageHeight,
   themeMode,
 }: {
-  usernameSlot: ReactNode;
   content: string;
   imageUrl: string;
   alt: string;
@@ -251,15 +249,11 @@ function PostBodyWithImage({
         imageWidth={imageWidth}
         imageHeight={imageHeight}
       />
-      <div className="mt-2 whitespace-pre-wrap break-words text-[15px] leading-5 text-theme-text-secondary">
-        <span className="whitespace-nowrap">{usernameSlot}</span>
-        {content && (
-          <>
-            {"\u00A0"}
-            {parsePostContent(content, themeMode)}
-          </>
-        )}
-      </div>
+      {content && (
+        <div className="mt-2 whitespace-pre-wrap break-words text-[15px] leading-5 text-theme-text-secondary">
+          {parsePostContent(content, themeMode)}
+        </div>
+      )}
     </>
   );
 }
@@ -733,6 +727,130 @@ function CommunityPostCommentEditForm({
   );
 }
 
+function PostInlineCommentInput({
+  postId,
+  communityId,
+  profileId,
+  profileAvatarUrl,
+  profileUsername,
+  profileDiscriminator,
+}: {
+  postId: string;
+  communityId: string;
+  profileId: string;
+  profileAvatarUrl: string;
+  profileUsername: string;
+  profileDiscriminator: string | null;
+}) {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const [content, setContent] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const trimmedContent = content.trim();
+  const canSubmit = trimmedContent.length > 0;
+
+  const handleSubmit = async () => {
+    if (isSubmitting || !canSubmit) return;
+    try {
+      setIsSubmitting(true);
+      const response = await axios.post(`/api/posts/${postId}/comments`, {
+        content: trimmedContent,
+        imageAssetId: null,
+        replyToCommentId: null,
+      });
+      const createdComment = response.data as CommunityPostCommentItemData;
+
+      queryClient.setQueryData<InfiniteData<CommunityPostsFeedPage>>(
+        communityPostsKey(communityId),
+        (current) => {
+          if (!current) return current;
+          return {
+            ...current,
+            pages: current.pages.map((page) => ({
+              ...page,
+              items: page.items.map((post) => {
+                if (post.id !== postId) return post;
+                return {
+                  ...post,
+                  commentCount: post.commentCount + 1,
+                  latestComments: [
+                    ...post.latestComments,
+                    createdComment,
+                  ].slice(-5),
+                };
+              }),
+            })),
+          };
+        },
+      );
+
+      queryClient.setQueryData<CommunityPostCommentsQueryData>(
+        communityPostCommentsKey(postId),
+        (current) =>
+          current
+            ? {
+                ...current,
+                totalCount: current.totalCount + 1,
+                items: [...current.items, createdComment],
+              }
+            : current,
+      );
+
+      setContent("");
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="mt-2.5 flex items-center gap-2">
+      <UserAvatarMenu
+        profileId={profileId}
+        profileImageUrl={profileAvatarUrl}
+        username={profileUsername}
+        discriminator={profileDiscriminator}
+        currentProfileId={profileId}
+        className="h-7 w-7 shrink-0"
+        showStatus={false}
+        disableHoverShadow
+        avatarAnimationMode="never"
+      />
+      <div className="flex flex-1 items-center overflow-hidden rounded-full border border-theme-border bg-theme-bg-input/60 px-3 py-1.5">
+        <input
+          type="text"
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          onKeyDown={(e) => {
+            if (
+              e.key === "Enter" &&
+              !e.shiftKey &&
+              canSubmit &&
+              !isSubmitting
+            ) {
+              e.preventDefault();
+              void handleSubmit();
+            }
+          }}
+          disabled={isSubmitting}
+          placeholder={t.posts.writeCommentPlaceholder}
+          className="flex-1 bg-transparent text-[13px] text-theme-text-light outline-none placeholder:text-theme-text-tertiary"
+        />
+        <button
+          type="button"
+          onClick={() => void handleSubmit()}
+          disabled={isSubmitting || !canSubmit}
+          className="ml-2 flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full bg-theme-tab-button-bg text-theme-text-light transition hover:bg-theme-tab-button-hover disabled:opacity-40"
+        >
+          <Send className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function CommunityPostsSectionInner({
   communityId,
   isActive,
@@ -751,7 +869,6 @@ function CommunityPostsSectionInner({
     postId: string;
     commentId: string;
   } | null>(null);
-  const [replyingToPostId, setReplyingToPostId] = useState<string | null>(null);
   const [replyingToComment, setReplyingToComment] = useState<{
     postId: string;
     commentId: string;
@@ -1033,7 +1150,6 @@ function CommunityPostsSectionInner({
                       const isOwnPost = post.author.id === profile.id;
                       const canDeletePost = isOwnPost || canDeleteAnyPost;
                       const isEditing = editingPostId === post.id;
-                      const isReplying = replyingToPostId === post.id;
                       const latestCommentIds = new Set(
                         post.latestComments.map((comment) => comment.id),
                       );
@@ -1041,14 +1157,23 @@ function CommunityPostsSectionInner({
                         expandedCommentsQueryMap[post.id];
                       const expandedComments =
                         expandedCommentsQuery?.data?.items ?? null;
+                      const latestCommentsDescending = [
+                        ...post.latestComments,
+                      ].reverse();
                       const omittedComments = expandedComments
                         ? expandedComments.filter(
                             (comment) => !latestCommentIds.has(comment.id),
                           )
                         : [];
+                      const omittedCommentsDescending = [
+                        ...omittedComments,
+                      ].reverse();
                       const commentsToRender = expandedComments
-                        ? [...omittedComments, ...post.latestComments]
-                        : post.latestComments;
+                        ? [
+                            ...latestCommentsDescending,
+                            ...omittedCommentsDescending,
+                          ]
+                        : latestCommentsDescending;
                       const omittedCount = Math.max(
                         post.commentCount - post.latestComments.length,
                         0,
@@ -1072,138 +1197,130 @@ function CommunityPostsSectionInner({
                           key={post.id}
                           className="-mx-6 border-b border-theme-border px-3 py-2"
                         >
-                          <div className="relative rounded-sm bg-theme-bg-edit-form/95 px-4 pt-3 pb-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.16),inset_-1px_-1px_0_rgba(0,0,0,0.38)]">
-                            <div className="flex items-start gap-2 -ml-1.5">
-                              <div className="shrink-0">
-                                <UserAvatarMenu
-                                  profileId={post.author.id}
-                                  profileImageUrl={authorAvatarUrl}
-                                  username={post.author.username}
-                                  discriminator={post.author.discriminator}
-                                  currentProfileId={profile.id}
-                                  className="h-9 w-9"
-                                  showStatus={false}
-                                  disableHoverShadow
-                                  avatarAnimationMode="never"
-                                />
-                              </div>
+                          <div className="relative rounded-lg border bg-theme-bg-edit-form/95 px-4 pt-3 pb-3">
+                            {isEditing ? (
+                              <CommunityPostEditForm
+                                postId={post.id}
+                                communityId={communityId}
+                                content={post.content}
+                                hasImage={Boolean(post.imageAsset)}
+                                onCancel={() => setEditingPostId(null)}
+                              />
+                            ) : (
+                              <>
+                                <div className="flex items-start gap-2.5">
+                                  <div className="shrink-0">
+                                    <UserAvatarMenu
+                                      profileId={post.author.id}
+                                      profileImageUrl={authorAvatarUrl}
+                                      username={post.author.username}
+                                      discriminator={post.author.discriminator}
+                                      currentProfileId={profile.id}
+                                      className="h-9 w-9"
+                                      showStatus={false}
+                                      disableHoverShadow
+                                      avatarAnimationMode="never"
+                                    />
+                                  </div>
 
-                              <div className="-mt-2 min-w-0 flex-1">
-                                {isEditing ? (
-                                  <CommunityPostEditForm
-                                    postId={post.id}
-                                    communityId={communityId}
-                                    content={post.content}
-                                    hasImage={Boolean(post.imageAsset)}
-                                    onCancel={() => setEditingPostId(null)}
-                                  />
-                                ) : (
-                                  <>
-                                    {post.title ? (
-                                      <>
-                                        {/* Con titulo: fila 1 = badge+timestamp, fila 2 = título */}
-                                        <div className="mb-0 flex flex-wrap items-center gap-1">
-                                          {(post.author.badge ||
-                                            authorBadgeStickerUrl) && (
-                                            <>
-                                              <span className="inline-flex items-center gap-0.5">
-                                                {authorBadgeStickerUrl && (
-                                                  <AnimatedSticker
-                                                    src={authorBadgeStickerUrl}
-                                                    alt="badge"
-                                                    containerClassName="h-5 w-5"
-                                                    fallbackWidthPx={20}
-                                                    fallbackHeightPx={20}
-                                                    className="object-contain"
-                                                    isHovered={false}
-                                                  />
-                                                )}
-                                                {post.author.badge && (
-                                                  <span className="pt-2.5 text-[12px] leading-none text-theme-text-tertiary">
-                                                    {post.author.badge}
-                                                  </span>
-                                                )}
-                                              </span>
-                                              <span className="pt-2.5 text-[12px] text-theme-text-tertiary">
-                                                |
-                                              </span>
-                                            </>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="-mb-0.5 flex flex-wrap items-baseline gap-x-1.5">
+                                      <UserAvatarMenu
+                                        profileId={post.author.id}
+                                        profileImageUrl={authorAvatarUrl}
+                                        username={post.author.username}
+                                        discriminator={
+                                          post.author.discriminator
+                                        }
+                                        currentProfileId={profile.id}
+                                        currentProfile={profile}
+                                        showStatus={false}
+                                        usernameColor={
+                                          post.author.usernameColor
+                                        }
+                                        usernameFormat={
+                                          post.author.usernameFormat
+                                        }
+                                        hideAvatar
+                                      >
+                                        <span
+                                          className={cn(
+                                            "cursor-pointer text-[15px] font-semibold text-white hover:underline",
+                                            getUsernameFormatClasses(
+                                              post.author.usernameFormat,
+                                            ),
+                                            getGradientAnimationClass(
+                                              post.author.usernameColor,
+                                            ),
                                           )}
-                                          <span className="pt-2.5 text-[12px] text-theme-text-tertiary">
-                                            {formatPostDate(
-                                              post.createdAt,
-                                              locale,
+                                          style={getUsernameColorStyle(
+                                            post.author.usernameColor,
+                                            {
+                                              isOwnProfile:
+                                                post.author.id === profile.id,
+                                              themeMode,
+                                            },
+                                          )}
+                                        >
+                                          {post.author.username}
+                                        </span>
+                                      </UserAvatarMenu>
+                                    </div>
+                                    <div className="mb-1 flex flex-wrap items-center gap-1">
+                                      {(post.author.badge ||
+                                        authorBadgeStickerUrl) && (
+                                        <>
+                                          <span className="inline-flex items-center gap-0.5">
+                                            {authorBadgeStickerUrl && (
+                                              <AnimatedSticker
+                                                src={authorBadgeStickerUrl}
+                                                alt="badge"
+                                                containerClassName="h-4 w-4"
+                                                fallbackWidthPx={16}
+                                                fallbackHeightPx={16}
+                                                className="object-contain"
+                                                isHovered={false}
+                                              />
+                                            )}
+                                            {post.author.badge && (
+                                              <span className="text-[12px] text-theme-text-tertiary">
+                                                {post.author.badge}
+                                              </span>
                                             )}
                                           </span>
-                                          {post.pinnedAt && (
-                                            <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[12px] font-medium leading-none text-theme-text-subtle">
-                                              <Pin className="h-3 w-3" />
-                                              {t.posts.pinned}
-                                            </span>
-                                          )}
-                                          {post.lockedAt && (
-                                            <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[12px] font-medium leading-none text-theme-text-subtle">
-                                              <Lock className="h-3 w-3" />
-                                              {t.posts.closed}
-                                            </span>
-                                          )}
-                                        </div>
-                                        <div className="break-words mt-1 mb-1.5 rounded-sm bg-theme-channel-type-active-border/20 border-2 border-theme-channel-type-active-border pl-1 text-[20px] font-light leading-snug text-theme-text-primary">
-                                          {post.title}
-                                        </div>
-                                      </>
-                                    ) : (
-                                      <>
-                                        {/* Sin título: badge+timestamp en fila 1 como siempre */}
-                                        <div className="mb-0 flex flex-wrap items-center gap-1">
-                                          {(post.author.badge ||
-                                            authorBadgeStickerUrl) && (
-                                            <>
-                                              <span className="inline-flex items-center gap-0.5">
-                                                {authorBadgeStickerUrl && (
-                                                  <AnimatedSticker
-                                                    src={authorBadgeStickerUrl}
-                                                    alt="badge"
-                                                    containerClassName="h-5 w-5"
-                                                    fallbackWidthPx={20}
-                                                    fallbackHeightPx={20}
-                                                    className="object-contain"
-                                                    isHovered={false}
-                                                  />
-                                                )}
-                                                {post.author.badge && (
-                                                  <span className="pt-2.5 text-[12px] leading-none text-theme-text-tertiary">
-                                                    {post.author.badge}
-                                                  </span>
-                                                )}
-                                              </span>
-                                              <span className="pt-2.5 text-[12px] text-theme-text-tertiary">
-                                                |
-                                              </span>
-                                            </>
-                                          )}
-                                          <span className="pt-2.5 text-[12px] text-theme-text-tertiary">
-                                            {formatPostDate(
-                                              post.createdAt,
-                                              locale,
-                                            )}
+                                          <span className="text-[12px] text-theme-text-tertiary">
+                                            |
                                           </span>
-                                          {post.pinnedAt && (
-                                            <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[12px] font-medium leading-none text-theme-text-subtle">
-                                              <Pin className="h-3 w-3" />
-                                              {t.posts.pinned}
-                                            </span>
-                                          )}
-                                          {post.lockedAt && (
-                                            <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[12px] font-medium leading-none text-theme-text-subtle">
-                                              <Lock className="h-3 w-3" />
-                                              {t.posts.closed}
-                                            </span>
-                                          )}
-                                        </div>
-                                      </>
+                                        </>
+                                      )}
+                                      <span className="text-[12px] text-theme-text-tertiary">
+                                        {formatPostDate(post.createdAt, locale)}
+                                      </span>
+                                      {post.pinnedAt && (
+                                        <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[12px] font-medium leading-none text-theme-text-subtle">
+                                          <Pin className="h-3 w-3" />
+                                          {t.posts.pinned}
+                                        </span>
+                                      )}
+                                      {post.lockedAt && (
+                                        <span className="inline-flex items-center gap-1 rounded-full bg-theme-bg-tertiary px-2 py-0.5 text-[12px] font-medium leading-none text-theme-text-subtle">
+                                          <Lock className="h-3 w-3" />
+                                          {t.posts.closed}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {(post.title ||
+                                  post.content ||
+                                  postImageUrl) && (
+                                  <div className="mt-0">
+                                    {post.title && (
+                                      <div className="mb-1 break-words text-[18px] font-semibold leading-snug text-theme-text-primary">
+                                        {post.title}
+                                      </div>
                                     )}
-
                                     {postImageUrl ? (
                                       <PostBodyWithImage
                                         imageUrl={postImageUrl}
@@ -1214,195 +1331,36 @@ function CommunityPostsSectionInner({
                                         imageWidth={post.imageAsset?.width}
                                         imageHeight={post.imageAsset?.height}
                                         themeMode={themeMode}
-                                        usernameSlot={
-                                          <>
-                                            <UserAvatarMenu
-                                              profileId={post.author.id}
-                                              profileImageUrl={authorAvatarUrl}
-                                              username={post.author.username}
-                                              discriminator={
-                                                post.author.discriminator
-                                              }
-                                              currentProfileId={profile.id}
-                                              currentProfile={profile}
-                                              showStatus={false}
-                                              usernameColor={
-                                                post.author.usernameColor
-                                              }
-                                              usernameFormat={
-                                                post.author.usernameFormat
-                                              }
-                                              hideAvatar
-                                            >
-                                              <span
-                                                className={cn(
-                                                  "cursor-pointer text-[15px] font-semibold text-white hover:underline",
-                                                  getUsernameFormatClasses(
-                                                    post.author.usernameFormat,
-                                                  ),
-                                                  getGradientAnimationClass(
-                                                    post.author.usernameColor,
-                                                  ),
-                                                )}
-                                                style={getUsernameColorStyle(
-                                                  post.author.usernameColor,
-                                                  {
-                                                    isOwnProfile:
-                                                      post.author.id ===
-                                                      profile.id,
-                                                    themeMode,
-                                                  },
-                                                )}
-                                              >
-                                                {post.author.username}
-                                              </span>
-                                            </UserAvatarMenu>
-                                            <span
-                                              className={cn(
-                                                "text-[15px] font-semibold",
-                                                getGradientAnimationClass(
-                                                  post.author.usernameColor,
-                                                ),
-                                              )}
-                                              style={getUsernameColorStyle(
-                                                post.author.usernameColor,
-                                                {
-                                                  isOwnProfile:
-                                                    post.author.id ===
-                                                    profile.id,
-                                                  themeMode,
-                                                },
-                                              )}
-                                            >
-                                              :
-                                            </span>
-                                          </>
-                                        }
                                       />
                                     ) : (
-                                      <div className="mt-0 whitespace-pre-wrap break-words text-[15px] leading-5 text-theme-text-secondary">
-                                        <span className="whitespace-nowrap">
-                                          <UserAvatarMenu
-                                            profileId={post.author.id}
-                                            profileImageUrl={authorAvatarUrl}
-                                            username={post.author.username}
-                                            discriminator={
-                                              post.author.discriminator
-                                            }
-                                            currentProfileId={profile.id}
-                                            currentProfile={profile}
-                                            showStatus={false}
-                                            usernameColor={
-                                              post.author.usernameColor
-                                            }
-                                            usernameFormat={
-                                              post.author.usernameFormat
-                                            }
-                                            hideAvatar
-                                          >
-                                            <span
-                                              className={cn(
-                                                "cursor-pointer text-[15px] font-semibold text-white hover:underline",
-                                                getUsernameFormatClasses(
-                                                  post.author.usernameFormat,
-                                                ),
-                                                getGradientAnimationClass(
-                                                  post.author.usernameColor,
-                                                ),
-                                              )}
-                                              style={getUsernameColorStyle(
-                                                post.author.usernameColor,
-                                                {
-                                                  isOwnProfile:
-                                                    post.author.id ===
-                                                    profile.id,
-                                                  themeMode,
-                                                },
-                                              )}
-                                            >
-                                              {post.author.username}
-                                            </span>
-                                          </UserAvatarMenu>
-                                          <span
-                                            className={cn(
-                                              "text-[15px] font-semibold",
-                                              getGradientAnimationClass(
-                                                post.author.usernameColor,
-                                              ),
-                                            )}
-                                            style={getUsernameColorStyle(
-                                              post.author.usernameColor,
-                                              {
-                                                isOwnProfile:
-                                                  post.author.id === profile.id,
-                                                themeMode,
-                                              },
-                                            )}
-                                          >
-                                            :
-                                          </span>
-                                        </span>
-                                        {"\u00A0"}
-                                        <span>
-                                          {parsePostContent(
-                                            post.content,
-                                            themeMode,
-                                          )}
-                                        </span>
+                                      <div className="whitespace-pre-wrap break-words text-[15px] leading-5 text-theme-text-secondary">
+                                        {parsePostContent(
+                                          post.content,
+                                          themeMode,
+                                        )}
                                       </div>
                                     )}
-                                  </>
+                                  </div>
                                 )}
 
-                                {!isEditing && (
-                                  <div
-                                    className={cn(
-                                      "clear-left flex items-center gap-x-3 -mb-1 pt-2.5",
-                                    )}
-                                  >
+                                <div className="-mx-4 mt-2 flex items-center gap-x-3 border-y border-theme-border/50 px-4 py-1.5">
+                                  {isOwnPost && (
                                     <button
                                       type="button"
-                                      onClick={() => {
-                                        setReplyingToComment(null);
-                                        setReplyingToPostId((current) =>
-                                          current === post.id ? null : post.id,
-                                        );
-                                      }}
-                                      className="cursor-pointer text-[15px] text-theme-text-tertiary transition hover:underline"
+                                      onClick={() => setEditingPostId(post.id)}
+                                      className="inline-flex cursor-pointer items-center gap-1.5 text-[13px] text-theme-text-tertiary transition hover:text-theme-text-subtle hover:underline"
                                     >
-                                      {t.chat.reply}
+                                      <Pencil className="h-3.5 w-3.5" />
+                                      {t.posts.editPost}
                                     </button>
-                                    {omittedCount > 0 && (
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          void handleToggleOmittedComments(
-                                            post.id,
-                                          )
-                                        }
-                                        className="cursor-pointer text-[15px] text-theme-text-tertiary transition hover:underline"
-                                      >
-                                        {isExpandedCommentsLoading
-                                          ? t.posts.loadingComments
-                                          : isOmittedExpanded
-                                            ? t.posts.hideOmittedComments
-                                            : t.posts.expandOmittedComments(
-                                                omittedCount,
-                                              )}
-                                      </button>
-                                    )}
-                                    {isOwnPost && (
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          setEditingPostId(post.id)
-                                        }
-                                        className="cursor-pointer text-[15px] text-theme-text-tertiary transition hover:underline"
-                                      >
-                                        {t.posts.editPost}
-                                      </button>
-                                    )}
-                                    {canDeletePost && (
+                                  )}
+                                  {canDeletePost && (
+                                    <>
+                                      {isOwnPost && (
+                                        <span className="text-theme-text-tertiary/50">
+                                          |
+                                        </span>
+                                      )}
                                       <button
                                         type="button"
                                         onClick={() =>
@@ -1412,12 +1370,20 @@ function CommunityPostsSectionInner({
                                               communityId,
                                           })
                                         }
-                                        className="cursor-pointer text-[15px] text-theme-text-tertiary transition hover:underline"
+                                        className="inline-flex cursor-pointer items-center gap-1.5 text-[13px] text-theme-text-tertiary transition hover:text-theme-text-subtle hover:underline"
                                       >
+                                        <Trash2 className="h-3.5 w-3.5" />
                                         {t.posts.deletePost}
                                       </button>
-                                    )}
-                                    {!isOwnPost && (
+                                    </>
+                                  )}
+                                  {!isOwnPost && (
+                                    <>
+                                      {canDeletePost && (
+                                        <span className="text-theme-text-tertiary/50">
+                                          |
+                                        </span>
+                                      )}
                                       <button
                                         type="button"
                                         onClick={() =>
@@ -1436,26 +1402,29 @@ function CommunityPostsSectionInner({
                                               post.author.discriminator,
                                           })
                                         }
-                                        className="cursor-pointer text-[15px] text-theme-text-tertiary transition hover:underline"
+                                        className="inline-flex cursor-pointer items-center gap-1.5 text-[13px] text-theme-text-tertiary transition hover:text-theme-text-subtle hover:underline"
                                       >
+                                        <Flag className="h-3.5 w-3.5" />
                                         {t.posts.reportPost}
                                       </button>
-                                    )}
-                                  </div>
-                                )}
+                                    </>
+                                  )}
+                                </div>
 
-                                {isReplying && !isEditing && (
-                                  <div className="clear-left">
-                                    <CommunityPostCommentComposer
-                                      postId={post.id}
-                                      communityId={communityId}
-                                      onCancel={() => setReplyingToPostId(null)}
-                                    />
-                                  </div>
-                                )}
+                                <PostInlineCommentInput
+                                  postId={post.id}
+                                  communityId={communityId}
+                                  profileId={profile.id}
+                                  profileAvatarUrl={
+                                    profile.avatarAsset?.url ?? ""
+                                  }
+                                  profileUsername={profile.username}
+                                  profileDiscriminator={profile.discriminator}
+                                />
 
-                                {!isEditing && commentsToRender.length > 0 && (
-                                  <div className="clear-left mt-3 space-y-2">
+                                {(commentsToRender.length > 0 ||
+                                  omittedCount > 0) && (
+                                  <div className="mt-3 space-y-2">
                                     {commentsToRender.map((comment) => (
                                       <div
                                         key={comment.id}
@@ -1483,7 +1452,6 @@ function CommunityPostsSectionInner({
                                             currentProfileId={profile.id}
                                             onReply={(commentId) => {
                                               setEditingComment(null);
-                                              setReplyingToPostId(null);
                                               setReplyingToComment((current) =>
                                                 current?.postId === post.id &&
                                                 current.commentId === commentId
@@ -1571,10 +1539,31 @@ function CommunityPostsSectionInner({
                                           )}
                                       </div>
                                     ))}
+                                    {omittedCount > 0 && (
+                                      <div className="pt-1 -mb-1.5 border-t border-theme-border/50 text-center">
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            void handleToggleOmittedComments(
+                                              post.id,
+                                            )
+                                          }
+                                          className="cursor-pointer text-[13px] text-theme-text-tertiary transition hover:underline"
+                                        >
+                                          {isExpandedCommentsLoading
+                                            ? t.posts.loadingComments
+                                            : isOmittedExpanded
+                                              ? t.posts.hideOmittedComments
+                                              : t.posts.expandOmittedComments(
+                                                  omittedCount,
+                                                )}
+                                        </button>
+                                      </div>
+                                    )}
                                   </div>
                                 )}
-                              </div>
-                            </div>
+                              </>
+                            )}
                           </div>
                         </article>
                       );

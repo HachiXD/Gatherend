@@ -74,12 +74,16 @@ function ForumViewInner() {
         <div className="sticky top-0 z-20 shrink-0 border-b border-theme-border transition-colors duration-300">
           <div
             className="px-0 h-11 flex items-center"
-            style={headerButtonStyles}
+            style={{
+              ...headerButtonStyles,
+              backgroundImage: "none",
+              backgroundColor: "var(--theme-bg-quinary)",
+            }}
           >
             <div className="ml-3 mr-3 flex w-full items-center gap-2">
               {/* Badge estilo chat-header */}
-              <div className="flex min-w-0 max-w-[min(52vw,420px)] items-center justify-center gap-2 rounded-sm border border-[var(--community-header-btn-ring)] bg-theme-bg-secondary/40 px-3 py-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]">
-                <MessageSquare className="h-6 w-6 shrink-0 text-(--community-header-btn-muted)" />
+              <div className="flex min-w-0 max-w-[min(52vw,420px)] items-center justify-center gap-2 rounded-lg px-3 py-0.5">
+                <MessageSquare className="h-6 w-6 shrink-0 text-theme-text-subtle" />
                 <p className="min-w-0 truncate text-center text-[20px] font-semibold text-theme-text-subtle">
                   {board ? `Foro de ${board.name}` : "Foro"}
                 </p>
@@ -89,7 +93,7 @@ function ForumViewInner() {
                 <button
                   type="button"
                   onClick={handleCreate}
-                  className="inline-flex h-9 w-9 cursor-pointer items-center justify-center gap-2 rounded-sm border border-[var(--community-header-btn-ring)] bg-theme-bg-secondary/40 px-0 text-[20px] font-semibold text-[var(--community-header-btn-muted)] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)] transition hover:bg-[var(--community-header-btn-hover)] hover:text-[var(--community-header-btn-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--community-header-btn-ring)] disabled:opacity-50 md:w-auto md:px-3"
+                  className="inline-flex h-9 w-9 cursor-pointer items-center justify-center gap-2 rounded-lg border-0 bg-transparent px-0 text-theme-text-subtle transition hover:bg-theme-app-settings-hover hover:text-theme-text-light focus-visible:outline-none disabled:opacity-50 md:w-auto md:px-3"
                   aria-label="Crear post"
                   title="Crear post"
                 >
@@ -101,12 +105,12 @@ function ForumViewInner() {
                   type="button"
                   onClick={handleRefresh}
                   disabled={isRefreshing}
-                  className="inline-flex h-9 w-9 cursor-pointer items-center justify-center gap-2 rounded-sm border border-[var(--community-header-btn-ring)] bg-theme-bg-secondary/40 px-0 text-[20px] font-semibold text-[var(--community-header-btn-muted)] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)] transition hover:bg-[var(--community-header-btn-hover)] hover:text-[var(--community-header-btn-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--community-header-btn-ring)] disabled:opacity-50 md:w-auto md:px-3"
+                  className="inline-flex h-9 w-9 cursor-pointer items-center justify-center gap-2 rounded-lg border-0 bg-transparent px-0 text-theme-text-subtle transition hover:bg-theme-app-settings-hover hover:text-theme-text-light focus-visible:outline-none disabled:opacity-50 md:w-auto md:px-3"
                   aria-label="Refrescar posts"
                   title="Refrescar posts"
                 >
                   <RefreshCw
-                    className={`h-6 w-6 text-(--community-header-btn-muted) ${isRefreshing ? "animate-spin" : ""}`}
+                    className={`h-6 w-6 ${isRefreshing ? "animate-spin" : ""}`}
                   />
                   <span className="hidden md:inline">Refrescar</span>
                 </button>

@@ -1,6 +1,12 @@
 "use client";
 
-import { memo, useCallback, useMemo, useRef, useState } from "react";
+import {
+  memo,
+  useCallback,
+  useMemo,
+  useState,
+  type ClipboardEvent,
+} from "react";
 import { Edit, Plus, ScrollText, Trash2 } from "lucide-react";
 import { useCommunityHeaderStyle } from "@/hooks/use-community-header-style";
 import { useBoardData, useCurrentMemberRole } from "@/hooks/use-board-data";
@@ -13,8 +19,8 @@ import { toast } from "sonner";
 import { FileUpload } from "@/components/file-upload";
 import { useUpload } from "@/hooks/use-upload";
 import {
-  parseStoredUploadValue,
   getStoredUploadAssetId,
+  parseStoredUploadValue,
 } from "@/lib/upload-values";
 import { parsePostContent } from "@/lib/parse-post-formatting";
 import { getOptimizedStaticUiImageUrl } from "@/lib/ui-image-optimizer";
@@ -29,13 +35,19 @@ import {
 } from "@/components/ui/dialog";
 import { useEffectiveThemeMode } from "@/hooks/use-effective-theme-config";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+const MAX_RULE_TITLE_LENGTH = 200;
+const MAX_RULE_DESCRIPTION_LENGTH = 1000;
+
+interface ClientRuleItem {
+  order: number;
+  title: string;
+  description: string | null;
+}
 
 interface ClientBoardRules {
   id: string;
   boardId: string;
-  title: string;
-  content: string;
+  items: ClientRuleItem[];
   imageAsset: {
     id: string;
     url: string;
@@ -50,7 +62,28 @@ interface BoardRulesResponse {
   rules: ClientBoardRules | null;
 }
 
-// ─── Inline image (always below text) ─────────────────────────────────────────
+interface RuleDraft {
+  title: string;
+  description: string;
+}
+
+function createEmptyRuleDraft(): RuleDraft {
+  return {
+    title: "",
+    description: "",
+  };
+}
+
+function toRuleDrafts(items?: ClientRuleItem[]): RuleDraft[] {
+  if (!items || items.length === 0) {
+    return [createEmptyRuleDraft()];
+  }
+
+  return items.map((item) => ({
+    title: item.title,
+    description: item.description ?? "",
+  }));
+}
 
 function RulesImage({
   imageUrl,
@@ -86,7 +119,7 @@ function RulesImage({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="mt-3 block cursor-pointer overflow-hidden rounded-md border border-theme-border bg-black/3"
+        className="mt-4 block cursor-pointer overflow-hidden rounded-lg border border-theme-border bg-black/3"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -125,12 +158,9 @@ function RulesImage({
   );
 }
 
-// ─── Inline form (create / edit) ──────────────────────────────────────────────
-
 interface RulesFormProps {
   boardId: string;
-  initialTitle?: string;
-  initialContent?: string;
+  initialItems?: ClientRuleItem[];
   initialImageUrl?: string | null;
   initialImageAssetId?: string | null;
   isEdit: boolean;
@@ -140,16 +170,16 @@ interface RulesFormProps {
 
 function RulesForm({
   boardId,
-  initialTitle = "",
-  initialContent = "",
+  initialItems,
   initialImageUrl,
   initialImageAssetId,
   isEdit,
   onCancel,
   onSuccess,
 }: RulesFormProps) {
-  const [title, setTitle] = useState(initialTitle);
-  const [content, setContent] = useState(initialContent);
+  const [ruleDrafts, setRuleDrafts] = useState<RuleDraft[]>(() =>
+    toRuleDrafts(initialItems),
+  );
   const [imageUpload, setImageUpload] = useState(() => {
     if (initialImageAssetId && initialImageUrl) {
       return JSON.stringify({
@@ -166,14 +196,38 @@ function RulesForm({
     onUploadError: (error) => toast.error(`Error al subir imagen: ${error}`),
   });
 
-  const titleRef = useRef<HTMLInputElement | null>(null);
-
-  const trimmedTitle = title.trim();
-  const trimmedContent = content.trim();
   const imageAssetId = getStoredUploadAssetId(imageUpload);
-  const canSubmit = trimmedTitle.length > 0 && trimmedContent.length > 0;
 
-  const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+  const canSubmit =
+    ruleDrafts.length > 0 &&
+    ruleDrafts.every((rule) => rule.title.trim().length > 0);
+
+  const updateRuleDraft = useCallback(
+    (index: number, field: keyof RuleDraft, value: string) => {
+      setRuleDrafts((current) =>
+        current.map((rule, currentIndex) =>
+          currentIndex === index ? { ...rule, [field]: value } : rule,
+        ),
+      );
+    },
+    [],
+  );
+
+  const handleAddRule = useCallback(() => {
+    setRuleDrafts((current) => [...current, createEmptyRuleDraft()]);
+  }, []);
+
+  const handleRemoveRule = useCallback((index: number) => {
+    setRuleDrafts((current) => {
+      if (current.length === 1) {
+        return [createEmptyRuleDraft()];
+      }
+
+      return current.filter((_, currentIndex) => currentIndex !== index);
+    });
+  }, []);
+
+  const handlePaste = async (e: ClipboardEvent<HTMLTextAreaElement>) => {
     const items = Array.from(e.clipboardData.items);
     const imageItem = items.find((item) => item.type.startsWith("image/"));
     if (!imageItem) return;
@@ -206,39 +260,39 @@ function RulesForm({
   const handleSubmit = async () => {
     if (isSubmitting || !canSubmit) return;
     setIsSubmitting(true);
+
     try {
       const uploadedMeta = parseStoredUploadValue(imageUpload);
       let resolvedImageAssetId: string | null = imageAssetId;
 
-      // If editing and image was cleared (upload is empty but there was one before)
       if (isEdit && !imageUpload && initialImageAssetId) {
         resolvedImageAssetId = null;
       }
+
+      const payload = {
+        items: ruleDrafts.map((rule) => ({
+          title: rule.title.trim(),
+          description:
+            rule.description.trim().length > 0 ? rule.description.trim() : null,
+        })),
+        imageAssetId: resolvedImageAssetId,
+      };
 
       let result: ClientBoardRules;
       if (isEdit) {
         const { data } = await axios.patch<ClientBoardRules>(
           `/api/boards/${boardId}/rules`,
-          {
-            title: trimmedTitle,
-            content: trimmedContent,
-            imageAssetId: resolvedImageAssetId,
-          },
+          payload,
         );
         result = { ...data, imageAsset: data.imageAsset ?? null };
       } else {
         const { data } = await axios.post<ClientBoardRules>(
           `/api/boards/${boardId}/rules`,
-          {
-            title: trimmedTitle,
-            content: trimmedContent,
-            imageAssetId: resolvedImageAssetId,
-          },
+          payload,
         );
         result = data;
       }
 
-      // Attach the optimistic image metadata if we have it from the upload
       if (resolvedImageAssetId && uploadedMeta && !result.imageAsset) {
         result = {
           ...result,
@@ -269,34 +323,39 @@ function RulesForm({
   };
 
   const uploadBtnClass =
-    "h-28 w-35 rounded-none text-[11px] transition-colors duration-150 border-white/30 bg-theme-bg-cancel-button text-theme-text-subtle hover:border-white/50 hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light";
+    "h-28 w-full rounded-lg border border-theme-border/60 bg-theme-bg-cancel-button text-[11px] text-theme-text-subtle transition-colors duration-150 hover:border-theme-border hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light sm:w-40";
 
   const removeBtnClass =
-    "bg-transparent p-1 mr-4 shadow-none cursor-pointer hover:bg-transparent transition-colors duration-150 text-theme-text-tertiary hover:text-theme-text-light";
+    "mr-3 bg-transparent p-1 text-theme-text-tertiary shadow-none transition-colors duration-150 hover:bg-transparent hover:text-theme-text-light";
 
   const cancelBtnClass =
-    "h-6.5 w-full cursor-pointer rounded-none border-0 px-3 text-[12px] transition-colors duration-150 bg-theme-bg-cancel-button text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light";
+    "h-8 w-full cursor-pointer rounded-lg border border-theme-border/50 bg-theme-bg-cancel-button px-3 text-[12px] text-theme-text-subtle transition-colors duration-150 hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light";
 
   const publishBtnClass =
-    "h-6.5 w-full cursor-pointer rounded-none border-0 px-3 text-[12px] font-semibold transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-70 bg-theme-tab-button-bg text-theme-text-light hover:bg-theme-tab-button-hover";
+    "h-8 w-full cursor-pointer rounded-lg border-0 bg-theme-tab-button-bg px-3 text-[12px] font-semibold text-theme-text-light transition-colors duration-150 hover:bg-theme-tab-button-hover disabled:cursor-not-allowed disabled:opacity-70";
 
   return (
-    <div className="border border-theme-border/40 bg-theme-bg-secondary p-3">
-      <div className="flex items-stretch gap-3">
-        {/* Left: image upload */}
-        <div className="flex shrink-0 flex-col mt-6.5">
+    <div className="rounded-lg border border-theme-border/50 bg-theme-bg-secondary p-3">
+      <div className="flex flex-col gap-3 lg:flex-row">
+        <div className="flex shrink-0 flex-col gap-3 lg:w-44">
           <FileUpload
             endpoint="boardRulesImage"
             label="Subir imagen"
             value={imageUpload}
             onChange={(value) => setImageUpload(value ?? "")}
             uploadButtonClassName={uploadBtnClass}
-            imagePreviewWrapperClassName="relative h-28 w-35 flex items-center justify-center"
-            imagePreviewClassName="h-28 rounded-none object-contain"
+            imagePreviewWrapperClassName="relative flex h-28 w-full items-center justify-center sm:w-40"
+            imagePreviewClassName="h-28 rounded-lg object-contain"
             removeButtonClassName={removeBtnClass}
           />
-          <div className="flex-1" />
-          <div className="flex flex-col gap-y-2">
+
+          <div className="rounded-lg border border-theme-border/40 bg-theme-bg-tertiary/70 px-3 py-2 text-[11px] leading-5 text-theme-text-muted">
+            El orden sigue la lista de arriba hacia abajo. Para reordenar, por
+            ahora elimina una regla y vuelve a crearla en la posicion que
+            quieras.
+          </div>
+
+          <div className="flex flex-col gap-2">
             <Button
               type="button"
               size="sm"
@@ -324,42 +383,108 @@ function RulesForm({
           </div>
         </div>
 
-        {/* Right: title + content */}
-        <div className="flex min-w-0 flex-1 flex-col gap-y-1.5 -mb-1">
-          <input
-            ref={titleRef}
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value.slice(0, 200))}
-            disabled={isSubmitting}
-            className="h-8 w-full shrink-0 border border-theme-border-subtle bg-transparent px-3 text-[14px] leading-5 text-theme-text-light outline-none focus:border-theme-border-accent"
-            placeholder="Título de las reglas..."
-          />
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            disabled={isSubmitting}
-            rows={5}
-            maxLength={5000}
-            onPaste={(e) => void handlePaste(e)}
-            className="scrollbar-ultra-thin min-h-[182px] w-full flex-1 resize-none border border-theme-border-subtle bg-transparent px-3 py-2 text-[14px] leading-5 text-theme-text-light outline-none focus:border-theme-border-accent"
-            placeholder="Escribe las reglas del board..."
-          />
-          <div className="flex items-center justify-between gap-x-2">
-            <span className="text-[11px] text-theme-text-muted">
-              Título y contenido son obligatorios
-            </span>
-            <span className="text-[11px] text-theme-text-tertiary">
-              {content.length}/5000
-            </span>
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-theme-border/40 bg-theme-bg-tertiary/50 px-3 py-2">
+            <div className="min-w-0">
+              <p className="text-[13px] font-semibold text-theme-text-light">
+                Lista de reglas
+              </p>
+              <p className="text-[11px] text-theme-text-muted">
+                Cada regla tiene titulo obligatorio y descripcion opcional.
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleAddRule}
+              disabled={isSubmitting}
+              className="h-8 cursor-pointer rounded-lg border border-theme-border/50 bg-theme-bg-cancel-button px-3 text-[12px] text-theme-text-subtle transition-colors hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+            >
+              <Plus className="mr-1 h-4 w-4" />
+              Anadir regla
+            </Button>
+          </div>
+
+          <div className="space-y-3">
+            {ruleDrafts.map((rule, index) => (
+              <div
+                key={`rule-draft-${index}`}
+                className="rounded-lg border border-theme-border/50 bg-theme-bg-tertiary/70"
+              >
+                <div className="flex items-center gap-3 border-b border-theme-border/40 px-3 py-2">
+                  <div className="flex h-7 min-w-7 items-center justify-center rounded-md border border-theme-border/50 bg-theme-bg-secondary text-[12px] font-semibold text-theme-text-light">
+                    {index + 1}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[13px] font-medium text-theme-text-light">
+                      Regla {index + 1}
+                    </p>
+                    <p className="text-[11px] text-theme-text-muted">
+                      El orden se guarda segun la posicion actual.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveRule(index)}
+                    disabled={isSubmitting}
+                    className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-transparent text-theme-text-tertiary transition hover:border-theme-border/40 hover:bg-theme-bg-secondary hover:text-theme-text-light disabled:cursor-not-allowed disabled:opacity-50"
+                    aria-label={`Eliminar regla ${index + 1}`}
+                    title={`Eliminar regla ${index + 1}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="space-y-2 px-3 py-3">
+                  <input
+                    type="text"
+                    value={rule.title}
+                    onChange={(e) =>
+                      updateRuleDraft(
+                        index,
+                        "title",
+                        e.target.value.slice(0, MAX_RULE_TITLE_LENGTH),
+                      )
+                    }
+                    disabled={isSubmitting}
+                    className="h-9 w-full rounded-lg border border-theme-border-subtle bg-transparent px-3 text-[14px] leading-5 text-theme-text-light outline-none transition focus:border-theme-border-accent"
+                    placeholder={`Titulo de la regla ${index + 1}`}
+                  />
+
+                  <textarea
+                    value={rule.description}
+                    onChange={(e) =>
+                      updateRuleDraft(
+                        index,
+                        "description",
+                        e.target.value.slice(0, MAX_RULE_DESCRIPTION_LENGTH),
+                      )
+                    }
+                    disabled={isSubmitting}
+                    rows={4}
+                    maxLength={MAX_RULE_DESCRIPTION_LENGTH}
+                    onPaste={(e) => void handlePaste(e)}
+                    className="scrollbar-ultra-thin min-h-[108px] w-full resize-none rounded-lg border border-theme-border-subtle bg-transparent px-3 py-2 text-[14px] leading-5 text-theme-text-light outline-none transition focus:border-theme-border-accent"
+                    placeholder="Descripcion opcional de la regla..."
+                  />
+
+                  <div className="flex items-center justify-between gap-2 text-[11px]">
+                    <span className="text-theme-text-muted">
+                      Titulo obligatorio. Descripcion opcional.
+                    </span>
+                    <span className="text-theme-text-tertiary">
+                      {rule.description.length}/{MAX_RULE_DESCRIPTION_LENGTH}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
     </div>
   );
 }
-
-// ─── rules-view inner ─────────────────────────────────────────────────────────
 
 function RulesViewInner() {
   const boardId = useCurrentBoardId();
@@ -379,8 +504,6 @@ function RulesViewInner() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // ── Query ──────────────────────────────────────────────────────────────────
-
   const rulesQueryKey = useMemo(() => ["boardRules", boardId], [boardId]);
 
   const { data: rulesData, isLoading: rulesLoading } =
@@ -396,12 +519,7 @@ function RulesViewInner() {
     });
 
   const rules = rulesData?.rules ?? null;
-
-  // ── Header colors (same logic as forum-view) ───────────────────────────────
-
   const headerButtonStyles = useCommunityHeaderStyle();
-
-  // ── Handlers ──────────────────────────────────────────────────────────────
 
   const handleFormSuccess = useCallback(
     (updated: ClientBoardRules) => {
@@ -430,8 +548,6 @@ function RulesViewInner() {
     }
   }, [isDeleting, boardId, queryClient, rulesQueryKey]);
 
-  // ── Loading / error states ─────────────────────────────────────────────────
-
   if (!board && boardLoading) {
     return (
       <div className="flex h-full w-full flex-col overflow-hidden bg-theme-bg-tertiary">
@@ -452,22 +568,24 @@ function RulesViewInner() {
   }
 
   const btnClass =
-    "inline-flex h-9 w-9 cursor-pointer items-center justify-center gap-2 rounded-sm border border-[var(--community-header-btn-ring)] bg-theme-bg-secondary/40 px-0 text-[20px] font-semibold text-[var(--community-header-btn-muted)] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)] transition hover:bg-[var(--community-header-btn-hover)] hover:text-[var(--community-header-btn-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--community-header-btn-ring)] disabled:opacity-50 md:w-auto md:px-3";
+    "inline-flex h-9 w-9 cursor-pointer items-center justify-center gap-2 rounded-lg border-0 bg-transparent px-0 text-theme-text-subtle transition hover:bg-theme-app-settings-hover hover:text-theme-text-light focus-visible:outline-none disabled:opacity-50 md:w-auto md:px-3";
 
   return (
     <>
       <div className="flex h-full w-full flex-col overflow-hidden bg-theme-bg-tertiary">
         <div className="h-full w-full overflow-y-auto scrollbar-chat">
-          {/* Header */}
           <div className="sticky top-0 z-20 shrink-0 border-b border-theme-border transition-colors duration-300">
             <div
-              className="px-0 h-11 flex items-center"
-              style={headerButtonStyles}
+              className="flex h-11 items-center px-0"
+              style={{
+                ...headerButtonStyles,
+                backgroundImage: "none",
+                backgroundColor: "var(--theme-bg-quinary)",
+              }}
             >
               <div className="ml-3 mr-3 flex w-full items-center gap-2">
-                {/* Badge */}
-                <div className="flex min-w-0 max-w-[min(52vw,420px)] items-center justify-center gap-2 rounded-sm border border-[var(--community-header-btn-ring)] bg-theme-bg-secondary/40 px-3 py-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]">
-                  <ScrollText className="h-6 w-6 shrink-0 text-(--community-header-btn-muted)" />
+                <div className="flex min-w-0 max-w-[min(52vw,420px)] items-center justify-center gap-2 rounded-lg px-3 py-0.5">
+                  <ScrollText className="h-6 w-6 shrink-0 text-theme-text-subtle" />
                   <p className="min-w-0 truncate text-center text-[20px] font-semibold text-theme-text-subtle">
                     {board ? `Reglas de ${board.name}` : "Reglas"}
                   </p>
@@ -516,7 +634,6 @@ function RulesViewInner() {
               </div>
             </div>
 
-            {/* Inline form */}
             {(mode === "create" || mode === "edit") && (
               <div
                 style={{
@@ -524,12 +641,11 @@ function RulesViewInner() {
                   backgroundImage: "none",
                   backgroundColor: "transparent",
                 }}
-                className="py-2.5 px-3"
+                className="px-3 py-2.5"
               >
                 <RulesForm
                   boardId={boardId}
-                  initialTitle={mode === "edit" ? (rules?.title ?? "") : ""}
-                  initialContent={mode === "edit" ? (rules?.content ?? "") : ""}
+                  initialItems={mode === "edit" ? (rules?.items ?? []) : []}
                   initialImageUrl={
                     mode === "edit" ? (rules?.imageAsset?.url ?? null) : null
                   }
@@ -544,7 +660,6 @@ function RulesViewInner() {
             )}
           </div>
 
-          {/* Body */}
           <div className="w-full px-4 py-4">
             {rulesLoading && (
               <div className="space-y-3">
@@ -556,11 +671,11 @@ function RulesViewInner() {
             {!rulesLoading && !rules && (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <p className="text-[16px] text-theme-text-muted">
-                  Este board no tiene reglas todavía.
+                  Este board no tiene reglas todavia.
                 </p>
                 {canEdit && (
                   <p className="mt-1 text-[15px] text-theme-text-subtle">
-                    Usa el botón &ldquo;Crear Reglas&rdquo; para añadirlas.
+                    Usa el boton &ldquo;Crear Reglas&rdquo; para anadirlas.
                   </p>
                 )}
               </div>
@@ -568,17 +683,31 @@ function RulesViewInner() {
 
             {!rulesLoading && rules && (
               <article className="w-full max-w-3xl">
-                {/* Title */}
-                <h1 className="mb-3 break-words border-2 border-theme-channel-type-active-border pl-2 text-[22px] font-bold leading-tight text-theme-text-light">
-                  {rules.title}
-                </h1>
+                <ol className="space-y-3">
+                  {rules.items.map((rule) => (
+                    <li
+                      key={`${rule.order}-${rule.title}`}
+                      className="flex gap-3 rounded-lg border border-theme-border/50 bg-theme-bg-secondary/70 px-3 py-3"
+                    >
+                      <div className="flex h-8 min-w-8 items-center justify-center rounded-md border border-theme-tab-button-bg/70 bg-theme-tab-button-bg/40 text-[14px] font-semibold text-theme-text-light">
+                        {rule.order}
+                      </div>
 
-                {/* Content */}
-                <div className="whitespace-pre-wrap wrap-break-word text-[16px] leading-7 text-theme-text-secondary">
-                  {parsePostContent(rules.content, themeMode)}
-                </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="break-words text-[18px] font-semibold leading-6 text-theme-text-light">
+                          {parsePostContent(rule.title, themeMode)}
+                        </div>
 
-                {/* Image — always below text */}
+                        {rule.description && (
+                          <div className="mt-1 whitespace-pre-wrap break-words text-[14px] leading-6 text-theme-text-subtle">
+                            {parsePostContent(rule.description, themeMode)}
+                          </div>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+
                 {rules.imageAsset && (
                   <RulesImage
                     imageUrl={rules.imageAsset.url}
@@ -592,7 +721,6 @@ function RulesViewInner() {
         </div>
       </div>
 
-      {/* Delete confirmation */}
       <Dialog
         open={showDeleteConfirm}
         onOpenChange={(open) => {
@@ -608,18 +736,18 @@ function RulesViewInner() {
               Eliminar reglas
             </DialogTitle>
             <DialogDescription className="-mt-2 text-center text-[15px] text-theme-text-subtle">
-              Esta acción no se puede deshacer.
+              Esta accion no se puede deshacer.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3 px-6 pb-4 -mt-2.5">
+          <div className="-mt-2.5 space-y-3 px-6 pb-4">
             <div className="flex h-8 items-center justify-center border border-theme-border bg-theme-bg-edit-form/60 px-3">
               <p className="text-center text-[14px] leading-none text-theme-text-tertiary">
                 Las reglas de{" "}
                 <span className="font-semibold text-red-400">
                   {board?.name}
                 </span>{" "}
-                serán eliminadas permanentemente.
+                seran eliminadas permanentemente.
               </p>
             </div>
           </div>

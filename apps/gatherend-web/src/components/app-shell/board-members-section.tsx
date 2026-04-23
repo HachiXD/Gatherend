@@ -35,9 +35,9 @@ export function MembersSkeleton() {
 
 const roleIconMap: Record<MemberRole, React.ReactNode> = {
   GUEST: null,
-  MODERATOR: <Ghost className="h-3.5 w-3.5 text-indigo-400" />,
-  ADMIN: <HardHat className="h-3.5 w-3.5 text-rose-400" />,
-  OWNER: <Crown className="h-3.5 w-3.5 text-[#FFD700]" />,
+  MODERATOR: <Ghost className="h-4.5 w-4.5 text-indigo-400" />,
+  ADMIN: <HardHat className="h-4.5 w-4.5 text-rose-400" />,
+  OWNER: <Crown className="h-4.5 w-4.5 text-[#FFD700]" />,
 };
 
 interface BoardMembersSectionProps {
@@ -142,7 +142,7 @@ export function BoardMembersSection({
                       </div>
                       {roleIconMap[member.role] ? (
                         <div
-                          className="flex h-5.5 w-5.5  rounded-sm shrink-0 items-center justify-center border border-[var(--community-header-btn-ring,var(--theme-border-secondary))] bg-[var(--community-header-btn-bg,var(--theme-chat-input-button-bg))] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]"
+                          className="flex h-5.5 w-5.5 rounded-lg shrink-0 items-center justify-center "
                           title={member.role}
                         >
                           {roleIconMap[member.role]}

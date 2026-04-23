@@ -24,11 +24,11 @@ import {
 import { exitBoardWithSpaFallback } from "@/lib/board-exit";
 
 const HEADER_PANEL_SHELL =
-  "border border-theme-border mr-1.5 bg-theme-bg-overlay-primary/78 px-4 pt-4 pb-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.26)] sm:px-5 sm:py-5";
+  "rounded-lg border border-theme-border mr-1.5 bg-theme-bg-overlay-primary/78 px-4 pt-4 pb-0 sm:px-5 sm:py-5";
 const DANGER_PANEL_SHELL =
-  "border border-rose-500/35 bg-rose-950/18 px-4 py-4 -mt-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.26)] sm:px-5 sm:py-5";
+  "rounded-lg border border-rose-500/35 bg-rose-950/18 px-4 py-4 -mt-4 sm:px-5 sm:py-5";
 const DANGER_ACTION_BUTTON_CLASS =
-  "flex h-8 w-full -mt-1.5 cursor-pointer items-center justify-center gap-1.5 rounded-none border border-rose-500/45 bg-rose-900/55 px-3 text-[14px] text-rose-100 transition hover:border-rose-400/65 hover:bg-rose-800/65 hover:text-white";
+  "flex h-8 w-full -mt-1.5 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-rose-500/45 bg-rose-900/55 px-3 text-[14px] text-rose-100 transition hover:border-rose-400/65 hover:bg-rose-800/65 hover:text-white";
 
 interface DangerZoneProps {
   board: Board;

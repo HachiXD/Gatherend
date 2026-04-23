@@ -143,8 +143,8 @@ export const ReportProfileModal = () => {
   return (
     <Dialog open={isModalOpen} onOpenChange={handleClose}>
       <DialogContent
-        className="max-w-[440px]! overflow-hidden rounded-none border border-theme-border bg-theme-bg-modal p-0 text-theme-text-subtle"
-        closeButtonClassName="cursor-pointer rounded-none p-1 text-theme-text-subtle opacity-100 transition hover:text-theme-text-light data-[state=open]:bg-transparent data-[state=open]:text-theme-text-subtle focus:ring-0 focus:ring-offset-0 focus:outline-none"
+        className="max-w-[440px]! overflow-hidden rounded-lg border border-theme-border bg-theme-bg-modal p-0 text-theme-text-subtle"
+        closeButtonClassName="cursor-pointer rounded-lg p-1 text-theme-text-subtle opacity-100 transition hover:text-theme-text-light data-[state=open]:bg-transparent data-[state=open]:text-theme-text-subtle focus:ring-0 focus:ring-offset-0 focus:outline-none"
       >
         <DialogHeader className="bg-theme-bg-secondary/20 px-6 pb-2 pt-2">
           <div className="flex items-center justify-center gap-2">
@@ -163,7 +163,7 @@ export const ReportProfileModal = () => {
             <p className="mb-1 text-[11px] text-theme-text-tertiary">
               {t.modals.report.userBeingReported}
             </p>
-            <div className="flex min-w-0 items-center gap-2 overflow-hidden border border-theme-border bg-theme-bg-secondary/20 px-3 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.28),inset_0_-1px_0_rgba(0,0,0,0.28)]">
+            <div className="flex min-w-0 items-center gap-2 overflow-hidden rounded-lg border border-theme-border bg-theme-bg-secondary/20 px-3 py-1.5">
               <UserAvatar
                 src={reportProfileImageUrl || ""}
                 profileId={reportProfileId || ""}
@@ -186,14 +186,14 @@ export const ReportProfileModal = () => {
             <p className="mb-1 text-[11px] text-theme-text-tertiary">
               {t.modals.report.whyReporting}
             </p>
-            <div className="max-h-[180px] space-y-1 p-1 overflow-y-auto scrollbar-ultra-thin border border-theme-border-subtle">
+            <div className="max-h-[180px] space-y-1 overflow-y-auto rounded-lg border border-theme-border-subtle p-1 scrollbar-ultra-thin">
               {REPORT_CATEGORIES.map((category) => (
                 <button
                   key={category.value}
                   onClick={() => setSelectedCategory(category.value)}
                   disabled={isLoading}
                   className={cn(
-                    "flex min-h-[40px] w-full cursor-pointer flex-col justify-center rounded-none border px-3 py-1 text-left transition",
+                    "flex min-h-[40px] w-full cursor-pointer flex-col justify-center rounded-lg border px-3 py-1 text-left transition",
                     selectedCategory === category.value
                       ? "border-theme-border-accent-active-channel bg-theme-border-accent-active-channel/40"
                       : "border-theme-border-subtle hover:border-theme-border hover:bg-theme-bg-secondary/30",
@@ -227,13 +227,13 @@ export const ReportProfileModal = () => {
               onChange={(e) => setDescription(e.target.value)}
               disabled={isLoading}
               placeholder={t.modals.report.additionalDetailsPlaceholder}
-              className="h-20 w-full scrollbar-ultra-thin resize-none rounded-none border border-theme-border-subtle bg-transparent px-3 py-2 text-[12px] leading-5 text-theme-text-light outline-none placeholder:text-theme-text-tertiary focus:border-theme-border-accent"
+              className="h-20 w-full scrollbar-ultra-thin resize-none rounded-lg border border-theme-border-subtle bg-transparent px-3 py-2 text-[12px] leading-5 text-theme-text-light outline-none placeholder:text-theme-text-tertiary focus:border-theme-border-accent"
               maxLength={500}
             />
           </div>
 
           {success && (
-            <div className="border border-theme-border-accent-active-channel bg-theme-channel-type-active-bg px-3 py-1 -mt-3 mb-1 text-[13px]">
+            <div className="-mt-3 mb-1 rounded-lg border border-theme-border-accent-active-channel bg-theme-channel-type-active-bg px-3 py-1 text-[13px]">
               <p className="font-medium text-theme-channel-type-active-text">
                 {t.modals.report.success}
               </p>
@@ -253,14 +253,14 @@ export const ReportProfileModal = () => {
               type="button"
               disabled={isLoading}
               onClick={handleClose}
-              className="h-6.5 cursor-pointer rounded-none bg-theme-bg-cancel-button px-3 text-[13px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+              className="h-6.5 cursor-pointer rounded-lg bg-theme-bg-cancel-button px-3 text-[13px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
             >
               {t.modals.report.cancel}
             </Button>
             <Button
               type="button"
               disabled={isLoading || !selectedCategory}
-              className="h-6.5 cursor-pointer rounded-none bg-red-500/80 px-3 text-[13px] text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className="h-6.5 cursor-pointer rounded-lg bg-red-500/80 px-3 text-[13px] text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
               onClick={onSubmit}
             >
               {isLoading ? t.modals.report.submitting : t.modals.report.submit}

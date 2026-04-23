@@ -185,17 +185,10 @@ export const ChatItemActions = memo(function ChatItemActions({
         : `/api/direct-messages/${id}/pin?conversationId=${conversationId}`;
 
       if (isPinned) {
-        await axios.delete(
-          url,
-          getExpressAxiosConfig(currentProfile.id),
-        );
+        await axios.delete(url, getExpressAxiosConfig(currentProfile.id));
         setIsPinned(false);
       } else {
-        await axios.post(
-          url,
-          {},
-          getExpressAxiosConfig(currentProfile.id),
-        );
+        await axios.post(url, {}, getExpressAxiosConfig(currentProfile.id));
         setIsPinned(true);
       }
 
@@ -213,7 +206,7 @@ export const ChatItemActions = memo(function ChatItemActions({
     <div
       onMouseEnter={enableTooltipsOnce}
       className={cn(
-        "items-center gap-x-2 absolute p-1 -top-2 right-5 bg-theme-toolbar-bg border border-theme-toolbar-border rounded-none shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)] z-10",
+        "items-center gap-x-2 absolute p-1 -top-2 right-5 bg-theme-toolbar-bg border border-theme-toolbar-border rounded-lg  z-10",
         showMoreMenu || showEmojiPicker
           ? "flex"
           : "hidden group-hover:flex hover:flex",
@@ -295,7 +288,7 @@ export const ChatItemActions = memo(function ChatItemActions({
             createPortal(
               <div
                 ref={emojiPickerPortalRef}
-                className="fixed z-[9999] h-8 flex mt-3 ml-2 gap-1 p-2 bg-theme-dropdown-bg border border-theme-dropdown-border  shadow-lg"
+                className="fixed z-[9999] h-8 flex mt-3 ml-2 gap-1 p-2 bg-theme-dropdown-bg border border-theme-dropdown-border rounded-lg shadow-lg"
                 style={{
                   top: emojiPickerPosition.top,
                   left: emojiPickerPosition.left,
@@ -354,13 +347,13 @@ export const ChatItemActions = memo(function ChatItemActions({
         </MaybeActionTooltip>
         {showMoreMenu && (
           <div
-            className="fixed z-50 w-48 py-1 px-1 bg-theme-dropdown-bg border border-theme-dropdown-border rounded-none shadow-[0_10px_24px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.1),inset_1px_0_0_rgba(255,255,255,0.08),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)] animate-in fade-in slide-in-from-top-2 duration-200"
+            className="fixed z-50 w-48 py-1 px-1 bg-theme-dropdown-bg border border-theme-dropdown-border rounded-lg shadow-none animate-in fade-in slide-in-from-top-2 duration-200"
             style={{ top: menuPosition.top, left: menuPosition.left }}
           >
             {canPinMessage && (
               <button
                 onClick={handleTogglePin}
-                className="h-8 w-full flex items-center gap-2 px-3 py-2 text-sm cursor-pointer text-theme-text-subtle rounded-none border border-transparent hover:border-theme-border hover:bg-theme-dropdown-hover hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.28)] focus:border-theme-border focus:bg-theme-dropdown-hover focus:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.28)]"
+                className="h-8 w-full flex items-center gap-2 px-3 py-2 text-sm cursor-pointer text-theme-text-subtle rounded-lg border border-transparent hover:border-theme-border hover:bg-theme-dropdown-hover focus:border-theme-border focus:bg-theme-dropdown-hover"
               >
                 <Pin className="h-4 w-4" />
                 <span>
@@ -384,7 +377,7 @@ export const ChatItemActions = memo(function ChatItemActions({
                     profileId: currentProfile.id,
                   });
                 }}
-                className="h-8 w-full flex items-center gap-2 px-3 py-2 text-sm cursor-pointer text-red-400 rounded-none border border-rose-500/20 bg-rose-500/6 hover:border-rose-500/35 hover:bg-rose-500/10 focus:border-rose-500/35 focus:bg-rose-500/10"
+                className="h-8 w-full flex items-center gap-2 px-3 py-2 text-sm cursor-pointer text-red-400 rounded-lg border border-rose-500/20 bg-rose-500/6 hover:border-rose-500/35 hover:bg-rose-500/10 focus:border-rose-500/35 focus:bg-rose-500/10"
               >
                 <TriangleAlert className="h-4 w-4" />
                 <span>{t.chat.reportMessage}</span>

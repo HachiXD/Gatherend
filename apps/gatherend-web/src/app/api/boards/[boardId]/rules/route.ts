@@ -10,20 +10,152 @@ import {
   uploadedAssetSummarySelect,
 } from "@/lib/uploaded-assets";
 
-const MAX_TITLE_LENGTH = 200;
-const MAX_CONTENT_LENGTH = 5000;
+const MAX_RULES_COUNT = 50;
+const MAX_RULE_TITLE_LENGTH = 200;
+const MAX_RULE_DESCRIPTION_LENGTH = 1000;
+
+interface RuleItem {
+  order: number;
+  title: string;
+  description: string | null;
+}
 
 const boardRulesSelect = {
   id: true,
   boardId: true,
-  title: true,
-  content: true,
+  items: true,
   createdAt: true,
   updatedAt: true,
   imageAsset: {
     select: uploadedAssetSummarySelect,
   },
 } as const;
+
+type BoardRulesRecord = Prisma.BoardRulesGetPayload<{
+  select: typeof boardRulesSelect;
+}>;
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function toRulesItemsInputJson(items: RuleItem[]): Prisma.InputJsonValue {
+  return items as unknown as Prisma.InputJsonValue;
+}
+
+function validateRulesItems(items: unknown):
+  | { success: true; items: RuleItem[] }
+  | { success: false; error: string } {
+  if (!Array.isArray(items)) {
+    return {
+      success: false,
+      error: "Items must be an array",
+    };
+  }
+
+  if (items.length === 0) {
+    return {
+      success: false,
+      error: "At least one rule item is required",
+    };
+  }
+
+  if (items.length > MAX_RULES_COUNT) {
+    return {
+      success: false,
+      error: `Items must contain ${MAX_RULES_COUNT} rules or less`,
+    };
+  }
+
+  const validatedItems: RuleItem[] = [];
+  const allowedKeys = new Set(["order", "title", "description"]);
+
+  for (let index = 0; index < items.length; index += 1) {
+    const item = items[index];
+
+    if (!isPlainObject(item)) {
+      return {
+        success: false,
+        error: `Rule item ${index + 1} must be an object`,
+      };
+    }
+
+    for (const key of Object.keys(item)) {
+      if (!allowedKeys.has(key)) {
+        return {
+          success: false,
+          error: `Rule item ${index + 1} contains an unsupported field: ${key}`,
+        };
+      }
+    }
+
+    const rawTitle = item.title;
+    const rawDescription = item.description;
+
+    if (typeof rawTitle !== "string" || rawTitle.trim().length === 0) {
+      return {
+        success: false,
+        error: `Rule item ${index + 1} must have a non-empty title`,
+      };
+    }
+
+    const trimmedTitle = rawTitle.trim();
+    if (trimmedTitle.length > MAX_RULE_TITLE_LENGTH) {
+      return {
+        success: false,
+        error: `Rule item ${index + 1} title must be ${MAX_RULE_TITLE_LENGTH} characters or less`,
+      };
+    }
+
+    let normalizedDescription: string | null = null;
+    if (rawDescription !== undefined && rawDescription !== null) {
+      if (typeof rawDescription !== "string") {
+        return {
+          success: false,
+          error: `Rule item ${index + 1} description must be a string or null`,
+        };
+      }
+
+      const trimmedDescription = rawDescription.trim();
+      if (trimmedDescription.length > MAX_RULE_DESCRIPTION_LENGTH) {
+        return {
+          success: false,
+          error: `Rule item ${index + 1} description must be ${MAX_RULE_DESCRIPTION_LENGTH} characters or less`,
+        };
+      }
+
+      normalizedDescription =
+        trimmedDescription.length > 0 ? trimmedDescription : null;
+    }
+
+    validatedItems.push({
+      order: index + 1,
+      title: trimmedTitle,
+      description: normalizedDescription,
+    });
+  }
+
+  return {
+    success: true,
+    items: validatedItems,
+  };
+}
+
+function serializeBoardRules(rules: BoardRulesRecord) {
+  const validatedItems = validateRulesItems(rules.items);
+  if (!validatedItems.success) {
+    throw new Error("INVALID_RULES_ITEMS");
+  }
+
+  return {
+    id: rules.id,
+    boardId: rules.boardId,
+    items: validatedItems.items,
+    imageAsset: serializeUploadedAsset(rules.imageAsset),
+    createdAt: rules.createdAt.toISOString(),
+    updatedAt: rules.updatedAt.toISOString(),
+  };
+}
 
 // GET /api/boards/[boardId]/rules — any member can read
 export async function GET(
@@ -63,17 +195,14 @@ export async function GET(
     }
 
     return NextResponse.json({
-      rules: {
-        id: rules.id,
-        boardId: rules.boardId,
-        title: rules.title,
-        content: rules.content,
-        imageAsset: serializeUploadedAsset(rules.imageAsset),
-        createdAt: rules.createdAt.toISOString(),
-        updatedAt: rules.updatedAt.toISOString(),
-      },
+      rules: serializeBoardRules(rules),
     });
   } catch (error) {
+    if (error instanceof Error && error.message === "INVALID_RULES_ITEMS") {
+      console.error("[BOARD_RULES_GET_INVALID_ITEMS]", error);
+      return NextResponse.json({ error: "Stored board rules are invalid" }, { status: 500 });
+    }
+
     console.error("[BOARD_RULES_GET]", error);
     return NextResponse.json({ error: "Internal Error" }, { status: 500 });
   }
@@ -98,41 +227,19 @@ export async function POST(
       return NextResponse.json({ error: "Invalid board ID" }, { status: 400 });
     }
 
-    let body: { title?: unknown; content?: unknown; imageAssetId?: unknown };
+    let body: { items?: unknown; imageAssetId?: unknown };
     try {
       body = await req.json();
     } catch {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const { title, content, imageAssetId } = body;
+    const { items, imageAssetId } = body;
 
-    if (!title || typeof title !== "string" || title.trim().length === 0) {
+    const validatedItems = validateRulesItems(items);
+    if (!validatedItems.success) {
       return NextResponse.json(
-        { error: "Title is required" },
-        { status: 400 },
-      );
-    }
-
-    const trimmedTitle = title.trim();
-    if (trimmedTitle.length > MAX_TITLE_LENGTH) {
-      return NextResponse.json(
-        { error: `Title must be ${MAX_TITLE_LENGTH} characters or less` },
-        { status: 400 },
-      );
-    }
-
-    if (!content || typeof content !== "string" || content.trim().length === 0) {
-      return NextResponse.json(
-        { error: "Content is required" },
-        { status: 400 },
-      );
-    }
-
-    const trimmedContent = content.trim();
-    if (trimmedContent.length > MAX_CONTENT_LENGTH) {
-      return NextResponse.json(
-        { error: `Content must be ${MAX_CONTENT_LENGTH} characters or less` },
+        { error: validatedItems.error },
         { status: 400 },
       );
     }
@@ -180,8 +287,7 @@ export async function POST(
       return tx.boardRules.create({
         data: {
           boardId,
-          title: trimmedTitle,
-          content: trimmedContent,
+          items: toRulesItemsInputJson(validatedItems.items),
           imageAssetId: resolvedImageAssetId,
         },
         select: boardRulesSelect,
@@ -189,18 +295,15 @@ export async function POST(
     });
 
     return NextResponse.json(
-      {
-        id: rules.id,
-        boardId: rules.boardId,
-        title: rules.title,
-        content: rules.content,
-        imageAsset: serializeUploadedAsset(rules.imageAsset),
-        createdAt: rules.createdAt.toISOString(),
-        updatedAt: rules.updatedAt.toISOString(),
-      },
+      serializeBoardRules(rules),
       { status: 201 },
     );
   } catch (error) {
+    if (error instanceof Error && error.message === "INVALID_RULES_ITEMS") {
+      console.error("[BOARD_RULES_POST_INVALID_ITEMS]", error);
+      return NextResponse.json({ error: "Stored board rules are invalid" }, { status: 500 });
+    }
+
     if (error instanceof Error) {
       if (error.message === "FORBIDDEN") {
         return NextResponse.json(
@@ -244,54 +347,33 @@ export async function PATCH(
       return NextResponse.json({ error: "Invalid board ID" }, { status: 400 });
     }
 
-    let body: { title?: unknown; content?: unknown; imageAssetId?: unknown };
+    let body: { items?: unknown; imageAssetId?: unknown };
     try {
       body = await req.json();
     } catch {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const { title, content, imageAssetId } = body;
+    const { items, imageAssetId } = body;
 
-    if (title === undefined && content === undefined && imageAssetId === undefined) {
+    if (items === undefined && imageAssetId === undefined) {
       return NextResponse.json(
         { error: "Nothing to update" },
         { status: 400 },
       );
     }
 
-    let trimmedTitle: string | undefined;
-    if (title !== undefined) {
-      if (typeof title !== "string" || title.trim().length === 0) {
+    let normalizedItems: RuleItem[] | undefined;
+    if (items !== undefined) {
+      const validatedItems = validateRulesItems(items);
+      if (!validatedItems.success) {
         return NextResponse.json(
-          { error: "Title must be a non-empty string" },
+          { error: validatedItems.error },
           { status: 400 },
         );
       }
-      trimmedTitle = title.trim();
-      if (trimmedTitle.length > MAX_TITLE_LENGTH) {
-        return NextResponse.json(
-          { error: `Title must be ${MAX_TITLE_LENGTH} characters or less` },
-          { status: 400 },
-        );
-      }
-    }
 
-    let trimmedContent: string | undefined;
-    if (content !== undefined) {
-      if (typeof content !== "string" || content.trim().length === 0) {
-        return NextResponse.json(
-          { error: "Content must be a non-empty string" },
-          { status: 400 },
-        );
-      }
-      trimmedContent = content.trim();
-      if (trimmedContent.length > MAX_CONTENT_LENGTH) {
-        return NextResponse.json(
-          { error: `Content must be ${MAX_CONTENT_LENGTH} characters or less` },
-          { status: 400 },
-        );
-      }
+      normalizedItems = validatedItems.items;
     }
 
     let resolvedImageAssetId: string | null | undefined;
@@ -348,25 +430,25 @@ export async function PATCH(
       return tx.boardRules.update({
         where: { boardId },
         data: {
-          ...(trimmedTitle !== undefined && { title: trimmedTitle }),
-          ...(trimmedContent !== undefined && { content: trimmedContent }),
+          ...(normalizedItems !== undefined && {
+            items: toRulesItemsInputJson(normalizedItems),
+          }),
           ...(resolvedImageAssetId !== undefined && { imageAssetId: resolvedImageAssetId }),
         },
         select: boardRulesSelect,
       });
     });
 
-    return NextResponse.json({
-      id: updated.id,
-      boardId: updated.boardId,
-      title: updated.title,
-      content: updated.content,
-      imageAsset: serializeUploadedAsset(updated.imageAsset),
-      createdAt: updated.createdAt.toISOString(),
-      updatedAt: updated.updatedAt.toISOString(),
-    });
+    return NextResponse.json(serializeBoardRules(updated));
   } catch (error) {
     if (error instanceof Error) {
+      if (error.message === "INVALID_RULES_ITEMS") {
+        console.error("[BOARD_RULES_PATCH_INVALID_ITEMS]", error);
+        return NextResponse.json(
+          { error: "Stored board rules are invalid" },
+          { status: 500 },
+        );
+      }
       if (error.message === "FORBIDDEN") {
         return NextResponse.json(
           { error: "Insufficient permissions" },

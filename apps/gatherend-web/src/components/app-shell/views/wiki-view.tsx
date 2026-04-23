@@ -1,6 +1,5 @@
 "use client";
 
-import { useCommunityHeaderStyle } from "@/hooks/use-community-header-style";
 import { useBoardData } from "@/hooks/use-board-data";
 import { useCurrentBoardId } from "@/contexts/board-switch-context";
 import { BookOpenText } from "lucide-react";
@@ -10,8 +9,6 @@ function WikiViewInner() {
   const { data: board, isLoading } = useBoardData(boardId, {
     enableFetch: true,
   });
-
-  const headerButtonStyles = useCommunityHeaderStyle();
 
   if (!board && isLoading) {
     return (
@@ -27,12 +24,11 @@ function WikiViewInner() {
         {/* Header */}
         <div className="sticky top-0 z-20 shrink-0 border-b border-theme-border transition-colors duration-300">
           <div
-            className="px-0 h-11 flex items-center"
-            style={headerButtonStyles}
+            className="px-0 h-11 flex items-center bg-theme-bg-quinary"
           >
             <div className="ml-3 mr-3 flex w-full items-center gap-2">
-              <div className="flex min-w-0 max-w-[min(52vw,420px)] items-center justify-center gap-2 rounded-sm border border-(--community-header-btn-ring) bg-theme-bg-secondary/40 px-3 py-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]">
-                <BookOpenText className="h-6 w-6 shrink-0 text-(--community-header-btn-muted)" />
+              <div className="flex min-w-0 max-w-[min(52vw,420px)] items-center justify-center gap-2 rounded-lg px-3 py-0.5">
+                <BookOpenText className="h-6 w-6 shrink-0 text-theme-text-subtle" />
                 <p className="min-w-0 truncate text-center text-[20px] font-semibold text-theme-text-subtle">
                   {board ? `Wiki de ${board.name}` : "Wiki"}
                 </p>

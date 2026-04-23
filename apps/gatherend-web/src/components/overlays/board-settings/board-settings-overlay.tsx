@@ -33,8 +33,6 @@ export const BoardSettingsOverlay = ({
     isFetching,
     isError,
   } = useBoardData(boardId, { enableFetch: true });
-  const overlayShellShadow =
-    "shadow-[0_18px_40px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.08),inset_1px_0_0_rgba(255,255,255,0.06),inset_-1px_0_0_rgba(0,0,0,0.42),inset_0_-1px_0_rgba(0,0,0,0.42)]";
   const currentMember =
     board?.currentMember?.profileId === currentProfileId
       ? board?.currentMember ?? null
@@ -86,9 +84,8 @@ export const BoardSettingsOverlay = ({
     <div className="fixed inset-0 z-[10000] bg-black/40 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-6 overflow-y-auto overscroll-contain pointer-events-auto">
       <div
         className={cn(
-          "relative flex h-[calc(100dvh-1rem)] w-full max-w-4xl flex-col overflow-hidden border border-theme-border bg-theme-bg-overlay-primary sm:h-[calc(100dvh-3rem)] sm:flex-row",
+          "relative flex h-[calc(100dvh-1rem)] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-theme-border bg-theme-bg-overlay-primary sm:h-[calc(100dvh-3rem)] sm:flex-row",
           "animate-in fade-in zoom-in duration-150",
-          overlayShellShadow,
         )}
       >
         {/* SIDEBAR */}

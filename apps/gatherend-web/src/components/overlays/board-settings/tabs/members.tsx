@@ -61,21 +61,19 @@ const ASSIGNABLE_BY_ROLE: Record<MemberRole, MemberRole[]> = {
 // Roles that can kick (OWNER, ADMIN, MODERATOR)
 const CAN_KICK_ROLES: MemberRole[] = ["OWNER", "ADMIN", "MODERATOR"];
 const HEADER_PANEL_SHELL =
-  "border border-theme-border bg-theme-bg-overlay-primary/78 px-4 mr-1.5 pt-4 pb-0  shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.26)] sm:px-5 sm:py-5";
+  "rounded-lg border border-theme-border bg-theme-bg-overlay-primary/78 px-4 mr-1.5 pt-4 pb-0 sm:px-5 sm:py-5";
 const MEMBER_ROW_CLASS =
-  "flex min-h-10 items-center gap-3 rounded-none border border-theme-border-subtle bg-theme-bg-edit-form/50 px-3 py-1";
+  "flex min-h-10 items-center gap-3 rounded-lg border border-theme-border-subtle bg-theme-bg-edit-form/50 px-3 py-1";
 const actionButtonClass =
-  "h-6.5 min-w-[120px] cursor-pointer rounded-none bg-theme-tab-button-bg px-3 text-[14px] text-theme-text-light transition hover:bg-theme-tab-button-hover";
+  "h-6.5 min-w-[120px] cursor-pointer rounded-lg bg-theme-tab-button-bg px-3 text-[14px] text-theme-text-light transition hover:bg-theme-tab-button-hover";
 const memberMetaBadgeClass =
-  "inline-flex items-center rounded-none border border-theme-border bg-theme-bg-secondary/35 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.05em] text-theme-text-muted";
-const menuPanelShadow =
-  "shadow-[0_10px_24px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.1),inset_1px_0_0_rgba(255,255,255,0.08),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]";
+  "inline-flex items-center rounded-lg border border-theme-border bg-theme-bg-secondary/35 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.05em] text-theme-text-muted";
 const menuRowClass =
-  "h-8 w-full cursor-pointer rounded-none border border-transparent px-3 py-2 text-left text-sm text-theme-text-secondary hover:border-theme-border hover:bg-theme-bg-secondary/30 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.28)] focus:border-theme-border focus:bg-theme-bg-secondary/30 focus:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.28)]";
+  "h-8 w-full cursor-pointer rounded-lg border border-transparent px-3 py-2 text-left text-sm text-theme-text-secondary hover:border-theme-border hover:bg-theme-bg-secondary/30 focus:border-theme-border focus:bg-theme-bg-secondary/30";
 const menuSectionSeparatorClass =
   "mx-2 my-0 h-0 border-b border-theme-border bg-transparent";
 const menuIconShellClass =
-  " flex h-6 w-6 items-center justify-center rounded-none border border-theme-border bg-theme-bg-primary/55 text-theme-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]";
+  " flex h-6 w-6 items-center justify-center rounded-lg border border-theme-border bg-theme-bg-primary/55 text-theme-text-secondary";
 
 interface MembersTabProps {
   board: Pick<
@@ -427,7 +425,7 @@ export const MembersTab = ({ board, currentProfileId }: MembersTabProps) => {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent
                               side="left"
-                              className={`z-10000 w-48 !animate-none rounded-none border-theme-border bg-theme-bg-dropdown-menu-primary px-1 py-0.5 text-xs font-medium text-theme-text-secondary ${menuPanelShadow}`}
+                              className="z-10000 w-48 !animate-none rounded-lg border-theme-border bg-theme-bg-dropdown-menu-primary px-1 py-0.5 text-xs font-medium text-theme-text-secondary"
                             >
                               {canAssignRoles && (
                                 <>
@@ -565,7 +563,7 @@ export const MembersTab = ({ board, currentProfileId }: MembersTabProps) => {
                                     className={cn(
                                       menuRowClass,
                                       !member.latestActiveWarningId &&
-                                        "cursor-not-allowed opacity-50 hover:border-transparent hover:bg-transparent hover:shadow-none focus:border-transparent focus:bg-transparent focus:shadow-none",
+                                        "cursor-not-allowed opacity-50 hover:border-transparent hover:bg-transparent focus:border-transparent focus:bg-transparent",
                                     )}
                                   >
                                     <span className={menuIconShellClass}>

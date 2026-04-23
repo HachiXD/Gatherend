@@ -266,6 +266,7 @@ function GroupedTextBubbleRun({
       }
     | undefined
   >(undefined);
+
   const canUsePretextLayout = useMemo(
     () =>
       ENABLE_PRETEXT_GROUPED_BUBBLE_LAYOUT &&
@@ -587,67 +588,6 @@ function ChatMessagesComponent({
   // messages.hasMoreAfter: there are more recent messages
   // not represented in the current window (cache or server).
   const hasMoreRecent = chatWindow.hasMoreAfter;
-
-  const prevCauseRef = useRef<{
-    status: string;
-    messageCount: number;
-    isFetchingOlder: boolean;
-    isFetchingNewer: boolean;
-    hasEvictedNewerLike: boolean;
-    hasEvictedOlderLike: boolean;
-    hasMoreRecent: boolean;
-    pendingNewerMessages: number;
-    scrollTrigger: number;
-    compactRevision: number;
-  } | null>(null);
-
-  const currentCause = {
-    status: chatWindow.status,
-    messageCount: chatWindow.messages.length,
-    isFetchingOlder: chatWindow.isFetchingOlder,
-    isFetchingNewer: chatWindow.isFetchingNewer,
-    hasEvictedNewerLike,
-    hasEvictedOlderLike,
-    hasMoreRecent,
-    pendingNewerMessages,
-    scrollTrigger,
-    compactRevision: chatWindow.compactRevision,
-  };
-
-  const changedCause: string[] = [];
-  const prevCause = prevCauseRef.current;
-
-  if (!prevCause || prevCause.status !== currentCause.status)
-    changedCause.push("status");
-  if (!prevCause || prevCause.messageCount !== currentCause.messageCount)
-    changedCause.push("messageCount");
-  if (!prevCause || prevCause.isFetchingOlder !== currentCause.isFetchingOlder)
-    changedCause.push("isFetchingOlder");
-  if (!prevCause || prevCause.isFetchingNewer !== currentCause.isFetchingNewer)
-    changedCause.push("isFetchingNewer");
-  if (
-    !prevCause ||
-    prevCause.hasEvictedNewerLike !== currentCause.hasEvictedNewerLike
-  )
-    changedCause.push("hasEvictedNewerLike");
-  if (
-    !prevCause ||
-    prevCause.hasEvictedOlderLike !== currentCause.hasEvictedOlderLike
-  )
-    changedCause.push("hasEvictedOlderLike");
-  if (!prevCause || prevCause.hasMoreRecent !== currentCause.hasMoreRecent)
-    changedCause.push("hasMoreRecent");
-  if (
-    !prevCause ||
-    prevCause.pendingNewerMessages !== currentCause.pendingNewerMessages
-  )
-    changedCause.push("pendingNewerMessages");
-  if (!prevCause || prevCause.scrollTrigger !== currentCause.scrollTrigger)
-    changedCause.push("scrollTrigger");
-  if (!prevCause || prevCause.compactRevision !== currentCause.compactRevision)
-    changedCause.push("compactRevision");
-
-  prevCauseRef.current = currentCause;
 
   // MESSAGES (message-window model: already oldest -> newest)
 

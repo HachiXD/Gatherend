@@ -47,21 +47,17 @@ interface EditableGradientColorStop extends GradientColorStop {
 const sectionLabelClass =
   "block uppercase text-xs font-bold text-theme-text-subtle";
 const panelSectionClass =
-  "space-y-2 border border-theme-border-subtle bg-theme-bg-edit-form/30 px-3 py-2";
+  "space-y-2 rounded-lg border border-theme-border-subtle bg-theme-bg-edit-form/30 px-3 py-2";
 const fieldInputClass =
-  "h-8 rounded-none border-theme-border-subtle bg-theme-bg-edit-form/50 text-theme-text-light placeholder:text-theme-text-muted focus-visible:border-theme-border-subtle";
-const panelToggleButtonClass =
-  "flex h-8 cursor-pointer items-center justify-center gap-2 rounded-none border px-3 text-[13px] transition";
+  "h-8 rounded-lg border-theme-border-subtle bg-theme-bg-edit-form/50 text-theme-text-light placeholder:text-theme-text-muted focus-visible:border-theme-border-subtle";
 const panelToggleActiveClass =
   "border-theme-channel-type-active-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text";
-const panelToggleInactiveClass =
-  "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border";
 const panelSelectTriggerClass =
-  "h-8 w-full cursor-pointer rounded-none border border-theme-border-subtle bg-theme-bg-edit-form/50 text-theme-text-light hover:bg-theme-bg-edit-form/50 focus:border-theme-border-subtle focus:ring-0";
+  "h-8 w-full cursor-pointer rounded-lg border border-theme-border-subtle bg-theme-bg-edit-form/50 text-theme-text-light hover:bg-theme-bg-edit-form/50 focus:border-theme-border-subtle focus:ring-0";
 const panelSelectContentClass =
-  "w-[var(--radix-select-trigger-width)] min-w-[var(--radix-select-trigger-width)] rounded-none border-theme-border bg-theme-bg-modal p-0 text-theme-text-secondary [&>div]:p-0";
+  "w-[var(--radix-select-trigger-width)] min-w-[var(--radix-select-trigger-width)] rounded-lg border-theme-border bg-theme-bg-modal p-0 text-theme-text-secondary [&>div]:p-0";
 const panelSelectItemClass =
-  "h-8 w-full cursor-pointer rounded-none border-x-0 border-t-0 border-b border-theme-border-subtle px-2 hover:border-theme-channel-type-active-border hover:bg-theme-channel-type-active-bg hover:text-theme-channel-type-active-text focus:border-theme-channel-type-active-border focus:bg-theme-channel-type-active-bg focus:text-theme-channel-type-active-text";
+  "h-8 w-full cursor-pointer rounded-lg border-x-0 border-t-0 border-b border-theme-border-subtle px-2 hover:border-theme-channel-type-active-border hover:bg-theme-channel-type-active-bg hover:text-theme-channel-type-active-text focus:border-theme-channel-type-active-border focus:bg-theme-channel-type-active-bg focus:text-theme-channel-type-active-text";
 
 function normalizeHexDraft(value: string): string {
   return value.slice(0, 7).toUpperCase();
@@ -521,7 +517,7 @@ export function ThemeModal({
 
   return (
     <div
-      className="fixed top-16 right-4 z-50 w-[356px] overflow-hidden border border-theme-border bg-theme-bg-dropdown-menu-primary text-theme-text-subtle shadow-xl animate-in fade-in slide-in-from-top-2 duration-200"
+      className="fixed top-16 right-4 z-50 w-[356px] overflow-hidden rounded-lg border border-theme-border bg-theme-bg-dropdown-menu-primary text-theme-text-subtle shadow-xl animate-in fade-in slide-in-from-top-2 duration-200"
       onClick={(e) => e.stopPropagation()}
     >
       {/* Header */}
@@ -531,7 +527,7 @@ export function ThemeModal({
         </h3>
         <button
           onClick={handleCancel}
-          className="cursor-pointer rounded-none p-1 text-theme-text-subtle opacity-100 transition hover:text-theme-text-light data-[state=open]:bg-transparent data-[state=open]:text-theme-text-subtle focus:ring-0 focus:ring-offset-0 focus:outline-none"
+          className="cursor-pointer rounded-lg p-1 text-theme-text-subtle opacity-100 transition hover:bg-theme-bg-cancel-button hover:text-theme-text-light data-[state=open]:bg-transparent data-[state=open]:text-theme-text-subtle focus:ring-0 focus:ring-offset-0 focus:outline-none"
         >
           <X className="h-3.5 w-3.5" />
         </button>
@@ -546,7 +542,7 @@ export function ThemeModal({
           </Label>
           <div className="flex items-center -mt-1 gap-2">
             <div
-              className="relative h-8 w-8 shrink-0 cursor-pointer overflow-hidden rounded-none border border-theme-border-subtle"
+              className="relative h-8 w-8 shrink-0 cursor-pointer overflow-hidden rounded-lg border border-theme-border-subtle"
               style={{ backgroundColor: baseColor }}
             >
               <input
@@ -587,7 +583,7 @@ export function ThemeModal({
                 key={preset.name}
                 onClick={() => setBaseColor(preset.baseColor)}
                 className={cn(
-                  "h-6 w-6 cursor-pointer rounded-none border transition",
+                  "h-6 w-6 cursor-pointer rounded-lg border transition",
                   baseColor === preset.baseColor
                     ? "border-theme-channel-type-active-border"
                     : "border-theme-border-subtle hover:border-theme-channel-type-inactive-hover-border",
@@ -605,18 +601,17 @@ export function ThemeModal({
             {t.modals.theme.mode}
           </span>
           <div
-            className="-mt-1 flex gap-2"
+            className="-mt-1 flex overflow-hidden rounded-lg border border-theme-border"
             role="group"
             aria-labelledby="theme-mode-label"
           >
             <button
               onClick={() => setThemeMode("dark")}
               className={cn(
-                panelToggleButtonClass,
-                "flex-1",
+                "flex h-8 flex-1 cursor-pointer items-center justify-center gap-2 text-[12px] transition",
                 themeMode === "dark"
-                  ? panelToggleActiveClass
-                  : panelToggleInactiveClass,
+                  ? "bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
+                  : "bg-transparent text-theme-text-subtle hover:text-theme-text-primary",
               )}
             >
               <Moon className="h-4 w-4" />
@@ -625,11 +620,10 @@ export function ThemeModal({
             <button
               onClick={() => setThemeMode("light")}
               className={cn(
-                panelToggleButtonClass,
-                "flex-1",
+                "flex h-8 flex-1 cursor-pointer items-center justify-center gap-2 border-l border-theme-border text-[12px] transition",
                 themeMode === "light"
-                  ? panelToggleActiveClass
-                  : panelToggleInactiveClass,
+                  ? "bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
+                  : "bg-transparent text-theme-text-subtle hover:text-theme-text-primary",
               )}
             >
               <Sun className="h-4 w-4" />
@@ -647,7 +641,7 @@ export function ThemeModal({
               {t.modals.theme.useGradient}
             </Label>
             <div
-              className="flex"
+              className="flex overflow-hidden rounded-lg border border-theme-border"
               role="group"
               aria-label={t.modals.theme.useGradient}
             >
@@ -665,10 +659,10 @@ export function ThemeModal({
                   );
                 }}
                 className={cn(
-                  "flex h-6 w-12 cursor-pointer items-center justify-center rounded-none border border-r-0 px-3 text-[12px] transition",
+                  "flex h-6 w-12 cursor-pointer items-center justify-center px-3 text-[12px] transition",
                   useGradient
-                    ? "border-theme-channel-type-active-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
-                    : "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border",
+                    ? "bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
+                    : "bg-transparent text-theme-text-subtle hover:text-theme-text-primary",
                 )}
                 aria-pressed={useGradient === true}
               >
@@ -678,10 +672,10 @@ export function ThemeModal({
                 type="button"
                 onClick={() => setUseGradient(false)}
                 className={cn(
-                  "flex h-6 w-12 cursor-pointer items-center justify-center rounded-none border px-3 text-[12px] transition",
+                  "flex h-6 w-12 cursor-pointer items-center justify-center border-l border-theme-border px-3 text-[12px] transition",
                   useGradient === false
-                    ? "border-theme-channel-type-active-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
-                    : "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border",
+                    ? "bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
+                    : "bg-transparent text-theme-text-subtle hover:text-theme-text-primary",
                 )}
                 aria-pressed={useGradient === false}
               >
@@ -719,7 +713,7 @@ export function ThemeModal({
                 minColors={2}
                 maxColors={4}
                 allowAdd={false}
-                className="[&_p]:hidden"
+                className="[&_p]:hidden [&>div:first-child]:rounded-lg [&>div:first-child]:overflow-hidden [&>div:first-child>div]:rounded-lg [&>div:first-child>div>div:first-child]:rounded-lg [&>div:first-child>div>div.absolute]:rounded-md"
                 aria-labelledby="theme-gradient-colors-label"
               />
             </div>
@@ -736,7 +730,7 @@ export function ThemeModal({
                   <div
                     key={stop.editorId}
                     className={cn(
-                      "border p-2 transition-colors",
+                      "rounded-lg border p-2 transition-colors",
                       selectedColorId === stop.editorId
                         ? panelToggleActiveClass
                         : "border-theme-border-subtle bg-theme-bg-edit-form/35 text-theme-text-light",
@@ -752,7 +746,7 @@ export function ThemeModal({
                       </Label>
 
                       <div
-                        className="relative h-8 w-8 shrink-0 cursor-pointer overflow-hidden rounded-none border border-theme-border-subtle"
+                        className="relative h-8 w-8 shrink-0 cursor-pointer overflow-hidden rounded-lg border border-theme-border-subtle"
                         style={{ backgroundColor: stop.color }}
                       >
                         <input
@@ -799,7 +793,7 @@ export function ThemeModal({
                         )}
                       />
 
-                      <span className="w-9 border border-theme-border-subtle bg-theme-bg-edit-form/50 px-1 py-1 text-right text-[11px] font-mono text-theme-text-muted">
+                      <span className="w-9 rounded-lg border border-theme-border-subtle bg-theme-bg-edit-form/50 px-1 py-1 text-right text-[11px] font-mono text-theme-text-muted">
                         {stop.position}%
                       </span>
 
@@ -811,7 +805,7 @@ export function ThemeModal({
                         }}
                         disabled={gradientColors.length <= 2}
                         className={cn(
-                          "flex h-8 w-8 cursor-pointer items-center justify-center rounded-none border transition",
+                          "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border transition",
                           gradientColors.length <= 2
                             ? "cursor-not-allowed border-theme-border-subtle bg-theme-bg-edit-form/20 text-theme-text-muted opacity-40"
                             : "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border hover:text-red-400",
@@ -836,7 +830,7 @@ export function ThemeModal({
                 onClick={addGradientColor}
                 disabled={gradientColors.length >= 4}
                 className={cn(
-                  "flex h-8 w-full cursor-pointer items-center justify-center rounded-none border border-dashed text-[13px] transition",
+                  "flex h-8 w-full cursor-pointer items-center justify-center rounded-lg border border-dashed text-[13px] transition",
                   gradientColors.length >= 4
                     ? "cursor-not-allowed border-theme-border-subtle bg-theme-bg-edit-form/20 text-theme-text-muted opacity-40"
                     : "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border",
@@ -849,7 +843,7 @@ export function ThemeModal({
             </div>
 
             {/* Gradient Type */}
-            <div className="space-y-1 border border-theme-border-subtle bg-theme-bg-edit-form/35 p-2">
+            <div className="space-y-1 rounded-lg border border-theme-border-subtle bg-theme-bg-edit-form/35 p-2">
               <Label
                 htmlFor="theme-gradient-type"
                 className="text-[11px] font-semibold uppercase tracking-[0.05em] text-theme-text-subtle"
@@ -881,7 +875,7 @@ export function ThemeModal({
 
             {/* Gradient Angle (only for linear) */}
             {gradientType === "linear" && (
-              <div className="space-y-1 border border-theme-border-subtle bg-theme-bg-edit-form/35 p-2">
+              <div className="space-y-1 rounded-lg border border-theme-border-subtle bg-theme-bg-edit-form/35 p-2">
                 <div className="flex items-center justify-between -mt-1 gap-2">
                   <span
                     id="theme-gradient-angle-label"
@@ -889,7 +883,7 @@ export function ThemeModal({
                   >
                     {t.modals.theme.angle}
                   </span>
-                  <span className="border border-theme-border-subtle bg-theme-bg-edit-form/50 px-2 py-0.5 text-[11px] font-mono text-theme-text-muted">
+                  <span className="rounded-lg border border-theme-border-subtle bg-theme-bg-edit-form/50 px-2 py-0.5 text-[11px] font-mono text-theme-text-muted">
                     {gradientAngle}°
                   </span>
                 </div>
@@ -906,7 +900,7 @@ export function ThemeModal({
                       clampGradientAngle(parseInt(e.target.value)),
                     )
                   }
-                  className="h-2 w-full cursor-pointer appearance-none rounded-none bg-theme-bg-edit-form accent-theme-accent-primary"
+                  className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-theme-bg-edit-form accent-theme-accent-primary"
                   aria-labelledby="theme-gradient-angle-label"
                 />
               </div>
@@ -921,7 +915,7 @@ export function ThemeModal({
           variant="ghost"
           size="sm"
           onClick={handleReset}
-          className="h-6.5 cursor-pointer rounded-none border border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg px-3 text-[13px] text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border hover:bg-theme-channel-type-inactive-bg hover:text-theme-text-light"
+          className="h-6.5 cursor-pointer rounded-lg border border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg px-3 text-[13px] text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border hover:bg-theme-channel-type-inactive-bg hover:text-theme-text-light"
         >
           <RotateCcw className="mr-1 h-3.5 w-3.5" />
           {t.modals.theme.reset}
@@ -931,7 +925,7 @@ export function ThemeModal({
             size="sm"
             onClick={handleCancel}
             disabled={isSaving}
-            className="h-6.5 cursor-pointer rounded-none bg-theme-bg-cancel-button px-3 text-[14px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+            className="h-6.5 cursor-pointer rounded-lg bg-theme-bg-cancel-button px-3 text-[14px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
           >
             {t.modals.theme.cancel}
           </Button>
@@ -939,7 +933,7 @@ export function ThemeModal({
             size="sm"
             onClick={handleSave}
             disabled={isSaving}
-            className="h-6.5 cursor-pointer rounded-none bg-theme-tab-button-bg px-3 text-[14px] text-theme-text-light hover:bg-theme-tab-button-hover"
+            className="h-6.5 cursor-pointer rounded-lg bg-theme-tab-button-bg px-3 text-[14px] text-theme-text-light hover:bg-theme-tab-button-hover"
           >
             {isSaving ? t.modals.theme.saving : t.modals.theme.save}
           </Button>

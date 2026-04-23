@@ -38,17 +38,17 @@ interface GeneralTabProps {
 }
 
 const PANEL_SHELL =
-  "border border-theme-border mr-1.5 bg-theme-bg-overlay-primary/78 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.26)] sm:px-5 sm:py-5";
+  "rounded-lg border border-theme-border mr-1.5 bg-theme-bg-overlay-primary/78 px-4 py-4 sm:px-5 sm:py-5";
 const FIELD_KICKER =
   "text-[11px] font-bold uppercase tracking-[0.06em] text-theme-text-subtle";
 const FIELD_INPUT_CLASS =
-  "h-8 -mt-1.5 rounded-none border-theme-border-subtle bg-theme-bg-edit-form/50 text-theme-text-light placeholder:text-theme-text-muted focus-visible:border-theme-border-subtle focus-visible:ring-0 focus-visible:ring-offset-0";
+  "h-8 -mt-1.5 rounded-lg border-theme-border-subtle bg-theme-bg-edit-form/50 text-theme-text-light placeholder:text-theme-text-muted focus-visible:border-theme-border-subtle focus-visible:ring-0 focus-visible:ring-offset-0";
 const FIELD_TEXTAREA_CLASS =
-  "rounded-none -mt-1.5 border-theme-border-subtle bg-theme-bg-edit-form/50 text-theme-text-light placeholder:text-theme-text-muted focus-visible:border-theme-border-subtle focus-visible:ring-0 focus-visible:ring-offset-0";
+  "rounded-lg -mt-1.5 border-theme-border-subtle bg-theme-bg-edit-form/50 text-theme-text-light placeholder:text-theme-text-muted focus-visible:border-theme-border-subtle focus-visible:ring-0 focus-visible:ring-offset-0";
 const HEADER_PANEL_SHELL =
-  "border border-theme-border mr-1.5 bg-theme-bg-overlay-primary/78 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.26)] sm:px-5 sm:py-5";
+  "rounded-lg border border-theme-border mr-1.5 bg-theme-bg-overlay-primary/78 px-4 py-4 sm:px-5 sm:py-5";
 const HOVER_ACTION_BUTTON_CLASS =
-  "flex h-8 w-full cursor-pointer items-center justify-center gap-1.5 rounded-none border px-3 text-[14px] transition border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-active-border hover:bg-theme-channel-type-active-bg hover:text-theme-channel-type-active-text";
+  "flex h-8 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-3 text-[14px] transition border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-active-border hover:bg-theme-channel-type-active-bg hover:text-theme-channel-type-active-text";
 
 const schema = z.object({
   name: z
@@ -210,7 +210,7 @@ export const GeneralTab = ({ board }: GeneralTabProps) => {
                             value={field.value || ""}
                             previewUrl={boardImagePreviewUrl}
                             onChange={field.onChange}
-                            uploadButtonClassName="rounded-none border-theme-border-subtle bg-theme-bg-cancel-button text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+                            uploadButtonClassName="rounded-lg border-theme-border-subtle bg-theme-bg-cancel-button text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
                           />
                         </FormControl>
                         <FormMessage className="-mt-1 text-[11px] leading-tight" />
@@ -302,7 +302,7 @@ export const GeneralTab = ({ board }: GeneralTabProps) => {
               <Button
                 type="submit"
                 disabled={isSaving}
-                className="h-6.5 min-w-[120px] -my-3 cursor-pointer rounded-none bg-theme-tab-button-bg px-3 text-[14px] text-theme-text-light hover:bg-theme-tab-button-hover"
+                className="h-6.5 min-w-[120px] -my-3 cursor-pointer rounded-lg bg-theme-tab-button-bg px-3 text-[14px] text-theme-text-light hover:bg-theme-tab-button-hover"
               >
                 {isSaving
                   ? t.overlays.boardSettings.general.saving

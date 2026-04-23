@@ -1633,7 +1633,10 @@ const ChatItemOptimizedComponent = ({
                     }
                     inlineUsername={
                       !isCompact ? (
-                        <>
+                        <span
+                          data-chat-item-block="inline-username"
+                          className="whitespace-nowrap"
+                        >
                           <span className="whitespace-nowrap">
                             <ProfileNameTrigger
                               canOpenAuthorProfile={canOpenAuthorProfile}
@@ -1647,7 +1650,7 @@ const ChatItemOptimizedComponent = ({
                             />
                           </span>
                           {"\u00A0"}
-                        </>
+                        </span>
                       ) : undefined
                     }
                   />

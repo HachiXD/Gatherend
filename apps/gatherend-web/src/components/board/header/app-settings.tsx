@@ -15,11 +15,11 @@ export function AppSettings() {
       className={cn(
         "p-2 rounded-md transition",
         "text-theme-text-secondary",
-        "hover:bg-theme-app-settings-hover cursor-pointer"
+        "hover:bg-theme-app-settings-hover cursor-pointer",
       )}
       aria-label="Open settings"
     >
-      <Settings className="w-5 h-5" />
+      <Settings className="w-5.5 h-5.5" />
     </button>
   );
 }

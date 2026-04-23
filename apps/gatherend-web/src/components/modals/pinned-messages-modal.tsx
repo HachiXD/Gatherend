@@ -2,19 +2,21 @@
 
 import axios from "axios";
 import { format } from "date-fns";
-import { X, Pin } from "lucide-react";
+import { Pin, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { useModal } from "@/hooks/use-modal-store";
 import { UserAvatar } from "@/components/user-avatar";
 import { cn } from "@/lib/utils";
 import { AnimatedSticker } from "@/components/ui/animated-sticker";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "@/i18n";
 import type {
   ClientAttachmentAsset,
@@ -39,13 +41,13 @@ function MessageListSkeleton() {
       {Array.from({ length: 3 }).map((_, i) => (
         <div
           key={i}
-          className="flex items-start gap-2 border border-theme-border bg-theme-bg-secondary/20 px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.28),inset_0_-1px_0_rgba(0,0,0,0.28)] animate-pulse"
+          className="flex items-start gap-2.5 rounded-lg border border-theme-border bg-theme-bg-edit-form/60 px-3 py-2.5 animate-pulse"
         >
-          <div className="h-8 w-8 shrink-0 border border-theme-border bg-white/10" />
+          <div className="h-8 w-8 shrink-0 rounded-full border border-theme-border bg-white/10" />
           <div className="flex-1 space-y-2 py-0.5">
-            <div className="h-3 w-1/3 bg-white/10" />
-            <div className="h-2.5 w-3/4 bg-white/10" />
-            <div className="h-2 w-1/4 bg-white/10" />
+            <div className="h-3 w-1/3 rounded bg-white/10" />
+            <div className="h-2.5 w-3/4 rounded bg-white/10" />
+            <div className="h-2 w-1/4 rounded bg-white/10" />
           </div>
         </div>
       ))}
@@ -61,13 +63,11 @@ export const PinnedMessagesModal = () => {
   const isModalOpen = isOpen && type === "pinnedMessages";
   const { channelId, conversationId, roomType } = data;
 
-  // Query key basado en el tipo de room
   const queryKey =
     roomType === "channel"
       ? ["pinnedMessages", "channel", channelId]
       : ["pinnedMessages", "conversation", conversationId];
 
-  // useQuery para obtener mensajes fijados
   const { data: pinnedMessages = [], isLoading } = useQuery({
     queryKey,
     queryFn: async () => {
@@ -79,10 +79,9 @@ export const PinnedMessagesModal = () => {
       return response.data;
     },
     enabled: isModalOpen && !!(channelId || conversationId),
-    staleTime: 1000 * 60, // 1 minuto
+    staleTime: 1000 * 60,
   });
 
-  // useMutation para desfijar mensajes
   const unpinMutation = useMutation({
     mutationFn: async (messageId: string) => {
       const url =
@@ -93,17 +92,17 @@ export const PinnedMessagesModal = () => {
       return messageId;
     },
     onSuccess: (messageId) => {
-      // Actualizar cache optimistamente
       queryClient.setQueryData<PinnedMessage[]>(
         queryKey,
         (old) => old?.filter((msg) => msg.id !== messageId) ?? [],
       );
-      // También invalidar la query de mensajes del chat para reflejar el cambio
+
       if (channelId) {
         queryClient.invalidateQueries({
           queryKey: ["chat", "channel", channelId],
         });
       }
+
       if (conversationId) {
         queryClient.invalidateQueries({
           queryKey: ["chat", "conversation", conversationId],
@@ -122,127 +121,148 @@ export const PinnedMessagesModal = () => {
   return (
     <Dialog open={isModalOpen} onOpenChange={handleClose}>
       <DialogContent
-        className="max-w-[500px]! overflow-hidden rounded-none border border-theme-border bg-theme-bg-modal p-0 text-theme-text-subtle"
-        closeButtonClassName="cursor-pointer rounded-none p-1 text-theme-text-subtle opacity-100 transition hover:text-theme-text-light data-[state=open]:bg-transparent data-[state=open]:text-theme-text-subtle focus:ring-0 focus:ring-offset-0 focus:outline-none"
+        className="max-w-[560px]! overflow-hidden rounded-lg border border-theme-border bg-theme-bg-modal p-0 text-theme-text-subtle"
+        closeButtonClassName="cursor-pointer rounded-md p-1 text-theme-text-subtle opacity-100 transition hover:bg-theme-bg-cancel-button hover:text-theme-text-light data-[state=open]:bg-transparent data-[state=open]:text-theme-text-subtle focus:ring-0 focus:ring-offset-0 focus:outline-none"
       >
-        <DialogHeader className="px-6 pt-2 -mb-5">
-          <DialogTitle className="flex items-center justify-center gap-2 text-2xl font-bold">
+        <DialogHeader className="px-5 pt-5 -mt-2">
+          <DialogTitle className="flex items-center gap-2 text-[22px] font-medium leading-none text-theme-text-primary">
+            <Pin className="h-4.5 w-4.5 text-theme-text-subtle" />
             {t.modals.pinnedMessages.title}
           </DialogTitle>
-          <DialogDescription className="-mt-2 text-center text-[15px] text-theme-text-subtle">
-            {pinnedMessages.length} {t.modals.pinnedMessages.messageCount}
+          <DialogDescription className="pt-1 text-[14px] leading-5 text-theme-text-subtle">
+            {isLoading
+              ? t.common.loading
+              : `${pinnedMessages.length} ${t.modals.pinnedMessages.messageCount}`}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="scrollbar-ultra-thin max-h-[500px] space-y-2 overflow-y-auto px-4 py-3">
-          {isLoading ? (
-            <MessageListSkeleton />
-          ) : pinnedMessages.length === 0 ? (
-            <div className="border border-theme-border-subtle bg-theme-bg-edit-form/35 px-3 py-6 text-center text-sm text-theme-text-muted">
-              {t.modals.pinnedMessages.noMessages}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {pinnedMessages.map((message) => {
-                const author = getMessageAuthor(message, {
-                  fallbackLabel: t.chat.deletedMember,
-                });
-                const authorProfileId =
-                  getMessageOwnerProfileId(message) || undefined;
-                const isImage =
-                  message.attachmentAsset?.mimeType?.startsWith("image/");
+        <div className="px-5 pt-0 pb-4">
+          <div className="rounded-lg border border-theme-border bg-theme-bg-edit-form/35 p-2.5">
+            <div className="scrollbar-ultra-thin max-h-[420px] overflow-y-auto pr-1">
+              {isLoading ? (
+                <MessageListSkeleton />
+              ) : pinnedMessages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-theme-border bg-theme-bg-edit-form/55 px-4 py-8 text-center">
+                  <Pin className="h-4.5 w-4.5 text-theme-text-subtle" />
+                  <p className="text-sm text-theme-text-muted">
+                    {t.modals.pinnedMessages.noMessages}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {pinnedMessages.map((message) => {
+                    const author = getMessageAuthor(message, {
+                      fallbackLabel: t.chat.deletedMember,
+                    });
+                    const authorProfileId =
+                      getMessageOwnerProfileId(message) || undefined;
+                    const isImage =
+                      message.attachmentAsset?.mimeType?.startsWith("image/");
 
-                return (
-                  <div
-                    key={message.id}
-                    className="group relative flex items-start gap-2 border border-theme-border bg-theme-bg-secondary/20 px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.28),inset_0_-1px_0_rgba(0,0,0,0.28)] transition hover:bg-theme-bg-tertiary/40"
-                  >
-                    <UserAvatar
-                      src={author?.avatarAsset?.url || undefined}
-                      profileId={authorProfileId}
-                      showStatus={false}
-                      className="h-8 w-8 shrink-0"
-                    />
+                    return (
+                      <div
+                        key={message.id}
+                        className="group flex items-start gap-2.5 rounded-lg border border-theme-border bg-theme-bg-edit-form/60 px-3 py-2.5 transition hover:bg-theme-bg-secondary/45"
+                      >
+                        <UserAvatar
+                          src={author?.avatarAsset?.url || undefined}
+                          profileId={authorProfileId}
+                          showStatus={false}
+                          className="h-8 w-8 shrink-0"
+                        />
 
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-x-2">
-                        <p className="text-sm font-semibold text-theme-accent-primary">
-                          {author?.username}
-                        </p>
-                        <span className="text-xs text-theme-text-muted">
-                          {format(
-                            new Date(message.createdAt),
-                            "MMM d, yyyy HH:mm",
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                <p className="text-sm font-medium text-theme-accent-primary">
+                                  {author?.username}
+                                </p>
+                                <span className="text-xs text-theme-text-muted">
+                                  {format(
+                                    new Date(message.createdAt),
+                                    "MMM d, yyyy HH:mm",
+                                  )}
+                                </span>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => unpinMutation.mutate(message.id)}
+                              disabled={unpinMutation.isPending}
+                              className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md border border-theme-border bg-theme-bg-cancel-button text-theme-text-subtle opacity-80 transition hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-50"
+                              title={t.chat.unpinMessage}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+
+                          {message.sticker ? (
+                            <div className="relative mt-1.5 h-16 w-16 overflow-hidden rounded-lg border border-theme-border bg-theme-bg-modal/60">
+                              <AnimatedSticker
+                                src={message.sticker.asset?.url || ""}
+                                alt={message.sticker.name}
+                                containerClassName="h-full w-full"
+                                fallbackWidthPx={64}
+                                fallbackHeightPx={64}
+                              />
+                            </div>
+                          ) : isImage && message.attachmentAsset?.url ? (
+                            <div className="relative mt-1.5 h-24 w-24 overflow-hidden rounded-lg border border-theme-border bg-theme-bg-modal/60">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={message.attachmentAsset.url}
+                                alt={
+                                  message.attachmentAsset.originalName || "Image"
+                                }
+                                className="absolute inset-0 h-full w-full object-cover"
+                                loading="lazy"
+                                decoding="async"
+                              />
+                            </div>
+                          ) : message.attachmentAsset?.url ? (
+                            <div className="mt-1.5 inline-flex max-w-full rounded-md border border-theme-border bg-theme-bg-modal/60 px-2 py-1 text-sm text-theme-accent-primary">
+                              <span className="truncate">{message.fileName}</span>
+                            </div>
+                          ) : (
+                            <p
+                              className={cn(
+                                "mt-1.5 text-sm text-theme-text-light wrap-break-word",
+                                message.content.length > 100 && "line-clamp-3",
+                              )}
+                            >
+                              {message.content}
+                            </p>
                           )}
-                        </span>
+
+                          <p className="mt-1.5 text-xs text-theme-text-muted">
+                            Pinned{" "}
+                            {format(
+                              new Date(message.pinnedAt),
+                              "MMM d 'at' HH:mm",
+                            )}
+                          </p>
+                        </div>
                       </div>
-
-                      {message.sticker ? (
-                        <div className="relative mt-1 h-16 w-16">
-                          <AnimatedSticker
-                            src={message.sticker.asset?.url || ""}
-                            alt={message.sticker.name}
-                            containerClassName="h-full w-full"
-                            fallbackWidthPx={64}
-                            fallbackHeightPx={64}
-                          />
-                        </div>
-                      ) : isImage && message.attachmentAsset?.url ? (
-                        <div className="relative mt-1 h-24 w-24 overflow-hidden border border-theme-border">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={message.attachmentAsset.url}
-                            alt={
-                              message.attachmentAsset.originalName || "Image"
-                            }
-                            className="absolute inset-0 h-full w-full object-cover"
-                            loading="lazy"
-                            decoding="async"
-                          />
-                        </div>
-                      ) : message.attachmentAsset?.url ? (
-                        <p className="mt-0.5 cursor-pointer text-sm text-theme-accent-primary hover:underline">
-                          📎 {message.fileName}
-                        </p>
-                      ) : (
-                        <p
-                          className={cn(
-                            "mt-0.5 text-sm text-theme-text-light wrap-break-word",
-                            message.content.length > 100 && "line-clamp-3",
-                          )}
-                        >
-                          {message.content}
-                        </p>
-                      )}
-
-                      <p className="mt-0.5 text-xs italic text-theme-text-muted">
-                        Pinned{" "}
-                        {format(new Date(message.pinnedAt), "MMM d 'at' HH:mm")}
-                      </p>
-                    </div>
-
-                    <button
-                      onClick={() => unpinMutation.mutate(message.id)}
-                      disabled={unpinMutation.isPending}
-                      className="shrink-0 cursor-pointer p-1 text-theme-text-subtle opacity-0 transition hover:text-theme-text-light group-hover:opacity-100 disabled:opacity-50"
-                      title={t.chat.unpinMessage}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
 
-        {!isLoading && pinnedMessages.length > 0 && (
-          <div className="border-t border-theme-border bg-theme-bg-secondary/40 px-4 py-1.5">
-            <p className="text-center text-xs text-theme-text-muted">
-              {pinnedMessages.length} {t.modals.pinnedMessages.messageCount}
-            </p>
-          </div>
-        )}
+        <DialogFooter className="border-t border-theme-border px-5 py-1">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={handleClose}
+            className="h-7 cursor-pointer rounded-lg bg-theme-bg-cancel-button px-3 text-[14px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+          >
+            {t.common.close}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

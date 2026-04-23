@@ -4,7 +4,7 @@ import { MemberRole } from "@prisma/client";
 import type { BoardWithData } from "@/components/providers/board-provider";
 import { VoiceControlBar } from "@/components/voice-control-bar";
 import {
-  ArrowBigUpDash,
+  Star,
   AtSign,
   Users,
   MessagesSquare,
@@ -144,20 +144,20 @@ export const BoardLeftbar = ({
         currentProfileId={currentProfileId}
       />
 
-      <div className="scrollbar-navigation flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-2 pt-3 pb-2">
-        <div className="relative shrink-0 flex flex-col overflow-hidden rounded-sm border border-theme-channel-type-active-border bg-theme-channel-type-active-border">
+      <div className="scrollbar-navigation flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-2 pt-2 pb-1.5">
+        <div className="shrink-0 flex flex-col gap-1">
           <button
             onClick={handleChannels}
             data-mentions={hasChatMentions}
             data-unreads={hasChatUnreads}
             className={cn(
-              "group/chats relative flex h-10 w-full cursor-pointer items-center gap-3 bg-theme-channel-type-active-border px-3 text-[20px] font-bold tracking-[0.05em] text-theme-text-primary transition-colors",
+              "group/chats relative flex h-10 w-full cursor-pointer items-center gap-3 rounded-lg bg-transparent px-3 text-[18px] font-medium tracking-[0.05em] text-theme-text-subtle transition-colors",
               isChannels
-                ? "bg-[var(--theme-button-primary-active)] shadow-[inset_0_1px_0_rgba(0,0,0,0.42),inset_0_-1px_0_rgba(255,255,255,0.18)]"
-                : "hover:bg-theme-tab-button-hover",
+                ? "bg-theme-channel-type-active-border"
+                : "hover:bg-theme-channel-type-active-border",
             )}
           >
-            <MessagesSquare className="h-6.5 w-6.5 shrink-0" />
+            <MessagesSquare className="h-5.5 w-5.5 shrink-0" />
             <span className="leading-none group-hover:text-theme-text-strong">
               Chats
             </span>
@@ -182,13 +182,13 @@ export const BoardLeftbar = ({
           <button
             onClick={handleForum}
             className={cn(
-              "group flex h-9 w-full cursor-pointer items-center gap-3 border-t bg-theme-channel-type-active-border px-3 text-[20px] font-bold tracking-[0.05em] text-theme-text-primary transition-colors",
+              "group flex h-10 w-full cursor-pointer items-center gap-3 rounded-lg bg-transparent px-3 text-[18px] font-medium tracking-[0.05em] text-theme-text-subtle transition-colors",
               isForum
-                ? "border-transparent bg-[var(--theme-button-primary-active)] shadow-[inset_0_1px_0_rgba(0,0,0,0.42),inset_0_-1px_0_rgba(255,255,255,0.18)]"
-                : "border-black/20 hover:bg-theme-tab-button-hover",
+                ? "bg-theme-channel-type-active-border"
+                : "hover:bg-theme-channel-type-active-border",
             )}
           >
-            <MessageSquare className="h-6.5 w-6.5 shrink-0" />
+            <MessageSquare className="h-5.5 w-4.5 shrink-0" />
             <span className="leading-none group-hover:text-theme-text-strong">
               Foro
             </span>
@@ -196,13 +196,13 @@ export const BoardLeftbar = ({
           <button
             onClick={handleWiki}
             className={cn(
-              "group flex h-9 w-full cursor-pointer items-center gap-3 border-t bg-theme-channel-type-active-border px-3 text-[20px] font-bold tracking-[0.05em] text-theme-text-primary transition-colors",
+              "group flex h-10 w-full cursor-pointer items-center gap-3 rounded-lg bg-transparent px-3 text-[18px] font-medium tracking-[0.05em] text-theme-text-subtle transition-colors",
               isWiki
-                ? "border-transparent bg-[var(--theme-button-primary-active)] shadow-[inset_0_1px_0_rgba(0,0,0,0.42),inset_0_-1px_0_rgba(255,255,255,0.18)]"
-                : "border-black/20 hover:bg-theme-tab-button-hover",
+                ? "bg-theme-channel-type-active-border"
+                : "hover:bg-theme-channel-type-active-border",
             )}
           >
-            <BookOpenText className="h-6.5 w-6.5 shrink-0" />
+            <BookOpenText className="h-5.5 w-5.5 shrink-0" />
             <span className="leading-none group-hover:text-theme-text-strong">
               Wiki
             </span>
@@ -210,13 +210,13 @@ export const BoardLeftbar = ({
           <button
             onClick={handleRules}
             className={cn(
-              "group flex h-9 w-full cursor-pointer items-center gap-3 border-t bg-theme-channel-type-active-border px-3 text-[20px] font-bold tracking-[0.05em] text-theme-text-primary transition-colors",
+              "group flex h-10 w-full cursor-pointer items-center gap-3 rounded-lg bg-transparent px-3 text-[18px] font-medium tracking-[0.05em] text-theme-text-subtle transition-colors",
               isRules
-                ? "border-transparent bg-[var(--theme-button-primary-active)] shadow-[inset_0_1px_0_rgba(0,0,0,0.42),inset_0_-1px_0_rgba(255,255,255,0.18)]"
-                : "border-black/20 hover:bg-theme-tab-button-hover",
+                ? "bg-theme-channel-type-active-border"
+                : "hover:bg-theme-channel-type-active-border",
             )}
           >
-            <ScrollText className="h-6.5 w-6.5 shrink-0" />
+            <ScrollText className="h-5.5 w-5.5 shrink-0" />
             <span className="leading-none group-hover:text-theme-text-strong">
               Reglas
             </span>
@@ -224,88 +224,96 @@ export const BoardLeftbar = ({
           <button
             onClick={handleRanking}
             className={cn(
-              "group flex h-10 w-full cursor-pointer items-center gap-3 border-t bg-theme-channel-type-active-border px-3 text-[20px] font-bold tracking-[0.05em] text-theme-text-primary transition-colors",
+              "group flex h-10 w-full cursor-pointer items-center gap-3 rounded-lg bg-transparent px-3 text-[18px] font-medium tracking-[0.05em] text-theme-text-subtle transition-colors",
               isRanking
-                ? "border-transparent bg-[var(--theme-button-primary-active)] shadow-[inset_0_1px_0_rgba(0,0,0,0.42),inset_0_-1px_0_rgba(255,255,255,0.18)]"
-                : "border-black/20 hover:bg-theme-tab-button-hover",
+                ? "bg-theme-channel-type-active-border"
+                : "hover:bg-theme-channel-type-active-border",
             )}
           >
-            <Trophy className="h-6.5 w-6.5 shrink-0" />
+            <Trophy className="h-5.5 w-5.5 shrink-0" />
             <span className="leading-none group-hover:text-theme-text-strong">
               Ranking
             </span>
           </button>
-          <div className="pointer-events-none absolute inset-0 border-0 rounded-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.18),inset_1px_0_0_rgba(255,255,255,0.14),inset_-1px_0_0_rgba(0,0,0,0.36),inset_0_-1px_0_rgba(0,0,0,0.42)]" />
         </div>
 
         <div className="shrink-0 border-t border-theme-border/60" />
 
         <div className="shrink-0 flex flex-col gap-2">
-          <div className="grid grid-cols-[1fr_1fr] gap-2">
-            {xpProgress && (
-              <div className="col-span-2 flex min-h-[38px] flex-col justify-center gap-0.5 rounded-sm border border-theme-channel-type-active-border bg-[var(--theme-channel-type-active-soft-bg)] px-3 pt-1 pb-1.5 text-theme-text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_1px_2px_rgba(0,0,0,0.2)]">
-                <p className="text-[14px] font-bold  tracking-[0.06em] text-theme-text-primary/70">
-                  Eres nivel
-                </p>
-                <div className="flex items-center gap-2 text-[16px] font-semibold text-theme-text-secondary">
-                  <ArrowBigUpDash className="h-5 w-5 shrink-0" />
-
-                  <span className="text-theme-text-strong font-bold leading-none">
-                    {xpProgress.level}
+          {/* Nivel — full width */}
+          {xpProgress && (
+            <div className="flex flex-col gap-1.5 rounded-lg  bg-transparent px-3 py-1">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1 rounded-md bg-theme-channel-type-active-border px-2 py-1">
+                  <Star className="h-5 w-5 shrink-0 text-theme-text-subtle" />
+                  <span className="text-[18px] font-medium leading-none  text-theme-text-subtle">
+                    Nv. {xpProgress.level}
                   </span>
-
-                  <div className="flex min-w-0 flex-1 flex-col gap-0.5 ml-1">
-                    <div className="h-2 w-full overflow-hidden rounded-sm bg-black/40 shadow-inner">
-                      <div
-                        className="h-full rounded-sm bg-theme-text-primary transition-all duration-500"
-                        style={{ width: `${xpProgress.percent}%` }}
-                      />
-                    </div>
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col gap-1 -mb-1">
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/40 shadow-inner">
+                    <div
+                      className="h-full rounded-full bg-[var(--theme-channel-type-active-soft-bg)] transition-all duration-500"
+                      style={{ width: `${xpProgress.percent}%` }}
+                    />
                   </div>
+                  <p className="text-[14px] text-theme-text-primary/40 tabular-nums">
+                    {xpProgress.percent}% al siguiente nivel
+                  </p>
                 </div>
               </div>
-            )}
-            <div className="flex min-h-[42px] flex-col justify-center gap-0 rounded-sm border border-theme-channel-type-active-border bg-[var(--theme-channel-type-active-soft-bg)] px-3 py-1 text-theme-text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_1px_2px_rgba(0,0,0,0.2)]">
-              <p className="text-[14px] font-bold  tracking-[0.06em] text-theme-text-primary/70">
-                Miembros
-              </p>
-              <div className="flex items-center gap-2 text-[16px] font-semibold text-theme-text-secondary">
-                <Users className="h-5 w-5 shrink-0" />
-                <span className="mt-0.5 text-theme-text-strong">
-                  {board.memberCount.toLocaleString()}
-                </span>
-              </div>
             </div>
-            <div className="flex min-h-[42px] flex-col justify-center gap-0 rounded-sm border border-theme-channel-type-active-border bg-[var(--theme-channel-type-active-soft-bg)] px-3 py-1 text-theme-text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_1px_2px_rgba(0,0,0,0.2)]">
-              <p className="text-[14px] font-bold  tracking-[0.06em] text-theme-text-primary/70">
-                Chats
-              </p>
-              <div className="flex items-center gap-2 text-[16px] font-semibold text-theme-text-secondary">
-                <MessagesSquare className="h-5 w-5 shrink-0" />
-                <span className="mt-0.5 text-theme-text-strong">
-                  {board.channels.length}
-                </span>
+          )}
+
+          <div className="shrink-0 border-t border-theme-border/60" />
+
+          {/* Stats — grid 2 columnas */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col gap-1 rounded-lg border border-theme-border-secondary bg-[var(--theme-channel-type-active-soft-bg)] px-3 py-2">
+              <div className="flex items-center justify-between">
+                <p className="text-[16px] font-medium tracking-[0.06em] text-theme-text-primary/70">
+                  Miembros
+                </p>
+                <Users className="h-5.5 w-5.5 shrink-0 text-theme-text-primary/50" />
               </div>
+              <span className="text-[18px] font-medium leading-none text-theme-text-subtle tabular-nums">
+                {board.memberCount.toLocaleString()}
+              </span>
             </div>
-            <div className="col-span-2 flex min-h-[42px] flex-col justify-center gap-0 rounded-sm border border-theme-channel-type-active-border bg-[var(--theme-channel-type-active-soft-bg)] px-3 py-1 text-theme-text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_1px_2px_rgba(0,0,0,0.2)]">
-              <p className="text-[14px] font-bold  tracking-[0.06em] text-theme-text-primary/70">
-                Posts esta semana
-              </p>
-              <div className="flex items-center gap-2 text-[16px] font-semibold text-theme-text-secondary">
-                <FileText className="h-5 w-5 shrink-0" />
-                <span className="mt-0.5 text-theme-text-strong">
-                  {board.recentPostCount7d}
-                </span>
+
+            <div className="flex flex-col gap-1 rounded-lg border border-theme-border-secondary bg-[var(--theme-channel-type-active-soft-bg)] px-3 py-2">
+              <div className="flex items-center justify-between">
+                <p className="text-[16px] font-medium tracking-[0.06em] text-theme-text-primary/70">
+                  Chats
+                </p>
+                <MessagesSquare className="h-5.5 w-5.5 shrink-0 text-theme-text-primary/50" />
               </div>
+              <span className="text-[18px] font-medium leading-none text-theme-text-subtle tabular-nums">
+                {board.channels.length}
+              </span>
             </div>
           </div>
 
+          {/* Posts — full width horizontal */}
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-theme-border-secondary bg-[var(--theme-channel-type-active-soft-bg)] px-3 py-2">
+            <div className="flex items-center gap-2">
+              <FileText className="h-5.5 w-5.5 shrink-0 text-theme-text-primary/50" />
+              <p className="text-[16px] font-medium tracking-[0.06em] text-theme-text-primary/70">
+                Posts esta semana
+              </p>
+            </div>
+            <span className="text-[18px] font-medium leading-none text-theme-text-subtle tabular-nums">
+              {board.recentPostCount7d}
+            </span>
+          </div>
+
+          {/* Descripción */}
           {board.description && (
-            <div className="rounded-sm border border-theme-channel-type-active-border bg-[var(--theme-channel-type-active-soft-bg)] px-3 py-2 text-theme-text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_1px_2px_rgba(0,0,0,0.2)]">
-              <p className="text-[14px] font-bold tracking-[0.06em] text-theme-text-primary/70">
+            <div className="rounded-lg border border-theme-border-secondary bg-[var(--theme-channel-type-active-soft-bg)] px-3 py-2">
+              <p className="mb-1 text-[16px] font-medium tracking-[0.06em] text-theme-text-primary/70">
                 Descripción
               </p>
-              <p className="line-clamp-6 text-[15px] leading-relaxed text-theme-text-secondary">
+              <p className="line-clamp-5 text-[18px] leading-relaxed text-theme-text-subtle">
                 {board.description}
               </p>
             </div>

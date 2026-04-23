@@ -6,11 +6,12 @@ import {
   prepareWithSegments,
   type PreparedTextWithSegments,
 } from "@chenglou/pretext";
+import { geistSans } from "@/lib/fonts";
 import { extractUrls, containsInviteLink } from "@/lib/parse-invite-links";
 import { formatMentionsForDisplay } from "@/lib/parse-mentions";
 import { GROUPED_TEXT_BUBBLE_LEFT_PX } from "./chat-grouped-layout";
 
-const FONT_FAMILY = "Arial, Helvetica, sans-serif";
+const FONT_FAMILY = geistSans.style.fontFamily;
 const MESSAGE_FONT = `15px ${FONT_FAMILY}`;
 const MESSAGE_FONT_BOLD = `600 15px ${FONT_FAMILY}`;
 const MESSAGE_EDITED_FONT = `10px ${FONT_FAMILY}`;

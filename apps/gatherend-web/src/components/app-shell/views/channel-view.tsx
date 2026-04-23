@@ -13,7 +13,6 @@ import {
   useBoardChannelsMap,
 } from "@/hooks/use-board-data";
 import { useQueryClient } from "@tanstack/react-query";
-import { useCommunityHeaderStyle } from "@/hooks/use-community-header-style";
 import { useBoardSwitchNavigation } from "@/contexts/board-switch-context";
 
 interface ChannelViewProps {
@@ -49,8 +48,6 @@ export function ChannelView({ channelId, boardId }: ChannelViewProps) {
 
   const resolvedChannelId = channel?.id ?? "";
   const resolvedBoardId = board?.id ?? "";
-
-  const headerStyle = useCommunityHeaderStyle();
 
   const socketQuery = useMemo(
     () => ({
@@ -107,7 +104,6 @@ export function ChannelView({ channelId, boardId }: ChannelViewProps) {
         type="channel"
         channelType={channel.type}
         channelId={channel.id}
-        style={headerStyle}
       />
       {channel.type === ChannelType.TEXT && (
         <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">

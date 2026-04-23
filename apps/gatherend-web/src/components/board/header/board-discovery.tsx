@@ -37,7 +37,7 @@ export const BoardDiscovery = memo(function BoardDiscovery() {
         type="button"
         onClick={handleClick}
         disabled={isPending}
-        className="flex h-12 w-12  rounded-2xl cursor-pointer items-center justify-center border-2 border-theme-border bg-theme-tab-button-bg px-1 py-0.5 text-theme-text-light transition hover:bg-theme-tab-button-hover hover:text-theme-text-light disabled:opacity-50 disabled:cursor-not-allowed"
+        className="flex h-12 w-12  rounded-2xl cursor-pointer items-center justify-center  bg-theme-tab-button-bg px-1 py-0.5 text-theme-text-light transition hover:bg-theme-tab-button-hover hover:text-theme-text-light disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <Globe className="h-6 w-6" />
       </button>

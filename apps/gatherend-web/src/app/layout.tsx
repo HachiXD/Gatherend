@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { cn } from "@/lib/utils";
+import { geistSans } from "@/lib/fonts";
 import "./globals.css";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { I18nServerProvider } from "@/components/providers/i18n-server-provider";
@@ -50,7 +51,13 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} suppressHydrationWarning>
-      <body className={cn("bg-theme-bg-quaternary")}>
+      <body
+        className={cn(
+          geistSans.className,
+          geistSans.variable,
+          "bg-theme-bg-quaternary",
+        )}
+      >
         <ThemeProvider
           nonce={nonce}
           attribute="class"

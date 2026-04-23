@@ -143,16 +143,11 @@ const LeftbarChannelComponent = ({
           channelImageUrl
             ? [
                 "bg-cover bg-center bg-no-repeat",
-                "shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_-1px_0_rgba(0,0,0,0.38)]",
-                isActive &&
-                  "shadow-[inset_0_1px_0_rgba(0,0,0,0.42),inset_1px_0_0_rgba(0,0,0,0.36),inset_-1px_0_0_rgba(255,255,255,0.14),inset_0_-1px_0_rgba(255,255,255,0.18)]",
               ]
             : [
-                "bg-theme-channel-type-active-border shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_-1px_0_rgba(0,0,0,0.38)]",
+                "bg-theme-channel-type-active-border",
                 !isActive && "hover:bg-theme-channel-type-active-border",
                 isActive && "bg-theme-button-primary",
-                isActive &&
-                  "shadow-[inset_0_1px_0_rgba(0,0,0,0.42),inset_1px_0_0_rgba(0,0,0,0.36),inset_-1px_0_0_rgba(255,255,255,0.14),inset_0_-1px_0_rgba(255,255,255,0.18)]",
               ],
           channelImageUrl &&
             isActive &&

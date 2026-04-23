@@ -84,7 +84,7 @@ function EmojiPickerPopover({
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <EmojiPickerReact
-          className="!rounded-sm"
+          className="!rounded-lg"
           onEmojiClick={handleEmojiClick}
           width={isNarrowScreen ? "100%" : 350}
           height={400}
@@ -124,6 +124,7 @@ function EmojiPickerPopover({
               "--epr-category-label-text-color": "var(--theme-text-light)",
               "--epr-picker-border-color": "var(--theme-picker-border)",
               "--epr-picker-border-radius": "0.125rem",
+              "--epr-search-input-border-radius": "8px",
             } as React.CSSProperties
           }
           skinTonesDisabled={true}

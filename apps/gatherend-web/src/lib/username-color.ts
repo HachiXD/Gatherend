@@ -209,36 +209,6 @@ export function getDisplayColor(
 }
 
 /**
- * Derive a subtle card background tint from the username color.
- * For gradients, we intentionally use only the first stop to keep the card
- * background stable and cheap to compute.
- */
-export function getUsernameTintBackgroundStyle(
-  color: JsonValue | string | null | undefined,
-  themeMode: "dark" | "light",
-): React.CSSProperties {
-  const parsed = parseUsernameColor(color);
-  if (!parsed) return {};
-
-  const sourceColor =
-    parsed.type === "solid"
-      ? parsed.color
-      : (getFirstUsernameGradientStop(parsed.colors)?.color ??
-          DEFAULT_USERNAME_COLOR);
-
-  const { h, s, l } = hexToHsl(sourceColor);
-  const mutedS = clamp(Math.round(s * 0.34), 12, 30);
-  const tintedL =
-    themeMode === "dark"
-      ? clamp(Math.round(16 + l * 0.16), 18, 30)
-      : clamp(Math.round(94 + (l - 50) * 0.04), 91, 97);
-
-  return {
-    backgroundColor: hslToHex(h, mutedS, tintedL),
-  };
-}
-
-/**
  * Get a softened inverse of the username color for larger surfaces such as
  * profile-card headers. This keeps the "opposite color" idea while toning it
  * down so it behaves better as a background.

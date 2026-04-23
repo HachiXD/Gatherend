@@ -167,37 +167,20 @@ export const DiscoveryCommunityView = memo(function DiscoveryCommunityView() {
     [switchBoard, switchToRules, userBoards],
   );
 
-  const discoveryHeaderStyle = {
-    "--community-header-bg-base": "var(--theme-bg-quaternary)",
-    "--community-header-bg-top":
-      "color-mix(in srgb, white 18%, var(--theme-bg-quaternary) 82%)",
-    "--community-header-bg-mid":
-      "color-mix(in srgb, white 8%, var(--theme-bg-quaternary) 92%)",
-    "--community-header-bg-bottom":
-      "color-mix(in srgb, black 18%, var(--theme-bg-quaternary) 82%)",
-    "--community-header-btn-ring": "var(--theme-border-secondary)",
-    backgroundColor: "var(--community-header-bg-base)",
-    backgroundImage:
-      "linear-gradient(180deg, var(--community-header-bg-top) 0%, var(--community-header-bg-mid) 52%, var(--community-header-bg-bottom) 100%)",
-  } as React.CSSProperties;
-
   return (
     <div
       ref={isSearching ? searchContainerRef : containerRef}
       className="h-full w-full flex flex-col overflow-y-auto scrollbar-chat"
     >
-      <div
-        className="sticky top-0 z-20 shrink-0 border-b border-theme-border-primary bg-theme-bg-quaternary transition-colors duration-300"
-        style={discoveryHeaderStyle}
-      >
-        <div className="px-0 h-11 flex items-center">
-          <div className="ml-3 w-full mr-3 flex items-center gap-2">
-            <div className="flex min-w-0 items-center justify-center gap-2 rounded-sm border border-[var(--community-header-btn-ring)] bg-theme-bg-secondary/40 px-3 py-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]">
+      <div className="sticky top-0 z-20 shrink-0 border-b border-theme-border transition-colors duration-300">
+        <div className="px-0 h-11 flex items-center bg-theme-bg-quinary">
+          <div className="ml-3 w-full mr-5 flex items-center gap-2">
+            <div className="flex min-w-0 items-center justify-center gap-2 rounded-lg px-3 py-0.5">
               <p className="min-w-0 truncate text-center text-[20px] font-semibold text-theme-text-subtle">
                 Feed de boards
               </p>
             </div>
-            <div className="ml-auto flex max-w-[min(56vw,480px)] shrink items-center justify-center rounded-sm border border-[var(--community-header-btn-ring)] bg-theme-bg-secondary/40 px-3 py-0.5 text-right shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]">
+            <div className="ml-auto flex max-w-[min(56vw,480px)] shrink items-center justify-center rounded-lg px-1 py-0.5 text-right">
               <p className="min-w-0 truncate text-right text-[16px] font-medium text-theme-text-muted">
                 Clickea cualquiera de los boards para unirte a esa comunidad!
               </p>

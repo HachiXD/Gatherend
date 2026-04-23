@@ -45,7 +45,7 @@ export const PinnedMessagesButton = ({
       type="button"
       onMouseEnter={enableTooltipsOnce}
       onClick={handleOpenPinnedMessages}
-      className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-sm border border-[var(--community-header-btn-ring)] bg-theme-bg-secondary/40 text-[var(--community-header-btn-muted)] transition hover:bg-[var(--community-header-btn-hover)] hover:text-[var(--community-header-btn-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]"
+      className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent text-[var(--community-header-btn-muted)] transition hover:bg-theme-app-settings-hover hover:text-[var(--community-header-btn-text)]"
     >
       <Pin className="h-6 w-6" />
     </button>

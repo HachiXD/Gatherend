@@ -90,38 +90,41 @@ export const InviteModal = () => {
   return (
     <Dialog open={isModalOpen} onOpenChange={handleClose}>
       <DialogContent
-        className="max-w-[440px]! overflow-hidden rounded-none border border-theme-border bg-theme-bg-modal p-0 text-theme-text-subtle"
-        closeButtonClassName="cursor-pointer rounded-none p-1 text-theme-text-subtle opacity-100 transition hover:text-theme-text-light data-[state=open]:bg-transparent data-[state=open]:text-theme-text-subtle focus:ring-0 focus:ring-offset-0 focus:outline-none"
+        className="max-w-[400px]! overflow-hidden rounded-lg border border-theme-border bg-theme-bg-modal p-0 text-theme-text-subtle"
+        closeButtonClassName="cursor-pointer rounded-md p-1 text-theme-text-subtle opacity-100 transition hover:bg-theme-bg-cancel-button hover:text-theme-text-light data-[state=open]:bg-transparent data-[state=open]:text-theme-text-subtle focus:ring-0 focus:ring-offset-0 focus:outline-none"
       >
-        <DialogHeader className="px-6 pt-2">
-          <DialogTitle className="text-2xl text-center font-bold">
+        <DialogHeader className="px-5 pt-5 -mt-2 -mb-2 pb-0">
+          <DialogTitle className="text-[22px] -mb-2.5 font-medium text-theme-text-primary">
             {t.modals.invite.title}
           </DialogTitle>
-          <DialogDescription className="text-center -mt-2 text-[15px] text-theme-text-subtle">
+          <DialogDescription className="text-[14px] text-theme-text-subtle mt-0.5">
             {t.modals.invite.description}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="px-6 pb-4 -mt-4.5 -mb-4">
-          <div className="space-y-3 bg-theme-bg-modal px-3 py-2">
-            <div className="flex h-8 items-center justify-between gap-3 border border-theme-border bg-theme-bg-edit-form/60 px-3">
-              <Label className="uppercase text-[14px] font-bold text-theme-text-subtle">
-                {t.modals.invite.inviteEnabledLabel}
-              </Label>
+        <div className="px-5 py-0 -mb-0.5 flex flex-col gap-3">
+          {/* Toggle invitaciones */}
+          <div className="flex flex-col gap-0.5">
+            <Label className="text-[14px] uppercase tracking-[0.08em] font-medium text-theme-text-subtle">
+              {t.modals.invite.inviteEnabledLabel}
+            </Label>
+            <div className="flex items-center justify-between rounded-lg border border-theme-border bg-theme-bg-edit-form/60 px-3 py-1">
+              <span className="text-[14px] text-theme-text-primary">
+                Permitir invitaciones
+              </span>
               <div
-                className="flex"
+                className="flex rounded-md overflow-hidden border border-theme-border"
                 role="group"
-                aria-label={t.modals.invite.inviteEnabledLabel}
               >
                 <button
                   type="button"
                   disabled={isLoading}
                   onClick={() => onSetInviteEnabled(true)}
                   className={cn(
-                    "flex h-6 w-12 cursor-pointer items-center justify-center rounded-none border border-r-0 px-3 text-[12px] transition disabled:cursor-not-allowed disabled:opacity-70",
+                    "flex h-6 w-10 cursor-pointer items-center justify-center text-[12px] transition disabled:cursor-not-allowed disabled:opacity-70",
                     board?.inviteEnabled
-                      ? "border-theme-channel-type-active-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
-                      : "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border",
+                      ? "bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
+                      : "bg-transparent text-theme-text-subtle hover:text-theme-text-primary",
                   )}
                   aria-pressed={board?.inviteEnabled === true}
                 >
@@ -132,10 +135,10 @@ export const InviteModal = () => {
                   disabled={isLoading}
                   onClick={() => onSetInviteEnabled(false)}
                   className={cn(
-                    "flex h-6 w-12 cursor-pointer items-center justify-center rounded-none border px-3 text-[12px] transition disabled:cursor-not-allowed disabled:opacity-70",
+                    "flex h-6 w-10 cursor-pointer items-center justify-center border-l border-theme-border text-[12px] transition disabled:cursor-not-allowed disabled:opacity-70",
                     board?.inviteEnabled === false
-                      ? "border-theme-channel-type-active-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
-                      : "border-theme-channel-type-inactive-border bg-theme-channel-type-inactive-bg text-theme-channel-type-inactive-text hover:border-theme-channel-type-inactive-hover-border",
+                      ? "bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
+                      : "bg-transparent text-theme-text-subtle hover:text-theme-text-primary",
                   )}
                   aria-pressed={board?.inviteEnabled === false}
                 >
@@ -143,60 +146,59 @@ export const InviteModal = () => {
                 </button>
               </div>
             </div>
+          </div>
 
-            <div className="space-y-1.5">
-              <Label
-                htmlFor="invite-url"
-                className="block uppercase text-[15px] font-bold text-theme-text-subtle -mt-1 mb-0.5"
-              >
-                {t.modals.invite.boardInviteLinkLabel}
-              </Label>
-
-              <div className="flex items-center gap-2 mb-0">
-                <Input
-                  id="invite-url"
-                  name="invite-url"
-                  disabled={isLoading || !board?.inviteEnabled}
-                  className="h-8 rounded-none border border-theme-border bg-theme-bg-edit-form/60 px-3 py-2 text-[14px] text-theme-text-primary focus-visible:border-theme-border-accent focus-visible:ring-0 focus-visible:ring-offset-0 disabled:text-theme-text-subtle"
-                  value={inviteUrl}
-                  readOnly
-                />
-
-                <Button
-                  type="button"
-                  disabled={isLoading || !board?.inviteEnabled}
-                  onClick={onCopy}
-                  size="icon"
-                  className="h-8 w-8 cursor-pointer rounded-none border border-theme-border bg-theme-tab-button-bg text-theme-text-light hover:bg-theme-tab-button-hover hover:text-theme-text-light disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  {copied ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-
+          {/* Link de invitación */}
+          <div className="flex flex-col gap-0.5">
+            <Label
+              htmlFor="invite-url"
+              className="text-[14px] uppercase tracking-[0.08em] font-medium text-theme-text-subtle"
+            >
+              {t.modals.invite.boardInviteLinkLabel}
+            </Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="invite-url"
+                name="invite-url"
+                disabled={isLoading || !board?.inviteEnabled}
+                className="h-9 rounded-lg border border-theme-border bg-theme-bg-edit-form/60 px-3 text-[13px] font-mono text-theme-text-primary focus-visible:border-theme-border-accent focus-visible:ring-0 focus-visible:ring-offset-0 disabled:text-theme-text-subtle"
+                value={inviteUrl}
+                readOnly
+              />
               <Button
                 type="button"
-                onClick={onRegenerate}
                 disabled={isLoading || !board?.inviteEnabled}
-                variant="ghost"
-                className="-mt-4 -ml-2.5 h-6 cursor-pointer rounded-none px-0 text-[12px] text-theme-text-tertiary hover:bg-transparent hover:text-theme-text-secondary disabled:cursor-not-allowed disabled:opacity-70"
+                onClick={onCopy}
+                size="icon"
+                className="h-9 w-9 shrink-0 cursor-pointer rounded-lg border border-theme-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text hover:bg-theme-channel-type-active-soft-bg hover:text-theme-channel-type-active-text disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {t.modals.invite.generateNewLink}
-                <RefreshCw className="-ml-0.5 -mt-0.5 h-4 w-4" />
+                {copied ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
               </Button>
             </div>
+            <Button
+              type="button"
+              onClick={onRegenerate}
+              disabled={isLoading || !board?.inviteEnabled}
+              variant="ghost"
+              className="w-fit h-auto mt-1 cursor-pointer px-0 py-0 gap-1.5 text-[11px] text-theme-text-subtle hover:bg-transparent hover:text-theme-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <RefreshCw className="h-3 w-3" />
+              {t.modals.invite.generateNewLink}
+            </Button>
           </div>
         </div>
-        <DialogFooter className="border-t border-theme-border bg-theme-bg-secondary/40 px-6 py-1.5 -mt-5">
+
+        <DialogFooter className="border-t border-theme-border px-5 py-1">
           <Button
             type="button"
             variant="ghost"
             disabled={isLoading}
             onClick={handleClose}
-            className="h-6.5 cursor-pointer rounded-none bg-theme-bg-cancel-button px-3 text-[14px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+            className="h-6.5 cursor-pointer rounded-lg border border-theme-border bg-theme-bg-cancel-button px-4 text-[13px] text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
           >
             {t.common.close}
           </Button>

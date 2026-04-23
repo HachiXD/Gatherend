@@ -33,7 +33,7 @@ export const SettingsSidebar = ({
 }: SidebarProps) => {
   const { t } = useTranslation();
   const tabClass =
-    "w-full whitespace-nowrap border px-3 py-2 text-left text-sm font-medium transition";
+    "w-full whitespace-nowrap rounded-lg border px-3 py-2 text-left text-sm font-medium transition";
 
   const items: Array<{ id: BoardSettingsTabId; label: string }> = [
     ...(showGeneralTab
@@ -59,8 +59,8 @@ export const SettingsSidebar = ({
   ];
 
   return (
-    <div className="flex w-full flex-col border-b border-theme-border bg-theme-bg-overlay-primary/85 p-3 sm:w-40 sm:border-b-0 sm:p-3 md:w-60 md:p-4">
-      <div className="border border-theme-border bg-theme-bg-secondary/25 px-2.5 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.24)]">
+    <div className="flex w-full flex-col rounded-lg border-b border-theme-border bg-theme-bg-overlay-primary/85 p-3 sm:w-40 sm:border-b-0 sm:p-3 md:w-60 md:p-4">
+      <div className="rounded-lg border border-theme-border bg-theme-bg-secondary/25 px-2.5 py-1">
         <h2 className="truncate text-[11px] font-semibold uppercase tracking-[0.06em] text-theme-text-muted">
           {t.overlays.boardSettings.title}
         </h2>
@@ -74,8 +74,8 @@ export const SettingsSidebar = ({
             className={cn(
               tabClass,
               tab === item.id
-                ? "border-theme-border-accent-active-channel cursor-pointer bg-theme-bg-secondary/40 text-theme-text-light shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_0_-1px_0_rgba(0,0,0,0.28)]"
-                : "border-transparent cursor-pointer text-theme-text-subtle hover:border-theme-border hover:bg-theme-bg-secondary/30 hover:text-theme-text-light hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.24)]",
+                ? "border-theme-border-accent-active-channel cursor-pointer bg-theme-bg-secondary/40 text-theme-text-light"
+                : "border-transparent cursor-pointer text-theme-text-subtle hover:border-theme-border hover:bg-theme-bg-secondary/30 hover:text-theme-text-light",
             )}
           >
             {item.label}

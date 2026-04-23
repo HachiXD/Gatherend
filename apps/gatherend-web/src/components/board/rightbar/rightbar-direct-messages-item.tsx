@@ -139,13 +139,13 @@ export const DirectMessageItem = memo(function DirectMessageItemComponent({
           onClick={onClick}
           disabled={isPending || isHiding}
           className={cn(
-            "group flex items-center gap-x-2 w-full cursor-pointer transition mb-1 ml-1 py-1.5 px-2 rounded-sm relative",
+            "group flex items-center gap-x-2 w-full cursor-pointer transition mb-1 ml-1 py-1.5 px-2 rounded-lg relative",
             "border border-transparent",
             !isActive &&
-              "hover:border-theme-border hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_-1px_0_rgba(0,0,0,0.38)]",
+              "hover:border-theme-border",
             !isActive && "hover:bg-theme-channel-hover",
             isActive &&
-              "bg-theme-channel-active border-transparent border-l-4 [border-left-color:var(--theme-border-accent-active-channel)] shadow-[inset_0_1px_0_rgba(0,0,0,0.42),inset_1px_0_0_rgba(0,0,0,0.36),inset_-1px_0_0_rgba(255,255,255,0.14),inset_0_-1px_0_rgba(255,255,255,0.18)]",
+              "bg-theme-channel-active border-transparent border-l-4 [border-left-color:var(--theme-border-accent-active-channel)]",
             (isPending || isHiding) && "opacity-50",
           )}
           onMouseEnter={() => {
@@ -212,11 +212,11 @@ export const DirectMessageItem = memo(function DirectMessageItemComponent({
           )}
         </button>
       </ContextMenuTrigger>
-      <ContextMenuContent className="w-48 rounded-none border border-theme-dropdown-border bg-theme-dropdown-bg p-1 shadow-[0_10px_24px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.1),inset_1px_0_0_rgba(255,255,255,0.08),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]">
+      <ContextMenuContent className="w-48 rounded-lg border border-theme-dropdown-border bg-theme-dropdown-bg p-1">
         <ContextMenuItem
           onClick={handleDeleteConversation}
           disabled={isHiding}
-          className="h-11 cursor-pointer rounded-none border border-rose-500/20 bg-rose-500/6 px-3 py-2 text-sm text-rose-400 focus:border-rose-500/35 focus:bg-rose-500/10 focus:text-rose-400 disabled:opacity-50"
+          className="h-11 cursor-pointer rounded-lg border border-rose-500/20 bg-rose-500/6 px-3 py-2 text-sm text-rose-400 focus:border-rose-500/35 focus:bg-rose-500/10 focus:text-rose-400 disabled:opacity-50"
         >
           <Trash2 className="w-4 h-4 mr-2" />
           {t.dm.deleteConversation}

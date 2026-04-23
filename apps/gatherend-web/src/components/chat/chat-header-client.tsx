@@ -28,7 +28,7 @@ export const ChatHeaderClient = ({
   const name = type === "channel" && channel ? channel.name : initialName;
   return (
     <div
-      className={`flex min-w-[160px] items-center justify-center gap-2 rounded-sm border border-[var(--community-header-btn-ring)] bg-theme-bg-secondary/40 px-3 py-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_-1px_0_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]`}
+      className={`flex min-w-[160px] items-center justify-center gap-2 px-3 py-0.5`}
       style={undefined}
     >
       {type === "channel" && (
@@ -38,17 +38,15 @@ export const ChatHeaderClient = ({
         <UserAvatar
           src={avatarUrl}
           profileId={profileId}
-          className="h-6.5 w-6.5"
+          className="h-8 w-8"
           statusOffset="right-0"
-          statusClassName="w-2.5 h-2.5"
+          statusClassName="w-3 h-3"
           ringColorClass="indicator-ring"
           overlayRingColorClass="bg-theme-bg-tertiary"
           animationMode="never"
         />
       )}
-      <p className="text-center text-[20px] font-semibold text-theme-text-subtle">
-        {name}
-      </p>
+      <p className="text-center text-[20px] font-semibold c">{name}</p>
     </div>
   );
 };

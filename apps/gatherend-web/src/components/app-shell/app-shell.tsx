@@ -65,7 +65,7 @@ export const AppShell = memo(function AppShell({
         <div
           className="hidden md:flex fixed items-center top-0 w-64 right-0 h-12 
           bg-theme-bg-quinary
-          border-t-[3px] border-b-[1px] border-x-[3px] border-theme-border-primary z-30"
+          border-t-[3px] border-b border-x-[3px] border-theme-border-primary z-30"
         >
           {header}
         </div>

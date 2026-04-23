@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, PlusCircle, Settings, UserPlus } from "lucide-react";
+import { LogOut, PlusCircle, Settings, UserPlus, Menu } from "lucide-react";
 import { useModal } from "@/hooks/use-modal-store";
 import { useOverlayStore } from "@/hooks/use-overlay-store";
 import { FEATURES } from "@/lib/features";
@@ -51,12 +51,11 @@ export const LeftbarBanner = ({
   const isOwner = role === MemberRole.OWNER;
   const isAdmin = isOwner || role === MemberRole.ADMIN;
   const isModerator = isAdmin || role === MemberRole.MODERATOR;
-  const menuPanelShadow =
-    "shadow-[0_10px_24px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.1),inset_1px_0_0_rgba(255,255,255,0.08),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)]";
+  const menuPanelShadow = "";
   const menuRowClass =
-    "h-9 cursor-pointer rounded-sm border border-transparent px-3 py-2 text-base hover:border-theme-border hover:bg-theme-bg-secondary/30 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.28)] focus:border-theme-border focus:bg-theme-bg-secondary/30 focus:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.28)]";
+    "h-9 cursor-pointer rounded-lg border border-transparent px-3 py-2 text-base hover:border-theme-border hover:bg-theme-bg-secondary/30 focus:border-theme-border focus:bg-theme-bg-secondary/30";
   const menuDangerRowClass =
-    "h-9 cursor-pointer rounded-sm border border-rose-500/20 bg-rose-500/6 px-3 py-2 text-sm text-rose-400 hover:border-rose-500/35 hover:bg-rose-500/10 focus:border-rose-500/35 focus:bg-rose-500/10";
+    "h-9 cursor-pointer rounded-lg border border-rose-500/20 bg-rose-500/6 px-3 py-2 text-sm text-rose-400 hover:border-rose-500/35 hover:bg-rose-500/10 focus:border-rose-500/35 focus:bg-rose-500/10";
 
   const finalImageUrl = getBoardImageUrl(
     boardImageUrl,
@@ -114,15 +113,15 @@ export const LeftbarBanner = ({
         if (e.key !== "Enter" && e.key !== " ") return;
         openOnFirstInteraction(e);
       }}
-      className="flex h-9 w-9 items-center justify-center cursor-pointer rounded-sm border border-theme-border bg-theme-bg-primary/55 text-theme-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)] transition hover:bg-theme-bg-primary/72 hover:text-theme-text-secondary"
+      className="flex h-9 w-9 items-center justify-center cursor-pointer rounded-lg   text-theme-text-secondary  transition hover:bg-theme-app-settings-hover hover:text-theme-text-secondary"
     >
-      <Settings className="h-5.5 w-5.5" />
+      <Menu className="h-5.5 w-5.5" />
     </button>
   );
 
   return (
-    <div className="w-full border  bg-theme-bg-secondary">
-      <div className="flex h-[44px] bg-theme-bg-quinary items-center gap-2 border-b border-theme-border-primary px-2 py-0">
+    <div className="w-full border-b  bg-theme-bg-secondary">
+      <div className="flex h-[45px] bg-theme-bg-quinary items-center gap-2 border-b border-theme-border-primary px-2 py-0">
         <h2 className="min-w-0 truncate text-[20px] font-semibold text-theme-text-primary">
           {boardName}
         </h2>
@@ -136,7 +135,7 @@ export const LeftbarBanner = ({
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
-                className={`w-64 rounded-sm border-theme-border bg-theme-bg-dropdown-menu-primary px-1 py-1 text-sm font-medium text-theme-text-secondary ${menuPanelShadow}`}
+                className={`w-64 rounded-lg border-theme-border bg-theme-bg-dropdown-menu-primary px-1 py-1 text-sm font-medium text-theme-text-secondary ${menuPanelShadow}`}
               >
                 {isModerator && (
                   <DropdownMenuItem
@@ -200,12 +199,12 @@ export const LeftbarBanner = ({
       </div>
 
       <div className="p-2">
-        <div className="relative h-[108px] overflow-hidden rounded-sm border border-theme-border-primary bg-theme-bg-secondary">
+        <div className="relative h-[108px] overflow-hidden rounded-lg border border-theme-border-primary bg-theme-bg-secondary">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={displayImageUrl ?? undefined}
             alt={boardName}
-            className={`h-full w-full rounded-sm ${
+            className={`h-full w-full rounded-lg ${
               isDicebear ? "object-cover" : "object-fill"
             }`}
             loading="eager"

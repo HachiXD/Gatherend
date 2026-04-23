@@ -12,13 +12,13 @@ import { cn } from "@/lib/utils";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 const HEADER_PANEL_SHELL =
-  "border border-theme-border bg-theme-bg-overlay-primary/78 mr-1.5 pt-4 pb-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),inset_0_-1px_0_rgba(0,0,0,0.26)] sm:px-5 sm:py-5";
+  "rounded-lg border border-theme-border bg-theme-bg-overlay-primary/78 mr-1.5 pt-4 pb-0 sm:px-5 sm:py-5";
 const ACTION_ROW_CLASS =
-  "flex min-h-10 items-center gap-3 rounded-none border border-theme-border-subtle bg-theme-bg-edit-form/50 px-3 py-1";
+  "flex min-h-10 items-center gap-3 rounded-lg border border-theme-border-subtle bg-theme-bg-edit-form/50 px-3 py-1";
 const actionButtonClass =
-  "h-6.5 min-w-[120px] cursor-pointer rounded-none bg-theme-tab-button-bg px-3 text-[14px] text-theme-text-light transition hover:bg-theme-tab-button-hover";
+  "h-6.5 min-w-[120px] cursor-pointer rounded-lg bg-theme-tab-button-bg px-3 text-[14px] text-theme-text-light transition hover:bg-theme-tab-button-hover";
 const actionBadgeClass =
-  "inline-flex items-center rounded-none border border-theme-border bg-theme-bg-secondary/35 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.05em] text-theme-text-muted";
+  "inline-flex items-center rounded-lg border border-theme-border bg-theme-bg-secondary/35 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.05em] text-theme-text-muted";
 
 interface ModerationProfile
   extends Pick<Profile, "id" | "username" | "discriminator"> {

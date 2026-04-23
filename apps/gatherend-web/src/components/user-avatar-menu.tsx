@@ -278,7 +278,7 @@ function UserAvatarMenuContent({
   const themeMode: "dark" | "light" =
     resolvedTheme === "light" ? "light" : "dark";
   const iconButtonClass =
-    "flex h-8 w-8 items-center justify-center cursor-pointer rounded-none border border-theme-border bg-theme-bg-primary/55 text-theme-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)] transition hover:bg-theme-bg-primary/72 hover:text-theme-text-secondary focus:outline-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 active:outline-none disabled:cursor-not-allowed disabled:opacity-50";
+    "flex h-8 w-8 items-center justify-center cursor-pointer rounded-lg border border-theme-border bg-theme-bg-primary/55 text-theme-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_1px_0_0_rgba(255,255,255,0.12),inset_-1px_0_0_rgba(0,0,0,0.38),inset_0_-1px_0_rgba(0,0,0,0.38)] transition hover:bg-theme-bg-primary/72 hover:text-theme-text-secondary focus:outline-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 active:outline-none disabled:cursor-not-allowed disabled:opacity-50";
 
   const handleReportUser = useCallback(() => {
     onClose();
@@ -301,7 +301,7 @@ function UserAvatarMenuContent({
 
   return (
     <PopoverContent
-      className="w-[22rem] max-w-[calc(100vw-1rem)] overflow-hidden rounded-sm border border-theme-border-secondary bg-theme-bg-dropdown-menu-primary p-0"
+      className="w-[22rem] max-w-[calc(100vw-1rem)] overflow-hidden rounded-lg border border-theme-border-secondary bg-theme-bg-dropdown-menu-primary p-0"
       side="right"
       align="start"
       sideOffset={8}
