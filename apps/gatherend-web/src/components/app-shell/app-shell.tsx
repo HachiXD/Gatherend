@@ -72,7 +72,7 @@ export const AppShell = memo(function AppShell({
 
         {/* Content - Con padding-top en móvil para el header fijo */}
         {/* El gradiente se aplica aquí cuando está habilitado, sino usa bgTertiary */}
-        <main className="app-shell-main h-full pt-14 md:pt-0 md:pl-[372px] md:pr-64 bg-theme-bg-tertiary flex flex-col overflow-hidden  border-t-[3px] border-theme-border-primary">
+        <main className="app-shell-main h-full pt-14 md:pt-0 md:pl-[372px] md:pr-64 bg-theme-bg-tertiary flex flex-col overflow-hidden border-t-0 border-theme-border-primary md:border-t-[3px]">
           <div className="flex-1 min-h-0 overflow-hidden">{children}</div>
         </main>
 

@@ -49,29 +49,27 @@ export const MobileHeader = memo(function MobileHeader({
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <Button
             variant="ghost"
-            size="icon"
             onClick={() => setLeftOpen(true)}
-            className="text-theme-text-primary hover:bg-theme-border-secondary flex-shrink-0"
+            className="text-theme-text-primary  hover:bg-theme-border-secondary flex-shrink-0"
           >
-            <Menu className="h-6 w-6" />
+            <Menu className="size-6" />
           </Button>
 
           {/* Title (solo cuando no estás en discovery y hay título) */}
           {isChannelChat && (
             <Button
               variant="ghost"
-              size="icon"
               onClick={handleChatBackClick}
               className="text-theme-text-primary hover:bg-theme-border-secondary flex-shrink-0"
               aria-label="Volver a la lista de chats"
               title="Volver a la lista de chats"
             >
-              <ArrowLeft className="h-6 w-6" />
+              <ArrowLeft className="size-6" />
             </Button>
           )}
 
           {!isDiscovery && title && (
-            <h1 className="text-theme-text-primary font-semibold text-base truncate">
+            <h1 className="text-theme-text-primary font-semibold text-[20px] truncate">
               {title}
             </h1>
           )}
@@ -81,12 +79,11 @@ export const MobileHeader = memo(function MobileHeader({
         <div className="flex items-center gap-1 flex-shrink-0">
           <Button
             variant="ghost"
-            size="icon"
             onClick={() => setRightOpen(true)}
             className="text-theme-text-primary hover:bg-theme-border-secondary"
             title="Members & DMs"
           >
-            <Users className="h-6 w-6" />
+            <Users className="size-6" />
           </Button>
         </div>
       </header>
