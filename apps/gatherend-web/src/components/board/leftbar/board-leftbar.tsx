@@ -151,7 +151,7 @@ export const BoardLeftbar = ({
             data-mentions={hasChatMentions}
             data-unreads={hasChatUnreads}
             className={cn(
-              "group/chats relative flex h-10 w-full cursor-pointer items-center gap-3 rounded-lg bg-transparent px-3 text-[18px] font-medium tracking-[0.05em] text-theme-text-subtle transition-colors",
+              "group/chats relative flex h-10 w-full cursor-pointer items-center gap-3 rounded-lg bg-transparent px-3 text-[16px] font-medium tracking-[0.05em] text-theme-text-subtle transition-colors",
               isChannels
                 ? "bg-theme-channel-type-active-border"
                 : "hover:bg-theme-channel-type-active-border",
@@ -182,7 +182,7 @@ export const BoardLeftbar = ({
           <button
             onClick={handleForum}
             className={cn(
-              "group flex h-10 w-full cursor-pointer items-center gap-3 rounded-lg bg-transparent px-3 text-[18px] font-medium tracking-[0.05em] text-theme-text-subtle transition-colors",
+              "group flex h-10 w-full cursor-pointer items-center gap-3 rounded-lg bg-transparent px-3 text-[16px] font-medium tracking-[0.05em] text-theme-text-subtle transition-colors",
               isForum
                 ? "bg-theme-channel-type-active-border"
                 : "hover:bg-theme-channel-type-active-border",
@@ -196,7 +196,7 @@ export const BoardLeftbar = ({
           <button
             onClick={handleWiki}
             className={cn(
-              "group flex h-10 w-full cursor-pointer items-center gap-3 rounded-lg bg-transparent px-3 text-[18px] font-medium tracking-[0.05em] text-theme-text-subtle transition-colors",
+              "group flex h-10 w-full cursor-pointer items-center gap-3 rounded-lg bg-transparent px-3 text-[16px] font-medium tracking-[0.05em] text-theme-text-subtle transition-colors",
               isWiki
                 ? "bg-theme-channel-type-active-border"
                 : "hover:bg-theme-channel-type-active-border",
@@ -210,7 +210,7 @@ export const BoardLeftbar = ({
           <button
             onClick={handleRules}
             className={cn(
-              "group flex h-10 w-full cursor-pointer items-center gap-3 rounded-lg bg-transparent px-3 text-[18px] font-medium tracking-[0.05em] text-theme-text-subtle transition-colors",
+              "group flex h-10 w-full cursor-pointer items-center gap-3 rounded-lg bg-transparent px-3 text-[16px] font-medium tracking-[0.05em] text-theme-text-subtle transition-colors",
               isRules
                 ? "bg-theme-channel-type-active-border"
                 : "hover:bg-theme-channel-type-active-border",
@@ -224,7 +224,7 @@ export const BoardLeftbar = ({
           <button
             onClick={handleRanking}
             className={cn(
-              "group flex h-10 w-full cursor-pointer items-center gap-3 rounded-lg bg-transparent px-3 text-[18px] font-medium tracking-[0.05em] text-theme-text-subtle transition-colors",
+              "group flex h-10 w-full cursor-pointer items-center gap-3 rounded-lg bg-transparent px-3 text-[16px] font-medium tracking-[0.05em] text-theme-text-subtle transition-colors",
               isRanking
                 ? "bg-theme-channel-type-active-border"
                 : "hover:bg-theme-channel-type-active-border",
@@ -244,9 +244,9 @@ export const BoardLeftbar = ({
           {xpProgress && (
             <div className="flex flex-col gap-1.5 rounded-lg  bg-transparent px-3 py-1">
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1 rounded-md bg-theme-channel-type-active-border px-2 py-1">
+                <div className="flex items-center gap-1.5 rounded-md bg-theme-channel-type-active-border px-2 py-1">
                   <Star className="h-5 w-5 shrink-0 text-theme-text-subtle" />
-                  <span className="text-[18px] font-medium leading-none  text-theme-text-subtle">
+                  <span className="text-[16px] font-medium leading-none  text-theme-text-subtle">
                     Nv. {xpProgress.level}
                   </span>
                 </div>
@@ -271,24 +271,24 @@ export const BoardLeftbar = ({
           <div className="grid grid-cols-2 gap-2">
             <div className="flex flex-col gap-1 rounded-lg border border-theme-border-secondary bg-[var(--theme-channel-type-active-soft-bg)] px-3 py-2">
               <div className="flex items-center justify-between">
-                <p className="text-[16px] font-medium tracking-[0.06em] text-theme-text-primary/70">
+                <p className="text-[15px] font-medium tracking-[0.06em] text-theme-text-primary/70">
                   Miembros
                 </p>
                 <Users className="h-5.5 w-5.5 shrink-0 text-theme-text-primary/50" />
               </div>
-              <span className="text-[18px] font-medium leading-none text-theme-text-subtle tabular-nums">
+              <span className="text-[16px] font-medium leading-none text-theme-text-subtle tabular-nums">
                 {board.memberCount.toLocaleString()}
               </span>
             </div>
 
             <div className="flex flex-col gap-1 rounded-lg border border-theme-border-secondary bg-[var(--theme-channel-type-active-soft-bg)] px-3 py-2">
               <div className="flex items-center justify-between">
-                <p className="text-[16px] font-medium tracking-[0.06em] text-theme-text-primary/70">
+                <p className="text-[15px] font-medium tracking-[0.06em] text-theme-text-primary/70">
                   Chats
                 </p>
                 <MessagesSquare className="h-5.5 w-5.5 shrink-0 text-theme-text-primary/50" />
               </div>
-              <span className="text-[18px] font-medium leading-none text-theme-text-subtle tabular-nums">
+              <span className="text-[16px] font-medium leading-none text-theme-text-subtle tabular-nums">
                 {board.channels.length}
               </span>
             </div>
@@ -298,11 +298,11 @@ export const BoardLeftbar = ({
           <div className="flex items-center justify-between gap-3 rounded-lg border border-theme-border-secondary bg-[var(--theme-channel-type-active-soft-bg)] px-3 py-2">
             <div className="flex items-center gap-2">
               <FileText className="h-5.5 w-5.5 shrink-0 text-theme-text-primary/50" />
-              <p className="text-[16px] font-medium tracking-[0.06em] text-theme-text-primary/70">
+              <p className="text-[15px] font-medium tracking-[0.06em] text-theme-text-primary/70">
                 Posts esta semana
               </p>
             </div>
-            <span className="text-[18px] font-medium leading-none text-theme-text-subtle tabular-nums">
+            <span className="text-[16px] font-medium leading-none text-theme-text-subtle tabular-nums">
               {board.recentPostCount7d}
             </span>
           </div>
@@ -310,10 +310,10 @@ export const BoardLeftbar = ({
           {/* Descripción */}
           {board.description && (
             <div className="rounded-lg border border-theme-border-secondary bg-[var(--theme-channel-type-active-soft-bg)] px-3 py-2">
-              <p className="mb-1 text-[16px] font-medium tracking-[0.06em] text-theme-text-primary/70">
+              <p className="mb-1 text-[15px] font-medium tracking-[0.06em] text-theme-text-primary/70">
                 Descripción
               </p>
-              <p className="line-clamp-5 text-[18px] leading-relaxed text-theme-text-subtle">
+              <p className="line-clamp-5 text-[16px] leading-relaxed text-theme-text-subtle">
                 {board.description}
               </p>
             </div>

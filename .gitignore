@@ -75,3 +75,6 @@ gatherend-web/.env*
 **/.env
 **/.env.*
 !**/.env.example
+
+# Claude temp settings
+.claude
