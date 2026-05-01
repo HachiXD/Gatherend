@@ -47,6 +47,7 @@ model UploadedAsset {
   profileCardRightTopImageFor              Profile[]              @relation("ProfileCardRightTopImageAsset")
   profileCardRightBottomImageFor           Profile[]              @relation("ProfileCardRightBottomImageAsset")
   boardImageFor                            Board[]                @relation("BoardImageAsset")
+  boardBannerFor                           Board[]                @relation("BoardBannerAsset")
   communityPostImageFor                    CommunityPost[]        @relation("CommunityPostImageAsset")
   communityPostCommentImageFor             CommunityPostComment[] @relation("CommunityPostCommentImageAsset")
   channelImageFor                          Channel[]              @relation("ChannelImageAsset")
@@ -230,6 +231,7 @@ model Board {
   name                  String
   description           String?
   imageAssetId          String?
+  bannerAssetId         String?
   inviteCode            String                   @unique
   inviteEnabled         Boolean                  @default(true)
   isPrivate             Boolean                  @default(true)
@@ -250,6 +252,7 @@ model Board {
   riskLevel             Int                      @default(1)
   riskUpdatedAt         DateTime?
   imageAsset            UploadedAsset?           @relation("BoardImageAsset", fields: [imageAssetId], references: [id], onDelete: SetNull)
+  bannerAsset           UploadedAsset?           @relation("BoardBannerAsset", fields: [bannerAssetId], references: [id], onDelete: SetNull)
   profile               Profile?                 @relation(fields: [profileId], references: [id])
   boardBans             BoardBan[]
   boardWarnings         BoardWarning[]
@@ -273,6 +276,7 @@ model Board {
   @@index([hiddenFromFeed])
   @@index([rankingScore(sort: Desc), id])
   @@index([imageAssetId])
+  @@index([bannerAssetId])
 }
 
 model BoardBan {
@@ -855,6 +859,7 @@ enum AssetContext {
   PROFILE_BANNER
   PROFILE_CARD_IMAGE
   BOARD_IMAGE
+  BOARD_BANNER
   BOARD_RULES_IMAGE
   COMMUNITY_POST_IMAGE
   COMMUNITY_POST_COMMENT_IMAGE

@@ -57,6 +57,9 @@ export async function GET(
         imageAsset: {
           select: uploadedAssetSummarySelect,
         },
+        bannerAsset: {
+          select: uploadedAssetSummarySelect,
+        },
         channels: {
           orderBy: { position: "asc" },
           include: {
@@ -97,12 +100,13 @@ export async function GET(
       return NextResponse.json({ error: "Board not found" }, { status: 404 });
     }
 
-    const { members, _count, channels, imageAsset, ...boardData } = board;
+    const { members, _count, channels, imageAsset, bannerAsset, ...boardData } = board;
     const currentMember = members[0] ?? null;
 
     return NextResponse.json({
       ...boardData,
       imageAsset: serializeUploadedAsset(imageAsset),
+      bannerAsset: serializeUploadedAsset(bannerAsset),
       memberCount: _count.members,
       currentMember,
       channels: channels.map((channel) => ({
@@ -226,6 +230,7 @@ export async function PATCH(
     let body: {
       name?: unknown;
       imageAssetId?: unknown;
+      bannerAssetId?: unknown;
       description?: unknown;
       isPrivate?: unknown;
     };
@@ -238,6 +243,7 @@ export async function PATCH(
     const {
       name,
       imageAssetId,
+      bannerAssetId,
       description,
       isPrivate,
     } = body;
@@ -309,6 +315,37 @@ export async function PATCH(
         }
 
         resolvedImageAssetId = imageAsset.id;
+      }
+    }
+
+    let resolvedBannerAssetId: string | null | undefined = undefined;
+    if (bannerAssetId !== undefined) {
+      if (bannerAssetId === null || bannerAssetId === "") {
+        resolvedBannerAssetId = null;
+      } else if (
+        typeof bannerAssetId !== "string" ||
+        !UUID_REGEX.test(bannerAssetId)
+      ) {
+        return NextResponse.json(
+          { error: "Banner asset ID must be a valid UUID" },
+          { status: 400 },
+        );
+      } else {
+        const bannerAsset = await findOwnedUploadedAsset(
+          bannerAssetId,
+          profile.id,
+          AssetContext.BOARD_BANNER,
+          AssetVisibility.PUBLIC,
+        );
+
+        if (!bannerAsset) {
+          return NextResponse.json(
+            { error: "Board banner asset not found" },
+            { status: 400 },
+          );
+        }
+
+        resolvedBannerAssetId = bannerAsset.id;
       }
     }
 
@@ -399,6 +436,9 @@ export async function PATCH(
           ...(resolvedImageAssetId !== undefined && {
             imageAssetId: resolvedImageAssetId,
           }),
+          ...(resolvedBannerAssetId !== undefined && {
+            bannerAssetId: resolvedBannerAssetId,
+          }),
           ...(description !== undefined && {
             description: description ? (description as string).trim() : null,
           }),
@@ -408,6 +448,9 @@ export async function PATCH(
           name: true,
           description: true,
           imageAsset: {
+            select: uploadedAssetSummarySelect,
+          },
+          bannerAsset: {
             select: uploadedAssetSummarySelect,
           },
           inviteCode: true,
@@ -430,6 +473,7 @@ export async function PATCH(
     return NextResponse.json({
       ...board,
       imageAsset: serializeUploadedAsset(board.imageAsset),
+      bannerAsset: serializeUploadedAsset(board.bannerAsset),
     });
   } catch (error) {
     if (error instanceof Error) {

@@ -14,6 +14,7 @@ const CDN_DOMAIN = process.env.NEXT_PUBLIC_STORAGE_DOMAIN || "";
 const ENDPOINT_TO_CONTEXT = {
   messageFile: "message_attachment",
   boardImage: "board_image",
+  boardBanner: "board_banner",
   channelImage: "channel_image",
   communityPostImage: "community_post_image",
   boardRulesImage: "board_rules_image",
@@ -111,6 +112,7 @@ export const FileUpload = ({
     !!fileUrl &&
     (fileType?.startsWith("image/") ||
       context === "board_image" ||
+      context === "board_banner" ||
       context === "community_post_image" ||
       looksLikeImageUrl(fileUrl));
 

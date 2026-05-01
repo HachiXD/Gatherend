@@ -76,6 +76,7 @@ export interface CommunityCardProps {
   id: string;
   name: string;
   imageAsset: ClientUploadedAsset | null;
+  bannerAsset?: ClientUploadedAsset | null;
   memberCount: number;
   recentPostCount7d: number;
   onExplore: (id: string) => void;
@@ -86,13 +87,14 @@ function CommunityCardInner({
   id,
   name,
   imageAsset,
+  bannerAsset,
   memberCount,
   recentPostCount7d,
   onExplore,
   className,
 }: CommunityCardProps) {
   const [imageFailed, setImageFailed] = useState(false);
-  const imageUrl = imageAsset?.url || null;
+  const imageUrl = (bannerAsset ?? imageAsset)?.url || null;
   const precomputedColor = imageAsset?.dominantColor || null;
 
   const displayImageUrl = useMemo(() => {

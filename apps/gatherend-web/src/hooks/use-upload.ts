@@ -11,6 +11,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 // Context types that match the backend
 export type UploadContext =
   | "board_image"
+  | "board_banner"
   | "channel_image"
   | "community_post_image"
   | "community_post_comment_image"
@@ -25,6 +26,7 @@ export type UploadContext =
 const ENDPOINT_TO_CONTEXT: Record<string, UploadContext> = {
   messageFile: "message_attachment",
   boardImage: "board_image",
+  boardBanner: "board_banner",
   channelImage: "channel_image",
   communityPostImage: "community_post_image",
   boardRulesImage: "board_rules_image",

@@ -137,6 +137,7 @@ export const BoardLeftbar = ({
     <div className="flex h-full w-full flex-col bg-theme-bg-secondary text-primary">
       <LeftbarBanner
         imageAsset={board.imageAsset}
+        bannerAsset={board.bannerAsset}
         boardName={board.name}
         boardId={board.id}
         board={board}

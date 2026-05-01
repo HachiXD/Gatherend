@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import type { BetterAuthPlugin } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { APIError, createAuthMiddleware } from "better-auth/api";
+import { expo } from "@better-auth/expo";
 import { nextCookies } from "better-auth/next-js";
 import { captcha } from "better-auth/plugins";
 import { db } from "./db";
@@ -13,6 +14,7 @@ import { generateRandomUsername } from "./username/random";
 const isDevelopment = process.env.NODE_ENV === "development";
 const turnstileSecretKey = process.env.TURNSTILE_SECRET_KEY;
 const isProductionBuild = process.env.NEXT_PHASE === "phase-production-build";
+const isTurnstileEnabled = !isDevelopment && Boolean(turnstileSecretKey);
 
 if (!isDevelopment && !isProductionBuild && !turnstileSecretKey) {
   throw new Error("TURNSTILE_SECRET_KEY is required in production.");
@@ -50,7 +52,9 @@ const trustedOrigins = Array.from(
   new Set(
     [
       process.env.BETTER_AUTH_URL,
+      "gatherendmobile://",
       ...(isDevelopment ? ["http://localhost:3000"] : []),
+      ...(isDevelopment ? ["exp://**"] : []),
     ].filter((origin): origin is string => Boolean(origin)),
   ),
 );
@@ -88,7 +92,7 @@ function disposableEmailGuard(): BetterAuthPlugin {
 }
 
 const plugins = [
-  ...(turnstileSecretKey
+  ...(isTurnstileEnabled
     ? [
         captcha({
           provider: "cloudflare-turnstile",
@@ -98,6 +102,7 @@ const plugins = [
       ]
     : []),
   disposableEmailGuard(),
+  expo(),
   nextCookies(),
 ];
 

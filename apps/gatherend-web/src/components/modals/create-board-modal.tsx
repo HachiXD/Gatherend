@@ -45,6 +45,7 @@ const schema = z.object({
     .max(300, { message: "La descripción no puede exceder 300 caracteres" })
     .optional(),
   imageUpload: z.string().optional(),
+  bannerUpload: z.string().optional(),
   isPrivate: z.boolean(),
 });
 
@@ -54,6 +55,7 @@ const DEFAULTS: FormSchema = {
   name: "",
   description: "",
   imageUpload: "",
+  bannerUpload: "",
   isPrivate: true,
 };
 
@@ -90,6 +92,7 @@ export const CreateBoardModal = () => {
         description: values.description,
         isPrivate: values.isPrivate,
         imageAssetId: getStoredUploadAssetId(values.imageUpload),
+        bannerAssetId: getStoredUploadAssetId(values.bannerUpload),
         languages: detectBoardLanguages(),
       };
       const response = await axios.post("/api/boards", boardData);
@@ -216,7 +219,7 @@ export const CreateBoardModal = () => {
                   />
                 </div>
 
-                <div className="flex w-full shrink-0 sm:w-[132px]">
+                <div className="flex w-full shrink-0 flex-col gap-2.5 sm:w-[132px]">
                   <FormField
                     control={form.control}
                     name="imageUpload"
@@ -234,6 +237,33 @@ export const CreateBoardModal = () => {
                                 onChange={field.onChange}
                                 uploadButtonClassName="border-theme-border bg-theme-bg-secondary/40 text-theme-text-subtle transition-all hover:border-theme-border hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
                                 label={t.common.uploadBoardImage}
+                              />
+                            </FormControl>
+                          </div>
+                        </div>
+                        <FormMessage className="text-[11px] leading-tight" />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="bannerUpload"
+                    render={({ field }) => (
+                      <FormItem className="flex w-full flex-1 flex-col gap-0.5">
+                        <FormLabel className={fieldLabelClassName}>
+                          Banner (opcional)
+                        </FormLabel>
+                        <div className="flex flex-1 rounded-lg border border-theme-border bg-theme-bg-edit-form/60 px-3 py-3">
+                          <div className="flex w-full flex-1 items-center justify-center text-center">
+                            <FormControl>
+                              <FileUpload
+                                endpoint="boardBanner"
+                                value={field.value || ""}
+                                onChange={field.onChange}
+                                uploadButtonClassName="w-full border-theme-border bg-theme-bg-secondary/40 text-theme-text-subtle transition-all hover:border-theme-border hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+                                imagePreviewWrapperClassName="h-20 w-full"
+                                imagePreviewClassName="h-20 w-full rounded-lg"
+                                label="Banner"
                               />
                             </FormControl>
                           </div>

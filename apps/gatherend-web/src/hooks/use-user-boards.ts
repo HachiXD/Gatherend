@@ -12,6 +12,7 @@ export interface UserBoard {
   id: string;
   name: string;
   imageAsset: ClientUploadedAsset | null;
+  bannerAsset: ClientUploadedAsset | null;
   channels: { id: string }[];
 }
 
@@ -19,6 +20,7 @@ interface PartialUserBoardInput {
   id: string;
   name: string;
   imageAsset: ClientUploadedAsset | null;
+  bannerAsset?: ClientUploadedAsset | null;
   targetChannelId?: string | null;
 }
 
@@ -53,6 +55,7 @@ export function upsertUserBoardFromJoin(
     id: input.id,
     name: input.name,
     imageAsset: input.imageAsset,
+    bannerAsset: input.bannerAsset ?? null,
     channels: input.targetChannelId ? [{ id: input.targetChannelId }] : [],
   };
 
@@ -71,6 +74,7 @@ export function syncUserBoardFromBoardData(
     id: board.id,
     name: board.name,
     imageAsset: board.imageAsset,
+    bannerAsset: board.bannerAsset,
     channels: allChannels.map((channel) => ({ id: channel.id })),
   };
 

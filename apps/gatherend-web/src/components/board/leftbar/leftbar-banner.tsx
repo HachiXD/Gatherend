@@ -23,6 +23,7 @@ const STORAGE_DOMAIN = process.env.NEXT_PUBLIC_STORAGE_DOMAIN || "";
 
 interface LeftbarBannerProps {
   imageAsset?: ClientUploadedAsset | null;
+  bannerAsset?: ClientUploadedAsset | null;
   boardName: string;
   boardId: string;
   board: BoardWithData;
@@ -32,6 +33,7 @@ interface LeftbarBannerProps {
 
 export const LeftbarBanner = ({
   imageAsset,
+  bannerAsset,
   boardName,
   boardId,
   board,
@@ -46,7 +48,7 @@ export const LeftbarBanner = ({
   const [menuEnabled, setMenuEnabled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const { t } = useTranslation();
-  const boardImageUrl = imageAsset?.url ?? null;
+  const boardImageUrl = (bannerAsset ?? imageAsset)?.url ?? null;
 
   const isOwner = role === MemberRole.OWNER;
   const isAdmin = isOwner || role === MemberRole.ADMIN;

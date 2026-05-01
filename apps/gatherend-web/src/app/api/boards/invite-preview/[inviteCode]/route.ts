@@ -52,6 +52,9 @@ export async function GET(
         imageAsset: {
           select: uploadedAssetSummarySelect,
         },
+        bannerAsset: {
+          select: uploadedAssetSummarySelect,
+        },
         inviteEnabled: true,
         _count: {
           select: {
@@ -76,6 +79,7 @@ export async function GET(
       id: board.id,
       name: board.name,
       imageAsset: serializeUploadedAsset(board.imageAsset),
+      bannerAsset: serializeUploadedAsset(board.bannerAsset),
       memberCount: board._count.members,
       inviteCode,
     });

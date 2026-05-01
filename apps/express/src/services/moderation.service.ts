@@ -316,6 +316,7 @@ function getContentType(context: ModerationContext): string {
     case "sticker":
       return "sticker";
     case "board_image":
+    case "board_banner":
     case "channel_image":
     case "community_post_image":
     case "community_post_comment_image":

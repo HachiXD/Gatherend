@@ -1,0 +1,33 @@
+diff --git a/node_modules/@shopify/flash-list/dist/recyclerview/RecyclerView.js b/node_modules/@shopify/flash-list/dist/recyclerview/RecyclerView.js
+index 8bea626..81e788a 100644
+--- a/node_modules/@shopify/flash-list/dist/recyclerview/RecyclerView.js
++++ b/node_modules/@shopify/flash-list/dist/recyclerview/RecyclerView.js
+@@ -58,7 +58,7 @@ var RecyclerViewComponent = function (props, ref) {
+     // Hook to handle list loading
+     (0, useOnLoad_1.useOnListLoad)(recyclerViewManager, onLoad);
+     // Hook to detect when scrolling reaches list bounds
+-    var checkBounds = (0, useBoundDetection_1.useBoundDetection)(recyclerViewManager, scrollViewRef).checkBounds;
++    var _a = (0, useBoundDetection_1.useBoundDetection)(recyclerViewManager, scrollViewRef), checkBounds = _a.checkBounds, runAutoScrollToBottomCheck = _a.runAutoScrollToBottomCheck;
+     var isHorizontalRTL = react_native_1.I18nManager.isRTL && horizontal;
+     /**
+      * Initialize the RecyclerView by measuring and setting up the window size
+@@ -339,6 +339,7 @@ var RecyclerViewComponent = function (props, ref) {
+                         recyclerViewManager.updateAverageRenderTime(renderTimeTracker.getAverageRenderTime());
+                         applyInitialScrollIndex();
+                         checkBounds();
++                        runAutoScrollToBottomCheck();
+                         recyclerViewManager.computeItemViewability();
+                         recyclerViewManager.animationOptimizationsEnabled = false;
+                     }, CellRendererComponent: CellRendererComponent, ItemSeparatorComponent: ItemSeparatorComponent, getChildContainerLayout: function () {
+diff --git a/node_modules/@shopify/flash-list/dist/recyclerview/hooks/useBoundDetection.js b/node_modules/@shopify/flash-list/dist/recyclerview/hooks/useBoundDetection.js
+index 7accbd8..fdce8cd 100644
+--- a/node_modules/@shopify/flash-list/dist/recyclerview/hooks/useBoundDetection.js
++++ b/node_modules/@shopify/flash-list/dist/recyclerview/hooks/useBoundDetection.js
+@@ -130,6 +130,7 @@ function useBoundDetection(recyclerViewManager, scrollViewRef) {
+     ]);
+     return {
+         checkBounds: checkBounds,
++        runAutoScrollToBottomCheck: runAutoScrollToBottomCheck,
+     };
+ }
+ //# sourceMappingURL=useBoundDetection.js.map

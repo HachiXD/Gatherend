@@ -55,6 +55,9 @@ export async function GET() {
         imageAsset: {
           select: uploadedAssetSummarySelect,
         },
+        bannerAsset: {
+          select: uploadedAssetSummarySelect,
+        },
         channels: {
           select: {
             id: true,
@@ -70,6 +73,7 @@ export async function GET() {
       boards.map((board) => ({
         ...board,
         imageAsset: serializeUploadedAsset(board.imageAsset),
+        bannerAsset: serializeUploadedAsset(board.bannerAsset),
       })),
     );
   } catch (error) {
@@ -108,11 +112,13 @@ export async function POST(req: Request) {
       name,
       description,
       imageAssetId,
+      bannerAssetId,
       isPrivate,
     }: {
       name?: unknown;
       description?: unknown;
       imageAssetId?: unknown;
+      bannerAssetId?: unknown;
       isPrivate?: unknown;
     } = body;
 
@@ -207,6 +213,32 @@ export async function POST(req: Request) {
       resolvedImageAssetId = imageAsset.id;
     }
 
+    let resolvedBannerAssetId: string | null = null;
+    if (bannerAssetId !== undefined && bannerAssetId !== null && bannerAssetId !== "") {
+      if (typeof bannerAssetId !== "string" || !UUID_REGEX.test(bannerAssetId)) {
+        return NextResponse.json(
+          { error: "Banner asset ID must be a valid UUID" },
+          { status: 400 },
+        );
+      }
+
+      const bannerAsset = await findOwnedUploadedAsset(
+        bannerAssetId,
+        profile.id,
+        AssetContext.BOARD_BANNER,
+        AssetVisibility.PUBLIC,
+      );
+
+      if (!bannerAsset) {
+        return NextResponse.json(
+          { error: "Board banner asset not found" },
+          { status: 400 },
+        );
+      }
+
+      resolvedBannerAssetId = bannerAsset.id;
+    }
+
     const board = await db.$transaction(async (tx) => {
       await ensurePublicBoardNameAvailable(tx, {
         name: name.trim(),
@@ -221,6 +253,7 @@ export async function POST(req: Request) {
               ? description.trim()
               : null,
           imageAssetId: resolvedImageAssetId,
+          bannerAssetId: resolvedBannerAssetId,
           isPrivate: resolvedIsPrivate,
           languages: languagesNorm,
           profileId: profile.id,
@@ -259,6 +292,9 @@ export async function POST(req: Request) {
           profileId: true,
           createdAt: true,
           imageAsset: {
+            select: uploadedAssetSummarySelect,
+          },
+          bannerAsset: {
             select: uploadedAssetSummarySelect,
           },
           _count: {
@@ -306,12 +342,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Board not found" }, { status: 404 });
     }
 
-    const { members, _count, channels, imageAsset, ...boardData } = board;
+    const { members, _count, channels, imageAsset, bannerAsset, ...boardData } = board;
     const currentMember = members[0] ?? null;
 
     return NextResponse.json({
       ...boardData,
       imageAsset: serializeUploadedAsset(imageAsset),
+      bannerAsset: serializeUploadedAsset(bannerAsset),
       memberCount: _count.members,
       currentMember,
       channels: channels.map((channel) => ({

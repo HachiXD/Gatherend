@@ -57,10 +57,18 @@ const app = express();
 // Disable x-powered-by header (security: don't expose Express)
 app.disable("x-powered-by");
 
+function parseCsvEnv(value: string | undefined) {
+  return (value ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 // CORS configuration
 const allowedOrigins = [
   process.env.FRONTEND_URL || "http://localhost:3000",
   ...(process.env.RAILWAY_PRIVATE_URL ? [process.env.RAILWAY_PRIVATE_URL] : []),
+  ...parseCsvEnv(process.env.SOCKET_ALLOWED_ORIGINS),
   "http://localhost:3000", // Local development
 ];
 

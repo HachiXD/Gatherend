@@ -7,6 +7,7 @@
 
 export type ModerationContext =
   | "board_image"
+  | "board_banner"
   | "channel_image"
   | "community_post_image"
   | "community_post_comment_image"
@@ -54,6 +55,7 @@ export type StorageBackend = "s3";
 
 export const CONTEXT_STORAGE_MAP: Record<ModerationContext, StorageBackend> = {
   board_image: "s3",
+  board_banner: "s3",
   channel_image: "s3",
   community_post_image: "s3",
   community_post_comment_image: "s3",
@@ -68,6 +70,7 @@ export const CONTEXT_STORAGE_MAP: Record<ModerationContext, StorageBackend> = {
 
 export const STORAGE_FOLDERS: Record<ModerationContext, string> = {
   board_image: "boards",
+  board_banner: "boards",
   channel_image: "channels",
   community_post_image: "community-posts",
   community_post_comment_image: "community-post-comments",

@@ -18,6 +18,8 @@ import { generateRandomUsername } from "@/lib/username/random";
 type SignUpStep = "details" | "verification";
 
 const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+const shouldUseTurnstile =
+  process.env.NODE_ENV !== "development" && Boolean(turnstileSiteKey);
 
 function extractErrorMessage(err: unknown, fallback: string): string {
   if (err instanceof Error && err.message) {
@@ -236,11 +238,11 @@ export const CustomSignUp = () => {
               </div>
             )}
 
-            {turnstileSiteKey ? (
+            {shouldUseTurnstile ? (
               <div className="flex justify-center">
                 <Turnstile
                   ref={turnstileRef}
-                  siteKey={turnstileSiteKey}
+                  siteKey={turnstileSiteKey!}
                   onSuccess={setTurnstileToken}
                   onExpire={() => setTurnstileToken("")}
                   onError={() => setTurnstileToken("")}
@@ -263,7 +265,7 @@ export const CustomSignUp = () => {
                 isLoading ||
                 !email ||
                 !password ||
-                Boolean(turnstileSiteKey && !turnstileToken)
+                Boolean(shouldUseTurnstile && !turnstileToken)
               }
             >
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}

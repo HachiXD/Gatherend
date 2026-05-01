@@ -72,6 +72,9 @@ const nextConfig: NextConfig = {
   // Strict Mode deshabilitado temporalmente para debugging de renders
   reactStrictMode: false,
 
+  // Permite que el emulador Android cargue recursos de desarrollo de Next.js.
+  allowedDevOrigins: ["10.0.2.2"],
+
   // Standalone output para Docker
   output: "standalone",
 

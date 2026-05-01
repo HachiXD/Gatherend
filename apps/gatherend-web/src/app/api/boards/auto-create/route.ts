@@ -44,6 +44,7 @@ function getBoardShell(
     where: { id: boardId },
     include: {
       imageAsset: { select: uploadedAssetSummarySelect },
+      bannerAsset: { select: uploadedAssetSummarySelect },
       _count: { select: { members: true } },
       members: {
         where: { profileId },
@@ -78,12 +79,13 @@ function getBoardShell(
 type BoardShell = Awaited<ReturnType<typeof getBoardShell>>;
 
 function serializeBoardShell(board: BoardShell) {
-  const { members, _count, channels, imageAsset, ...boardData } = board;
+  const { members, _count, channels, imageAsset, bannerAsset, ...boardData } = board;
   const currentMember = members[0] ?? null;
 
   return {
     ...boardData,
     imageAsset: serializeUploadedAsset(imageAsset),
+    bannerAsset: serializeUploadedAsset(bannerAsset),
     memberCount: _count.members,
     currentMember,
     channels: channels.map((channel) => ({

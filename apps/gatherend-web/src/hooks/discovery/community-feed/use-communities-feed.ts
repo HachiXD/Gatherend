@@ -16,6 +16,7 @@ export interface CommunityFeedItem {
   id: string;
   name: string;
   imageAsset: ClientUploadedAsset | null;
+  bannerAsset: ClientUploadedAsset | null;
   memberCount: number;
   recentPostCount7d: number;
 }

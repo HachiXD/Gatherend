@@ -15,6 +15,7 @@ interface BoardPreviewData {
   id: string;
   name: string;
   imageAsset: ClientUploadedAsset | null;
+  bannerAsset: ClientUploadedAsset | null;
   memberCount: number;
   size: number;
   inviteCode: string;
@@ -110,6 +111,7 @@ export const InviteLinkPreview = ({
         id: boardData.id,
         name: boardData.name,
         imageAsset: boardData.imageAsset,
+        bannerAsset: boardData.bannerAsset,
         targetChannelId: targetChannelId ?? null,
       });
       await queryClient.invalidateQueries({ queryKey: ["board", boardData.id] });
@@ -182,9 +184,9 @@ export const InviteLinkPreview = ({
     >
       {/* Board Image */}
       <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-theme-bg-tertiary shrink-0">
-        {boardData.imageAsset?.url ? (
+        {(boardData.bannerAsset ?? boardData.imageAsset)?.url ? (
           <Image
-            src={boardData.imageAsset.url}
+            src={(boardData.bannerAsset ?? boardData.imageAsset)?.url ?? ""}
             alt={boardData.name}
             fill
             className="object-cover"

@@ -34,6 +34,7 @@ import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 interface GeneralTabProps {
   board: Board & {
     imageAsset?: ClientUploadedAsset | null;
+    bannerAsset?: ClientUploadedAsset | null;
   };
 }
 
@@ -60,6 +61,7 @@ const schema = z.object({
     .max(300, { message: "Description cannot exceed 300 characters" })
     .optional(),
   imageUpload: z.string().optional(),
+  bannerUpload: z.string().optional(),
 });
 
 type FormSchema = z.infer<typeof schema>;
@@ -80,6 +82,7 @@ export const GeneralTab = ({ board }: GeneralTabProps) => {
       name: board.name,
       description: board.description || "",
       imageUpload: getStoredUploadValueFromAsset(board.imageAsset),
+      bannerUpload: getStoredUploadValueFromAsset(board.bannerAsset),
     },
   });
 
@@ -125,12 +128,16 @@ export const GeneralTab = ({ board }: GeneralTabProps) => {
 
       // Actualizar información básica del board
       const currentImageAssetId = board.imageAsset?.id ?? null;
+      const currentBannerAssetId = board.bannerAsset?.id ?? null;
       const nextImageAssetId = getStoredUploadAssetId(values.imageUpload);
+      const nextBannerAssetId = getStoredUploadAssetId(values.bannerUpload);
       const imageWasChanged = nextImageAssetId !== currentImageAssetId;
+      const bannerWasChanged = nextBannerAssetId !== currentBannerAssetId;
       const payload: {
         name: string;
         description?: string;
         imageAssetId?: string | null;
+        bannerAssetId?: string | null;
       } = {
         name: values.name,
         description: values.description,
@@ -139,10 +146,14 @@ export const GeneralTab = ({ board }: GeneralTabProps) => {
       if (imageWasChanged) {
         payload.imageAssetId = nextImageAssetId;
       }
+      if (bannerWasChanged) {
+        payload.bannerAssetId = nextBannerAssetId;
+      }
 
       const response = await axios.patch(`/api/boards/${board.id}`, payload);
       const updatedBoard = response.data as Board & {
         imageAsset?: ClientUploadedAsset | null;
+        bannerAsset?: ClientUploadedAsset | null;
       };
 
       updateBoard({
@@ -151,6 +162,10 @@ export const GeneralTab = ({ board }: GeneralTabProps) => {
         ...(imageWasChanged && {
           imageAssetId: nextImageAssetId,
           imageAsset: updatedBoard.imageAsset ?? null,
+        }),
+        ...(bannerWasChanged && {
+          bannerAssetId: nextBannerAssetId,
+          bannerAsset: updatedBoard.bannerAsset ?? null,
         }),
       });
 
@@ -229,6 +244,31 @@ export const GeneralTab = ({ board }: GeneralTabProps) => {
                     ? t.overlays.boardSettings.general.bumping
                     : t.overlays.boardSettings.general.bumpButton}
                 </Button>
+
+                <FormField
+                  control={form.control}
+                  name="bannerUpload"
+                  render={({ field }) => (
+                    <FormItem className="w-full">
+                      <FormLabel className={FIELD_KICKER}>
+                        Banner (opcional)
+                      </FormLabel>
+                      <FormControl>
+                        <FileUpload
+                          endpoint="boardBanner"
+                          value={field.value || ""}
+                          previewUrl={board.bannerAsset?.url ?? null}
+                          onChange={field.onChange}
+                          uploadButtonClassName="w-full rounded-lg border-theme-border-subtle bg-theme-bg-cancel-button text-theme-text-subtle hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+                          imagePreviewWrapperClassName="h-20 w-full"
+                          imagePreviewClassName="h-20 w-full rounded-lg"
+                          label="Banner"
+                        />
+                      </FormControl>
+                      <FormMessage className="-mt-1 text-[11px] leading-tight" />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               <div className=" w-full flex-1 space-y-2">

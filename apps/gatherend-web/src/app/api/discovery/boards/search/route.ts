@@ -20,6 +20,7 @@ interface BoardSearchResult {
   id: string;
   name: string;
   imageAsset: ReturnType<typeof serializeUploadedAsset>;
+  bannerAsset: ReturnType<typeof serializeUploadedAsset>;
   memberCount: number;
   recentPostCount7d: number;
   rankingScore: number;
@@ -107,6 +108,7 @@ export async function GET(req: Request) {
       id: string;
       name: string;
       imageAssetId: string | null;
+      bannerAssetId: string | null;
       memberCount: number;
       recentPostCount7d: number;
       rankingScore: number;
@@ -121,6 +123,7 @@ export async function GET(req: Request) {
           b.id,
           b.name,
           b."imageAssetId",
+          b."bannerAssetId",
           b."memberCount",
           b."recentPostCount7d",
           b."rankingScore"
@@ -141,6 +144,7 @@ export async function GET(req: Request) {
           b.id,
           b.name,
           b."imageAssetId",
+          b."bannerAssetId",
           b."memberCount",
           b."recentPostCount7d",
           b."rankingScore"
@@ -156,13 +160,14 @@ export async function GET(req: Request) {
     const hasMore = boards.length > limit;
     const items = hasMore ? boards.slice(0, limit) : boards;
     const assetMap = await loadSerializedUploadedAssetMap(
-      items.map((item) => item.imageAssetId),
+      items.flatMap((item) => [item.imageAssetId, item.bannerAssetId]),
     );
 
     const result: BoardSearchResult[] = items.map((b) => ({
       id: b.id,
       name: b.name,
       imageAsset: b.imageAssetId ? (assetMap.get(b.imageAssetId) ?? null) : null,
+      bannerAsset: b.bannerAssetId ? (assetMap.get(b.bannerAssetId) ?? null) : null,
       memberCount: b.memberCount,
       recentPostCount7d: b.recentPostCount7d,
       rankingScore: b.rankingScore,

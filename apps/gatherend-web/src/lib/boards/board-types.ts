@@ -41,6 +41,7 @@ export type BoardCurrentMember = Pick<
 
 export type BoardWithData = Omit<Board, "memberCount"> & {
   imageAsset: ClientUploadedAsset | null;
+  bannerAsset: ClientUploadedAsset | null;
   channels: BoardChannel[];
   currentMember: BoardCurrentMember | null;
   memberCount: number;

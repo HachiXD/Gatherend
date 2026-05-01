@@ -48,6 +48,9 @@ export async function GET(
         imageAsset: {
           select: uploadedAssetSummarySelect,
         },
+        bannerAsset: {
+          select: uploadedAssetSummarySelect,
+        },
         members: {
           where: { profileId: profile.id },
           select: { id: true, role: true },
@@ -72,6 +75,7 @@ export async function GET(
       id: board.id,
       name: board.name,
       imageAsset: serializeUploadedAsset(board.imageAsset),
+      bannerAsset: serializeUploadedAsset(board.bannerAsset),
       memberCount: board.memberCount,
       recentPostCount7d: board.recentPostCount7d,
       canDeleteAnyPost: isOwner || isModerator,

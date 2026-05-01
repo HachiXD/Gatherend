@@ -185,12 +185,17 @@ export function useBoardMutations(boardId: string) {
 
       // Si se actualizó el nombre o imagen, también actualizar el cache de user-boards
       // para que la sidebar de navegación se actualice inmediatamente
-      if (updates.name !== undefined || updates.imageAsset !== undefined) {
+      if (
+        updates.name !== undefined ||
+        updates.imageAsset !== undefined ||
+        updates.bannerAsset !== undefined
+      ) {
         queryClient.setQueryData<
           {
             id: string;
             name: string;
             imageAsset: BoardWithData["imageAsset"];
+            bannerAsset: BoardWithData["bannerAsset"];
             channels: { id: string }[];
           }[]
         >(["user-boards"], (old) => {
@@ -202,6 +207,9 @@ export function useBoardMutations(boardId: string) {
                   ...(updates.name !== undefined && { name: updates.name }),
                   ...(updates.imageAsset !== undefined && {
                     imageAsset: updates.imageAsset,
+                  }),
+                  ...(updates.bannerAsset !== undefined && {
+                    bannerAsset: updates.bannerAsset,
                   }),
                 }
               : board,
