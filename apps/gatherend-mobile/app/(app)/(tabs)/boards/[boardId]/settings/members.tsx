@@ -247,7 +247,7 @@ export default function BoardMembersSettingsScreen() {
   );
 
   if (boardLoading && !board) {
-    return <BoardSettingsCenterState message="Cargando members..." loading />;
+    return <BoardSettingsCenterState message="Cargando miembros..." loading />;
   }
 
   if (!board || !canViewSettingsSection(board.currentMember?.role, "members")) {
@@ -260,13 +260,13 @@ export default function BoardMembersSettingsScreen() {
   }
 
   if (query.isLoading && members.length === 0) {
-    return <BoardSettingsCenterState message="Cargando members..." loading />;
+    return <BoardSettingsCenterState message="Cargando miembros..." loading />;
   }
 
   if (query.isError && members.length === 0) {
     return (
       <BoardSettingsCenterState
-        title="No se pudieron cargar members"
+        title="No se pudieron cargar los miembros"
         message={query.error.message}
         actionLabel="Reintentar"
         onAction={() => void query.refetch()}
@@ -299,7 +299,7 @@ export default function BoardMembersSettingsScreen() {
       contentContainerStyle={styles.listContent}
       ListHeaderComponent={
         <Text style={styles.summary}>
-          {board.memberCount} {board.memberCount === 1 ? "member" : "members"}
+          {board.memberCount} {board.memberCount === 1 ? "miembro" : "miembros"}
         </Text>
       }
       ListEmptyComponent={

@@ -41,15 +41,15 @@ import {
 import { Text } from "@/src/components/app-typography";
 
 const BOARD_SECTION_TABS = [
-  { key: "home", label: "Home", icon: "home-outline" },
+  { key: "home", label: "Casa", icon: "home-outline" },
   { key: "chats", label: "Chats", icon: "chatbubble-ellipses-outline" },
-  { key: "forum", label: "Forum", icon: "chatbox-outline" },
-  { key: "rules", label: "Rules", icon: "document-text-outline" },
+  { key: "forum", label: "Foro", icon: "chatbox-outline" },
+  { key: "rules", label: "Reglas", icon: "document-text-outline" },
   { key: "wiki", label: "Wiki", icon: "book-outline" },
   { key: "ranking", label: "Ranking", icon: "trophy-outline" },
-  { key: "members", label: "Members", icon: "people-outline" },
-  { key: "invite", label: "Invite Friends", icon: "person-add-outline" },
-  { key: "settings", label: "Settings", icon: "settings-outline" },
+  { key: "members", label: "Miembros", icon: "people-outline" },
+  { key: "invite", label: "Invitar amigos", icon: "person-add-outline" },
+  { key: "settings", label: "Ajustes", icon: "settings-outline" },
 ] as const;
 
 const DRAWER_WIDTH = 356;
@@ -58,10 +58,10 @@ type BoardSectionKey = (typeof BOARD_SECTION_TABS)[number]["key"];
 
 function getSettingsSubviewTitle(pathname: string) {
   if (pathname.includes("/settings/general")) return "General";
-  if (pathname.includes("/settings/members")) return "Members";
+  if (pathname.includes("/settings/members")) return "Miembros";
   if (pathname.includes("/settings/bans")) return "Bans";
-  if (pathname.includes("/settings/history")) return "Moderation History";
-  if (pathname.includes("/settings/danger")) return "Danger Zone";
+  if (pathname.includes("/settings/history")) return "Historial de moderacion";
+  if (pathname.includes("/settings/danger")) return "Zona de peligro";
   return null;
 }
 
@@ -314,7 +314,7 @@ export default function BoardShellLayout() {
 
           {settingsSubviewTitle ? (
             <Pressable
-              accessibilityHint="Regresa a Board Settings"
+              accessibilityHint="Regresa a ajustes del board"
               accessibilityRole="button"
               accessibilityLabel="Volver"
               onPress={() => {

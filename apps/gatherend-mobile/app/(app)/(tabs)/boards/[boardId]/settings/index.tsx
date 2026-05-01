@@ -32,7 +32,7 @@ export default function BoardSettingsIndexScreen() {
   } = useBoard(boardId);
 
   if (isLoading && !board) {
-    return <BoardSettingsCenterState message="Cargando settings..." loading />;
+    return <BoardSettingsCenterState message="Cargando ajustes..." loading />;
   }
 
   if (isError && !board) {

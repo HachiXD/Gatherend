@@ -1036,6 +1036,12 @@ export type TranslationKeys = {
       effectiveDate: string;
       content: string;
     };
+    deleteAccount: {
+      title: string;
+      effectiveDate: string;
+      emailButtonLabel: string;
+      content: string;
+    };
   };
 };
 

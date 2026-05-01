@@ -49,9 +49,9 @@ import type {
 type HomeTabKey = "rules" | "chats" | "forum";
 
 const HOME_TABS: Array<{ key: HomeTabKey; label: string }> = [
-  { key: "rules", label: "Rules" },
+  { key: "rules", label: "Reglas" },
   { key: "chats", label: "Chats" },
-  { key: "forum", label: "Forum" },
+  { key: "forum", label: "Foro" },
 ];
 
 const INITIAL_TAB_INDEX = 1; // Chats

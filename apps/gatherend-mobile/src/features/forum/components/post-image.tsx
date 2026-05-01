@@ -2,6 +2,7 @@ import { Image } from "expo-image";
 import { useState } from "react";
 import {
   Dimensions,
+  type LayoutChangeEvent,
   Modal,
   Pressable,
   StyleSheet,
@@ -34,31 +35,42 @@ type PostImageProps = {
 export function PostImage({ imageUrl, imageWidth, imageHeight }: PostImageProps) {
   const { colors } = useTheme();
   const { width: screenWidth } = useWindowDimensions();
-  const containerWidth = screenWidth - 32;
+  const [measuredContainerWidth, setMeasuredContainerWidth] = useState<number | null>(null);
+  const fallbackContainerWidth = Math.max(0, screenWidth - 54);
+  const containerWidth = measuredContainerWidth ?? fallbackContainerWidth;
   const { width, height } = getImageDimensions(imageWidth, imageHeight, containerWidth);
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
+  const handleContainerLayout = (event: LayoutChangeEvent) => {
+    const nextWidth = event.nativeEvent.layout.width;
+    setMeasuredContainerWidth((currentWidth) =>
+      currentWidth === nextWidth ? currentWidth : nextWidth,
+    );
+  };
+
   return (
     <>
-      <Pressable
-        onPress={() => setLightboxOpen(true)}
-        style={[
-          styles.imageContainer,
-          {
-            width,
-            height,
-            borderColor: colors.borderPrimary,
-            backgroundColor: colors.bgPrimary,
-          },
-        ]}
-      >
-        <Image
-          source={{ uri: imageUrl }}
-          contentFit="contain"
-          style={StyleSheet.absoluteFill}
-          transition={150}
-        />
-      </Pressable>
+      <View style={styles.containerMeasure} onLayout={handleContainerLayout}>
+        <Pressable
+          onPress={() => setLightboxOpen(true)}
+          style={[
+            styles.imageContainer,
+            {
+              width,
+              height,
+              borderColor: colors.borderPrimary,
+              backgroundColor: colors.bgPrimary,
+            },
+          ]}
+        >
+          <Image
+            source={{ uri: imageUrl }}
+            contentFit="contain"
+            style={StyleSheet.absoluteFill}
+            transition={150}
+          />
+        </Pressable>
+      </View>
 
       <Modal
         visible={lightboxOpen}
@@ -85,6 +97,9 @@ export function PostImage({ imageUrl, imageWidth, imageHeight }: PostImageProps)
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
 
 const styles = StyleSheet.create({
+  containerMeasure: {
+    alignSelf: "stretch",
+  },
   imageContainer: {
     borderRadius: 8,
     borderWidth: 1,

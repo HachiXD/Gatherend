@@ -36,7 +36,7 @@ const QUICK_ACTIONS: QuickAction[] = [
   },
   {
     key: "rules",
-    label: "Rules",
+    label: "Reglas",
     icon: "document-text-outline",
     angleDeg: 330,
   },

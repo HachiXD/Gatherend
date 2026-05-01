@@ -18,7 +18,7 @@ export const BOARD_SETTINGS_SECTIONS: BoardSettingsSection[] = [
   },
   {
     id: "members",
-    title: "Members",
+    title: "Miembros",
     description: "Roles, advertencias, expulsiones y bans.",
     icon: "people-outline",
     route: "members",
@@ -32,14 +32,14 @@ export const BOARD_SETTINGS_SECTIONS: BoardSettingsSection[] = [
   },
   {
     id: "history",
-    title: "Moderation History",
+    title: "Historial de moderacion",
     description: "Registro de acciones de moderacion del board.",
     icon: "receipt-outline",
     route: "history",
   },
   {
     id: "danger",
-    title: "Danger Zone",
+    title: "Zona de peligro",
     description: "Eliminar el board de forma permanente.",
     icon: "warning-outline",
     route: "danger",

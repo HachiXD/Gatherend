@@ -24,7 +24,7 @@ export default function BoardDangerSettingsScreen() {
   const deleteMutation = useDeleteBoard(boardId ?? "");
 
   if (isLoading && !board) {
-    return <BoardSettingsCenterState message="Cargando danger zone..." loading />;
+    return <BoardSettingsCenterState message="Cargando zona de peligro..." loading />;
   }
 
   if (!board || !canViewSettingsSection(board.currentMember?.role, "danger")) {

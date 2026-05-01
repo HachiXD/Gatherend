@@ -3,7 +3,7 @@ import { BoardSectionPlaceholder } from "@/src/features/boards/components/board-
 export default function BoardMembersScreen() {
   return (
     <BoardSectionPlaceholder
-      title="Members"
+      title="Miembros"
       description="Hachi está trabajando en esto :D."
     />
   );
