@@ -25,17 +25,19 @@ function resolveExpressUrl(url: string) {
 export function getExpressAuthHeaders(
   profileId?: string,
 ): Record<string, string> {
+  const cookie = authClient.getCookie();
+
+  if (cookie) {
+    return {
+      Cookie: cookie,
+    };
+  }
+
   if (__DEV__) {
     return profileId ? { "x-profile-id": profileId } : {};
   }
 
-  const cookie = authClient.getCookie();
-
-  return cookie
-    ? {
-        Cookie: cookie,
-      }
-    : {};
+  return {};
 }
 
 export async function expressFetch(

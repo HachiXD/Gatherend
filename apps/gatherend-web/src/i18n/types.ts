@@ -1042,6 +1042,11 @@ export type TranslationKeys = {
       emailButtonLabel: string;
       content: string;
     };
+    childSafety: {
+      title: string;
+      effectiveDate: string;
+      content: string;
+    };
   };
 };
 

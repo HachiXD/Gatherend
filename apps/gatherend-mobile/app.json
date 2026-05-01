@@ -20,7 +20,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.gatherendmobile"
+      "package": "com.gatherend.app"
     },
     "web": {
       "output": "static",
