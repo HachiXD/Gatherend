@@ -92,7 +92,7 @@ function disposableEmailGuard(): BetterAuthPlugin {
 }
 
 const plugins = [
-  ...(isTurnstileEnabled
+  ...(isTurnstileEnabled && turnstileSecretKey
     ? [
         captcha({
           provider: "cloudflare-turnstile",
