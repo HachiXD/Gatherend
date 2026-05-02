@@ -1040,6 +1040,7 @@ export const en: TranslationKeys = {
       "Create or join boards and build your own community (And you can also be part of the development! :D)",
     ctaButton: "Enter Gatherend (^ᆽ^)",
     sourceCodeButton: "Source code",
+    mobileAppButton: "Download mobile app",
     footerCopyright: "©2026 Gatherend",
     footerBuiltBy: "Completely free - made in 7 months by Hachi (╥️️╥)",
     footerFaq: "FAQ",
@@ -1276,6 +1277,25 @@ export const en: TranslationKeys = {
         "Google Play, users, guardians, and authorities may contact Gatherend about child safety or CSAE concerns at: safety@gatherend.com",
         "For general support, contact: support@gatherend.com",
       ].join("\n"),
+    },
+    androidDownload: {
+      title: "GATHEREND ANDROID DOWNLOADS",
+      subtitle:
+        "Download signed Android APK releases for manual installation outside Google Play.",
+      effectiveDate: "Last updated: 05/02/2026",
+      versionHeader: "Version",
+      notesHeader: "Notes",
+      downloadHeader: "Download",
+      downloadLabel: "Download APK",
+      installNote:
+        "Android may ask you to allow installs from this source before installing the APK.",
+      releases: [
+        {
+          version: "1.0.0",
+          notes: "Initial Android release.",
+          href: "https://downloads.gatherend.com/android/gatherend-android-1.0.0.apk",
+        },
+      ],
     },
   },
 };

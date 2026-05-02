@@ -68,7 +68,7 @@ export default async function LandingPage() {
             <p className="text-base md:text-lg text-theme-text-muted mb-8 max-w-lg">
               {t.landing.heroDescription}
             </p>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
               <Link
                 href="/sign-up"
                 className={`${belanosima.className} px-6 py-3 text-[20px] font-normal bg-theme-button-primary hover:bg-theme-button-hover text-theme-text-light rounded-lg transition-colors`}
@@ -91,6 +91,12 @@ export default async function LandingPage() {
                 </svg>
                 {t.landing.sourceCodeButton}
               </a>
+              <Link
+                href="/android"
+                className={`${belanosima.className} px-6 py-3 text-[20px] font-normal bg-theme-button-primary hover:bg-theme-button-hover text-theme-text-light rounded-lg transition-colors`}
+              >
+                {t.landing.mobileAppButton}
+              </Link>
             </div>
           </div>
 

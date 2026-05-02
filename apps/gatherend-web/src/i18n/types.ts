@@ -1013,6 +1013,7 @@ export type TranslationKeys = {
     heroDescription: string;
     ctaButton: string;
     sourceCodeButton: string;
+    mobileAppButton: string;
     footerCopyright: string;
     footerBuiltBy: string;
     footerFaq: string;
@@ -1046,6 +1047,21 @@ export type TranslationKeys = {
       title: string;
       effectiveDate: string;
       content: string;
+    };
+    androidDownload: {
+      title: string;
+      subtitle: string;
+      effectiveDate: string;
+      versionHeader: string;
+      notesHeader: string;
+      downloadHeader: string;
+      downloadLabel: string;
+      installNote: string;
+      releases: Array<{
+        version: string;
+        notes: string;
+        href: string;
+      }>;
     };
   };
 };
