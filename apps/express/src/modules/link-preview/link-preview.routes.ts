@@ -361,6 +361,34 @@ function decodeHTMLEntities(text: string): string {
     .replace(/&nbsp;/g, " ");
 }
 
+// Extracts a YouTube video ID from a parsed URL.
+// Handles youtube.com/watch?v=ID and youtu.be/ID.
+function extractYoutubeVideoId(parsedUrl: URL, hostname: string): string | null {
+  const bare = stripWww(hostname);
+  if (bare === "youtube.com") {
+    const v = parsedUrl.searchParams.get("v");
+    return v && /^[a-zA-Z0-9_-]{11}$/.test(v) ? v : null;
+  }
+  if (bare === "youtu.be") {
+    const id = parsedUrl.pathname.replace(/^\//, "").split("/")[0];
+    return id && /^[a-zA-Z0-9_-]{11}$/.test(id) ? id : null;
+  }
+  return null;
+}
+
+// Builds a rich preview for a YouTube video using the public thumbnail CDN.
+// No server-side fetch to youtube.com needed — YouTube blocks bots reliably.
+function buildYoutubePreview(parsedUrl: URL, videoId: string): LinkPreviewData {
+  return {
+    url: parsedUrl.toString(),
+    title: "YouTube",
+    description: null,
+    image: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+    siteName: "YouTube",
+    favicon: "https://www.youtube.com/favicon.ico",
+  };
+}
+
 // GET /link-preview?url=...
 router.get("/", async (req, res) => {
   try {
@@ -390,20 +418,20 @@ router.get("/", async (req, res) => {
 
     const hostname = canonicalizeHostname(parsedUrl.hostname);
 
-    // Rewrite youtu.be short links to full youtube.com URLs so the rich
-    // preview fetch hits youtube.com and gets OG tags (including the thumbnail).
-    // This is safe because youtu.be is in RICH_PREVIEW_HOSTS and we only
-    // rewrite based on the path — no HTTP redirect is followed.
-    if (hostname === "youtu.be") {
-      const videoId = parsedUrl.pathname.replace(/^\//, "").split("/")[0];
-      if (videoId) {
-        const rewritten = new URL("https://www.youtube.com/watch");
-        rewritten.searchParams.set("v", videoId);
-        parsedUrl = rewritten;
-      }
+    // For YouTube URLs (both youtube.com/watch and youtu.be short links),
+    // build the preview directly from the video ID without fetching YouTube's
+    // page — YouTube blocks bot user-agents reliably. The thumbnail CDN
+    // (img.youtube.com) is always public and needs no auth.
+    const youtubeVideoId = extractYoutubeVideoId(parsedUrl, hostname);
+    if (youtubeVideoId) {
+      const cached = cacheGet(url);
+      if (cached) return res.json(cached);
+      const data = buildYoutubePreview(parsedUrl, youtubeVideoId);
+      cacheSet(url, data);
+      return res.json(data);
     }
 
-    const resolvedHostname = canonicalizeHostname(parsedUrl.hostname);
+    const resolvedHostname = hostname;
 
     // Default behavior: SSRF-safe basic preview for any URL (no server-side fetch).
     if (!RICH_PREVIEW_HOSTS.has(resolvedHostname)) {
@@ -411,8 +439,6 @@ router.get("/", async (req, res) => {
     }
 
     // Rich preview: only for allowlisted hosts.
-    // Cache key uses the original user-supplied URL so repeated youtu.be requests
-    // also hit the cache after the first rewrite.
     const cached = cacheGet(url);
     if (cached) {
       return res.json(cached);
