@@ -5,15 +5,23 @@ import { editMessage } from "../api/edit-message";
 import { deleteMessage } from "../api/delete-message";
 import { pinMessage } from "../api/pin-message";
 import { chatMessageWindowStore } from "../store/chat-message-window-store";
-import type { ChatMessage } from "../chat-message";
+import type { ChatMessage } from "../lib/chat-message";
 import type { ChatReaction, ClientProfileSummary } from "../types";
 
 type MessageActionsOptions = {
   windowKey: string;
-  boardId: string;
-  channelId: string;
   profileId: string;
-};
+} & (
+  | {
+      type: "channel";
+      boardId: string;
+      channelId: string;
+    }
+  | {
+      type: "conversation";
+      conversationId: string;
+    }
+);
 
 const EMPTY_PROFILE: ClientProfileSummary = {
   id: "",
@@ -29,19 +37,25 @@ const EMPTY_PROFILE: ClientProfileSummary = {
 
 export function useMessageActions({
   windowKey,
-  boardId,
-  channelId,
   profileId,
+  ...context
 }: MessageActionsOptions) {
   const addReactionMutation = useMutation({
     mutationFn: (vars: { messageId: string; emoji: string }) =>
-      addReaction({
-        messageId: vars.messageId,
-        emoji: vars.emoji,
-        boardId,
-        channelId,
-        profileId,
-      }),
+      context.type === "channel"
+        ? addReaction({
+            messageId: vars.messageId,
+            emoji: vars.emoji,
+            boardId: context.boardId,
+            channelId: context.channelId,
+            profileId,
+          })
+        : addReaction({
+            directMessageId: vars.messageId,
+            emoji: vars.emoji,
+            conversationId: context.conversationId,
+            profileId,
+          }),
     onMutate: ({ messageId, emoji }) => {
       const tempReaction: ChatReaction = {
         id: `temp-${Date.now()}`,
@@ -112,9 +126,8 @@ export function useMessageActions({
       editMessage({
         messageId: vars.messageId,
         content: vars.content,
-        boardId,
-        channelId,
         profileId,
+        ...context,
       }),
     onMutate: ({ messageId, content }) => {
       chatMessageWindowStore.updateById(
@@ -134,21 +147,11 @@ export function useMessageActions({
     mutationFn: (vars: { messageId: string }) =>
       deleteMessage({
         messageId: vars.messageId,
-        boardId,
-        channelId,
         profileId,
+        ...context,
       }),
     onMutate: ({ messageId }) => {
-      chatMessageWindowStore.updateById(
-        windowKey,
-        messageId,
-        (m) =>
-          ({
-            ...m,
-            deleted: true,
-            content: "",
-          }) as ChatMessage,
-      );
+      chatMessageWindowStore.removeById(windowKey, messageId);
     },
   });
 
@@ -156,10 +159,9 @@ export function useMessageActions({
     mutationFn: (vars: { messageId: string; pin: boolean }) =>
       pinMessage({
         messageId: vars.messageId,
-        boardId,
-        channelId,
         profileId,
         pin: vars.pin,
+        ...context,
       }),
     onMutate: ({ messageId, pin }) => {
       chatMessageWindowStore.updateById(

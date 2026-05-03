@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo } from "react";
-import type { ChatMessage } from "@/src/features/chat/chat-message";
+import type { ChatMessage } from "@/src/features/chat/lib/chat-message";
 import {
   chatMessageWindowStore,
   useChatMessageWindowStoreSelector,

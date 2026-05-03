@@ -9,6 +9,7 @@ import { useState, useRef, useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import { Languages } from "@prisma/client";
 import type { ClientProfile } from "@/hooks/use-current-profile";
+import { CURRENT_PROFILE_QUERY_KEY } from "@/lib/current-profile-cache";
 import { useUpload } from "@/hooks/use-upload";
 import { useQueryClient } from "@tanstack/react-query";
 import { useInvalidateProfileCard } from "@/hooks/use-profile-card";
@@ -942,7 +943,7 @@ export const ProfileTab = ({ user }: ProfileTabProps) => {
 
         // Update React Query cache (simplified - let invalidation handle the rest)
         queryClient.setQueryData(
-          ["current-profile"],
+          CURRENT_PROFILE_QUERY_KEY,
           (oldProfile: ClientProfile | undefined) =>
             oldProfile ? { ...oldProfile, ...serverProfile } : serverProfile,
         );

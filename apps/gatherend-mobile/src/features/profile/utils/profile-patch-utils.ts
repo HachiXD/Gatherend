@@ -3,6 +3,7 @@ import type { Conversation } from "@/src/features/conversations/domain/conversat
 import {
   CONVERSATIONS_QUERY_KEY,
 } from "@/src/features/conversations/queries";
+import { CURRENT_PROFILE_QUERY_KEY } from "@/src/features/profile/lib/current-profile-cache";
 import { chatMessageWindowStore } from "@/src/features/chat/store/chat-message-window-store";
 
 export type ProfilePatch = Record<string, unknown>;
@@ -55,7 +56,7 @@ export function applyProfilePatchToAllMobileCaches(
 ) {
   // current-profile query
   queryClient.setQueryData<Record<string, unknown>>(
-    ["current-profile"],
+    CURRENT_PROFILE_QUERY_KEY,
     (old) => {
       if (!old) return old;
       return applyPatch(old, patch);

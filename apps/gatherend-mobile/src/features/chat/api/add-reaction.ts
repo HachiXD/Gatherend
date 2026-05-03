@@ -2,12 +2,19 @@ import { expressFetch } from "@/src/services/express/express-fetch";
 import type { ChatReaction } from "../types";
 
 export type AddReactionInput = {
-  messageId: string;
   emoji: string;
-  boardId: string;
-  channelId: string;
   profileId: string;
-};
+} & (
+  | {
+      messageId: string;
+      boardId: string;
+      channelId: string;
+    }
+  | {
+      directMessageId: string;
+      conversationId: string;
+    }
+);
 
 export async function addReaction(input: AddReactionInput): Promise<ChatReaction> {
   const response = await expressFetch("/reactions", {
@@ -16,9 +23,16 @@ export async function addReaction(input: AddReactionInput): Promise<ChatReaction
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       emoji: input.emoji,
-      messageId: input.messageId,
-      boardId: input.boardId,
-      channelId: input.channelId,
+      ...("messageId" in input
+        ? {
+            messageId: input.messageId,
+            boardId: input.boardId,
+            channelId: input.channelId,
+          }
+        : {
+            directMessageId: input.directMessageId,
+            conversationId: input.conversationId,
+          }),
     }),
   });
 

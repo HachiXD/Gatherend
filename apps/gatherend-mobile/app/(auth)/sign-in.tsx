@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link, Redirect, useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -20,11 +21,14 @@ import {
 } from "@/src/features/auth/api/social-auth";
 import { SocialAuthButtons } from "@/src/features/auth/components/social-auth-buttons";
 import { useSession } from "@/src/features/auth/hooks/use-session";
+import { prefetchCurrentProfile } from "@/src/features/profile/lib/current-profile-cache";
 import { Text, TextInput } from "@/src/components/app-typography";
+import { hideStartupSplash } from "@/src/lib/startup-splash";
 import { BRAND_COLORS } from "@/src/theme/brand-colors";
 
 export default function SignInScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { isAuthenticated } = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -48,6 +52,7 @@ export default function SignInScreen() {
 
     try {
       await signInWithEmail({ email, password });
+      await prefetchCurrentProfile(queryClient);
       router.replace("/(app)/(tabs)/boards/index");
     } catch (submitError) {
       setError(
@@ -82,7 +87,12 @@ export default function SignInScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      onLayout={() => {
+        hideStartupSplash("sign-in layout");
+      }}
+      style={styles.safeArea}
+    >
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.flex}

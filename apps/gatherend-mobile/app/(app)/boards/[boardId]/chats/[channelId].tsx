@@ -41,9 +41,11 @@ import type { ChannelMessage } from "@/src/features/chat/types";
 import { EmojiPanel } from "@/src/features/chat/components/emoji-panel";
 import { GoToRecentButton } from "@/src/features/chat/components/go-to-recent-button";
 import { StickerPanel } from "@/src/features/chat/components/sticker-panel";
+import { WelcomeMessageCard } from "@/src/features/chat/components/welcome-message-card";
+import { getMessageAuthor } from "@/src/features/chat/utils/message-author";
 import { getChannelMessages } from "@/src/features/chat/api/get-channel-messages";
 import { joinChannel } from "@/src/features/chat/api/join-channel";
-import type { ChatMessage } from "@/src/features/chat/chat-message";
+import type { ChatMessage } from "@/src/features/chat/lib/chat-message";
 import {
   useChatMessageWindow,
   type FetchPageFn,
@@ -59,23 +61,79 @@ import { useTheme } from "@/src/theme/theme-provider";
 import { Text } from "@/src/components/app-typography";
 
 const MESSAGE_REPORT_CATEGORIES: ReportCategoryConfig[] = [
-  { value: "CSAM", label: "Seguridad infantil", description: "Involucra a menores de forma inapropiada" },
-  { value: "SEXUAL_CONTENT", label: "Contenido sexual", description: "Contiene material explícito o no solicitado" },
-  { value: "HARASSMENT", label: "Acoso", description: "Amenazas o comportamiento intimidatorio" },
-  { value: "HATE_SPEECH", label: "Discurso de odio", description: "Promueve odio contra grupos o personas" },
-  { value: "SPAM", label: "Spam", description: "Contenido repetitivo, engañoso o no solicitado" },
-  { value: "IMPERSONATION", label: "Suplantación de identidad", description: "Se hace pasar por otra persona" },
-  { value: "OTHER", label: "Otro", description: "Razón no listada anteriormente" },
+  {
+    value: "CSAM",
+    label: "Seguridad infantil",
+    description: "Involucra a menores de forma inapropiada",
+  },
+  {
+    value: "SEXUAL_CONTENT",
+    label: "Contenido sexual",
+    description: "Contiene material explícito o no solicitado",
+  },
+  {
+    value: "HARASSMENT",
+    label: "Acoso",
+    description: "Amenazas o comportamiento intimidatorio",
+  },
+  {
+    value: "HATE_SPEECH",
+    label: "Discurso de odio",
+    description: "Promueve odio contra grupos o personas",
+  },
+  {
+    value: "SPAM",
+    label: "Spam",
+    description: "Contenido repetitivo, engañoso o no solicitado",
+  },
+  {
+    value: "IMPERSONATION",
+    label: "Suplantación de identidad",
+    description: "Se hace pasar por otra persona",
+  },
+  {
+    value: "OTHER",
+    label: "Otro",
+    description: "Razón no listada anteriormente",
+  },
 ];
 
 const PROFILE_REPORT_CATEGORIES: ReportCategoryConfig[] = [
-  { value: "CSAM", label: "Seguridad infantil", description: "El perfil involucra a menores de forma inapropiada" },
-  { value: "SEXUAL_CONTENT", label: "Contenido sexual", description: "El perfil contiene material explícito" },
-  { value: "HARASSMENT", label: "Acoso", description: "Este usuario acosa o intimida a otros" },
-  { value: "HATE_SPEECH", label: "Discurso de odio", description: "Promueve odio contra grupos o personas" },
-  { value: "SPAM", label: "Spam", description: "Cuenta falsa o con actividad de spam" },
-  { value: "IMPERSONATION", label: "Suplantación de identidad", description: "Se hace pasar por otra persona o entidad" },
-  { value: "OTHER", label: "Otro", description: "Razón no listada anteriormente" },
+  {
+    value: "CSAM",
+    label: "Seguridad infantil",
+    description: "El perfil involucra a menores de forma inapropiada",
+  },
+  {
+    value: "SEXUAL_CONTENT",
+    label: "Contenido sexual",
+    description: "El perfil contiene material explícito",
+  },
+  {
+    value: "HARASSMENT",
+    label: "Acoso",
+    description: "Este usuario acosa o intimida a otros",
+  },
+  {
+    value: "HATE_SPEECH",
+    label: "Discurso de odio",
+    description: "Promueve odio contra grupos o personas",
+  },
+  {
+    value: "SPAM",
+    label: "Spam",
+    description: "Cuenta falsa o con actividad de spam",
+  },
+  {
+    value: "IMPERSONATION",
+    label: "Suplantación de identidad",
+    description: "Se hace pasar por otra persona o entidad",
+  },
+  {
+    value: "OTHER",
+    label: "Otro",
+    description: "Razón no listada anteriormente",
+  },
 ];
 
 type ReportConfig = {
@@ -188,7 +246,6 @@ const ChannelComposerAccessory = memo(function ChannelComposerAccessory({
             profileId={profileId}
             onSelect={(sticker) => {
               void chatInputRef.current?.sendSticker(sticker);
-              closePanel();
             }}
           />
         ) : null}
@@ -215,6 +272,7 @@ export default function BoardChannelScreen() {
   const lastScrollMetricsRef = useRef<FlashListScrollMetrics | null>(null);
   // Direction to evict after the next messages-length change.
   const pendingWindowManage = useRef<"up" | "down" | null>(null);
+  const [listVisible, setListVisible] = useState(false);
 
   const { boardId, channelId } = useLocalSearchParams<{
     boardId?: string;
@@ -226,8 +284,11 @@ export default function BoardChannelScreen() {
   const windowKey = resolvedChannelId ? `channel:${resolvedChannelId}` : "";
   const [isJoining, setIsJoining] = useState(false);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
-  const [selectedMessage, setSelectedMessage] = useState<ChatMessage | null>(null);
-  const [selectedAuthor, setSelectedAuthor] = useState<ClientProfileSummary | null>(null);
+  const [selectedMessage, setSelectedMessage] = useState<ChatMessage | null>(
+    null,
+  );
+  const [selectedAuthor, setSelectedAuthor] =
+    useState<ClientProfileSummary | null>(null);
   const [reportConfig, setReportConfig] = useState<ReportConfig | null>(null);
 
   const {
@@ -257,13 +318,12 @@ export default function BoardChannelScreen() {
       await joinChannel({
         boardId: resolvedBoardId,
         channelId: resolvedChannelId,
-        profileId: profile.id,
       });
       await refetchBoard();
     } finally {
       setIsJoining(false);
     }
-  }, [isJoining, resolvedBoardId, resolvedChannelId, profile.id, refetchBoard]);
+  }, [isJoining, resolvedBoardId, resolvedChannelId, refetchBoard]);
 
   const handleJoinVoice = useCallback(() => {
     if (!resolvedBoardId || !resolvedChannelId || !channel) return;
@@ -326,8 +386,11 @@ export default function BoardChannelScreen() {
     channel?.type === "VOICE" ? resolvedBoardId : undefined,
   );
 
+  const reversedMessages = messages;
+
   useEffect(() => {
     pinnedRef.current = true;
+    setListVisible(false);
   }, [windowKey]);
 
   useEffect(() => {
@@ -360,6 +423,11 @@ export default function BoardChannelScreen() {
     flashListRef.current?.scrollToEnd({ animated: false });
     pinnedRef.current = true;
   }, []);
+
+  const handleListLoad = useCallback(() => {
+    scrollToBottom();
+    setListVisible(true);
+  }, [scrollToBottom]);
 
   // Sticky bottom: present mounted + physically pinned to bottom.
   const newestMessageId = messages[messages.length - 1]?.id;
@@ -417,15 +485,27 @@ export default function BoardChannelScreen() {
 
   const renderMessageItem = useCallback(
     ({ item, index }: { item: ChatMessage; index: number }) => {
-      const previous = messages[index - 1] ?? null;
+      // Without inverted, index-1 is the older message rendered above.
+      const previous = reversedMessages[index - 1] ?? null;
+      const dateSeparatorLabel = getChatDateSeparatorLabel(
+        item.createdAt,
+        previous?.createdAt,
+      );
+
+      if ("type" in item && item.type === "WELCOME") {
+        const welcomeUsername = getMessageAuthor(item)?.username ?? null;
+        return (
+          <WelcomeMessageCard
+            boardName={board?.name ?? ""}
+            username={welcomeUsername}
+          />
+        );
+      }
 
       return (
         <ChatItem
           currentProfileId={profile.id}
-          dateSeparatorLabel={getChatDateSeparatorLabel(
-            item.createdAt,
-            previous?.createdAt,
-          )}
+          dateSeparatorLabel={dateSeparatorLabel}
           isCompact={compactById[item.id] ?? false}
           message={item}
           onLongPress={(message) => setSelectedMessage(message)}
@@ -433,12 +513,8 @@ export default function BoardChannelScreen() {
         />
       );
     },
-    [compactById, messages, profile.id],
+    [board?.name, compactById, reversedMessages, profile.id],
   );
-
-  const handleListLoad = useCallback(() => {
-    scrollToBottom();
-  }, [scrollToBottom]);
 
   const handleEndReachedEvent = useCallback(() => {
     void handleEndReached();
@@ -571,15 +647,12 @@ export default function BoardChannelScreen() {
           ) : (
             <View style={styles.centerState}>
               <View style={styles.voiceIconWrap}>
-                <Ionicons
-                  color={colors.accentPrimary}
-                  name="call"
-                  size={32}
-                />
+                <Ionicons color={colors.accentPrimary} name="call" size={32} />
               </View>
               <Text style={styles.stateTitle}>Canal de voz</Text>
               <Text style={styles.stateText}>
-                Unete a la llamada para ver a los participantes dentro del canal.
+                Unete a la llamada para ver a los participantes dentro del
+                canal.
               </Text>
               <Pressable
                 onPress={handleJoinVoice}
@@ -632,21 +705,22 @@ export default function BoardChannelScreen() {
                   </Text>
                 </View>
               ) : (
-                <View style={styles.listContainer}>
+                <View style={[styles.listContainer, { opacity: listVisible ? 1 : 0 }]}>
                   <FlashList
                     key={windowKey}
                     ref={flashListRef}
-                    data={messages}
+                    data={reversedMessages}
                     drawDistance={CHAT_DRAW_DISTANCE}
                     extraData={compactById}
+                    initialScrollIndex={reversedMessages.length > 0 ? reversedMessages.length - 1 : undefined}
                     keyExtractor={keyExtractor}
                     renderItem={renderMessageItem}
                     contentContainerStyle={styles.messagesList}
+                    onLoad={handleListLoad}
                     maintainVisibleContentPosition={
                       MAINTAIN_VISIBLE_CONTENT_POSITION
                     }
                     onScroll={handleListScroll}
-                    onLoad={handleListLoad}
                     scrollEventThrottle={16}
                     showsVerticalScrollIndicator={false}
                     onEndReached={handleEndReachedEvent}
@@ -737,8 +811,11 @@ export default function BoardChannelScreen() {
         currentProfileId={profile.id}
         currentMemberRole={board.currentMember?.role ?? null}
         windowKey={windowKey}
-        boardId={resolvedBoardId}
-        channelId={resolvedChannelId}
+        context={{
+          type: "channel",
+          boardId: resolvedBoardId,
+          channelId: resolvedChannelId,
+        }}
         onClose={() => setSelectedMessage(null)}
         onReply={(message) => {
           setReplyTo(message);
@@ -751,7 +828,9 @@ export default function BoardChannelScreen() {
           setReportConfig({
             title: "Reportar mensaje",
             previewLabel:
-              content.length > 120 ? `${content.slice(0, 120)}…` : content || "Mensaje sin texto",
+              content.length > 120
+                ? `${content.slice(0, 120)}…`
+                : content || "Mensaje sin texto",
             categories: MESSAGE_REPORT_CATEGORIES,
             targetType: "CHANNEL_MESSAGE",
             targetId: message.id,
@@ -804,8 +883,8 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       flex: 1,
     },
     messagesList: {
-      paddingBottom: 0,
-      paddingTop: 16,
+      paddingBottom: 16,
+      paddingTop: 0,
     },
     paginationLoader: {
       alignItems: "center",

@@ -39,7 +39,12 @@ export function useChannelSocket({
       chatMessageWindowStore.upsertIncomingMessage(windowKey, message);
     };
 
-    const handleChannelMessageUpdate = (message: ChannelMessage) => {
+    const handleChannelMessageUpdate = (message: Partial<ChannelMessage> & { id: string }) => {
+      if (message.deleted) {
+        chatMessageWindowStore.removeById(windowKey, message.id);
+        return;
+      }
+
       chatMessageWindowStore.upsertById(windowKey, message, {
         insertIfMissing: false,
       });

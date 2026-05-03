@@ -9,7 +9,7 @@ import {
   View,
 } from "react-native";
 import { UserAvatar } from "@/src/components/user-avatar";
-import type { ChatMessage } from "@/src/features/chat/chat-message";
+import type { ChatMessage } from "@/src/features/chat/lib/chat-message";
 import type {
   ChatReaction,
   ChatReplyTarget,
@@ -20,6 +20,10 @@ import {
   getMessageOwnerProfileId,
   getReplyAuthor,
 } from "@/src/features/chat/utils/message-author";
+import { parseInviteLinks } from "@/src/features/chat/utils/parse-invite-links";
+import { extractFirstUrl } from "@/src/features/chat/utils/parse-urls";
+import { InviteLinkPreview } from "@/src/features/chat/components/invite-link-preview";
+import { LinkPreviewCard } from "@/src/features/chat/components/link-preview-card";
 import { useTheme } from "@/src/theme/theme-provider";
 import { Text } from "@/src/components/app-typography";
 
@@ -484,7 +488,7 @@ export const ChatItem = memo(function ChatItem({
   const chatBubbleStyle = parseChatBubbleStyle(author?.chatBubbleStyle);
   const bubbleStyle = getBubbleCustomStyle(
     chatBubbleStyle,
-    isOwnMessage ? colors.buttonPrimary : colors.bgTertiary,
+    isOwnMessage ? colors.buttonPrimary : colors.accentPrimary,
   );
 
   const hasSticker = Boolean(message.sticker?.asset?.url);
@@ -494,10 +498,25 @@ export const ChatItem = memo(function ChatItem({
   const hasFile =
     Boolean(message.attachmentAsset) &&
     !isImageMime(message.attachmentAsset!.mimeType);
-  const hasTextContent = message.content.trim().length > 0;
 
-  // Bubbled content: text/deleted. Unbubbled: sticker, image, file.
+  const { cleanContent, inviteCodes, hasInviteLinks } = useMemo(
+    () => parseInviteLinks(message.content),
+    [message.content],
+  );
+  const hasTextContent = cleanContent.trim().length > 0;
+  const previewUrl = useMemo(
+    () => (hasInviteLinks ? null : extractFirstUrl(cleanContent)),
+    [cleanContent, hasInviteLinks],
+  );
+
+  if (message.deleted) {
+    return null;
+  }
+
+  // Bubbled content: text. Unbubbled: sticker, image, file.
   const showBubble = !hasSticker && !hasImage && !hasFile;
+  // Don't render an empty bubble when the only content is invite link cards.
+  const showBubbleView = showBubble && (hasTextContent || !!message.replyTo);
 
   return (
     <>
@@ -597,24 +616,13 @@ export const ChatItem = memo(function ChatItem({
         ) : null}
 
         {/* Body */}
-        {showBubble ? (
+        {showBubbleView ? (
           <View style={[styles.bubble, bubbleStyle]}>
             {message.replyTo ? (
               <ReplyPreview replyTo={message.replyTo} />
             ) : null}
 
-            {message.deleted ? (
-              <Text
-                style={[
-                  styles.deletedText,
-                  {
-                    color: isOwnMessage ? colors.textInverse : colors.textMuted,
-                  },
-                ]}
-              >
-                Mensaje eliminado
-              </Text>
-            ) : hasTextContent ? (
+            {hasTextContent ? (
               <Text
                 style={[
                   styles.bodyText,
@@ -623,7 +631,7 @@ export const ChatItem = memo(function ChatItem({
                   },
                 ]}
               >
-                {message.content}
+                {cleanContent}
                 {edited ? (
                   <Text
                     style={[
@@ -642,7 +650,7 @@ export const ChatItem = memo(function ChatItem({
               </Text>
             ) : null}
           </View>
-        ) : (
+        ) : !showBubble ? (
           /* Unbubbled: sticker / image / file */
           <View>
             {message.replyTo ? (
@@ -661,7 +669,17 @@ export const ChatItem = memo(function ChatItem({
               <FileBody asset={message.attachmentAsset!} />
             ) : null}
           </View>
-        )}
+        ) : null}
+
+        {hasInviteLinks ? (
+          <View style={styles.invitePreviews}>
+            {inviteCodes.map((code) => (
+              <InviteLinkPreview key={code} inviteCode={code} />
+            ))}
+          </View>
+        ) : previewUrl ? (
+          <LinkPreviewCard url={previewUrl} />
+        ) : null}
 
         {reactions.length > 0 && !message.deleted ? (
           <ReactionsRow
@@ -795,10 +813,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontStyle: "italic",
   },
-  deletedText: {
-    fontSize: 13,
-    fontStyle: "italic",
-  },
   replyPreview: {
     borderLeftWidth: 3,
     borderRadius: 6,
@@ -855,6 +869,11 @@ const styles = StyleSheet.create({
   },
   fileMeta: {
     fontSize: 11,
+  },
+  invitePreviews: {
+    flexDirection: "column",
+    gap: 6,
+    paddingTop: 4,
   },
   reactionsRow: {
     flexDirection: "row",

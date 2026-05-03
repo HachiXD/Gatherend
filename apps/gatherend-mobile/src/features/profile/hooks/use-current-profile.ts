@@ -1,9 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "@/src/features/auth/hooks/use-session";
 import { getCurrentProfile } from "@/src/features/profile/api/get-current-profile";
+import { CURRENT_PROFILE_QUERY_KEY } from "@/src/features/profile/lib/current-profile-cache";
 import type { ClientProfile } from "@/src/features/profile/types/current-profile";
-
-const CURRENT_PROFILE_QUERY_KEY = ["current-profile"] as const;
 
 export function useCurrentProfile() {
   const { session, isPending, isAuthenticated } = useSession();

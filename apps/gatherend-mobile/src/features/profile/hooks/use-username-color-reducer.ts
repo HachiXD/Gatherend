@@ -1,5 +1,5 @@
 import { useReducer, useCallback, useMemo } from "react";
-import { normalizeUsernameGradientStops } from "@/src/features/profile/lib/username-gradient-stops";
+import { normalizeUsernameGradientStops } from "@/src/features/profile/lib/username/username-gradient-stops";
 import type {
   EditableGradientColorStop,
   UsernameColor,

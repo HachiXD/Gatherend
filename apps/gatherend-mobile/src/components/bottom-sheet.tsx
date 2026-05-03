@@ -1,20 +1,15 @@
-import { useEffect, useRef, useState } from "react";
-import {
-  Animated,
-  Modal,
-  Pressable,
-  StyleSheet,
-  View,
-  useWindowDimensions,
-} from "react-native";
+import { Dimensions, Modal, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/src/theme/theme-provider";
+
+const SCREEN_HEIGHT = Dimensions.get("screen").height;
 
 type BottomSheetProps = {
   visible: boolean;
   onClose: () => void;
   children: React.ReactNode;
   maxHeight?: number;
+  hideHandle?: boolean;
 };
 
 export function BottomSheet({
@@ -22,102 +17,60 @@ export function BottomSheet({
   onClose,
   children,
   maxHeight,
+  hideHandle = false,
 }: BottomSheetProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { height: screenHeight } = useWindowDimensions();
-  const [localVisible, setLocalVisible] = useState(false);
-  const translateY = useRef(new Animated.Value(screenHeight)).current;
-  const backdropOpacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (visible) {
-      setLocalVisible(true);
-      Animated.parallel([
-        Animated.spring(translateY, {
-          toValue: 0,
-          damping: 24,
-          stiffness: 280,
-          mass: 0.8,
-          useNativeDriver: true,
-        }),
-        Animated.timing(backdropOpacity, {
-          toValue: 1,
-          duration: 180,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(translateY, {
-          toValue: screenHeight,
-          duration: 220,
-          useNativeDriver: true,
-        }),
-        Animated.timing(backdropOpacity, {
-          toValue: 0,
-          duration: 180,
-          useNativeDriver: true,
-        }),
-      ]).start(({ finished }) => {
-        if (finished) setLocalVisible(false);
-      });
-    }
-  }, [visible, backdropOpacity, screenHeight, translateY]);
-
-  if (!localVisible) return null;
 
   return (
     <Modal
-      animationType="none"
+      animationType="fade"
       onRequestClose={onClose}
       statusBarTranslucent
       transparent
-      visible={localVisible}
+      visible={visible}
     >
-      <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
-        <Animated.View
-          style={[styles.backdrop, { opacity: backdropOpacity }]}
-        >
-          <Pressable onPress={onClose} style={StyleSheet.absoluteFill} />
-        </Animated.View>
+      <View style={styles.container}>
+        <Pressable onPress={onClose} style={styles.backdrop} />
 
-        <Animated.View
+        <View
           style={[
             styles.sheet,
             {
               backgroundColor: colors.bgSecondary,
               borderColor: colors.borderPrimary,
+              borderTopWidth: hideHandle ? 0 : 1,
               maxHeight: maxHeight ?? screenHeight * 0.85,
               paddingBottom: insets.bottom + 8,
-              transform: [{ translateY }],
             },
           ]}
         >
-          <View
-            style={[styles.handle, { backgroundColor: colors.borderPrimary }]}
-          />
+          {!hideHandle ? (
+            <View
+              style={[styles.handle, { backgroundColor: colors.borderPrimary }]}
+            />
+          ) : null}
           {children}
-        </Animated.View>
+        </View>
       </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
+  container: {
+    height: SCREEN_HEIGHT,
     backgroundColor: "rgba(2, 6, 23, 0.62)",
+  },
+  backdrop: {
+    flex: 1,
   },
   sheet: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     borderTopWidth: 1,
-    bottom: 0,
-    left: 0,
     overflow: "hidden",
-    position: "absolute",
-    right: 0,
   },
   handle: {
     alignSelf: "center",

@@ -1,5 +1,5 @@
 import { useRef, useSyncExternalStore } from "react";
-import type { ChatMessage } from "@/src/features/chat/chat-message";
+import type { ChatMessage } from "@/src/features/chat/lib/chat-message";
 import {
   getMessageOwnerProfileId,
   isChannelMessage,
@@ -58,6 +58,28 @@ function emit(key: string) {
 
 function getId(m: ChatMessage): string {
   return (m as { id: string }).id;
+}
+
+function mergeMessageUpdate(
+  current: ChatMessage,
+  update: Partial<ChatMessage>,
+): ChatMessage {
+  const merged = { ...(current as object), ...(update as object) } as ChatMessage;
+
+  if ((update as { deleted?: unknown }).deleted !== true) {
+    return merged;
+  }
+
+  return ({
+    ...(merged as object),
+    attachmentAsset: null,
+    attachmentAssetId: null,
+    content: "",
+    deleted: true,
+    reactions: [],
+    sticker: null,
+    stickerId: null,
+  } as unknown) as ChatMessage;
 }
 
 function normalizeServerItems(items: ChatMessage[]): ChatMessage[] {
@@ -929,17 +951,17 @@ export const chatMessageWindowStore = {
 
   upsertById(
     key: string,
-    message: ChatMessage,
+    message: Partial<ChatMessage> & { id: string },
     options?: { insertIfMissing?: boolean; preferAfterCache?: boolean },
   ) {
     chatMessageWindowStore.patch(key, (prev) => {
-      const id = getId(message);
+      const id = message.id;
       const replaceIn = (arr: ChatMessage[]) => {
         let changed = false;
         const next = arr.map((m) => {
           if (getId(m) !== id) return m;
           changed = true;
-          return message;
+          return mergeMessageUpdate(m, message);
         });
         return { changed, next };
       };
@@ -957,8 +979,9 @@ export const chatMessageWindowStore = {
         };
       }
       if (!options?.insertIfMissing) return prev;
+      const insertedMessage = message as ChatMessage;
       if (options?.preferAfterCache) {
-        const trimmed = trimAfterCache([...prev.after, message]);
+        const trimmed = trimAfterCache([...prev.after, insertedMessage]);
         return {
           ...prev,
           ready: true,
@@ -971,7 +994,7 @@ export const chatMessageWindowStore = {
       const merged: ChatMessageWindowState = {
         ...prev,
         ready: true,
-        messages: [...prev.messages, message],
+        messages: [...prev.messages, insertedMessage],
         updatedAt: Date.now(),
       };
       return { ...enforceWindowBudget(merged, "down"), updatedAt: Date.now() };

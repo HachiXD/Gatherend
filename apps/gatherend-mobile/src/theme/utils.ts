@@ -414,14 +414,28 @@ export function generateGrayPaletteFromBase(baseColor: string): ThemeColors {
   const clampL = (ratio: number, min: number, max: number) =>
     Math.min(max, Math.max(min, l * ratio));
 
-  const bgSecondary = hslToHex(h + 4, clampS(0.32, 22, 43), clampL(0.47, 19, 22));
+  const bgSecondary = hslToHex(
+    h + 4,
+    clampS(0.32, 22, 43),
+    clampL(0.47, 19, 22),
+  );
   const communityTabsFallbackBg = toCommunityTabsFallbackBg(bgSecondary);
-  const communityTabsFallbackActiveBg = toCommunityTabsFallbackActiveBg(communityTabsFallbackBg);
+  const communityTabsFallbackActiveBg = toCommunityTabsFallbackActiveBg(
+    communityTabsFallbackBg,
+  );
 
   return {
     bgPrimary: hslToHex(h + 3, clampS(0.35, 24, 45), clampL(0.32, 13, 16)),
-    bgOverlayPrimary: hslToHex(h + 3, clampS(0.35, 24, 45), clampL(0.32, 13, 16)),
-    bgDropdownMenuPrimary: hslToHex(h + 3, clampS(0.35, 24, 45), clampL(0.32, 13, 16)),
+    bgOverlayPrimary: hslToHex(
+      h + 3,
+      clampS(0.35, 24, 45),
+      clampL(0.32, 13, 16),
+    ),
+    bgDropdownMenuPrimary: hslToHex(
+      h + 3,
+      clampS(0.35, 24, 45),
+      clampL(0.32, 13, 16),
+    ),
     bgSecondary,
     bgTertiary: hslToHex(h + 6, clampS(0.25, 17, 37), clampL(0.57, 23, 26)),
     bgQuaternary: hslToHex(h + 4, clampS(0.26, 18, 39), clampL(0.72, 28, 31)),
@@ -470,9 +484,21 @@ export function generateGrayPaletteFromBase(baseColor: string): ThemeColors {
     dropdownBg: hslToHex(h - 1, clampS(0.34, 21, 27), clampL(0.5, 18, 22)),
     dropdownBorder: hslToHex(h - 1, clampS(0.31, 19, 25), clampL(0.6, 22, 26)),
     dropdownHover: hslToHex(h - 2, clampS(0.34, 21, 27), clampL(0.57, 21, 25)),
-    reactionActiveBg: hslToHex(h - 2, clampS(0.44, 28, 34), clampL(0.6, 22, 26)),
-    reactionActiveBorder: hslToHex(h - 1, clampS(0.6, 38, 45), clampL(1.0, 37, 43)),
-    reactionActiveText: hslToHex(h - 9, clampS(0.24, 14, 20), clampL(2.15, 82, 88)),
+    reactionActiveBg: hslToHex(
+      h - 2,
+      clampS(0.44, 28, 34),
+      clampL(0.6, 22, 26),
+    ),
+    reactionActiveBorder: hslToHex(
+      h - 1,
+      clampS(0.6, 38, 45),
+      clampL(1.0, 37, 43),
+    ),
+    reactionActiveText: hslToHex(
+      h - 9,
+      clampS(0.24, 14, 20),
+      clampL(2.15, 82, 88),
+    ),
     reactionBg: hslToHex(h - 1, clampS(0.34, 21, 27), clampL(0.5, 18, 22)),
     reactionBorder: hslToHex(h - 1, clampS(0.31, 19, 25), clampL(0.6, 22, 26)),
     reactionText: hslToHex(h - 1, clampS(0.13, 7, 12), clampL(2.02, 77, 83)),
@@ -484,28 +510,96 @@ export function generateGrayPaletteFromBase(baseColor: string): ThemeColors {
     bgModal: hslToHex(h + 4, clampS(0.32, 22, 43), clampL(0.47, 19, 22)),
     bgInputModal: hslToHex(h - 7, clampS(0.2, 12, 17), clampL(0.65, 24, 28)),
     bgCancelButton: hslToHex(h - 3, clampS(0.2, 12, 17), clampL(0.65, 24, 28)),
-    bgCancelButtonHover: hslToHex(h - 3, clampS(0.2, 12, 17), clampL(0.75, 28, 32)),
+    bgCancelButtonHover: hslToHex(
+      h - 3,
+      clampS(0.2, 12, 17),
+      clampL(0.75, 28, 32),
+    ),
     chatInputIcon: hslToHex(h - 10, clampS(0.51, 33, 39), clampL(1.77, 68, 74)),
-    chatInputIconHover: hslToHex(h - 9, clampS(0.43, 27, 33), clampL(1.5, 57, 63)),
-    chatInputButtonBg: hslToHex(h + 4, clampS(0.28, 18, 34), clampL(0.6, 25, 27)),
-    chatInputSurfaceBg: hslToHex(h + 5, clampS(0.2, 14, 28), clampL(0.98, 35, 40)),
-    channelTypeActiveBorder: hslToHex(h, clampS(0.7, 38, 48), clampL(0.92, 34, 40)),
-    channelTypeActiveSoftBg: hslToHex(h, clampS(0.52, 24, 34), clampL(0.92, 34, 40)),
+    chatInputIconHover: hslToHex(
+      h - 9,
+      clampS(0.43, 27, 33),
+      clampL(1.5, 57, 63),
+    ),
+    chatInputButtonBg: hslToHex(
+      h + 4,
+      clampS(0.28, 18, 34),
+      clampL(0.6, 25, 27),
+    ),
+    chatInputSurfaceBg: hslToHex(
+      h + 5,
+      clampS(0.2, 14, 28),
+      clampL(0.98, 35, 40),
+    ),
+    channelTypeActiveBorder: hslToHex(
+      h,
+      clampS(0.7, 38, 48),
+      clampL(0.92, 34, 40),
+    ),
+    channelTypeActiveSoftBg: hslToHex(
+      h,
+      clampS(0.52, 24, 34),
+      clampL(0.92, 34, 40),
+    ),
     channelTypeActiveBg: `hsla(${h}, ${clampS(0.7, 38, 48)}%, ${clampL(0.92, 34, 40)}%, 0.4)`,
-    channelTypeActiveText: hslToHex(h, clampS(0.55, 28, 38), clampL(2.4, 92, 96)),
-    channelTypeInactiveBg: hslToHex(h, clampS(0.24, 11, 18), clampL(0.67, 24, 30)),
-    channelTypeInactiveBorder: hslToHex(h, clampS(0.1, 4, 8), clampL(1.05, 38, 44)),
-    channelTypeInactiveHoverBorder: hslToHex(h, clampS(0.1, 4, 8), clampL(1.2, 44, 50)),
-    channelTypeInactiveText: hslToHex(h, clampS(0.1, 4, 8), clampL(2.0, 74, 80)),
+    channelTypeActiveText: hslToHex(
+      h,
+      clampS(0.55, 28, 38),
+      clampL(2.4, 92, 96),
+    ),
+    channelTypeInactiveBg: hslToHex(
+      h,
+      clampS(0.24, 11, 18),
+      clampL(0.67, 24, 30),
+    ),
+    channelTypeInactiveBorder: hslToHex(
+      h,
+      clampS(0.1, 4, 8),
+      clampL(1.05, 38, 44),
+    ),
+    channelTypeInactiveHoverBorder: hslToHex(
+      h,
+      clampS(0.1, 4, 8),
+      clampL(1.2, 44, 50),
+    ),
+    channelTypeInactiveText: hslToHex(
+      h,
+      clampS(0.1, 4, 8),
+      clampL(2.0, 74, 80),
+    ),
     scrollbarNavThumb: hslToHex(h, clampS(0.22, 10, 20), clampL(0.87, 32, 38)),
-    scrollbarNavThumbHover: hslToHex(h, clampS(0.26, 12, 24), clampL(1.12, 42, 48)),
+    scrollbarNavThumbHover: hslToHex(
+      h,
+      clampS(0.26, 12, 24),
+      clampL(1.12, 42, 48),
+    ),
     scrollbarMainThumb: hslToHex(h, clampS(0.26, 12, 24), clampL(1.0, 37, 43)),
-    scrollbarMainThumbHover: hslToHex(h, clampS(0.29, 14, 26), clampL(1.25, 47, 53)),
-    appSettingsHover: hslToHex(h + 1, clampS(0.81, 35, 45), clampL(0.74, 24, 28)),
-    accentCustomUserButton: hslToHex(h + 2, clampS(0.94, 40, 50), clampL(0.89, 28, 34)),
+    scrollbarMainThumbHover: hslToHex(
+      h,
+      clampS(0.29, 14, 26),
+      clampL(1.25, 47, 53),
+    ),
+    appSettingsHover: hslToHex(
+      h + 1,
+      clampS(0.81, 35, 45),
+      clampL(0.74, 24, 28),
+    ),
+    accentCustomUserButton: hslToHex(
+      h + 2,
+      clampS(0.94, 40, 50),
+      clampL(0.89, 28, 34),
+    ),
     bgTabHover: hslToHex(h - 1, clampS(0.77, 33, 42), clampL(0.89, 28, 34)),
-    borderAccentItemReplyPreview: hslToHex(h, clampS(0.9, 50, 80), clampL(0.95, 36, 44)),
-    borderAccentActiveChannel: hslToHex(h, clampS(0.9, 50, 80), clampL(0.95, 36, 44)),
+    borderAccentItemReplyPreview: hslToHex(
+      h,
+      clampS(0.9, 50, 80),
+      clampL(0.95, 36, 44),
+    ),
+    borderAccentActiveChannel: hslToHex(
+      h,
+      clampS(0.9, 50, 80),
+      clampL(0.95, 36, 44),
+    ),
     bgEditForm: hslToHex(h + 4, clampS(0.32, 22, 43), clampL(0.52, 21, 24)),
     notificationBg: hslToHex(h + 140, clampS(0.8, 65, 70), clampL(0.8, 24, 30)),
     unreadBg: hslToHex(h + 140, clampS(0.6, 42, 55), clampL(0.65, 39, 44)),
@@ -589,7 +683,7 @@ export function generateLightPaletteFromBase(baseColor: string): ThemeColors {
     textLight: hslToHex(h + 30, clampS(0.5, 28, 42), clampL(0.35, 10, 18)),
     textSubtle: hslToHex(h + 30, clampS(0.45, 24, 38), clampL(0.65, 22, 32)),
     textPrimary: hslToHex(h + 30, clampS(0.2, 10, 20), clampL(0.35, 10, 18)),
-    textSecondary: hslToHex(h + 36, clampS(0.71, 40, 60), clampL(0.75, 26, 34)),
+    textSecondary: hslToHex(h + 70, clampS(0.14, 6, 14), clampL(1.87, 96, 100)),
     textTertiary: hslToHex(h + 36, clampS(0.6, 32, 48), clampL(0.95, 34, 42)),
     textInverse: "#ffffff",
 

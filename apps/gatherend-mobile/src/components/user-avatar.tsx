@@ -10,6 +10,10 @@ type UserAvatarProps = {
   profileId?: string;
   showStatus?: boolean;
   size?: number;
+  statusSize?: number;
+  statusOffsetX?: number;
+  statusOffsetY?: number;
+  statusRingColor?: string;
   status?: "active" | "inactive";
 };
 
@@ -19,6 +23,10 @@ export function UserAvatar({
   profileId,
   showStatus = false,
   size = 36,
+  statusSize,
+  statusOffsetX,
+  statusOffsetY,
+  statusRingColor,
   status,
 }: UserAvatarProps) {
   const { colors } = useTheme();
@@ -28,6 +36,9 @@ export function UserAvatar({
     profileId ? state.onlineUsers.has(profileId) : false,
   );
   const isOnline = profileId ? isOnlineFromStore : status === "active";
+
+  const ringSize = statusSize ?? Math.max(11, Math.round(size * 0.32));
+  const dotSize = statusSize ? Math.round(statusSize * 0.68) : Math.max(7, Math.round(size * 0.22));
 
   const avatar = avatarUrl ? (
     <Image
@@ -66,10 +77,12 @@ export function UserAvatar({
           style={[
             styles.statusRing,
             {
-              backgroundColor: colors.bgSecondary,
-              borderRadius: Math.round(size * 0.18),
-              height: Math.max(11, Math.round(size * 0.32)),
-              width: Math.max(11, Math.round(size * 0.32)),
+              backgroundColor: statusRingColor ?? colors.bgSecondary,
+              borderRadius: Math.round(ringSize / 2),
+              bottom: statusOffsetY ?? -1,
+              height: ringSize,
+              right: statusOffsetX ?? -1,
+              width: ringSize,
             },
           ]}
         >
@@ -78,9 +91,9 @@ export function UserAvatar({
               styles.statusDot,
               {
                 backgroundColor: isOnline ? "#059669" : "#71717a",
-                borderRadius: Math.round(size * 0.13),
-                height: Math.max(7, Math.round(size * 0.22)),
-                width: Math.max(7, Math.round(size * 0.22)),
+                borderRadius: Math.round(dotSize / 2),
+                height: dotSize,
+                width: dotSize,
               },
             ]}
           />
@@ -107,9 +120,7 @@ const styles = StyleSheet.create({
   statusDot: {},
   statusRing: {
     alignItems: "center",
-    bottom: -1,
     justifyContent: "center",
     position: "absolute",
-    right: -1,
   },
 });

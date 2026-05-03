@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { authClient } from "@/src/lib/auth-client";
 import { useProfile } from "@/src/features/profile/providers/current-profile-provider";
 import type { ClientProfile } from "@/src/features/profile/types/current-profile";
+import { CURRENT_PROFILE_QUERY_KEY } from "@/src/features/profile/lib/current-profile-cache";
 import { useSession } from "@/src/features/auth/hooks/use-session";
 import { useSocket } from "@/src/providers/socket-context";
 import { LEGAL_LINKS } from "@/src/lib/legal-links";
@@ -29,6 +30,10 @@ import { getThemeBaseColor, normalizeThemeConfig } from "@/src/theme/runtime";
 import { useTheme } from "@/src/theme/theme-provider";
 import type { ThemeConfig, ThemeMode } from "@/src/theme/types";
 import { isValidHexColor } from "@/src/theme/utils";
+import ColorPicker, {
+  HueSlider,
+  Panel1,
+} from "reanimated-color-picker";
 import { Text, TextInput } from "@/src/components/app-typography";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -58,6 +63,7 @@ export default function SettingsScreen() {
   const [themeMode, setThemeMode] = useState<ThemeMode>(mode);
   const [themeError, setThemeError] = useState<string | null>(null);
   const [isSavingTheme, setIsSavingTheme] = useState(false);
+  const [showThemePicker, setShowThemePicker] = useState(false);
 
   useEffect(() => {
     setThemeBaseColor(effectiveBaseColor);
@@ -174,8 +180,9 @@ export default function SettingsScreen() {
       }
 
       const serverProfile = (await response.json()) as ClientProfile;
-      queryClient.setQueryData<ClientProfile>(["current-profile"], (old) =>
-        old ? { ...old, ...serverProfile } : serverProfile,
+      queryClient.setQueryData<ClientProfile>(
+        CURRENT_PROFILE_QUERY_KEY,
+        (old) => (old ? { ...old, ...serverProfile } : serverProfile),
       );
       setOpenSection("none");
       Alert.alert("Tema actualizado", "Tu tema fue guardado.");
@@ -197,6 +204,7 @@ export default function SettingsScreen() {
       setIsSigningOut(true);
       goOffline();
       await signOut();
+      queryClient.clear();
       router.replace("/sign-in");
     } catch {
       setIsSigningOut(false);
@@ -234,6 +242,7 @@ export default function SettingsScreen() {
                 // Best-effort — session may already be invalid
               }
 
+              queryClient.clear();
               router.replace("/sign-in");
             } catch {
               setIsDeletingAccount(false);
@@ -464,14 +473,15 @@ export default function SettingsScreen() {
                 <View style={styles.fieldGroup}>
                   <Text style={styles.fieldLabel}>Color base</Text>
                   <View style={styles.themeColorInputRow}>
-                    <View
+                    <Pressable
+                      onPress={() => setShowThemePicker((v) => !v)}
                       style={[
                         styles.themeColorSwatch,
                         {
                           backgroundColor: isValidHexColor(themeBaseColor)
                             ? themeBaseColor
                             : DEFAULT_BASE_COLOR,
-                          borderColor: colors.borderPrimary,
+                          borderColor: showThemePicker ? colors.channelTypeActiveBorder : colors.borderPrimary,
                         },
                       ]}
                     />
@@ -501,6 +511,23 @@ export default function SettingsScreen() {
                       ]}
                       value={themeBaseColor}
                     />
+                  </View>
+                  <View style={showThemePicker ? null : styles.colorPickerCollapsed}>
+                    <ColorPicker
+                      value={
+                        isValidHexColor(themeBaseColor)
+                          ? themeBaseColor
+                          : DEFAULT_BASE_COLOR
+                      }
+                      onCompleteJS={({ hex }) => {
+                        setThemeError(null);
+                        setThemeBaseColor(hex.slice(0, 7).toUpperCase());
+                      }}
+                      style={styles.colorPicker}
+                    >
+                      <Panel1 style={styles.colorPickerPanel} />
+                      <HueSlider style={styles.colorPickerSlider} />
+                    </ColorPicker>
                   </View>
                 </View>
 
@@ -1098,6 +1125,22 @@ const styles = StyleSheet.create({
     height: 44,
     letterSpacing: 0,
     paddingHorizontal: 12,
+  },
+  colorPickerCollapsed: {
+    height: 0,
+    overflow: "hidden",
+  },
+  colorPicker: {
+    gap: 12,
+    marginTop: 10,
+  },
+  colorPickerPanel: {
+    borderRadius: 8,
+    height: 180,
+  },
+  colorPickerSlider: {
+    borderRadius: 8,
+    height: 28,
   },
   themePresetGrid: {
     flexDirection: "row",

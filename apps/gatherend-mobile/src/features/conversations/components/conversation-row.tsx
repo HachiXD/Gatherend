@@ -1,10 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   Pressable,
   StyleSheet,
   View,
 } from "react-native";
+import { BottomSheet } from "@/src/components/bottom-sheet";
 import { UserAvatar } from "@/src/components/user-avatar";
 import { useTheme } from "@/src/theme/theme-provider";
 import type { Conversation } from "../domain/conversation";
@@ -50,48 +51,63 @@ export function ConversationRow({
 }: ConversationRowProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const [sheetVisible, setSheetVisible] = useState(false);
   const { otherProfile } = conversation;
   const avatarUrl = otherProfile.avatarAsset?.url;
 
   return (
-    <Pressable
-      onPress={() => onPress(conversation.id)}
-      style={({ pressed }) => [
-        styles.row,
-        pressed ? styles.rowPressed : null,
-      ]}
-    >
-      <UserAvatar
-        avatarUrl={avatarUrl}
-        profileId={otherProfile.id}
-        showStatus
-        size={40}
-        username={otherProfile.username}
-      />
-
-      <View style={styles.copy}>
-        <Text numberOfLines={1} style={styles.username}>
-          {otherProfile.username}
-        </Text>
-        <Text numberOfLines={1} style={styles.preview}>
-          {getLastMessagePreview(conversation)}
-        </Text>
-      </View>
-
+    <>
       <Pressable
-        accessibilityLabel="Ocultar conversacion"
-        disabled={isHiding}
-        hitSlop={10}
-        onPress={() => onHide?.(conversation)}
+        onLongPress={() => setSheetVisible(true)}
+        onPress={() => onPress(conversation.id)}
         style={({ pressed }) => [
-          styles.hideButton,
-          pressed && !isHiding ? styles.hideButtonPressed : null,
-          isHiding ? styles.hideButtonDisabled : null,
+          styles.row,
+          pressed ? styles.rowPressed : null,
         ]}
       >
-        <Ionicons color={colors.textMuted} name="trash-outline" size={17} />
+        <UserAvatar
+          avatarUrl={avatarUrl}
+          profileId={otherProfile.id}
+          showStatus
+          size={40}
+          username={otherProfile.username}
+        />
+
+        <View style={styles.copy}>
+          <Text numberOfLines={1} style={styles.username}>
+            {otherProfile.username}
+          </Text>
+          <Text numberOfLines={1} style={styles.preview}>
+            {getLastMessagePreview(conversation)}
+          </Text>
+        </View>
       </Pressable>
-    </Pressable>
+
+      <BottomSheet
+        maxHeight={200}
+        onClose={() => setSheetVisible(false)}
+        visible={sheetVisible}
+      >
+        <View style={styles.actionList}>
+          <Pressable
+            disabled={isHiding}
+            onPress={() => {
+              setSheetVisible(false);
+              onHide?.(conversation);
+            }}
+            style={({ pressed }) => [
+              styles.actionRow,
+              { borderBottomColor: colors.borderPrimary },
+              pressed && styles.actionRowPressed,
+              isHiding && styles.actionRowDisabled,
+            ]}
+          >
+            <Ionicons color="#f87171" name="trash-outline" size={20} />
+            <Text style={styles.actionLabel}>Eliminar conversacion</Text>
+          </Pressable>
+        </View>
+      </BottomSheet>
+    </>
   );
 }
 
@@ -126,18 +142,27 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       fontSize: 14,
       lineHeight: 19,
     },
-    hideButton: {
+    actionList: {
+      paddingBottom: 4,
+    },
+    actionRow: {
       alignItems: "center",
-      borderRadius: 14,
-      height: 34,
-      justifyContent: "center",
-      width: 34,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      flexDirection: "row",
+      gap: 14,
+      paddingHorizontal: 20,
+      paddingVertical: 15,
     },
-    hideButtonPressed: {
-      backgroundColor: colors.bgTertiary,
+    actionRowPressed: {
+      opacity: 0.7,
     },
-    hideButtonDisabled: {
+    actionRowDisabled: {
       opacity: 0.5,
+    },
+    actionLabel: {
+      color: "#f87171",
+      fontSize: 15,
+      fontWeight: "600",
     },
   });
 }

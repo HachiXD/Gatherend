@@ -1,6 +1,7 @@
 "use client";
 
 import type { ClientProfile } from "@/hooks/use-current-profile";
+import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
@@ -29,6 +30,7 @@ export const LogoutTab = ({
   setOverlayBlocking,
 }: LogoutTabProps) => {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const pathname = usePathname();
   const { t } = useTranslation();
   const { goOffline } = useSocketClient();
@@ -49,6 +51,7 @@ export const LogoutTab = ({
       setOverlayBlocking(true);
       goOffline();
       await signOut();
+      queryClient.clear();
       toast.success(t.overlays.userSettings.logout.logoutSuccess);
       setCloseOnRouteChange(true);
       router.replace("/");

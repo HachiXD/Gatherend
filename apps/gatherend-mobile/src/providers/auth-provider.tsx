@@ -4,14 +4,20 @@ import {
   type ReactNode,
   type Context,
 } from "react";
-import { signOut, useSession } from "@/src/lib/auth-client";
+import {
+  signOut,
+  useSession as useBetterAuthSession,
+} from "@/src/lib/auth-client";
 
-type SessionData = ReturnType<typeof useSession>["data"];
+type SessionState = ReturnType<typeof useBetterAuthSession>;
+type SessionData = SessionState["data"];
 
 type AuthContextValue = {
   session: SessionData;
   isPending: boolean;
   isAuthenticated: boolean;
+  sessionError: SessionState["error"];
+  refetchSession: SessionState["refetch"];
   signOut: typeof signOut;
 };
 
@@ -23,12 +29,15 @@ type AuthProviderProps = {
 };
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const sessionState = useSession();
+  const sessionState = useBetterAuthSession();
+  const isAuthenticated = Boolean(sessionState.data?.user?.id);
 
   const value: AuthContextValue = {
     session: sessionState.data,
     isPending: sessionState.isPending,
-    isAuthenticated: Boolean(sessionState.data?.user?.id),
+    isAuthenticated,
+    sessionError: sessionState.error,
+    refetchSession: sessionState.refetch,
     signOut,
   };
 

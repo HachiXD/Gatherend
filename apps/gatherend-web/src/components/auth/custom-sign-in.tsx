@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -12,6 +13,7 @@ import { useTranslation } from "@/i18n";
 import { useRateLimit, RATE_LIMIT_CONFIGS } from "@/hooks/use-rate-limit";
 import { checkUserBanStatus } from "@/lib/check-ban-client";
 import { signIn } from "@/lib/better-auth-client";
+import { prefetchCurrentProfile } from "@/lib/current-profile-cache";
 
 type SignInStep = "credentials" | "verification";
 
@@ -41,6 +43,7 @@ export const CustomSignIn = ({
   showEmailVerifiedMessage?: boolean;
 }) => {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { t } = useTranslation();
 
   const { lockoutSecondsRemaining, checkAndRecord: checkRateLimit } =
@@ -109,6 +112,7 @@ export const CustomSignIn = ({
         return;
       }
 
+      await prefetchCurrentProfile(queryClient);
       router.push("/boards");
     } catch (err: unknown) {
       const message = extractErrorMessage(err, t.auth.invalidCredentials);

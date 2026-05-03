@@ -1,7 +1,7 @@
 import type { BoardImageAsset } from "@/src/features/boards/types/board";
 import type { ClientProfile } from "@/src/features/profile/types/current-profile";
 import type { UploadedFile } from "@/src/features/uploads/domain/uploaded-file";
-import type { ProfileCardConfig } from "@/src/features/profile/lib/profile-card-config";
+import type { ProfileCardConfig } from "./profile-card-config";
 
 // ----- Types -----
 

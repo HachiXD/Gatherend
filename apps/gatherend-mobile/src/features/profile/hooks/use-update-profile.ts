@@ -3,6 +3,7 @@ import {
   updateProfile,
   type ProfileUpdatePayload,
 } from "@/src/features/profile/api/update-profile";
+import { CURRENT_PROFILE_QUERY_KEY } from "@/src/features/profile/lib/current-profile-cache";
 import { applyProfilePatchToAllMobileCaches } from "@/src/features/profile/utils/profile-patch-utils";
 import type { ClientProfile } from "@/src/features/profile/types/current-profile";
 
@@ -14,7 +15,7 @@ export function useUpdateProfile() {
     onSuccess: (serverProfile) => {
       // Full replace of the current-profile cache with the server response
       queryClient.setQueryData<ClientProfile>(
-        ["current-profile"],
+        CURRENT_PROFILE_QUERY_KEY,
         (old) => (old ? { ...old, ...serverProfile } : serverProfile),
       );
 
@@ -33,6 +34,9 @@ export function useUpdateProfile() {
       });
 
       // Invalidate downstream queries that embed profile data
+      queryClient.invalidateQueries({
+        queryKey: ["profile-card", serverProfile.id],
+      });
       queryClient.invalidateQueries({ queryKey: ["user-boards"] });
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
     },

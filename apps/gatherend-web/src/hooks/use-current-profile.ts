@@ -3,8 +3,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { Languages } from "@prisma/client";
 import { JsonValue } from "@prisma/client/runtime/library";
-import { fetchWithRetry } from "@/lib/fetch-with-retry";
 import { useSession } from "@/lib/better-auth-client";
+import {
+  CURRENT_PROFILE_QUERY_KEY,
+  fetchCurrentProfile,
+} from "@/lib/current-profile-cache";
 import type { ChatBubbleStyle } from "@/lib/chat-bubble-style";
 import type { ProfileCardConfig } from "@/lib/profile-card-config";
 import type {
@@ -49,7 +52,7 @@ export function useCurrentProfile() {
   const isLoaded = !isPending;
 
   return useQuery<ClientProfile>({
-    queryKey: ["current-profile"],
+    queryKey: CURRENT_PROFILE_QUERY_KEY,
     queryFn: async () => {
       if (!isLoaded) {
         throw new Error("Auth not loaded");
@@ -59,16 +62,7 @@ export function useCurrentProfile() {
         throw new Error("Not signed in");
       }
 
-      const response = await fetchWithRetry("/api/profile/me");
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error("Unauthorized");
-        }
-        throw new Error("Failed to fetch profile");
-      }
-
-      return response.json();
+      return fetchCurrentProfile();
     },
     staleTime: 1000 * 60 * 5,
     retry: false,

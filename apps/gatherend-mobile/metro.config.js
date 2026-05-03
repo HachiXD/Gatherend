@@ -20,6 +20,16 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
     };
   }
 
+  if (moduleName === 'reanimated-color-picker') {
+    return {
+      filePath: path.resolve(
+        __dirname,
+        'node_modules/reanimated-color-picker/lib/commonjs/index.js',
+      ),
+      type: 'sourceFile',
+    };
+  }
+
   if (defaultResolveRequest) {
     return defaultResolveRequest(context, moduleName, platform);
   }

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useProfile } from "@/src/features/profile/providers/current-profile-provider";
 import { getChannelMessages } from "@/src/features/chat/api/get-channel-messages";
-import { channelMessagesQueryKey } from "@/src/features/chat/queries";
+import { channelMessagesQueryKey } from "@/src/features/chat/lib/queries";
 import {
   CHAT_MESSAGES_PAGE_SIZE,
   type ChatPage,

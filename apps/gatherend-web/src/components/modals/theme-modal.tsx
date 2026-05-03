@@ -27,6 +27,7 @@ import axios from "axios";
 import { useQueryClient } from "@tanstack/react-query";
 import { Profile } from "@prisma/client";
 import { useTranslation } from "@/i18n";
+import { CURRENT_PROFILE_QUERY_KEY } from "@/lib/current-profile-cache";
 import { useThemePreviewStore } from "@/stores/theme-preview-store";
 
 interface ThemeModalProps {
@@ -360,7 +361,7 @@ export function ThemeModal({
 
       setPersistedConfig(savedThemeConfig);
       queryClient.setQueryData(
-        ["current-profile"],
+        CURRENT_PROFILE_QUERY_KEY,
         (oldProfile: Profile | undefined) =>
           oldProfile ? { ...oldProfile, ...serverProfile } : serverProfile,
       );

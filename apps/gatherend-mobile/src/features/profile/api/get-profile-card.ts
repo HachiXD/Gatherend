@@ -1,5 +1,6 @@
 import { expressFetch } from "@/src/services/express/express-fetch";
-import type { ClientPublicAsset, ClientStickerAssetRef } from "../types";
+import type { ProfileCardConfig } from "@/src/features/profile/lib/card/profile-card-config";
+import type { ClientPublicAsset, ClientStickerAssetRef } from "@/src/features/chat/types";
 
 export type ProfileCard = {
   id: string;
@@ -12,6 +13,12 @@ export type ProfileCard = {
   badgeSticker: ClientStickerAssetRef | null;
   usernameFormat: unknown;
   profileTags: string[];
+  profileCardConfig: ProfileCardConfig | null;
+  profileCardLeftTopImageAsset: ClientPublicAsset | null;
+  profileCardLeftBottomRightTopImageAsset: ClientPublicAsset | null;
+  profileCardLeftBottomRightBottomImageAsset: ClientPublicAsset | null;
+  profileCardRightTopImageAsset: ClientPublicAsset | null;
+  profileCardRightBottomImageAsset: ClientPublicAsset | null;
 };
 
 export async function getProfileCard(

@@ -1,12 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useMemo } from "react";
-import {
-  FlatList,
-  Pressable,
-  StyleSheet,
-  View,
-} from "react-native";
+import { FlatList, Pressable, StyleSheet, View } from "react-native";
 import { useTheme } from "@/src/theme/theme-provider";
 import type { BoardChannel } from "../types/board";
 import { Text } from "@/src/components/app-typography";
@@ -21,7 +16,9 @@ type BoardChannelsListProps = {
 
 function getChannelMeta(channel: BoardChannel, voiceParticipantCount: number) {
   const count =
-    channel.type === "VOICE" ? voiceParticipantCount : channel.channelMemberCount;
+    channel.type === "VOICE"
+      ? voiceParticipantCount
+      : channel.channelMemberCount;
   const label = count === 1 ? "miembro" : "miembros";
   if (channel.type === "VOICE") {
     return count === 0 ? "Nadie conectado" : `${count} ${label} en llamada`;
@@ -34,8 +31,8 @@ export function BoardChannelsList({
   onSelectChannel,
   onJoinVoice,
 }: BoardChannelsListProps) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { colors, mode } = useTheme();
+  const styles = useMemo(() => createStyles(colors, mode), [colors, mode]);
   const participantsByChannel = useVoiceParticipantsStore(
     (state) => state.participants,
   );
@@ -48,9 +45,10 @@ export function BoardChannelsList({
       renderItem={({ item }) => {
         const imageUrl = item.imageAsset?.url ?? null;
         const voiceParticipants =
-          item.type === "VOICE" ? participantsByChannel[item.id] ?? [] : [];
+          item.type === "VOICE" ? (participantsByChannel[item.id] ?? []) : [];
         const displayedParticipants = voiceParticipants.slice(0, 5);
-        const hiddenCount = voiceParticipants.length - displayedParticipants.length;
+        const hiddenCount =
+          voiceParticipants.length - displayedParticipants.length;
 
         return (
           <Pressable
@@ -91,7 +89,9 @@ export function BoardChannelsList({
               />
               <Ionicons
                 color={colors.textPrimary}
-                name={item.type === "VOICE" ? "volume-high" : "chatbubble-ellipses"}
+                name={
+                  item.type === "VOICE" ? "volume-high" : "chatbubble-ellipses"
+                }
                 size={18}
               />
             </View>
@@ -138,7 +138,10 @@ export function BoardChannelsList({
   );
 }
 
-function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
+function createStyles(
+  colors: ReturnType<typeof useTheme>["colors"],
+  mode: "dark" | "light",
+) {
   return StyleSheet.create({
     content: {
       gap: 12,
@@ -163,7 +166,8 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       opacity: 0.92,
     },
     imageOverlay: {
-      backgroundColor: "rgba(2, 6, 23, 0.52)",
+      backgroundColor:
+        mode === "light" ? "rgba(240,240,245,0.42)" : "rgba(2, 6, 23, 0.52)",
     },
     iconWrap: {
       alignItems: "center",

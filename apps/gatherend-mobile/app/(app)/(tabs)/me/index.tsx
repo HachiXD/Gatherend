@@ -1,74 +1,68 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { useRouter } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useRouter, useFocusEffect } from "expo-router";
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
+import { useCallback, useRef } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useProfile } from "@/src/features/profile/providers/current-profile-provider";
+import {
+  getFgFromBg,
+  getCardStyle,
+  ProfileCardInlineView,
+} from "@/src/features/profile/components/profile-card-inline-view";
 
-import { useTheme } from "@/src/theme/theme-provider";
 import { Text } from "@/src/components/app-typography";
 
 const BANNER_HEIGHT = 180;
-const AVATAR_SIZE = 80;
+const AVATAR_SIZE = 120;
 const AVATAR_OVERLAP = AVATAR_SIZE / 2;
+
+function getUsernameColorHex(value: unknown): string | null {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const c = value as { type?: unknown; color?: unknown };
+    if (c.type === "solid" && typeof c.color === "string") return c.color;
+  }
+  return null;
+}
+
+function hexToRgba(hex: string, alpha: number) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b))
+    return `rgba(0,0,0,${alpha})`;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
 
 function getInitial(username: string) {
   return username.trim().charAt(0).toUpperCase() || "?";
 }
 
-function StatPill({ value, label }: { value: string | number; label: string }) {
-  return (
-    <View style={styles.statPill}>
-      <Text style={styles.statPillValue}>{value}</Text>
-      <Text style={styles.statPillLabel}>{label}</Text>
-    </View>
-  );
-}
-
-function SectionRow({
-  icon,
-  label,
-  value,
-  last = false,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  value: string;
-  last?: boolean;
-}) {
-  return (
-    <View style={[styles.sectionRow, last ? styles.sectionRowLast : null]}>
-      <View style={styles.sectionRowIcon}>
-        <Ionicons color="#94a3b8" name={icon} size={17} />
-      </View>
-      <View style={styles.sectionRowCopy}>
-        <Text style={styles.sectionRowLabel}>{label}</Text>
-        <Text numberOfLines={1} style={styles.sectionRowValue}>
-          {value}
-        </Text>
-      </View>
-    </View>
-  );
-}
-
 export default function MeScreen() {
   const router = useRouter();
   const profile = useProfile();
+  const navigating = useRef(false);
 
-  const { colors } = useTheme();
+  useFocusEffect(useCallback(() => {
+    navigating.current = false;
+  }, []));
+
   const insets = useSafeAreaInsets();
+
+  const cardStyle = getCardStyle(profile.profileCardConfig);
+  const bgFg = getFgFromBg(cardStyle.bg);
+  const boxFg = getFgFromBg(cardStyle.box);
 
   const avatarUrl = profile.avatarAsset?.url;
   const bannerUrl = profile.bannerAsset?.url;
-  const languageSummary =
-    profile.languages.length > 0 ? profile.languages.join(", ") : "Sin idiomas";
-  const tagSummary =
-    profile.profileTags.length > 0
-      ? profile.profileTags.slice(0, 3).join(", ")
-      : "Sin tags";
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
+    <View style={[styles.root, { backgroundColor: cardStyle.bg }]}>
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
@@ -78,8 +72,7 @@ export default function MeScreen() {
       >
         {/* ── Hero: banner + avatar centrado ── */}
         <View style={styles.hero}>
-          {/* Banner */}
-          <View style={[styles.banner, { backgroundColor: colors.bgTertiary }]}>
+          <View style={[styles.banner, { backgroundColor: cardStyle.box }]}>
             {bannerUrl ? (
               <Image
                 contentFit="cover"
@@ -87,28 +80,25 @@ export default function MeScreen() {
                 style={StyleSheet.absoluteFill}
               />
             ) : null}
-            {/* Settings button top-right */}
             <Pressable
               hitSlop={12}
               style={({ pressed }) => [
                 styles.settingsBtn,
                 {
-                  backgroundColor: colors.bgSecondary,
-                  borderColor: colors.borderPrimary,
-                  opacity: pressed ? 0.75 : 1,
+                  backgroundColor: hexToRgba(cardStyle.bg, 1),
+                  borderColor: "rgba(255,255,255,0.25)",
                 },
               ]}
-              onPress={() => router.push("/(app)/(tabs)/me/settings")}
+              onPress={() => {
+                if (navigating.current) return;
+                navigating.current = true;
+                router.push("/(app)/(tabs)/me/settings");
+              }}
             >
-              <Ionicons
-                color={colors.textSubtle}
-                name="settings-outline"
-                size={26}
-              />
+              <Ionicons color="#ffffff" name="settings-outline" size={26} />
             </Pressable>
           </View>
 
-          {/* Avatar centered over banner bottom edge */}
           <View style={styles.avatarWrapper}>
             {avatarUrl ? (
               <Image
@@ -116,10 +106,7 @@ export default function MeScreen() {
                 source={{ uri: avatarUrl }}
                 style={[
                   styles.avatar,
-                  {
-                    borderColor: colors.bgPrimary,
-                    backgroundColor: colors.bgSecondary,
-                  },
+                  { borderColor: cardStyle.bg, backgroundColor: cardStyle.box },
                 ]}
               />
             ) : (
@@ -127,18 +114,10 @@ export default function MeScreen() {
                 style={[
                   styles.avatar,
                   styles.avatarFallback,
-                  {
-                    borderColor: colors.bgPrimary,
-                    backgroundColor: colors.bgSecondary,
-                  },
+                  { borderColor: cardStyle.bg, backgroundColor: cardStyle.box },
                 ]}
               >
-                <Text
-                  style={[
-                    styles.avatarFallbackText,
-                    { color: colors.textPrimary },
-                  ]}
-                >
+                <Text style={[styles.avatarFallbackText, { color: boxFg.fg }]}>
                   {getInitial(profile.username)}
                 </Text>
               </View>
@@ -148,102 +127,102 @@ export default function MeScreen() {
 
         {/* ── Identity ── */}
         <View style={styles.identity}>
-          <Text
-            numberOfLines={1}
-            style={[styles.username, { color: colors.textPrimary }]}
-          >
+          <Text numberOfLines={1} style={[styles.username, { color: bgFg.fg }]}>
             {profile.username}
             {profile.discriminator ? (
-              <Text style={[styles.discriminator, { color: colors.textMuted }]}>
+              <Text style={[styles.discriminator, { color: bgFg.fgSubtle }]}>
                 {" "}
                 /{profile.discriminator}
               </Text>
             ) : null}
           </Text>
-          {profile.badge ? (
-            <View
-              style={[
-                styles.badgePill,
-                {
-                  backgroundColor: colors.bgTertiary,
-                  borderColor: colors.borderPrimary,
-                },
-              ]}
-            >
-              <Text style={[styles.badgeText, { color: colors.textSubtle }]}>
-                {profile.badge}
-              </Text>
+          {profile.badge
+            ? (() => {
+                const pillColor =
+                  getUsernameColorHex(profile.usernameColor) ?? cardStyle.box;
+                const pillFg = getFgFromBg(pillColor);
+                return (
+                  <View
+                    style={[
+                      styles.badgePill,
+                      { backgroundColor: pillColor, borderColor: bgFg.border },
+                    ]}
+                  >
+                    <Text style={[styles.badgeText, { color: pillFg.fg }]}>
+                      {profile.badge}
+                    </Text>
+                  </View>
+                );
+              })()
+            : null}
+          {profile.profileTags.length > 0 ? (
+            <View style={styles.tagsRow}>
+              {profile.profileTags.slice(0, 4).map((tag) => (
+                <View
+                  key={tag}
+                  style={[
+                    styles.tag,
+                    {
+                      backgroundColor: cardStyle.box,
+                      borderColor: bgFg.border,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.tagText, { color: boxFg.fgSubtle }]}>
+                    {tag}
+                  </Text>
+                </View>
+              ))}
             </View>
           ) : null}
         </View>
 
-        {/* ── Edit button ── */}
-        <Pressable
-          style={({ pressed }) => [
-            styles.editBtn,
-            {
-              backgroundColor: colors.bgTertiary,
-              borderColor: colors.borderPrimary,
-              opacity: pressed ? 0.8 : 1,
-            },
-          ]}
-          onPress={() => router.push("/(app)/(tabs)/me/edit-profile")}
-        >
-          <Ionicons color={colors.textSubtle} name="create-outline" size={16} />
-          <Text style={[styles.editBtnText, { color: colors.textSubtle }]}>
-            Editar perfil
-          </Text>
-        </Pressable>
-
-        {/* ── Stats strip ── */}
-        <View
-          style={[
-            styles.statsStrip,
-            {
-              backgroundColor: colors.bgSecondary,
-              borderColor: colors.borderPrimary,
-            },
-          ]}
-        >
-          <StatPill label="Reputación" value={profile.reputationScore} />
-          <View
-            style={[
-              styles.statDivider,
-              { backgroundColor: colors.borderPrimary },
+        {/* ── Edit buttons ── */}
+        <View style={styles.editBtnsRow}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.editBtn,
+              {
+                backgroundColor: cardStyle.box,
+                borderColor: bgFg.border,
+                opacity: pressed ? 0.8 : 1,
+              },
             ]}
-          />
-          <StatPill label="Idiomas" value={profile.languages.length} />
-          <View
-            style={[
-              styles.statDivider,
-              { backgroundColor: colors.borderPrimary },
+            onPress={() => {
+                if (navigating.current) return;
+                navigating.current = true;
+                router.push("/(app)/(tabs)/me/edit-profile");
+              }}
+          >
+            <Ionicons color={boxFg.fg} name="create-outline" size={16} />
+            <Text style={[styles.editBtnText, { color: boxFg.fg }]}>
+              Editar perfil
+            </Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [
+              styles.editBtn,
+              {
+                backgroundColor: cardStyle.box,
+                borderColor: bgFg.border,
+                opacity: pressed ? 0.8 : 1,
+              },
             ]}
-          />
-          <StatPill label="Tags" value={profile.profileTags.length} />
+            onPress={() => {
+                if (navigating.current) return;
+                navigating.current = true;
+                router.push("/(app)/(tabs)/me/edit-wall");
+              }}
+          >
+            <Ionicons color={boxFg.fg} name="albums-outline" size={16} />
+            <Text style={[styles.editBtnText, { color: boxFg.fg }]}>
+              Editar muro
+            </Text>
+          </Pressable>
         </View>
 
-        {/* ── Info section ── */}
-        <View
-          style={[
-            styles.section,
-            {
-              backgroundColor: colors.bgSecondary,
-              borderColor: colors.borderPrimary,
-            },
-          ]}
-        >
-          <SectionRow
-            icon="language-outline"
-            label="Idiomas"
-            value={languageSummary}
-          />
-          <SectionRow
-            icon="pricetag-outline"
-            label="Tags"
-            value={tagSummary}
-            last
-          />
-        </View>
+        {/* ── Card content + stats + info ── */}
+        <ProfileCardInlineView profile={profile} />
       </ScrollView>
     </View>
   );
@@ -303,7 +282,7 @@ const styles = StyleSheet.create({
   identity: {
     alignItems: "center",
     gap: 6,
-    marginTop: 6,
+    marginTop: -12,
   },
   username: {
     fontSize: 22,
@@ -325,11 +304,32 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
   },
+  tagsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    justifyContent: "center",
+    marginTop: 2,
+  },
+  tag: {
+    borderRadius: 20,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  tagText: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
 
-  // Edit button
+  // Edit buttons
+  editBtnsRow: {
+    flexDirection: "row",
+    gap: 10,
+    justifyContent: "center",
+  },
   editBtn: {
     alignItems: "center",
-    alignSelf: "center",
     borderRadius: 14,
     borderWidth: 1,
     flexDirection: "row",
@@ -342,84 +342,5 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  // Stats strip
-  statsStrip: {
-    borderRadius: 16,
-    borderWidth: 1,
-    flexDirection: "row",
-    paddingVertical: 14,
-  },
-  statPill: {
-    alignItems: "center",
-    flex: 1,
-    gap: 2,
-  },
-  statPillValue: {
-    color: "#f8fafc",
-    fontSize: 20,
-    fontWeight: "800",
-  },
-  statPillLabel: {
-    color: "#64748b",
-    fontSize: 11,
-    fontWeight: "700",
-    textTransform: "uppercase",
-  },
-  statDivider: {
-    width: 1,
-  },
 
-  // Section rows
-  section: {
-    borderRadius: 16,
-    borderWidth: 1,
-    overflow: "hidden",
-  },
-  sectionRow: {
-    alignItems: "center",
-    borderBottomColor: "transparent",
-    borderBottomWidth: 1,
-    flexDirection: "row",
-    gap: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-  },
-  sectionRowLast: {
-    borderBottomWidth: 0,
-  },
-  sectionRowIcon: {
-    alignItems: "center",
-    justifyContent: "center",
-    width: 22,
-  },
-  sectionRowCopy: {
-    flex: 1,
-    gap: 2,
-    minWidth: 0,
-  },
-  sectionRowLabel: {
-    color: "#64748b",
-    fontSize: 11,
-    fontWeight: "700",
-    textTransform: "uppercase",
-  },
-  sectionRowValue: {
-    color: "#f8fafc",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-
-  // Sign out
-  signOutButton: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 8,
-    justifyContent: "center",
-    paddingVertical: 6,
-  },
-  signOutText: {
-    color: "#fda4af",
-    fontSize: 14,
-    fontWeight: "700",
-  },
 });

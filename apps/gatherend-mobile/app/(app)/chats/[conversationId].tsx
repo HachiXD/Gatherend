@@ -1,10 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { FlashList, FlashListRef } from "@shopify/flash-list";
-import {
-  Redirect,
-  useLocalSearchParams,
-  useRouter,
-} from "expo-router";
+import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
 import {
   memo,
   useCallback,
@@ -12,6 +8,7 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
 import {
   ActivityIndicator,
@@ -22,17 +19,26 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ChatInput, type ChatInputHandle } from "@/src/features/chat/components/chat-input";
+import {
+  ChatInput,
+  type ChatInputHandle,
+} from "@/src/features/chat/components/chat-input";
 import {
   ChatItem,
   getChatDateSeparatorLabel,
 } from "@/src/features/chat/components/chat-item";
 import { EmojiPanel } from "@/src/features/chat/components/emoji-panel";
 import { GoToRecentButton } from "@/src/features/chat/components/go-to-recent-button";
+import { MessageActionsSheet } from "@/src/features/chat/components/message-actions-sheet";
 import { StickerPanel } from "@/src/features/chat/components/sticker-panel";
-import type { ChatMessage } from "@/src/features/chat/chat-message";
+import { UserProfileSheet } from "@/src/features/chat/components/user-profile-sheet";
+import type { ChatMessage } from "@/src/features/chat/lib/chat-message";
+import type { ClientProfileSummary } from "@/src/features/chat/types";
 import { useChatAccessoryPanel } from "@/src/features/chat/hooks/use-chat-accessory-panel";
-import { useChatMessageWindow, type FetchPageFn } from "@/src/features/chat/hooks/use-chat-message-window";
+import {
+  useChatMessageWindow,
+  type FetchPageFn,
+} from "@/src/features/chat/hooks/use-chat-message-window";
 import { useConversation } from "@/src/features/conversations/hooks/use-conversation";
 import { getDirectMessages } from "@/src/features/conversations/application/get-direct-messages";
 import { useConversationRoomSubscription } from "@/src/features/conversations/hooks/use-conversation-room-subscription";
@@ -50,6 +56,97 @@ import { useVoiceStore } from "@/src/features/voice/store/use-voice-store";
 import { useTheme } from "@/src/theme/theme-provider";
 import { Text } from "@/src/components/app-typography";
 import { UserAvatar } from "@/src/components/user-avatar";
+import {
+  ReportScreen,
+  type ReportCategoryConfig,
+} from "@/src/features/report/components/report-screen";
+import type { ReportTargetType } from "@/src/features/report/api/submit-report";
+
+const MESSAGE_REPORT_CATEGORIES: ReportCategoryConfig[] = [
+  {
+    value: "CSAM",
+    label: "Seguridad infantil",
+    description: "Involucra a menores de forma inapropiada",
+  },
+  {
+    value: "SEXUAL_CONTENT",
+    label: "Contenido sexual",
+    description: "Contiene material explicito o no solicitado",
+  },
+  {
+    value: "HARASSMENT",
+    label: "Acoso",
+    description: "Amenazas o comportamiento intimidatorio",
+  },
+  {
+    value: "HATE_SPEECH",
+    label: "Discurso de odio",
+    description: "Promueve odio contra grupos o personas",
+  },
+  {
+    value: "SPAM",
+    label: "Spam",
+    description: "Contenido repetitivo, enganoso o no solicitado",
+  },
+  {
+    value: "IMPERSONATION",
+    label: "Suplantacion de identidad",
+    description: "Se hace pasar por otra persona",
+  },
+  {
+    value: "OTHER",
+    label: "Otro",
+    description: "Razon no listada anteriormente",
+  },
+];
+
+const PROFILE_REPORT_CATEGORIES: ReportCategoryConfig[] = [
+  {
+    value: "CSAM",
+    label: "Seguridad infantil",
+    description: "El perfil involucra a menores de forma inapropiada",
+  },
+  {
+    value: "SEXUAL_CONTENT",
+    label: "Contenido sexual",
+    description: "El perfil contiene material explicito",
+  },
+  {
+    value: "HARASSMENT",
+    label: "Acoso",
+    description: "Este usuario acosa o intimida a otros",
+  },
+  {
+    value: "HATE_SPEECH",
+    label: "Discurso de odio",
+    description: "Promueve odio contra grupos o personas",
+  },
+  {
+    value: "SPAM",
+    label: "Spam",
+    description: "Cuenta falsa o con actividad de spam",
+  },
+  {
+    value: "IMPERSONATION",
+    label: "Suplantacion de identidad",
+    description: "Se hace pasar por otra persona o entidad",
+  },
+  {
+    value: "OTHER",
+    label: "Otro",
+    description: "Razon no listada anteriormente",
+  },
+];
+
+type ReportConfig = {
+  title: string;
+  previewLabel: string;
+  categories: ReportCategoryConfig[];
+  targetType: ReportTargetType;
+  targetId: string;
+  targetOwnerId?: string;
+  snapshot?: Record<string, unknown>;
+};
 
 const CHAT_DRAW_DISTANCE = 1800;
 const PINNED_TO_BOTTOM_OFFSET = 48;
@@ -88,75 +185,81 @@ function ChatPaginationLoader({ placement }: { placement: "top" | "bottom" }) {
   );
 }
 
-const ConversationComposerAccessory = memo(function ConversationComposerAccessory({
-  conversationId,
-  profileId,
-  windowKey,
-}: {
-  conversationId: string;
-  profileId: string;
-  windowKey: string;
-}) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
-  const chatInputRef = useRef<ChatInputHandle>(null);
-  const {
-    activePanel,
-    closePanel,
-    isComposerCompact,
-    onInputFocus,
-    openPanel,
-    panelAnimatedStyle,
-  } = useChatAccessoryPanel();
+const ConversationComposerAccessory = memo(
+  function ConversationComposerAccessory({
+    conversationId,
+    profileId,
+    replyTo,
+    onClearReply,
+    windowKey,
+  }: {
+    conversationId: string;
+    profileId: string;
+    replyTo: ChatMessage | null;
+    onClearReply: () => void;
+    windowKey: string;
+  }) {
+    const { colors } = useTheme();
+    const styles = useMemo(() => createStyles(colors), [colors]);
+    const chatInputRef = useRef<ChatInputHandle>(null);
+    const {
+      activePanel,
+      closePanel,
+      isComposerCompact,
+      onInputFocus,
+      openPanel,
+      panelAnimatedStyle,
+    } = useChatAccessoryPanel();
 
-  return (
-    <>
-      <ChatInput
-        ref={chatInputRef}
-        context={{ type: "conversation", conversationId }}
-        isComposerCompact={isComposerCompact}
-        bottomInset={0}
-        windowKey={windowKey}
-        onEmojiPickerPress={() => {
-          if (activePanel === "emoji") {
-            closePanel();
-          } else {
-            openPanel("emoji");
-          }
-        }}
-        onInputFocus={() => {
-          onInputFocus();
-        }}
-        onStickerPickerPress={() => {
-          if (activePanel === "sticker") {
-            closePanel();
-          } else {
-            openPanel("sticker");
-          }
-        }}
-      />
-
-      <View style={[styles.pickerPanel, panelAnimatedStyle]}>
-        {activePanel === "sticker" ? (
-          <StickerPanel
-            profileId={profileId}
-            onSelect={(sticker) => {
-              void chatInputRef.current?.sendSticker(sticker);
+    return (
+      <>
+        <ChatInput
+          ref={chatInputRef}
+          context={{ type: "conversation", conversationId }}
+          isComposerCompact={isComposerCompact}
+          replyTo={replyTo}
+          onClearReply={onClearReply}
+          windowKey={windowKey}
+          onEmojiPickerPress={() => {
+            if (activePanel === "emoji") {
               closePanel();
-            }}
-          />
-        ) : null}
-        {activePanel === "emoji" ? (
-          <EmojiPanel
-            onSelect={(emoji) => {
-              chatInputRef.current?.appendEmoji(emoji);
-            }}
-          />
-        ) : null}
-      </View>
-    </>
-  );
-});
+            } else {
+              openPanel("emoji");
+            }
+          }}
+          onInputFocus={() => {
+            onInputFocus();
+          }}
+          onStickerPickerPress={() => {
+            if (activePanel === "sticker") {
+              closePanel();
+            } else {
+              openPanel("sticker");
+            }
+          }}
+        />
+
+        <View style={[styles.pickerPanel, panelAnimatedStyle]}>
+          {activePanel === "sticker" ? (
+            <StickerPanel
+              profileId={profileId}
+              onSelect={(sticker) => {
+                void chatInputRef.current?.sendSticker(sticker);
+              }}
+            />
+          ) : null}
+          {activePanel === "emoji" ? (
+            <EmojiPanel
+              onSelect={(emoji) => {
+                chatInputRef.current?.appendEmoji(emoji);
+              }}
+            />
+          ) : null}
+        </View>
+      </>
+    );
+  },
+);
 
 export default function ConversationScreen() {
   const router = useRouter();
@@ -168,6 +271,14 @@ export default function ConversationScreen() {
   const pinnedRef = useRef(true);
   const lastScrollMetricsRef = useRef<FlashListScrollMetrics | null>(null);
   const pendingWindowManage = useRef<"up" | "down" | null>(null);
+  const [listVisible, setListVisible] = useState(false);
+  const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
+  const [selectedMessage, setSelectedMessage] = useState<ChatMessage | null>(
+    null,
+  );
+  const [selectedAuthor, setSelectedAuthor] =
+    useState<ClientProfileSummary | null>(null);
+  const [reportConfig, setReportConfig] = useState<ReportConfig | null>(null);
 
   const { conversationId } = useLocalSearchParams<{
     conversationId?: string;
@@ -258,8 +369,11 @@ export default function ConversationScreen() {
     );
   }, [conversation, resolvedConversationId, startConnecting]);
 
+  const reversedMessages = messages;
+
   useEffect(() => {
     pinnedRef.current = true;
+    setListVisible(false);
   }, [windowKey]);
 
   useEffect(() => {
@@ -292,6 +406,11 @@ export default function ConversationScreen() {
     flashListRef.current?.scrollToEnd({ animated: false });
     pinnedRef.current = true;
   }, []);
+
+  const handleListLoad = useCallback(() => {
+    scrollToBottom();
+    setListVisible(true);
+  }, [scrollToBottom]);
 
   const newestMessageId = messages[messages.length - 1]?.id;
   useLayoutEffect(() => {
@@ -342,7 +461,8 @@ export default function ConversationScreen() {
 
   const renderMessageItem = useCallback(
     ({ item, index }: { item: ChatMessage; index: number }) => {
-      const previous = messages[index - 1] ?? null;
+      // Without inverted, index-1 is the older message rendered above.
+      const previous = reversedMessages[index - 1] ?? null;
 
       return (
         <ChatItem
@@ -353,15 +473,13 @@ export default function ConversationScreen() {
           )}
           isCompact={compactById[item.id] ?? false}
           message={item}
+          onLongPress={(message) => setSelectedMessage(message)}
+          onAvatarPress={(author) => setSelectedAuthor(author)}
         />
       );
     },
-    [compactById, messages, profile.id],
+    [compactById, reversedMessages, profile.id],
   );
-
-  const handleListLoad = useCallback(() => {
-    scrollToBottom();
-  }, [scrollToBottom]);
 
   const handleEndReachedEvent = useCallback(() => {
     void handleEndReached();
@@ -513,21 +631,22 @@ export default function ConversationScreen() {
                   </Text>
                 </View>
               ) : (
-                <View style={styles.listContainer}>
+                <View style={[styles.listContainer, { opacity: listVisible ? 1 : 0 }]}>
                   <FlashList
                     key={windowKey}
                     ref={flashListRef}
                     contentContainerStyle={styles.messagesList}
-                    data={messages}
+                    data={reversedMessages}
                     drawDistance={CHAT_DRAW_DISTANCE}
                     extraData={compactById}
+                    initialScrollIndex={reversedMessages.length > 0 ? reversedMessages.length - 1 : undefined}
                     keyExtractor={keyExtractor}
-                    maintainVisibleContentPosition={
-                      MAINTAIN_VISIBLE_CONTENT_POSITION
-                    }
                     onEndReached={handleEndReachedEvent}
                     onEndReachedThreshold={0.4}
                     onLoad={handleListLoad}
+                    maintainVisibleContentPosition={
+                      MAINTAIN_VISIBLE_CONTENT_POSITION
+                    }
                     onScroll={handleListScroll}
                     onStartReached={handleStartReachedEvent}
                     onStartReachedThreshold={0.4}
@@ -557,12 +676,94 @@ export default function ConversationScreen() {
               <ConversationComposerAccessory
                 conversationId={resolvedConversationId}
                 profileId={profile.id}
+                replyTo={replyTo}
+                onClearReply={() => setReplyTo(null)}
                 windowKey={windowKey}
               />
             </>
           ) : null}
         </View>
       </View>
+
+      <UserProfileSheet
+        visible={selectedAuthor !== null}
+        author={selectedAuthor}
+        currentProfileId={profile.id}
+        onClose={() => setSelectedAuthor(null)}
+        onReport={() => {
+          const a = selectedAuthor;
+          setSelectedAuthor(null);
+          setReportConfig({
+            title: "Reportar usuario",
+            previewLabel: a
+              ? `${a.username}${a.discriminator ? `#${a.discriminator}` : ""}`
+              : "",
+            categories: PROFILE_REPORT_CATEGORIES,
+            targetType: "PROFILE",
+            targetId: a?.id ?? "",
+            targetOwnerId: a?.id,
+            snapshot: {
+              username: a?.username,
+              discriminator: a?.discriminator,
+            },
+          });
+        }}
+      />
+
+      <MessageActionsSheet
+        visible={selectedMessage !== null}
+        message={selectedMessage}
+        currentProfileId={profile.id}
+        windowKey={windowKey}
+        context={{
+          type: "conversation",
+          conversationId: resolvedConversationId,
+        }}
+        onClose={() => setSelectedMessage(null)}
+        onReply={(message) => {
+          setReplyTo(message);
+          setSelectedMessage(null);
+        }}
+        onReport={(message) => {
+          const content = message.content ?? "";
+          setSelectedMessage(null);
+          setReportConfig({
+            title: "Reportar mensaje",
+            previewLabel:
+              content.length > 120
+                ? `${content.slice(0, 120)}...`
+                : content || "Mensaje sin texto",
+            categories: MESSAGE_REPORT_CATEGORIES,
+            targetType: "DIRECT_MESSAGE",
+            targetId: message.id,
+            targetOwnerId:
+              "senderId" in message
+                ? (message.senderId ?? undefined)
+                : undefined,
+            snapshot: {
+              content: message.content,
+              senderUsername:
+                "sender" in message ? message.sender?.username : undefined,
+              senderDiscriminator:
+                "sender" in message ? message.sender?.discriminator : undefined,
+            },
+          });
+        }}
+      />
+
+      {reportConfig ? (
+        <ReportScreen
+          visible
+          onClose={() => setReportConfig(null)}
+          title={reportConfig.title}
+          previewLabel={reportConfig.previewLabel}
+          categories={reportConfig.categories}
+          targetType={reportConfig.targetType}
+          targetId={reportConfig.targetId}
+          targetOwnerId={reportConfig.targetOwnerId}
+          snapshot={reportConfig.snapshot}
+        />
+      ) : null}
     </View>
   );
 }
@@ -586,8 +787,8 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       flex: 1,
     },
     messagesList: {
-      paddingBottom: 0,
-      paddingTop: 16,
+      paddingBottom: 16,
+      paddingTop: 0,
     },
     paginationLoader: {
       alignItems: "center",

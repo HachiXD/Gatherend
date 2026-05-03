@@ -1,31 +1,21 @@
-import { expressFetch } from "@/src/services/express/express-fetch";
+import {
+  nextApiFetch,
+  readNextApiError,
+} from "@/src/services/next-api/next-api-fetch";
 
 export async function joinChannel({
   boardId,
   channelId,
-  profileId,
 }: {
   boardId: string;
   channelId: string;
-  profileId: string;
 }) {
-  const response = await expressFetch(
-    `/boards/${boardId}/channels/${channelId}/join`,
-    {
-      method: "POST",
-      profileId,
-    },
+  const response = await nextApiFetch(
+    `/api/boards/${boardId}/channels/${channelId}/join`,
+    { method: "POST" },
   );
 
   if (!response.ok) {
-    const errorPayload = await response
-      .json()
-      .catch(() => ({ error: "Unknown error" }));
-
-    throw new Error(
-      typeof errorPayload?.error === "string"
-        ? errorPayload.error
-        : "Failed to join channel",
-    );
+    throw new Error(await readNextApiError(response, "Failed to join channel"));
   }
 }

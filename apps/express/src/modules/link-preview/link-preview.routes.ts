@@ -390,13 +390,29 @@ router.get("/", async (req, res) => {
 
     const hostname = canonicalizeHostname(parsedUrl.hostname);
 
+    // Rewrite youtu.be short links to full youtube.com URLs so the rich
+    // preview fetch hits youtube.com and gets OG tags (including the thumbnail).
+    // This is safe because youtu.be is in RICH_PREVIEW_HOSTS and we only
+    // rewrite based on the path — no HTTP redirect is followed.
+    if (hostname === "youtu.be") {
+      const videoId = parsedUrl.pathname.replace(/^\//, "").split("/")[0];
+      if (videoId) {
+        const rewritten = new URL("https://www.youtube.com/watch");
+        rewritten.searchParams.set("v", videoId);
+        parsedUrl = rewritten;
+      }
+    }
+
+    const resolvedHostname = canonicalizeHostname(parsedUrl.hostname);
+
     // Default behavior: SSRF-safe basic preview for any URL (no server-side fetch).
-    if (!RICH_PREVIEW_HOSTS.has(hostname)) {
+    if (!RICH_PREVIEW_HOSTS.has(resolvedHostname)) {
       return res.json(buildBasicPreview(parsedUrl, { includeFavicon: false }));
     }
 
     // Rich preview: only for allowlisted hosts.
-    // Check cache first.
+    // Cache key uses the original user-supplied URL so repeated youtu.be requests
+    // also hit the cache after the first rewrite.
     const cached = cacheGet(url);
     if (cached) {
       return res.json(cached);
@@ -408,9 +424,10 @@ router.get("/", async (req, res) => {
 
     try {
       // Defense-in-depth: prevent fetching private/local addresses even for allowlisted hosts.
-      await assertPublicHost(hostname);
+      await assertPublicHost(resolvedHostname);
 
-      const response = await fetch(url, {
+      const fetchUrl = parsedUrl.toString();
+      const response = await fetch(fetchUrl, {
         signal: controller.signal,
         headers: {
           "User-Agent":
@@ -446,7 +463,7 @@ router.get("/", async (req, res) => {
       }
 
       const html = await readHtmlWithLimit(response);
-      const data = extractMetadata(html, url);
+      const data = extractMetadata(html, fetchUrl);
 
       cacheSet(url, data);
       return res.json(data);
@@ -459,7 +476,7 @@ router.get("/", async (req, res) => {
       // Safe fallback: never error the UI for preview failures; return a basic preview.
       // Avoid logging full user URLs; log host only.
       logger.warn(
-        `[LINK_PREVIEW] Rich preview failed for host=${hostname}: ${String(
+        `[LINK_PREVIEW] Rich preview failed for host=${resolvedHostname}: ${String(
           fetchError?.message || fetchError,
         )}`,
       );

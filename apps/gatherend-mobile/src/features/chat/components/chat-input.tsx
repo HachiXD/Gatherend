@@ -21,7 +21,7 @@ import {
   createTempId,
   useSendChannelMessage,
 } from "../hooks/use-send-channel-message";
-import type { ChatMessage } from "../chat-message";
+import type { ChatMessage } from "../lib/chat-message";
 import { getMessageAuthor } from "../utils/message-author";
 import {
   createTempDirectMessageId,

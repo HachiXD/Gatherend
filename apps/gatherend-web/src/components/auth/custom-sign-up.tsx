@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -13,6 +14,7 @@ import { useTranslation } from "@/i18n";
 import { useRateLimit, RATE_LIMIT_CONFIGS } from "@/hooks/use-rate-limit";
 import { checkUserBanStatus } from "@/lib/check-ban-client";
 import { signIn, signUp } from "@/lib/better-auth-client";
+import { prefetchCurrentProfile } from "@/lib/current-profile-cache";
 import { generateRandomUsername } from "@/lib/username/random";
 
 type SignUpStep = "details" | "verification";
@@ -50,6 +52,7 @@ function buildDefaultName(email: string): string {
 
 export const CustomSignUp = () => {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { t } = useTranslation();
 
   const {
@@ -139,6 +142,7 @@ export const CustomSignUp = () => {
           router.push("/banned");
           return;
         }
+        await prefetchCurrentProfile(queryClient);
         router.push("/boards");
         return;
       }

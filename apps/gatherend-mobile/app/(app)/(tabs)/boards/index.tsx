@@ -1,12 +1,16 @@
-import { useRouter } from "expo-router";
-import { useMemo } from "react";
+import { useRouter, useFocusEffect } from "expo-router";
+import { useCallback, useMemo, useRef } from "react";
 import {
   ActivityIndicator,
   Pressable,
+  StatusBar,
   StyleSheet,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  initialWindowMetrics,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { BoardsGrid } from "@/src/features/boards/components/boards-grid";
 import { useUserBoards } from "@/src/features/boards/hooks/use-user-boards";
 import { useTheme } from "@/src/theme/theme-provider";
@@ -14,7 +18,17 @@ import { Text } from "@/src/components/app-typography";
 
 export default function BoardsScreen() {
   const router = useRouter();
+  const navigating = useRef(false);
+
+  useFocusEffect(useCallback(() => {
+    navigating.current = false;
+  }, []));
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const topInset = Math.max(
+    insets.top,
+    initialWindowMetrics?.insets.top ?? StatusBar.currentHeight ?? 0,
+  );
   const styles = useMemo(() => createStyles(colors), [colors]);
   const {
     data: boards = [],
@@ -26,14 +40,18 @@ export default function BoardsScreen() {
   const hasBoards = boards.length > 0;
 
   return (
-    <SafeAreaView edges={["top", "left", "right"]} style={styles.safeArea}>
+    <View style={[styles.safeArea, { paddingTop: topInset }]}>
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>Mis Boards</Text>
         </View>
 
         <Pressable
-          onPress={() => router.push("/modal/create-board")}
+          onPress={() => {
+            if (navigating.current) return;
+            navigating.current = true;
+            router.push("/modal/create-board");
+          }}
           style={({ pressed }) => [
             styles.createButton,
             pressed ? styles.createButtonPressed : null,
@@ -89,7 +107,7 @@ export default function BoardsScreen() {
           ) : null}
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -36,6 +36,7 @@ import {
   generatePaletteFromBase,
   generateLightPaletteFromBase,
   generateGrayPaletteFromBase,
+  hexToRgba,
   hexToHsl,
 } from "@/src/theme/utils";
 import { Text } from "@/src/components/app-typography";
@@ -111,12 +112,10 @@ export default function BoardShellLayout() {
   const { data: userBoards = [], isFetched: userBoardsFetched } =
     useUserBoards();
   const boardDisplayAsset = board?.bannerAsset ?? board?.imageAsset ?? null;
-  const boardHeaderImageUrl = board
-    ? getBoardImageUrl(board.imageAsset?.url, board.id, board.name, 512)
-    : null;
   const boardImageUrl = board
     ? getBoardImageUrl(boardDisplayAsset?.url, board.id, board.name, 512)
     : null;
+  const hasBoardHeaderImage = Boolean(board?.imageAsset?.url);
 
   const boardColors = useMemo(() => {
     const raw =
@@ -180,8 +179,10 @@ export default function BoardShellLayout() {
     BOARD_SECTION_TABS.find((tab) => tab.key === currentSection)?.label ??
     "Chats";
   const settingsSubviewTitle = getSettingsSubviewTitle(pathname);
-  const boardTitle = board?.name ?? (boardLoading ? "Loading..." : "Board");
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  // DEBUG: trace board query state changes
+
+  const boardTitle = board?.name ?? "Loading...";
+  const styles = useMemo(() => createStyles(colors, mode), [colors, mode]);
 
   const handleQuickAction = useCallback(
     (key: BoardQuickActionKey) => {
@@ -345,22 +346,13 @@ export default function BoardShellLayout() {
               }}
               style={({ pressed }) => [
                 styles.menuButton,
+                hasBoardHeaderImage
+                  ? { backgroundColor: hexToRgba(colors.bgQuaternary, 0.5) }
+                  : null,
                 pressed ? styles.menuButtonPressed : null,
               ]}
             >
-              {boardHeaderImageUrl ? (
-                <Image
-                  contentFit="cover"
-                  source={{ uri: boardHeaderImageUrl }}
-                  style={styles.menuButtonImage}
-                />
-              ) : (
-                <View style={styles.menuButtonFallback}>
-                  <Text style={styles.menuButtonFallbackText}>
-                    {getBoardInitial(board?.name)}
-                  </Text>
-                </View>
-              )}
+              <Ionicons color={colors.textPrimary} name="menu" size={22} />
             </Pressable>
           )}
 
@@ -579,7 +571,10 @@ export default function BoardShellLayout() {
   );
 }
 
-function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
+function createStyles(
+  colors: ReturnType<typeof useTheme>["colors"],
+  mode: "dark" | "light",
+) {
   return StyleSheet.create({
     safeArea: {
       flex: 1,
@@ -610,7 +605,8 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     headerBackgroundOverlay: {
       ...StyleSheet.absoluteFillObject,
-      backgroundColor: "rgba(0,0,0,0.46)",
+      backgroundColor:
+        mode === "light" ? "rgba(240,240,245,0.42)" : "rgba(0,0,0,0.46)",
     },
     menuButton: {
       alignItems: "center",
@@ -623,23 +619,6 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       overflow: "hidden",
       zIndex: 1,
       width: 44,
-    },
-    menuButtonImage: {
-      backgroundColor: colors.bgQuaternary,
-      height: "100%",
-      width: "100%",
-    },
-    menuButtonFallback: {
-      alignItems: "center",
-      backgroundColor: colors.avatarFallbackBg,
-      height: "100%",
-      justifyContent: "center",
-      width: "100%",
-    },
-    menuButtonFallbackText: {
-      color: colors.textLight,
-      fontSize: 14,
-      fontWeight: "800",
     },
     menuButtonPressed: {
       opacity: 0.9,

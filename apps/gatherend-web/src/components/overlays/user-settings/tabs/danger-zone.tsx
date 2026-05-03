@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { ClientProfile } from "@/hooks/use-current-profile";
+import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { usePathname, useRouter } from "next/navigation";
 import { AlertTriangle, Loader2 } from "lucide-react";
@@ -39,6 +40,7 @@ export const UserDangerZoneTab = ({
   setOverlayBlocking,
 }: UserDangerZoneTabProps) => {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const pathname = usePathname();
   const { goOffline } = useSocketClient();
   const { t } = useTranslation();
@@ -69,6 +71,7 @@ export const UserDangerZoneTab = ({
         console.warn("[ACCOUNT_DELETE_SIGNOUT]", signOutError);
       }
 
+      queryClient.clear();
       toast.success(t.overlays.userSettings.dangerZone.deleteSuccess);
       setCloseOnRouteChange(true);
       router.replace("/");

@@ -5,6 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Text } from "@/src/components/app-typography";
 import { useSession } from "@/src/features/auth/hooks/use-session";
 import { LEGAL_LINKS } from "@/src/lib/legal-links";
+import { hideStartupSplash } from "@/src/lib/startup-splash";
 import { BRAND_COLORS } from "@/src/theme/brand-colors";
 
 export default function PublicIndexScreen() {
@@ -16,7 +17,12 @@ export default function PublicIndexScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      onLayout={() => {
+        hideStartupSplash("public index layout");
+      }}
+      style={styles.safeArea}
+    >
       <ScrollView
         bounces={false}
         contentContainerStyle={styles.content}

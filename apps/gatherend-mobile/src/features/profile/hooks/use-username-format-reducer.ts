@@ -2,7 +2,7 @@ import { useReducer, useMemo } from "react";
 import {
   parseUsernameFormat,
   type UsernameFormatConfig,
-} from "@/src/features/profile/lib/username-format";
+} from "@/src/features/profile/lib/username/username-format";
 
 export interface UsernameFormatState {
   bold: boolean;

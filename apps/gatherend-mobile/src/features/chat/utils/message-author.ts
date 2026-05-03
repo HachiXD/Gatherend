@@ -1,5 +1,5 @@
 import type { ChatReplyTarget, ClientProfileSummary , ChannelMessage } from "@/src/features/chat/types";
-import type { ChatMessage } from "@/src/features/chat/chat-message";
+import type { ChatMessage } from "@/src/features/chat/lib/chat-message";
 
 export const MISSING_MESSAGE_AUTHOR_ID = "__deleted_member__";
 export const DEFAULT_MISSING_MESSAGE_AUTHOR_LABEL = "Deleted member";

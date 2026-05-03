@@ -2,11 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import {
-  useCallback,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -34,6 +30,8 @@ import {
   getStoredUploadValueFromUploadedFile,
   parseStoredUploadValue,
 } from "@/src/features/uploads/utils/upload-values";
+import ColorPicker, { HueSlider, Panel1 } from "reanimated-color-picker";
+import { getCardStyle } from "@/src/features/profile/components/profile-card-inline-view";
 import { THEME_PRESETS } from "@/src/theme/presets";
 import { useTheme } from "@/src/theme/theme-provider";
 import { Text, TextInput } from "@/src/components/app-typography";
@@ -41,7 +39,7 @@ import { Text, TextInput } from "@/src/components/app-typography";
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const BANNER_HEIGHT = 140;
-const AVATAR_SIZE = 72;
+const AVATAR_SIZE = 120;
 const AVATAR_OVERLAP = AVATAR_SIZE / 2;
 
 const AVAILABLE_LANGUAGES = [
@@ -101,6 +99,12 @@ export default function EditProfileScreen() {
   const usernameColor = useUsernameColorReducer(profile.usernameColor);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [showUsernameColorPicker, setShowUsernameColorPicker] = useState(false);
+  const [showBubblePicker, setShowBubblePicker] = useState(false);
+  const [cardBgColor, setCardBgColor] = useState(
+    () => getCardStyle(profile.profileCardConfig).bg,
+  );
+  const [showCardBgPicker, setShowCardBgPicker] = useState(false);
 
   // ── Hooks ─────────────────────────────────────────────────────────────────
 
@@ -203,11 +207,14 @@ export default function EditProfileScreen() {
     usernameColor.state.solidColor,
   );
   const isUsernameColorValid = HEX_REGEX.test(normalizedUsernameColor);
+  const normalizedCardBgColor = normalizeHexDraft(cardBgColor);
+  const isCardBgColorValid = HEX_REGEX.test(normalizedCardBgColor);
   const canSave =
     !isSaving &&
     !uploadingAvatar &&
     !uploadingBanner &&
     isUsernameColorValid &&
+    isCardBgColorValid &&
     usernameValidation.status.valid &&
     !usernameValidation.status.checking;
 
@@ -226,6 +233,14 @@ export default function EditProfileScreen() {
       chatBubbleStyle,
       usernameColor: { type: "solid", color: normalizedUsernameColor },
       profileTags: profileTags.state.tags,
+      profileCardConfig: {
+        ...((profile.profileCardConfig as object | null) ?? {}),
+        style: {
+          ...((profile.profileCardConfig as { style?: object } | null)?.style ??
+            {}),
+          backgroundColor: normalizedCardBgColor,
+        },
+      },
     });
 
     router.back();
@@ -240,7 +255,9 @@ export default function EditProfileScreen() {
     languages,
     chatBubbleStyle,
     normalizedUsernameColor,
+    normalizedCardBgColor,
     profileTags.state.tags,
+    profile.profileCardConfig,
     mutation,
     router,
   ]);
@@ -285,7 +302,11 @@ export default function EditProfileScreen() {
               { opacity: pressed ? 0.6 : 1 },
             ]}
           >
-            <Ionicons color={colors.textPrimary} name="chevron-back" size={24} />
+            <Ionicons
+              color={colors.textPrimary}
+              name="chevron-back"
+              size={24}
+            />
           </Pressable>
 
           <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
@@ -326,7 +347,9 @@ export default function EditProfileScreen() {
             }}
             style={styles.bannerPressable}
           >
-            <View style={[styles.banner, { backgroundColor: colors.bgTertiary }]}>
+            <View
+              style={[styles.banner, { backgroundColor: colors.bgTertiary }]}
+            >
               {bannerPreviewUrl ? (
                 <Image
                   contentFit="cover"
@@ -380,7 +403,10 @@ export default function EditProfileScreen() {
                   ]}
                 >
                   <Text
-                    style={[styles.avatarInitial, { color: colors.textPrimary }]}
+                    style={[
+                      styles.avatarInitial,
+                      { color: colors.textPrimary },
+                    ]}
                   >
                     {profile.username.charAt(0).toUpperCase()}
                   </Text>
@@ -399,7 +425,7 @@ export default function EditProfileScreen() {
                   { backgroundColor: colors.tabButtonBg },
                 ]}
               >
-                <Ionicons color="#fff" name="camera" size={12} />
+                <Ionicons color="#fff" name="camera" size={16} />
               </View>
             </Pressable>
           </View>
@@ -464,18 +490,94 @@ export default function EditProfileScreen() {
               ]}
             />
 
+            {/* Color del perfil */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Color del perfil</Text>
+              <View style={styles.colorInputRow}>
+                <Pressable
+                  onPress={() => setShowCardBgPicker((v) => !v)}
+                  style={[
+                    styles.colorSwatch,
+                    {
+                      backgroundColor: isCardBgColorValid
+                        ? normalizedCardBgColor
+                        : "#707070",
+                      borderColor: showCardBgPicker
+                        ? colors.channelTypeActiveBorder
+                        : colors.borderPrimary,
+                    },
+                  ]}
+                />
+                <TextInput
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  editable={!isSaving}
+                  maxLength={7}
+                  onBlur={() => {
+                    if (isCardBgColorValid) {
+                      setCardBgColor(normalizedCardBgColor);
+                    }
+                  }}
+                  onChangeText={(value) => {
+                    setCardBgColor(normalizeHexDraft(value));
+                  }}
+                  placeholder="#707070"
+                  placeholderTextColor={colors.textMuted}
+                  style={[
+                    styles.textInput,
+                    {
+                      flex: 1,
+                      color: colors.textPrimary,
+                      borderColor: colors.borderPrimary,
+                      backgroundColor: colors.bgTertiary,
+                    },
+                  ]}
+                  value={cardBgColor}
+                />
+              </View>
+              <View
+                style={showCardBgPicker ? null : styles.colorPickerCollapsed}
+              >
+                <ColorPicker
+                  value={isCardBgColorValid ? normalizedCardBgColor : "#707070"}
+                  onCompleteJS={({ hex }) => {
+                    setCardBgColor(hex.slice(0, 7).toUpperCase());
+                  }}
+                  style={styles.colorPicker}
+                >
+                  <Panel1 style={styles.colorPickerPanel} />
+                  <HueSlider style={styles.colorPickerSlider} />
+                </ColorPicker>
+              </View>
+              {!isCardBgColorValid ? (
+                <Text style={[styles.validationMsg, { color: "#f87171" }]}>
+                  Ingresa un color hex válido.
+                </Text>
+              ) : null}
+            </View>
+
+            <View
+              style={[
+                styles.fieldDivider,
+                { backgroundColor: colors.borderPrimary },
+              ]}
+            />
+
             {/* Username color */}
             <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Color del username</Text>
+              <Text style={styles.fieldLabel}>Color de tu insignia</Text>
               <View style={styles.colorInputRow}>
-                <View
+                <Pressable
+                  onPress={() => setShowUsernameColorPicker((v) => !v)}
                   style={[
                     styles.colorSwatch,
                     {
                       backgroundColor: isUsernameColorValid
                         ? normalizedUsernameColor
                         : DEFAULT_USERNAME_COLOR,
-                      borderColor: colors.borderPrimary,
+                      borderColor: showUsernameColorPicker
+                        ? colors.channelTypeActiveBorder
+                        : colors.borderPrimary,
                     },
                   ]}
                 />
@@ -512,36 +614,60 @@ export default function EditProfileScreen() {
               </View>
 
               <View style={styles.colorPresetGrid}>
-                {[DEFAULT_USERNAME_COLOR, ...THEME_PRESETS.map((preset) => preset.baseColor)].map(
-                  (presetColor) => {
-                    const isSelected =
-                      normalizedUsernameColor === presetColor.toUpperCase();
+                {[
+                  DEFAULT_USERNAME_COLOR,
+                  ...THEME_PRESETS.map((preset) => preset.baseColor),
+                ].map((presetColor) => {
+                  const isSelected =
+                    normalizedUsernameColor === presetColor.toUpperCase();
 
-                    return (
-                      <Pressable
-                        accessibilityLabel={`Color ${presetColor}`}
-                        key={presetColor}
-                        onPress={() => {
-                          usernameColor.actions.setSolidColor(presetColor);
-                        }}
-                        style={({ pressed }) => [
-                          styles.colorPresetButton,
-                          {
-                            backgroundColor: presetColor,
-                            borderColor: isSelected
-                              ? colors.channelTypeActiveBorder
-                              : colors.borderPrimary,
-                            opacity: pressed ? 0.75 : 1,
-                          },
-                        ]}
-                      >
-                        {isSelected ? (
-                          <Ionicons color="#fff" name="checkmark" size={14} />
-                        ) : null}
-                      </Pressable>
+                  return (
+                    <Pressable
+                      accessibilityLabel={`Color ${presetColor}`}
+                      key={presetColor}
+                      onPress={() => {
+                        usernameColor.actions.setSolidColor(presetColor);
+                      }}
+                      style={({ pressed }) => [
+                        styles.colorPresetButton,
+                        {
+                          backgroundColor: presetColor,
+                          borderColor: isSelected
+                            ? colors.channelTypeActiveBorder
+                            : colors.borderPrimary,
+                          opacity: pressed ? 0.75 : 1,
+                        },
+                      ]}
+                    >
+                      {isSelected ? (
+                        <Ionicons color="#fff" name="checkmark" size={14} />
+                      ) : null}
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <View
+                style={
+                  showUsernameColorPicker ? null : styles.colorPickerCollapsed
+                }
+              >
+                <ColorPicker
+                  value={
+                    isUsernameColorValid
+                      ? normalizedUsernameColor
+                      : DEFAULT_USERNAME_COLOR
+                  }
+                  onCompleteJS={({ hex }) => {
+                    usernameColor.actions.setSolidColor(
+                      hex.slice(0, 7).toUpperCase(),
                     );
-                  },
-                )}
+                  }}
+                  style={styles.colorPicker}
+                >
+                  <Panel1 style={styles.colorPickerPanel} />
+                  <HueSlider style={styles.colorPickerSlider} />
+                </ColorPicker>
               </View>
 
               {!isUsernameColorValid ? (
@@ -609,7 +735,10 @@ export default function EditProfileScreen() {
                     ]}
                   >
                     <Text
-                      style={[styles.tagChipText, { color: colors.textPrimary }]}
+                      style={[
+                        styles.tagChipText,
+                        { color: colors.textPrimary },
+                      ]}
                     >
                       {tag}
                     </Text>
@@ -730,15 +859,18 @@ export default function EditProfileScreen() {
           >
             {/* Background color */}
             <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Color de fondo (hex)</Text>
+              <Text style={styles.fieldLabel}>Color de tu burbuja</Text>
               <View style={styles.colorInputRow}>
-                <View
+                <Pressable
+                  onPress={() => setShowBubblePicker((v) => !v)}
                   style={[
                     styles.colorSwatch,
                     {
                       backgroundColor:
                         chatBubbleStyle.background ?? "transparent",
-                      borderColor: colors.borderPrimary,
+                      borderColor: showBubblePicker
+                        ? colors.channelTypeActiveBorder
+                        : colors.borderPrimary,
                     },
                   ]}
                 >
@@ -749,7 +881,7 @@ export default function EditProfileScreen() {
                       size={18}
                     />
                   )}
-                </View>
+                </Pressable>
                 <TextInput
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -781,6 +913,27 @@ export default function EditProfileScreen() {
                   ]}
                   value={chatBubbleStyle.background ?? ""}
                 />
+              </View>
+              <View
+                style={showBubblePicker ? null : styles.colorPickerCollapsed}
+              >
+                <ColorPicker
+                  value={
+                    HEX_REGEX.test(chatBubbleStyle.background ?? "")
+                      ? chatBubbleStyle.background!
+                      : "#B5B5B5"
+                  }
+                  onCompleteJS={({ hex }) => {
+                    setChatBubbleStyle((s) => ({
+                      ...s,
+                      background: hex.slice(0, 7),
+                    }));
+                  }}
+                  style={styles.colorPicker}
+                >
+                  <Panel1 style={styles.colorPickerPanel} />
+                  <HueSlider style={styles.colorPickerSlider} />
+                </ColorPicker>
               </View>
             </View>
 
@@ -925,6 +1078,7 @@ export default function EditProfileScreen() {
             </View>
           </View>
         </View>
+
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -999,7 +1153,7 @@ const styles = StyleSheet.create({
     height: 34,
     justifyContent: "center",
     position: "absolute",
-    right: 12,
+    right: 22,
     width: 34,
   },
   avatarAnchor: {
@@ -1021,7 +1175,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   avatarInitial: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: "800",
   },
   avatarUploadOverlay: {
@@ -1033,13 +1187,13 @@ const styles = StyleSheet.create({
   },
   avatarCameraIcon: {
     alignItems: "center",
-    borderRadius: 10,
-    bottom: 2,
-    height: 20,
+    borderRadius: 14,
+    bottom: 4,
+    height: 28,
     justifyContent: "center",
     position: "absolute",
-    right: 2,
-    width: 20,
+    right: 10,
+    width: 28,
   },
 
   // Sections
@@ -1116,6 +1270,22 @@ const styles = StyleSheet.create({
     height: 34,
     justifyContent: "center",
     width: 34,
+  },
+  colorPickerCollapsed: {
+    height: 0,
+    overflow: "hidden",
+  },
+  colorPicker: {
+    gap: 12,
+    marginTop: 10,
+  },
+  colorPickerPanel: {
+    borderRadius: 8,
+    height: 180,
+  },
+  colorPickerSlider: {
+    borderRadius: 8,
+    height: 28,
   },
 
   // Tags

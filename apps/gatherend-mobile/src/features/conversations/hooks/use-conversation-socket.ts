@@ -43,7 +43,12 @@ export function useConversationSocket({
       chatMessageWindowStore.upsertIncomingMessage(windowKey, message);
     };
 
-    const handleDirectMessageUpdate = (message: DirectMessage) => {
+    const handleDirectMessageUpdate = (message: Partial<DirectMessage> & { id: string }) => {
+      if (message.deleted) {
+        chatMessageWindowStore.removeById(windowKey, message.id);
+        return;
+      }
+
       chatMessageWindowStore.upsertById(windowKey, message, {
         insertIfMissing: false,
       });

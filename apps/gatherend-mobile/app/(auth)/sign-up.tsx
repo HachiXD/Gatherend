@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Link,
   Redirect,
@@ -21,8 +22,10 @@ import { signInWithSocial, type SocialProvider } from "@/src/features/auth/api/s
 import { SocialAuthButtons } from "@/src/features/auth/components/social-auth-buttons";
 import { TurnstileVerificationModal } from "@/src/features/auth/components/turnstile-verification-modal";
 import { useSession } from "@/src/features/auth/hooks/use-session";
+import { prefetchCurrentProfile } from "@/src/features/profile/lib/current-profile-cache";
 import { Text, TextInput } from "@/src/components/app-typography";
 import { LEGAL_LINKS } from "@/src/lib/legal-links";
+import { hideStartupSplash } from "@/src/lib/startup-splash";
 import { BRAND_COLORS } from "@/src/theme/brand-colors";
 
 type SignUpStep = "details" | "verification";
@@ -31,6 +34,7 @@ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function SignUpScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { isAuthenticated } = useSession();
   const [step, setStep] = useState<SignUpStep>("details");
   const [email, setEmail] = useState("");
@@ -96,6 +100,7 @@ export default function SignUpScreen() {
       ).data?.token;
 
       if (token) {
+        await prefetchCurrentProfile(queryClient);
         router.replace("/(app)/(tabs)/boards/index");
         return;
       }
@@ -134,7 +139,12 @@ export default function SignUpScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      onLayout={() => {
+        hideStartupSplash("sign-up layout");
+      }}
+      style={styles.safeArea}
+    >
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.flex}

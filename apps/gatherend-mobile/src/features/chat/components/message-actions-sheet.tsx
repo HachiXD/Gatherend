@@ -12,7 +12,7 @@ import { Text, TextInput } from "@/src/components/app-typography";
 import { useMessageActions } from "../hooks/use-message-actions";
 import { getMessageOwnerProfileId } from "../utils/message-author";
 import { useTheme } from "@/src/theme/theme-provider";
-import type { ChatMessage } from "../chat-message";
+import type { ChatMessage } from "../lib/chat-message";
 import type { ChannelMessage, ChatReaction } from "../types";
 
 const REACTION_EMOJIS = ["👍", "❤️", "😂", "💀", "😭", "🤑"] as const;
@@ -21,10 +21,18 @@ const MOD_ROLES = new Set(["OWNER", "ADMIN", "MODERATOR"]);
 type MessageActionsSheetProps = {
   message: ChatMessage | null;
   currentProfileId: string;
-  currentMemberRole: string | null;
   windowKey: string;
-  boardId: string;
-  channelId: string;
+  currentMemberRole?: string | null;
+  context:
+    | {
+        type: "channel";
+        boardId: string;
+        channelId: string;
+      }
+    | {
+        type: "conversation";
+        conversationId: string;
+      };
   visible: boolean;
   onClose: () => void;
   onReply: (message: ChatMessage) => void;
@@ -36,8 +44,7 @@ export function MessageActionsSheet({
   currentProfileId,
   currentMemberRole,
   windowKey,
-  boardId,
-  channelId,
+  context,
   visible,
   onClose,
   onReply,
@@ -50,12 +57,12 @@ export function MessageActionsSheet({
 
   const actions = useMessageActions({
     windowKey,
-    boardId,
-    channelId,
     profileId: currentProfileId,
+    ...context,
   });
 
-  const isMod = MOD_ROLES.has(currentMemberRole ?? "");
+  const isChannel = context.type === "channel";
+  const isMod = isChannel && MOD_ROLES.has(currentMemberRole ?? "");
   const ownerId = message ? getMessageOwnerProfileId(message) : null;
   const isOwn = ownerId === currentProfileId;
   const isDeleted = !!(message as ChannelMessage | null)?.deleted;

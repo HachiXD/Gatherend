@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { useMemo } from "react";
+import { useRouter, useFocusEffect } from "expo-router";
+import { useCallback, useMemo, useRef } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -24,6 +24,11 @@ import { Text } from "@/src/components/app-typography";
 
 export default function ChatsScreen() {
   const router = useRouter();
+  const navigating = useRef(false);
+
+  useFocusEffect(useCallback(() => {
+    navigating.current = false;
+  }, []));
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const topInset = Math.max(
@@ -75,7 +80,11 @@ export default function ChatsScreen() {
 
           <Pressable
             accessibilityLabel="Agregar amigo"
-            onPress={() => router.push("/(app)/(tabs)/chats/add-friend")}
+            onPress={() => {
+              if (navigating.current) return;
+              navigating.current = true;
+              router.push("/(app)/(tabs)/chats/add-friend");
+            }}
             style={({ pressed }) => [
               styles.addButton,
               pressed ? styles.buttonPressed : null,
@@ -129,8 +138,10 @@ export default function ChatsScreen() {
               hidingConversationId={hideConversationMutation.variables ?? null}
               onHideConversation={handleHideConversation}
               onSelectConversation={(conversationId) => {
+                if (navigating.current) return;
+                navigating.current = true;
                 router.push({
-                  pathname: "/(app)/(tabs)/chats/[conversationId]",
+                  pathname: "/(app)/chats/[conversationId]",
                   params: { conversationId },
                 });
               }}
