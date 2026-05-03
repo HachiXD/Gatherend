@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { FlashList, FlashListRef } from "@shopify/flash-list";
-import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
-import {
+import { Redirect, useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";import {
   memo,
   useCallback,
   useEffect,
@@ -45,6 +44,7 @@ import { useConversationRoomSubscription } from "@/src/features/conversations/ho
 import { useConversationSocket } from "@/src/features/conversations/hooks/use-conversation-socket";
 import { usePresence } from "@/src/features/presence/hooks/use-presence";
 import { useProfile } from "@/src/features/profile/providers/current-profile-provider";
+import { useChannelReadState } from "@/src/features/notifications/hooks/use-channel-read-state";
 import { VoiceCallView } from "@/src/features/voice/components/voice-call-view";
 import { useConversationVoiceParticipantsSocket } from "@/src/features/voice/hooks/use-conversation-voice-participants-socket";
 import {
@@ -267,6 +267,7 @@ export default function ConversationScreen() {
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const profile = useProfile();
+  const { markAsRead, clearViewingRoom } = useChannelReadState(profile.id);
   const flashListRef = useRef<FlashListRef<ChatMessage>>(null);
   const pinnedRef = useRef(true);
   const lastScrollMetricsRef = useRef<FlashListScrollMetrics | null>(null);
@@ -287,6 +288,18 @@ export default function ConversationScreen() {
   const windowKey = resolvedConversationId
     ? `conversation:${resolvedConversationId}`
     : "";
+
+  // Mark DM as read on focus, clear on blur
+  useFocusEffect(
+    useCallback(() => {
+      if (resolvedConversationId) {
+        void markAsRead(resolvedConversationId, true);
+      }
+      return () => {
+        clearViewingRoom();
+      };
+    }, [resolvedConversationId, markAsRead, clearViewingRoom]),
+  );
 
   const {
     data: conversation,

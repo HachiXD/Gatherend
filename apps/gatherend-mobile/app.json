@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Gatherend",
-    "slug": "Gatherend",
+    "slug": "gatherend",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/GATHEREND_SQUARE_RELLENADO.png",
@@ -29,6 +29,14 @@
     "plugins": [
       "expo-router",
       [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/GATHEREND_SQUARE_RELLENADO.png",
+          "color": "#3D6E58",
+          "defaultChannel": "default"
+        }
+      ],
+      [
         "@livekit/react-native-expo-plugin",
         {
           "cameraPermission": "Allow Gatherend to access your camera",
@@ -52,6 +60,11 @@
       "expo-image",
       "expo-web-browser"
     ],
+    "extra": {
+      "eas": {
+        "projectId": "0dbe43bb-482e-4a92-8e4d-d242286738db"
+      }
+    },
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true

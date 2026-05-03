@@ -627,7 +627,7 @@ export const ChatItem = memo(function ChatItem({
                 style={[
                   styles.bodyText,
                   {
-                    color: colors.textSecondary,
+                    color: colors.textChat,
                   },
                 ]}
               >

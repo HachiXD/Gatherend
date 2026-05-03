@@ -203,6 +203,7 @@ export function generatePaletteFromBase(baseColor: string): ThemeColors {
     textSecondary: hslToHex(h + 70, clampS(0.14, 6, 14), clampL(1.87, 96, 100)), // Mensajes de chat
     textTertiary: hslToHex(h + 70, clampS(0.12, 5, 12), clampL(1.5, 65, 73)), // timestamp
     textInverse: hslToHex(h, clampS(0.22, 10, 20), clampL(0.37, 12, 18)),
+    textChat: hslToHex(h + 70, clampS(0.14, 6, 14), clampL(1.87, 96, 100)),
 
     // Channels - Jerarquía: Bg < Hover < Active
     channelBg: hslToHex(h + 5, clampS(0.29, 20, 36), clampL(0.57, 23, 26)),
@@ -459,6 +460,7 @@ export function generateGrayPaletteFromBase(baseColor: string): ThemeColors {
     textSecondary: hslToHex(h + 70, clampS(0.14, 6, 14), clampL(1.87, 96, 100)),
     textTertiary: hslToHex(h + 70, clampS(0.12, 5, 12), clampL(1.5, 65, 73)),
     textInverse: hslToHex(h, clampS(0.22, 10, 20), clampL(0.37, 12, 18)),
+    textChat: hslToHex(h + 70, clampS(0.14, 6, 14), clampL(1.87, 96, 100)),
     channelBg: hslToHex(h + 5, clampS(0.29, 20, 36), clampL(0.57, 23, 26)),
     channelHover: hslToHex(h + 3, clampS(0.29, 22, 34), clampL(0.57, 22, 24)),
     channelActive: hslToHex(h + 3, clampS(0.29, 20, 34), clampL(0.57, 24, 26)),
@@ -683,9 +685,10 @@ export function generateLightPaletteFromBase(baseColor: string): ThemeColors {
     textLight: hslToHex(h + 30, clampS(0.5, 28, 42), clampL(0.35, 10, 18)),
     textSubtle: hslToHex(h + 30, clampS(0.45, 24, 38), clampL(0.65, 22, 32)),
     textPrimary: hslToHex(h + 30, clampS(0.2, 10, 20), clampL(0.35, 10, 18)),
-    textSecondary: hslToHex(h + 70, clampS(0.14, 6, 14), clampL(1.87, 96, 100)),
+    textSecondary: hslToHex(h + 36, clampS(0.71, 40, 60), clampL(0.75, 26, 34)),
     textTertiary: hslToHex(h + 36, clampS(0.6, 32, 48), clampL(0.95, 34, 42)),
     textInverse: "#ffffff",
+    textChat: hslToHex(h + 70, clampS(0.14, 6, 14), clampL(1.87, 96, 100)),
 
     // Channels
     channelBg: hslToHex(h + 34, clampS(0.99, 55, 75), clampL(1.97, 75, 83)),

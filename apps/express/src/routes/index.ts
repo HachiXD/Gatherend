@@ -11,6 +11,7 @@ import linkPreviewRoutes from "../modules/link-preview/link-preview.routes.js";
 import profileRoutes from "../modules/profiles/profiles.routes.js";
 import uploadRoutes from "../modules/upload/upload.routes.js";
 import mediaRoutes from "../modules/media/media.routes.js";
+import pushTokenRoutes from "../modules/push-notifications/push-notifications.routes.js";
 import { authenticateRequest } from "../middleware/auth.js";
 import {
   messageRateLimit,
@@ -18,6 +19,7 @@ import {
   uploadRateLimit,
   presenceRateLimit,
   emitRateLimit,
+  pushTokenRateLimit,
 } from "../middleware/rate-limit.js";
 import { presenceManager } from "../lib/presence-manager.js";
 import { logger } from "../lib/logger.js";
@@ -123,6 +125,9 @@ export function registerRoutes(app: express.Application, io: Server) {
 
   // Profiles
   app.use("/profiles", authenticateRequest, profileRoutes);
+
+  // Push Tokens
+  app.use("/push-tokens", authenticateRequest, pushTokenRateLimit, pushTokenRoutes);
 
   // PRESENCE ENDPOINTS
 

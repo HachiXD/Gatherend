@@ -14,6 +14,8 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/src/theme/theme-provider";
+import { useMentionStore } from "@/src/features/notifications/stores/use-mention-store";
+import { useUnreadStore } from "@/src/features/notifications/stores/use-unread-store";
 
 const TAB_BAR_CONTENT_HEIGHT = 84;
 const TAB_BAR_BOTTOM_PADDING = 12;
@@ -106,6 +108,12 @@ export default function TabsLayout() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const bottomInset = Math.max(insets.bottom, TAB_BAR_BOTTOM_PADDING);
+  const mentionCount = useMentionStore(
+    (state) => Object.values(state.mentions).filter(Boolean).length,
+  );
+  const dmCount = useUnreadStore(
+    (state) => Object.keys(state.dmUnreads).filter((id) => (state.dmUnreads[id] ?? 0) > 0).length,
+  );
   const navigationTheme = useMemo(
     () => ({
       ...DarkTheme,
@@ -164,6 +172,7 @@ export default function TabsLayout() {
               tabBarIcon: ({ focused }) => (
                 <TabIcon focused={focused} name="grid-outline" />
               ),
+              tabBarBadge: mentionCount > 0 ? mentionCount : undefined,
             }}
           />
           <Tabs.Screen
@@ -173,6 +182,7 @@ export default function TabsLayout() {
               tabBarIcon: ({ focused }) => (
                 <TabIcon focused={focused} name="chatbubble-outline" />
               ),
+              tabBarBadge: dmCount > 0 ? dmCount : undefined,
             }}
           />
           <Tabs.Screen

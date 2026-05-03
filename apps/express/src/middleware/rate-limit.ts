@@ -239,6 +239,37 @@ export const emitRateLimit = rateLimit({
 });
 
 /**
+ * Rate limiter para registro de push tokens
+ * 10 registros por minuto por usuario — protege contra token flooding
+ */
+export const pushTokenRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: {
+    error: "Push token rate limit exceeded",
+    message: "Too many token registration requests. Please try again later.",
+    retryAfter: 60,
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { xForwardedForHeader: false, ip: false },
+  keyGenerator: (req: Request) => {
+    const profileId =
+      (req as RequestWithProfile).profile?.id || req.headers["x-profile-id"];
+    return `push-token:${(profileId as string) || getClientIp(req)}`;
+  },
+  handler: (req: Request, res: Response) => {
+    logger.warn(
+      `Push token rate limit exceeded for profile ${req.headers["x-profile-id"]}`,
+    );
+    res.status(429).json({
+      error: "Push token rate limit exceeded",
+      message: "Too many token registration requests. Please try again later.",
+    });
+  },
+});
+
+/**
  * Rate limiter para WebSocket typing events
  * Almacenado en memoria, usado directamente en el servidor de socket
  */

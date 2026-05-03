@@ -13,6 +13,7 @@ import { ThemeProvider, useTheme } from "@/src/theme/theme-provider";
 import { Text } from "@/src/components/app-typography";
 import { hideStartupSplash } from "@/src/lib/startup-splash";
 import { BRAND_COLORS } from "@/src/theme/brand-colors";
+import { NotificationsProvider } from "@/src/features/notifications/notifications-provider";
 
 function ThemedAppStack() {
   const { colors } = useTheme();
@@ -120,9 +121,11 @@ export default function AppLayout() {
     <CurrentProfileProvider>
       <ThemeProvider>
         <SocketProvider>
-          <VoiceLiveKitProvider>
-            <ThemedAppStack />
-          </VoiceLiveKitProvider>
+          <NotificationsProvider>
+            <VoiceLiveKitProvider>
+              <ThemedAppStack />
+            </VoiceLiveKitProvider>
+          </NotificationsProvider>
         </SocketProvider>
       </ThemeProvider>
     </CurrentProfileProvider>

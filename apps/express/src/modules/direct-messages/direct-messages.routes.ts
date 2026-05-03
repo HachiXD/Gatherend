@@ -7,6 +7,7 @@ import {
   getDirectMessagesByIds,
   findConversationForProfile,
 } from "./direct-messages.service.js";
+import { sendPushToProfiles } from "../push-notifications/push-notifications.service.js";
 import { AssetContext, AssetVisibility } from "@prisma/client";
 import { db } from "../../lib/db.js";
 import {
@@ -166,6 +167,18 @@ router.post("/", async (req, res) => {
           senderId: profileId,
         },
       });
+
+    // Push notification al destinatario (fire-and-forget)
+    const dmBody =
+      trimmedContent.substring(0, 100) ||
+      (resolvedAttachmentAssetId ? "Sent an image" : "Sent a sticker");
+    sendPushToProfiles({
+      profileIds: [otherProfile.id],
+      notificationType: "DIRECT_MESSAGE",
+      title: currentProfile.username,
+      body: dmBody,
+      data: { conversationId: conversation.id },
+    }).catch((err) => logger.error("[PUSH_DM]", err));
 
     return res.json(messageWithTempId);
   } catch (error) {

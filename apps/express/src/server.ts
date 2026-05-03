@@ -50,6 +50,7 @@ import {
   closeRedis,
 } from "./lib/redis.js";
 import { globalRateLimit, readRateLimit } from "./middleware/rate-limit.js";
+import { startReceiptScheduler } from "./modules/push-notifications/push-notifications.scheduler.js";
 
 // EXPRESS APP SETUP
 const app = express();
@@ -221,6 +222,13 @@ const PORT = process.env.PORT || 3001;
       "MEDIA_ALLOWED_HOSTNAMES not set — media proxy will reject all source URLs",
     );
   }
+  if (!process.env.EXPO_ACCESS_TOKEN) {
+    logger.warn(
+      "EXPO_ACCESS_TOKEN not set — push notification enhanced security disabled",
+    );
+  }
+
+  startReceiptScheduler();
 
   server.listen(PORT, () => {
     logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");

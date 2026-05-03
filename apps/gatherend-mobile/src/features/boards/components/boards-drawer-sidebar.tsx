@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -12,6 +12,9 @@ import { getBoardImageUrl } from "@/src/lib/avatar-utils";
 import { useTheme } from "@/src/theme/theme-provider";
 import { useUserBoards } from "../hooks/use-user-boards";
 import { Text } from "@/src/components/app-typography";
+import { useUnreadStore } from "@/src/features/notifications/stores/use-unread-store";
+import { useMentionStore } from "@/src/features/notifications/stores/use-mention-store";
+import type { UserBoard } from "../types/board";
 
 type BoardsDrawerSidebarProps = {
   currentBoardId?: string;
@@ -30,6 +33,75 @@ function getBoardInitials(name: string) {
     .slice(0, 2)
     .map((word) => word[0]?.toUpperCase() ?? "")
     .join("");
+}
+
+type BoardDrawerItemProps = {
+  item: UserBoard;
+  isActive: boolean;
+  styles: ReturnType<typeof createStyles>;
+  colors: ReturnType<typeof useTheme>["colors"];
+  onSelectBoard: (boardId: string) => void;
+};
+
+function BoardDrawerItem({ item, isActive, styles, colors, onSelectBoard }: BoardDrawerItemProps) {
+  const channelIds = useMemo(() => item.channels.map((c) => c.id), [item.channels]);
+
+  const hasUnread = useUnreadStore(
+    useCallback(
+      (state) => channelIds.some((id) => (state.unreads[id] ?? 0) > 0),
+      [channelIds],
+    ),
+  );
+  const hasMention = useMentionStore(
+    useCallback(
+      (state) => channelIds.some((id) => state.mentions[id] === true),
+      [channelIds],
+    ),
+  );
+
+  const fallbackColor = item.imageAsset?.dominantColor ?? colors.avatarFallbackBg;
+  const imageUrl = getBoardImageUrl(item.imageAsset?.url, item.id, item.name, 128);
+
+  return (
+    <View style={styles.itemOuter}>
+      {hasUnread && !isActive ? (
+        <View style={styles.unreadBar} />
+      ) : null}
+      <Pressable
+        onPress={() => onSelectBoard(item.id)}
+        style={({ pressed }) => [
+          styles.itemButton,
+          isActive ? styles.itemButtonActive : null,
+          pressed ? styles.itemPressed : null,
+        ]}
+      >
+        {imageUrl ? (
+          <Image
+            contentFit="cover"
+            source={{ uri: imageUrl }}
+            style={styles.itemImage}
+          />
+        ) : (
+          <View
+            style={[
+              styles.itemImage,
+              styles.itemFallback,
+              { backgroundColor: fallbackColor },
+            ]}
+          >
+            <Text style={styles.itemFallbackText}>
+              {getBoardInitials(item.name)}
+            </Text>
+          </View>
+        )}
+      </Pressable>
+      {hasMention && !isActive ? (
+        <View style={styles.mentionBadge}>
+          <Ionicons color={colors.textLight} name="at" size={10} />
+        </View>
+      ) : null}
+    </View>
+  );
 }
 
 export function BoardsDrawerSidebar({
@@ -86,48 +158,15 @@ export function BoardsDrawerSidebar({
           contentContainerStyle={styles.listContent}
           data={boards}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => {
-            const isActive = item.id === currentBoardId;
-            const fallbackColor =
-              item.imageAsset?.dominantColor ?? colors.avatarFallbackBg;
-            const imageUrl = getBoardImageUrl(
-              item.imageAsset?.url,
-              item.id,
-              item.name,
-              128,
-            );
-
-            return (
-              <Pressable
-                onPress={() => onSelectBoard(item.id)}
-                style={({ pressed }) => [
-                  styles.itemButton,
-                  isActive ? styles.itemButtonActive : null,
-                  pressed ? styles.itemPressed : null,
-                ]}
-              >
-                {imageUrl ? (
-                  <Image
-                    contentFit="cover"
-                    source={{ uri: imageUrl }}
-                    style={styles.itemImage}
-                  />
-                ) : (
-                  <View
-                    style={[
-                      styles.itemImage,
-                      styles.itemFallback,
-                      { backgroundColor: fallbackColor },
-                    ]}
-                  >
-                    <Text style={styles.itemFallbackText}>
-                      {getBoardInitials(item.name)}
-                    </Text>
-                  </View>
-                )}
-              </Pressable>
-            );
-          }}
+          renderItem={({ item }) => (
+            <BoardDrawerItem
+              colors={colors}
+              isActive={item.id === currentBoardId}
+              item={item}
+              onSelectBoard={onSelectBoard}
+              styles={styles}
+            />
+          )}
           showsVerticalScrollIndicator={false}
         />
       ) : null}
@@ -220,6 +259,33 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     fontSize: 16,
     fontWeight: "700",
     letterSpacing: 0.6,
+  },
+  itemOuter: {
+    alignItems: "center",
+    flexDirection: "row",
+    position: "relative",
+    width: "100%",
+    justifyContent: "center",
+  },
+  unreadBar: {
+    backgroundColor: colors.accentPrimary,
+    borderRadius: 4,
+    bottom: 8,
+    left: -4,
+    position: "absolute",
+    top: 8,
+    width: 4,
+  },
+  mentionBadge: {
+    alignItems: "center",
+    backgroundColor: colors.notificationBg,
+    borderRadius: 999,
+    bottom: 0,
+    height: 18,
+    justifyContent: "center",
+    position: "absolute",
+    right: 0,
+    width: 18,
   },
   });
 }

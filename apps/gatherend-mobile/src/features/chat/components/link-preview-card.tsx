@@ -1,5 +1,5 @@
 import { Image } from "expo-image";
-import { memo } from "react";
+import { memo, useState } from "react";
 import { Alert, Linking, Pressable, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLinkPreview } from "../hooks/use-link-preview";
@@ -63,6 +63,7 @@ export const LinkPreviewCard = memo(function LinkPreviewCard({
 }: LinkPreviewCardProps) {
   const { colors } = useTheme();
   const { data, isLoading, isError } = useLinkPreview(url);
+  const [imageError, setImageError] = useState(false);
 
   // Loading skeleton
   if (isLoading) {
@@ -106,11 +107,20 @@ export const LinkPreviewCard = memo(function LinkPreviewCard({
     >
       {/* OG image */}
       {data.image ? (
-        <Image
-          contentFit="cover"
-          source={{ uri: data.image }}
-          style={styles.ogImage}
-        />
+        imageError ? (
+          <View style={[styles.ogImage, styles.ogImageError, { backgroundColor: colors.bgTertiary }]}>
+            <Text style={[styles.ogImageErrorText, { color: colors.textMuted }]}>
+              No se encontró :(
+            </Text>
+          </View>
+        ) : (
+          <Image
+            contentFit="cover"
+            onError={() => setImageError(true)}
+            source={{ uri: data.image }}
+            style={styles.ogImage}
+          />
+        )
       ) : null}
 
       <View style={styles.body}>
@@ -151,7 +161,9 @@ export const LinkPreviewCard = memo(function LinkPreviewCard({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 8,
+    alignSelf: "stretch",
+    width: "100%",
+    borderRadius: 16,
     borderWidth: 1,
     marginTop: 6,
     overflow: "hidden",
@@ -168,6 +180,13 @@ const styles = StyleSheet.create({
   ogImage: {
     height: 140,
     width: "100%",
+  },
+  ogImageError: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  ogImageErrorText: {
+    fontSize: 13,
   },
   body: {
     gap: 3,

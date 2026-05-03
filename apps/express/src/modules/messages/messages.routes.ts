@@ -13,6 +13,7 @@ import {
   reserveChannelMessageSeqRange,
   advanceAuthorChannelReadState,
 } from "./messages.service.js";
+import { sendPushToProfiles } from "../push-notifications/push-notifications.service.js";
 import {
   verifyMemberInBoardCached,
   findChannelCached,
@@ -287,6 +288,24 @@ router.post("/", async (req, res) => {
               content: trimmedContent.substring(0, 100), // Preview del mensaje
             });
           }
+        }
+
+        // Push notifications para usuarios mencionados (fire-and-forget)
+        const pushRecipients = mentionedProfileIds.filter(
+          (id) => id !== member.profileId,
+        );
+        if (pushRecipients.length > 0) {
+          sendPushToProfiles({
+            profileIds: pushRecipients,
+            notificationType: "MENTION",
+            title: `${senderProfile.username} te mencionó`,
+            body: trimmedContent.substring(0, 100),
+            data: {
+              messageId: message.id,
+              channelId: channelId as string,
+              boardId: boardId as string,
+            },
+          }).catch((err) => logger.error("[PUSH_MENTION]", err));
         }
       }
     }

@@ -1,8 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { FlashList, FlashListRef } from "@shopify/flash-list";
-import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
-import {
+import { Redirect, useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";import {
   memo,
   useCallback,
   useEffect,
@@ -54,6 +53,7 @@ import { useChannelRoomSubscription } from "@/src/features/chat/hooks/use-channe
 import { useChannelSocket } from "@/src/features/chat/hooks/use-channel-socket";
 import { useChatAccessoryPanel } from "@/src/features/chat/hooks/use-chat-accessory-panel";
 import { useProfile } from "@/src/features/profile/providers/current-profile-provider";
+import { useChannelReadState } from "@/src/features/notifications/hooks/use-channel-read-state";
 import { VoiceCallView } from "@/src/features/voice/components/voice-call-view";
 import { useBoardVoiceParticipantsSocket } from "@/src/features/voice/hooks/use-board-voice-participants-socket";
 import { useVoiceStore } from "@/src/features/voice/store/use-voice-store";
@@ -267,6 +267,7 @@ export default function BoardChannelScreen() {
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const profile = useProfile();
+  const { markAsRead, clearViewingRoom } = useChannelReadState(profile.id);
   const flashListRef = useRef<FlashListRef<ChatMessage>>(null);
   const pinnedRef = useRef(true);
   const lastScrollMetricsRef = useRef<FlashListScrollMetrics | null>(null);
@@ -280,6 +281,18 @@ export default function BoardChannelScreen() {
   }>();
   const resolvedBoardId = boardId ?? undefined;
   const resolvedChannelId = channelId ?? undefined;
+
+  // Mark channel as read on focus, clear on blur
+  useFocusEffect(
+    useCallback(() => {
+      if (resolvedChannelId) {
+        void markAsRead(resolvedChannelId);
+      }
+      return () => {
+        clearViewingRoom();
+      };
+    }, [resolvedChannelId, markAsRead, clearViewingRoom]),
+  );
 
   const windowKey = resolvedChannelId ? `channel:${resolvedChannelId}` : "";
   const [isJoining, setIsJoining] = useState(false);

@@ -1,12 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { FlatList, Pressable, StyleSheet, View } from "react-native";
 import { useTheme } from "@/src/theme/theme-provider";
 import type { BoardChannel } from "../types/board";
 import { Text } from "@/src/components/app-typography";
 import { UserAvatar } from "@/src/components/user-avatar";
 import { useVoiceParticipantsStore } from "@/src/features/voice/store/use-voice-participants-store";
+import { useUnreadStore } from "@/src/features/notifications/stores/use-unread-store";
+import { useMentionStore } from "@/src/features/notifications/stores/use-mention-store";
 
 type BoardChannelsListProps = {
   channels: BoardChannel[];
@@ -26,6 +28,125 @@ function getChannelMeta(channel: BoardChannel, voiceParticipantCount: number) {
   return `${count} ${label}`;
 }
 
+type ChannelRowProps = {
+  item: BoardChannel;
+  styles: ReturnType<typeof createStyles>;
+  colors: ReturnType<typeof useTheme>["colors"];
+  onSelectChannel: (id: string) => void;
+  onJoinVoice?: (id: string, name: string) => void;
+};
+
+function ChannelRow({ item, styles, colors, onSelectChannel, onJoinVoice }: ChannelRowProps) {
+  const participantsByChannel = useVoiceParticipantsStore(
+    (state) => state.participants,
+  );
+  const unreadCount = useUnreadStore(
+    useCallback((state) => state.unreads[item.id] ?? 0, [item.id]),
+  );
+  const hasMention = useMentionStore(
+    useCallback((state) => state.mentions[item.id] === true, [item.id]),
+  );
+
+  const imageUrl = item.imageAsset?.url ?? null;
+  const voiceParticipants =
+    item.type === "VOICE" ? (participantsByChannel[item.id] ?? []) : [];
+  const displayedParticipants = voiceParticipants.slice(0, 5);
+  const hiddenCount = voiceParticipants.length - displayedParticipants.length;
+  const hasUnread = unreadCount > 0;
+
+  return (
+    <Pressable
+      onPress={() => {
+        if (item.type === "VOICE" && onJoinVoice) {
+          onJoinVoice(item.id, item.name);
+        } else {
+          onSelectChannel(item.id);
+        }
+      }}
+      style={({ pressed }) => [
+        styles.card,
+        imageUrl ? styles.cardWithImage : null,
+        pressed ? styles.cardPressed : null,
+      ]}
+    >
+      {imageUrl ? (
+        <>
+          <Image
+            contentFit="cover"
+            source={{ uri: imageUrl }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFill, styles.imageOverlay]}
+          />
+        </>
+      ) : null}
+
+      <View style={styles.iconWrap}>
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            styles.iconWrapBg,
+            imageUrl ? styles.iconWrapBgDimmed : null,
+          ]}
+        />
+        <Ionicons
+          color={colors.textPrimary}
+          name={item.type === "VOICE" ? "volume-high" : "chatbubble-ellipses"}
+          size={18}
+        />
+      </View>
+
+      <View style={styles.copy}>
+        <Text numberOfLines={1} style={styles.title}>
+          /{item.name}
+        </Text>
+        <Text numberOfLines={1} style={styles.meta}>
+          {getChannelMeta(item, voiceParticipants.length)}
+        </Text>
+        {item.type === "VOICE" && voiceParticipants.length > 0 ? (
+          <View style={styles.participantsRow}>
+            <View style={styles.avatarStack}>
+              {displayedParticipants.map((participant, index) => (
+                <View
+                  key={participant.profileId}
+                  style={[
+                    styles.avatarWrap,
+                    index > 0 ? styles.avatarOverlap : null,
+                  ]}
+                >
+                  <UserAvatar
+                    avatarUrl={participant.avatarUrl}
+                    profileId={participant.profileId}
+                    showStatus={false}
+                    size={22}
+                    username={participant.username}
+                  />
+                </View>
+              ))}
+            </View>
+            {hiddenCount > 0 ? (
+              <Text style={styles.hiddenCount}>+{hiddenCount}</Text>
+            ) : null}
+          </View>
+        ) : null}
+        {hasUnread && item.type === "TEXT" ? (
+          <View style={styles.unreadPill}>
+            <Text style={styles.unreadPillText}>Nuevos mensajes</Text>
+          </View>
+        ) : null}
+      </View>
+
+      {hasMention ? (
+        <View style={styles.mentionBadge}>
+          <Ionicons color={colors.textLight} name="at" size={14} />
+        </View>
+      ) : null}
+    </Pressable>
+  );
+}
+
 export function BoardChannelsList({
   channels,
   onSelectChannel,
@@ -33,106 +154,21 @@ export function BoardChannelsList({
 }: BoardChannelsListProps) {
   const { colors, mode } = useTheme();
   const styles = useMemo(() => createStyles(colors, mode), [colors, mode]);
-  const participantsByChannel = useVoiceParticipantsStore(
-    (state) => state.participants,
-  );
 
   return (
     <FlatList
       contentContainerStyle={styles.content}
       data={channels}
       keyExtractor={(item) => item.id}
-      renderItem={({ item }) => {
-        const imageUrl = item.imageAsset?.url ?? null;
-        const voiceParticipants =
-          item.type === "VOICE" ? (participantsByChannel[item.id] ?? []) : [];
-        const displayedParticipants = voiceParticipants.slice(0, 5);
-        const hiddenCount =
-          voiceParticipants.length - displayedParticipants.length;
-
-        return (
-          <Pressable
-            onPress={() => {
-              if (item.type === "VOICE" && onJoinVoice) {
-                onJoinVoice(item.id, item.name);
-              } else {
-                onSelectChannel(item.id);
-              }
-            }}
-            style={({ pressed }) => [
-              styles.card,
-              imageUrl ? styles.cardWithImage : null,
-              pressed ? styles.cardPressed : null,
-            ]}
-          >
-            {imageUrl ? (
-              <>
-                <Image
-                  contentFit="cover"
-                  source={{ uri: imageUrl }}
-                  style={StyleSheet.absoluteFill}
-                />
-                <View
-                  pointerEvents="none"
-                  style={[StyleSheet.absoluteFill, styles.imageOverlay]}
-                />
-              </>
-            ) : null}
-
-            <View style={styles.iconWrap}>
-              <View
-                style={[
-                  StyleSheet.absoluteFill,
-                  styles.iconWrapBg,
-                  imageUrl ? styles.iconWrapBgDimmed : null,
-                ]}
-              />
-              <Ionicons
-                color={colors.textPrimary}
-                name={
-                  item.type === "VOICE" ? "volume-high" : "chatbubble-ellipses"
-                }
-                size={18}
-              />
-            </View>
-
-            <View style={styles.copy}>
-              <Text numberOfLines={1} style={styles.title}>
-                /{item.name}
-              </Text>
-              <Text numberOfLines={1} style={styles.meta}>
-                {getChannelMeta(item, voiceParticipants.length)}
-              </Text>
-              {item.type === "VOICE" && voiceParticipants.length > 0 ? (
-                <View style={styles.participantsRow}>
-                  <View style={styles.avatarStack}>
-                    {displayedParticipants.map((participant, index) => (
-                      <View
-                        key={participant.profileId}
-                        style={[
-                          styles.avatarWrap,
-                          index > 0 ? styles.avatarOverlap : null,
-                        ]}
-                      >
-                        <UserAvatar
-                          avatarUrl={participant.avatarUrl}
-                          profileId={participant.profileId}
-                          showStatus={false}
-                          size={22}
-                          username={participant.username}
-                        />
-                      </View>
-                    ))}
-                  </View>
-                  {hiddenCount > 0 ? (
-                    <Text style={styles.hiddenCount}>+{hiddenCount}</Text>
-                  ) : null}
-                </View>
-              ) : null}
-            </View>
-          </Pressable>
-        );
-      }}
+      renderItem={({ item }) => (
+        <ChannelRow
+          colors={colors}
+          item={item}
+          onJoinVoice={onJoinVoice}
+          onSelectChannel={onSelectChannel}
+          styles={styles}
+        />
+      )}
       showsVerticalScrollIndicator={false}
     />
   );
@@ -221,6 +257,27 @@ function createStyles(
       color: colors.textMuted,
       fontSize: 12,
       fontWeight: "700",
+    },
+    unreadPill: {
+      alignSelf: "flex-start",
+      backgroundColor: colors.notificationBg,
+      borderRadius: 6,
+      marginTop: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+    },
+    unreadPillText: {
+      color: colors.textLight,
+      fontSize: 12,
+      fontWeight: "700",
+    },
+    mentionBadge: {
+      alignItems: "center",
+      backgroundColor: colors.notificationBg,
+      borderRadius: 999,
+      height: 26,
+      justifyContent: "center",
+      width: 26,
     },
   });
 }

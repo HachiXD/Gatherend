@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -10,6 +10,7 @@ import { UserAvatar } from "@/src/components/user-avatar";
 import { useTheme } from "@/src/theme/theme-provider";
 import type { Conversation } from "../domain/conversation";
 import { Text } from "@/src/components/app-typography";
+import { useUnreadStore } from "@/src/features/notifications/stores/use-unread-store";
 
 type ConversationRowProps = {
   conversation: Conversation;
@@ -55,6 +56,14 @@ export function ConversationRow({
   const { otherProfile } = conversation;
   const avatarUrl = otherProfile.avatarAsset?.url;
 
+  const unreadCount = useUnreadStore(
+    useCallback(
+      (state) => state.dmUnreads[conversation.id] ?? 0,
+      [conversation.id],
+    ),
+  );
+  const hasUnread = unreadCount > 0;
+
   return (
     <>
       <Pressable
@@ -74,13 +83,21 @@ export function ConversationRow({
         />
 
         <View style={styles.copy}>
-          <Text numberOfLines={1} style={styles.username}>
+          <Text numberOfLines={1} style={[styles.username, hasUnread ? styles.usernameUnread : null]}>
             {otherProfile.username}
           </Text>
-          <Text numberOfLines={1} style={styles.preview}>
+          <Text numberOfLines={1} style={[styles.preview, hasUnread ? styles.previewUnread : null]}>
             {getLastMessagePreview(conversation)}
           </Text>
         </View>
+
+        {hasUnread ? (
+          <View style={styles.unreadBadge}>
+            <Text style={styles.unreadBadgeText}>
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </Text>
+          </View>
+        ) : null}
       </Pressable>
 
       <BottomSheet
@@ -137,10 +154,32 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       fontSize: 16,
       fontWeight: "700",
     },
+    usernameUnread: {
+      color: colors.textPrimary,
+    },
     preview: {
       color: colors.textMuted,
       fontSize: 14,
       lineHeight: 19,
+    },
+    previewUnread: {
+      color: colors.textSecondary,
+      fontWeight: "600",
+    },
+    unreadBadge: {
+      alignItems: "center",
+      backgroundColor: colors.notificationBg,
+      borderRadius: 999,
+      justifyContent: "center",
+      minHeight: 20,
+      minWidth: 20,
+      paddingHorizontal: 5,
+    },
+    unreadBadgeText: {
+      color: colors.textLight,
+      fontSize: 11,
+      fontWeight: "700",
+      lineHeight: 14,
     },
     actionList: {
       paddingBottom: 4,

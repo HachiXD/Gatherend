@@ -25,6 +25,7 @@
     "better-auth": "1.6.4",
     "concurrently": "^9.2.1",
     "crypto": "^1.0.1",
+    "expo-server-sdk": "^6.1.0",
     "express": "^4.21.2",
     "express-rate-limit": "^8.2.1",
     "multer": "^2.0.2",

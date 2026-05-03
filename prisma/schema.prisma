@@ -145,6 +145,8 @@ model Profile {
   boardRiskEvents                              BoardRiskEvent[]
   channelMembers                               ChannelMember[]
   channelReadStates                            ChannelReadState[]
+  pushTokens                                   PushToken[]
+  pushNotificationDeliveries                   PushNotificationDelivery[] @relation("ProfilePushNotificationDeliveries")
 
   @@unique([username, discriminator])
   @@index([username])
@@ -557,6 +559,58 @@ model ChannelReadState {
   @@unique([profileId, channelId])
   @@index([profileId])
   @@index([channelId])
+}
+
+model PushToken {
+  id           String                     @id @default(uuid())
+  profileId    String
+  token        String                     @unique
+  provider     PushProvider               @default(EXPO)
+  platform     PushTokenPlatform
+  status       PushTokenStatus            @default(ACTIVE)
+  projectId    String?
+  appId        String?
+  deviceId     String?
+  deviceName   String?
+  lastSeenAt   DateTime                   @default(now())
+  disabledAt   DateTime?
+  disableReason String?
+  createdAt    DateTime                   @default(now())
+  updatedAt    DateTime                   @updatedAt
+  profile      Profile                    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  deliveries   PushNotificationDelivery[]
+
+  @@index([profileId, status])
+  @@index([platform])
+  @@index([lastSeenAt])
+}
+
+model PushNotificationDelivery {
+  id                    String                         @id @default(uuid())
+  profileId             String
+  pushTokenId           String?
+  notificationType      PushNotificationType
+  status                PushNotificationDeliveryStatus @default(PENDING)
+  title                 String?
+  body                  String?
+  data                  Json?
+  expoTicketId          String?                        @unique
+  expoTicketStatus      String?
+  expoReceiptStatus     String?
+  errorCode             String?
+  errorMessage          String?
+  sentAt                DateTime?
+  receiptCheckedAt      DateTime?
+  createdAt             DateTime                       @default(now())
+  updatedAt             DateTime                       @updatedAt
+  profile               Profile                        @relation("ProfilePushNotificationDeliveries", fields: [profileId], references: [id], onDelete: Cascade)
+  pushToken             PushToken?                     @relation(fields: [pushTokenId], references: [id], onDelete: SetNull)
+
+  @@index([profileId, createdAt(sort: Desc)])
+  @@index([pushTokenId, createdAt(sort: Desc)])
+  @@index([status, createdAt(sort: Desc)])
+  @@index([expoTicketId])
+  @@index([notificationType, createdAt(sort: Desc)])
 }
 
 model ModerationCache {
@@ -980,6 +1034,35 @@ enum MessageType {
 enum AuthProvider {
   CLERK
   BETTER_AUTH
+}
+
+enum PushProvider {
+  EXPO
+}
+
+enum PushTokenPlatform {
+  IOS
+  ANDROID
+}
+
+enum PushTokenStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum PushNotificationType {
+  MENTION
+  DIRECT_MESSAGE
+  CHANNEL_MESSAGE
+  FRIEND_REQUEST
+  SYSTEM
+}
+
+enum PushNotificationDeliveryStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
 }
 
 model User {

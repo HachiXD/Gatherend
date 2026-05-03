@@ -146,6 +146,9 @@ export interface ThemeColors {
   // Notification / Unread indicators
   notificationBg: string; // Fondo de badges y puntos de notificación (hue complementario al bgPrimary)
   unreadBg: string; // Fondo sutil para estados de no-leído (hue complementario, oscuro)
+
+  // Chat message text
+  textChat: string; // Color de texto de mensajes de chat (burbujas)
 }
 
 /** Modo del tema: dark o light */
@@ -275,4 +278,5 @@ export const THEME_CSS_VAR_MAP: Record<ThemeColorKey, string> = {
   bgEditForm: "--theme-bg-edit-form",
   notificationBg: "--theme-notification-bg",
   unreadBg: "--theme-unread-bg",
+  textChat: "--theme-text-chat",
 } as const;
