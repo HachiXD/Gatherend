@@ -19,11 +19,7 @@ import {
   findChannelCached,
   invalidateMemberCache,
 } from "../../lib/cache.js";
-import {
-  AssetContext,
-  AssetVisibility,
-  MessageType,
-} from "@prisma/client";
+import { AssetContext, AssetVisibility, MessageType } from "@prisma/client";
 import { db } from "../../lib/db.js";
 import {
   awardMemberXp,
@@ -213,7 +209,7 @@ router.post("/", async (req, res) => {
 
       await tx.channel.update({
         where: { id: channelId as string },
-        data: { lastMessageAt: new Date() },
+        data: { lastMessageSeq: reservedSeq },
       });
 
       let memberTarget = {

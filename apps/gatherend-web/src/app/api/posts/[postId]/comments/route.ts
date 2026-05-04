@@ -231,7 +231,9 @@ export async function GET(
     const likedCommentSet = new Set(likedComments.map((l) => l.commentId));
 
     return NextResponse.json({
-      items: comments.map((c) => serializeComment(c, likedCommentSet.has(c.id))),
+      items: comments.map((c) =>
+        serializeComment(c, likedCommentSet.has(c.id)),
+      ),
       totalCount: post.commentCount,
     });
   } catch (error) {
@@ -506,7 +508,7 @@ export async function POST(
       await expressMemberCache.invalidate(commentBoardId, profile.id);
     }
 
-    return NextResponse.json(serializeComment(createdComment));
+    return NextResponse.json(serializeComment(createdComment, false));
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === "POST_NOT_FOUND") {
