@@ -64,6 +64,7 @@ export function useUpdateBoardSettings(boardId: string) {
           bannerAsset: updated.bannerAsset,
           inviteCode: updated.inviteCode,
           inviteEnabled: updated.inviteEnabled,
+          tabNames: updated.tabNames,
         };
       });
 

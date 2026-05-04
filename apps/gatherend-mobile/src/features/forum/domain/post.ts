@@ -16,6 +16,8 @@ export type ForumPostComment = {
   postId: string;
   content: string;
   deleted: boolean;
+  likeCount: number;
+  isLikedByCurrentUser: boolean;
   imageAsset: ClientPublicAsset | null;
   createdAt: string;
   updatedAt: string;
@@ -40,6 +42,8 @@ export type ForumPost = {
   content: string;
   imageAsset: ClientPublicAsset | null;
   commentCount: number;
+  likeCount: number;
+  isLikedByCurrentUser: boolean;
   latestComments: ForumPostComment[];
   createdAt: string;
   updatedAt: string;
@@ -65,6 +69,8 @@ export type ForumPostPreview = {
   contentSnippet: string;
   imageAsset: ClientPublicAsset | null;
   commentCount: number;
+  likeCount: number;
+  isLikedByCurrentUser: boolean;
   createdAt: string;
   updatedAt: string;
   pinnedAt: string | null;

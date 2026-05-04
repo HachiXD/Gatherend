@@ -1,15 +1,6 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import {
-  useCallback,
-  useMemo,
-  useState,
-} from "react";
-import {
-  ActivityIndicator,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { useCallback, useMemo, useState } from "react";
+import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
 import { useProfile } from "@/src/features/profile/providers/current-profile-provider";
 import { useBoard } from "@/src/features/boards/hooks/use-board";
 import { usePost } from "@/src/features/forum/hooks/use-post";
@@ -25,27 +16,86 @@ import {
 } from "@/src/features/report/components/report-screen";
 import type { ReportTargetType } from "@/src/features/report/api/submit-report";
 import { useTheme } from "@/src/theme/theme-provider";
-import type { ForumPost, ForumPostComment } from "@/src/features/forum/domain/post";
+import type {
+  ForumPost,
+  ForumPostComment,
+} from "@/src/features/forum/domain/post";
 import { Text } from "@/src/components/app-typography";
 
 const POST_REPORT_CATEGORIES: ReportCategoryConfig[] = [
-  { value: "CSAM", label: "Seguridad infantil", description: "El post involucra a menores de forma inapropiada" },
-  { value: "SEXUAL_CONTENT", label: "Contenido sexual", description: "El post contiene material explícito o no solicitado" },
-  { value: "HARASSMENT", label: "Acoso", description: "El post contiene amenazas o comportamiento intimidatorio" },
-  { value: "HATE_SPEECH", label: "Discurso de odio", description: "Promueve odio contra grupos o personas" },
-  { value: "SPAM", label: "Spam", description: "Contenido repetitivo, engañoso o no solicitado" },
-  { value: "IMPERSONATION", label: "Suplantación de identidad", description: "Se hace pasar por otra persona" },
-  { value: "OTHER", label: "Otro", description: "Razón no listada anteriormente" },
+  {
+    value: "CSAM",
+    label: "Seguridad infantil",
+    description: "El post involucra a menores de forma inapropiada",
+  },
+  {
+    value: "SEXUAL_CONTENT",
+    label: "Contenido sexual",
+    description: "El post contiene material explícito o no solicitado",
+  },
+  {
+    value: "HARASSMENT",
+    label: "Acoso",
+    description: "El post contiene amenazas o comportamiento intimidatorio",
+  },
+  {
+    value: "HATE_SPEECH",
+    label: "Discurso de odio",
+    description: "Promueve odio contra grupos o personas",
+  },
+  {
+    value: "SPAM",
+    label: "Spam",
+    description: "Contenido repetitivo, engañoso o no solicitado",
+  },
+  {
+    value: "IMPERSONATION",
+    label: "Suplantación de identidad",
+    description: "Se hace pasar por otra persona",
+  },
+  {
+    value: "OTHER",
+    label: "Otro",
+    description: "Razón no listada anteriormente",
+  },
 ];
 
 const COMMENT_REPORT_CATEGORIES: ReportCategoryConfig[] = [
-  { value: "CSAM", label: "Seguridad infantil", description: "El comentario involucra a menores de forma inapropiada" },
-  { value: "SEXUAL_CONTENT", label: "Contenido sexual", description: "El comentario contiene material explícito" },
-  { value: "HARASSMENT", label: "Acoso", description: "El comentario contiene amenazas o acoso" },
-  { value: "HATE_SPEECH", label: "Discurso de odio", description: "Promueve odio contra grupos o personas" },
-  { value: "SPAM", label: "Spam", description: "Contenido repetitivo, engañoso o no solicitado" },
-  { value: "IMPERSONATION", label: "Suplantación de identidad", description: "Se hace pasar por otra persona" },
-  { value: "OTHER", label: "Otro", description: "Razón no listada anteriormente" },
+  {
+    value: "CSAM",
+    label: "Seguridad infantil",
+    description: "El comentario involucra a menores de forma inapropiada",
+  },
+  {
+    value: "SEXUAL_CONTENT",
+    label: "Contenido sexual",
+    description: "El comentario contiene material explícito",
+  },
+  {
+    value: "HARASSMENT",
+    label: "Acoso",
+    description: "El comentario contiene amenazas o acoso",
+  },
+  {
+    value: "HATE_SPEECH",
+    label: "Discurso de odio",
+    description: "Promueve odio contra grupos o personas",
+  },
+  {
+    value: "SPAM",
+    label: "Spam",
+    description: "Contenido repetitivo, engañoso o no solicitado",
+  },
+  {
+    value: "IMPERSONATION",
+    label: "Suplantación de identidad",
+    description: "Se hace pasar por otra persona",
+  },
+  {
+    value: "OTHER",
+    label: "Otro",
+    description: "Razón no listada anteriormente",
+  },
 ];
 
 type ReportConfig = {
@@ -59,7 +109,10 @@ type ReportConfig = {
 };
 
 export default function PostDetailScreen() {
-  const { boardId, postId } = useLocalSearchParams<{ boardId: string; postId: string }>();
+  const { boardId, postId } = useLocalSearchParams<{
+    boardId: string;
+    postId: string;
+  }>();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
@@ -119,7 +172,9 @@ export default function PostDetailScreen() {
   );
 
   const handleReportPost = useCallback((p: ForumPost) => {
-    const preview = p.title ?? (p.content.length > 120 ? `${p.content.slice(0, 120)}…` : p.content);
+    const preview =
+      p.title ??
+      (p.content.length > 120 ? `${p.content.slice(0, 120)}…` : p.content);
     setReportConfig({
       title: "Reportar post",
       previewLabel: preview || "Post sin texto",
@@ -127,12 +182,19 @@ export default function PostDetailScreen() {
       targetType: "COMMUNITY_POST",
       targetId: p.id,
       targetOwnerId: p.author.id,
-      snapshot: { title: p.title, content: p.content, authorUsername: p.author.username },
+      snapshot: {
+        title: p.title,
+        content: p.content,
+        authorUsername: p.author.username,
+      },
     });
   }, []);
 
   const handleReportComment = useCallback((comment: ForumPostComment) => {
-    const preview = comment.content.length > 120 ? `${comment.content.slice(0, 120)}…` : comment.content;
+    const preview =
+      comment.content.length > 120
+        ? `${comment.content.slice(0, 120)}…`
+        : comment.content;
     setReportConfig({
       title: "Reportar comentario",
       previewLabel: preview || "Comentario sin texto",
@@ -140,7 +202,11 @@ export default function PostDetailScreen() {
       targetType: "COMMUNITY_POST_COMMENT",
       targetId: comment.id,
       targetOwnerId: comment.author.id,
-      snapshot: { content: comment.content, authorUsername: comment.author.username, postId: comment.postId },
+      snapshot: {
+        content: comment.content,
+        authorUsername: comment.author.username,
+        postId: comment.postId,
+      },
     });
   }, []);
 
@@ -172,6 +238,7 @@ export default function PostDetailScreen() {
       >
         <PostCard
           post={post}
+          boardId={boardId ?? ""}
           currentProfileId={profile.id}
           currentMemberRole={currentMemberRole}
           isExpanded={isExpanded}

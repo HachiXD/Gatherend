@@ -4,6 +4,7 @@ import { Alert, Pressable, StyleSheet, View } from "react-native";
 import { UserAvatar } from "@/src/components/user-avatar";
 import { useTheme } from "@/src/theme/theme-provider";
 import { usePostComments } from "../hooks/use-post-comments";
+import { useTogglePostLike } from "../hooks/use-toggle-post-like";
 import { PostCommentItem } from "./post-comment-item";
 import { PostContent } from "./post-content";
 import { PostImage } from "./post-image";
@@ -22,6 +23,7 @@ function formatDate(value: string): string {
 
 type PostCardProps = {
   post: ForumPost;
+  boardId: string;
   currentProfileId: string;
   currentMemberRole: string | null;
   isExpanded: boolean;
@@ -38,6 +40,7 @@ type PostCardProps = {
 
 function PostCardInner({
   post,
+  boardId,
   currentProfileId,
   currentMemberRole,
   isExpanded,
@@ -53,6 +56,8 @@ function PostCardInner({
 }: PostCardProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+
+  const togglePostLike = useTogglePostLike(boardId);
 
   const isOwnPost = post.author.id === currentProfileId;
   const canModerate = isModerator(currentMemberRole);
@@ -305,6 +310,26 @@ function PostCardInner({
       {/* Action bar */}
       {!isEditingPost && (
         <View style={[styles.actionBar, { borderColor: colors.borderPrimary }]}>
+          {/* Like button */}
+          <Pressable
+            onPress={() =>
+              togglePostLike.mutate({ postId: post.id, isLiked: post.isLikedByCurrentUser })
+            }
+            style={({ pressed }) => [styles.likeButton, pressed && styles.pressed]}
+          >
+            <Ionicons
+              name={post.isLikedByCurrentUser ? "heart" : "heart-outline"}
+              size={16}
+              color={post.isLikedByCurrentUser ? "#e74c3c" : colors.textTertiary}
+            />
+            {post.likeCount > 0 ? (
+              <Text style={[styles.likeCount, { color: colors.textTertiary }]}>
+                {post.likeCount}
+              </Text>
+            ) : null}
+          </Pressable>
+
+          <View style={styles.actionBarRight}>
           {isOwnPost && (
             <Pressable
               onPress={handleStartEditPost}
@@ -351,6 +376,7 @@ function PostCardInner({
               </Pressable>
             </>
           ) : null}
+          </View>
         </View>
       )}
 
@@ -519,6 +545,21 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       gap: 10,
       marginTop: 10,
       paddingVertical: 8,
+    },
+    likeButton: {
+      alignItems: "center",
+      flexDirection: "row",
+      gap: 4,
+    },
+    likeCount: {
+      fontSize: 13,
+    },
+    actionBarRight: {
+      alignItems: "center",
+      flex: 1,
+      flexDirection: "row",
+      gap: 10,
+      justifyContent: "flex-end",
     },
     actionText: {
       fontSize: 13,

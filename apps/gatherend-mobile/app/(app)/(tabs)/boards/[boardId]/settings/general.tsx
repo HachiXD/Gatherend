@@ -24,6 +24,18 @@ import {
 import { canViewSettingsSection } from "@/src/features/board-settings/utils/permissions";
 import { useTheme } from "@/src/theme/theme-provider";
 import { Text, TextInput } from "@/src/components/app-typography";
+import type { BoardTabNames } from "@/src/features/boards/types/board";
+
+const TAB_FIELDS: { key: keyof BoardTabNames; defaultLabel: string }[] = [
+  { key: "home", defaultLabel: "Casa" },
+  { key: "chats", defaultLabel: "Chats" },
+  { key: "forum", defaultLabel: "Foro" },
+  { key: "rules", defaultLabel: "Reglas" },
+  { key: "wiki", defaultLabel: "Wiki" },
+  { key: "ranking", defaultLabel: "Ranking" },
+  { key: "members", defaultLabel: "Miembros" },
+  { key: "invite", defaultLabel: "Invitar amigos" },
+];
 
 export default function BoardGeneralSettingsScreen() {
   const { boardId } = useLocalSearchParams<{ boardId?: string }>();
@@ -36,6 +48,7 @@ export default function BoardGeneralSettingsScreen() {
   const [description, setDescription] = useState("");
   const [imageUpload, setImageUpload] = useState("");
   const [bannerUpload, setBannerUpload] = useState("");
+  const [tabNames, setTabNames] = useState<BoardTabNames>({});
 
   useEffect(() => {
     if (!board) return;
@@ -43,6 +56,7 @@ export default function BoardGeneralSettingsScreen() {
     setDescription(board.description ?? "");
     setImageUpload(getStoredUploadValueFromAsset(board.imageAsset));
     setBannerUpload(getStoredUploadValueFromAsset(board.bannerAsset));
+    setTabNames(board.tabNames ?? {});
   }, [board]);
 
   if (isLoading && !board) {
@@ -85,6 +99,7 @@ export default function BoardGeneralSettingsScreen() {
         description: description.trim() || null,
         imageAssetId: getStoredUploadAssetId(imageUpload),
         bannerAssetId: getStoredUploadAssetId(bannerUpload),
+        tabNames,
       });
       Alert.alert("Guardado", "El board fue actualizado.");
     } catch (saveError) {
@@ -175,6 +190,29 @@ export default function BoardGeneralSettingsScreen() {
           </View>
         </View>
 
+        <View style={styles.panel}>
+          <Text style={styles.sectionTitle}>NOMBRES DE SECCIONES</Text>
+          <Text style={styles.sectionHint}>
+            Deja vacío para usar el nombre por defecto.
+          </Text>
+          {TAB_FIELDS.map(({ key, defaultLabel }) => (
+            <View key={key} style={styles.field}>
+              <Text style={styles.label}>{defaultLabel.toUpperCase()}</Text>
+              <TextInput
+                value={tabNames[key] ?? ""}
+                onChangeText={(val) =>
+                  setTabNames((prev) => ({ ...prev, [key]: val || null }))
+                }
+                editable={!updateSettings.isPending}
+                maxLength={30}
+                placeholder={defaultLabel}
+                placeholderTextColor={colors.textTertiary}
+                style={styles.input}
+              />
+            </View>
+          ))}
+        </View>
+
         <View style={styles.actions}>
           <Pressable
             onPress={handleBump}
@@ -262,6 +300,17 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       borderWidth: 1,
       gap: 16,
       padding: 14,
+    },
+    sectionTitle: {
+      color: colors.textMuted,
+      fontSize: 11,
+      fontWeight: "700",
+      letterSpacing: 0.8,
+    },
+    sectionHint: {
+      color: colors.textTertiary,
+      fontSize: 12,
+      marginTop: -8,
     },
     pressed: {
       opacity: 0.65,

@@ -59,17 +59,13 @@ export function createForumHttpDataSource(): ForumRepository {
     },
 
     async getPost(boardId, postId) {
-      const url = `/api/boards/${boardId}/posts/${postId}`;
-      console.log("[getPost] fetching", url);
-      const response = await nextApiFetch(url);
-      console.log("[getPost] status", response.status);
+      const response = await nextApiFetch(`/api/boards/${boardId}/posts/${postId}`);
       if (!response.ok) {
-        const errText = await response.text();
-        console.log("[getPost] error body", errText);
-        throw new Error(errText || "Error al cargar el post");
+        throw new Error(
+          await readNextApiError(response, "Error al cargar el post"),
+        );
       }
       const data = (await response.json()) as { post: ForumPost };
-      console.log("[getPost] response keys", Object.keys(data));
       return data.post;
     },
 

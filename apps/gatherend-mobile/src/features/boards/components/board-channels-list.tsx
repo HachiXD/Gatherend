@@ -16,6 +16,21 @@ type BoardChannelsListProps = {
   onJoinVoice?: (channelId: string, channelName: string) => void;
 };
 
+function timeAgo(iso: string): string {
+  const secs = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (secs < 60) return "hace un momento";
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return `hace ${mins} min`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `hace ${hours} h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `hace ${days} día${days !== 1 ? "s" : ""}`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return `hace ${weeks} semana${weeks !== 1 ? "s" : ""}`;
+  const months = Math.floor(days / 30);
+  return `hace ${months} mes${months !== 1 ? "es" : ""}`;
+}
+
 function getChannelMeta(channel: BoardChannel, voiceParticipantCount: number) {
   const count =
     channel.type === "VOICE"
@@ -131,6 +146,11 @@ function ChannelRow({ item, styles, colors, onSelectChannel, onJoinVoice }: Chan
             ) : null}
           </View>
         ) : null}
+        {item.type === "TEXT" && item.lastMessageAt ? (
+          <Text numberOfLines={1} style={styles.activity}>
+            Activo {timeAgo(item.lastMessageAt)}
+          </Text>
+        ) : null}
         {hasUnread && item.type === "TEXT" ? (
           <View style={styles.unreadPill}>
             <Text style={styles.unreadPillText}>Nuevos mensajes</Text>
@@ -232,6 +252,10 @@ function createStyles(
     meta: {
       color: colors.textMuted,
       fontSize: 13,
+    },
+    activity: {
+      color: colors.textTertiary,
+      fontSize: 12,
     },
     participantsRow: {
       alignItems: "center",

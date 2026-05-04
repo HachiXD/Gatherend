@@ -231,6 +231,7 @@ export async function PATCH(
       bannerAssetId?: unknown;
       description?: unknown;
       isPrivate?: unknown;
+      tabNames?: unknown;
     };
     try {
       body = await req.json();
@@ -238,7 +239,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const { name, imageAssetId, bannerAssetId, description, isPrivate } = body;
+    const { name, imageAssetId, bannerAssetId, description, isPrivate, tabNames } = body;
 
     if (name !== undefined) {
       if (typeof name !== "string" || name.trim().length < 2) {
@@ -277,6 +278,30 @@ export async function PATCH(
         { error: "isPrivate must be a boolean" },
         { status: 400 },
       );
+    }
+
+    const TAB_KEYS = ["home", "chats", "forum", "rules", "wiki", "ranking", "members", "invite"] as const;
+    let resolvedTabNames: Record<string, string | null> | undefined = undefined;
+    if (tabNames !== undefined) {
+      if (tabNames === null) {
+        resolvedTabNames = {};
+      } else if (typeof tabNames !== "object" || Array.isArray(tabNames)) {
+        return NextResponse.json({ error: "tabNames must be an object" }, { status: 400 });
+      } else {
+        resolvedTabNames = {};
+        for (const key of TAB_KEYS) {
+          const val = (tabNames as Record<string, unknown>)[key];
+          if (val === undefined || val === null || val === "") {
+            resolvedTabNames[key] = null;
+          } else if (typeof val !== "string") {
+            return NextResponse.json({ error: `tabNames.${key} must be a string` }, { status: 400 });
+          } else if (val.trim().length > 30) {
+            return NextResponse.json({ error: `tabNames.${key} cannot exceed 30 characters` }, { status: 400 });
+          } else {
+            resolvedTabNames[key] = val.trim();
+          }
+        }
+      }
     }
 
     let resolvedImageAssetId: string | null | undefined = undefined;
@@ -431,11 +456,13 @@ export async function PATCH(
           ...(description !== undefined && {
             description: description ? (description as string).trim() : null,
           }),
+          ...(resolvedTabNames !== undefined && { tabNames: resolvedTabNames }),
         },
         select: {
           id: true,
           name: true,
           description: true,
+          tabNames: true,
           imageAsset: {
             select: uploadedAssetSummarySelect,
           },

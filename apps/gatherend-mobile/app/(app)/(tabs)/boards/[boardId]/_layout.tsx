@@ -45,6 +45,7 @@ const BOARD_SECTION_TABS = [
   { key: "home", label: "Casa", icon: "home-outline" },
   { key: "chats", label: "Chats", icon: "chatbubble-ellipses-outline" },
   { key: "forum", label: "Foro", icon: "chatbox-outline" },
+  { key: "featured", label: "Destacado", icon: "star-outline" },
   { key: "rules", label: "Reglas", icon: "document-text-outline" },
   { key: "wiki", label: "Wiki", icon: "book-outline" },
   { key: "ranking", label: "Ranking", icon: "trophy-outline" },
@@ -72,6 +73,8 @@ function getBoardInitial(name: string | undefined) {
 
 function getBoardSectionPathname(section: BoardSectionKey) {
   switch (section) {
+    case "featured":
+      return "/boards/[boardId]/featured";
     case "home":
       return "/boards/[boardId]/home";
     case "forum":
@@ -175,9 +178,12 @@ export default function BoardShellLayout() {
     BOARD_SECTION_TABS.find((tab) => pathname.includes(`/${tab.key}`))?.key ??
     "home";
   const isHome = currentSection === "home";
-  const currentSectionTitle =
-    BOARD_SECTION_TABS.find((tab) => tab.key === currentSection)?.label ??
-    "Chats";
+  const resolvedTabLabel = (key: (typeof BOARD_SECTION_TABS)[number]["key"]) => {
+    const custom = board?.tabNames?.[key as keyof typeof board.tabNames];
+    const fallback = BOARD_SECTION_TABS.find((t) => t.key === key)?.label ?? key;
+    return (custom && custom.trim()) ? custom.trim() : fallback;
+  };
+  const currentSectionTitle = resolvedTabLabel(currentSection);
   const settingsSubviewTitle = getSettingsSubviewTitle(pathname);
   // DEBUG: trace board query state changes
 
@@ -560,7 +566,7 @@ export default function BoardShellLayout() {
                                   : null,
                               ]}
                             >
-                              {tab.label}
+                              {resolvedTabLabel(tab.key)}
                             </Text>
                           </Pressable>
                         </Fragment>

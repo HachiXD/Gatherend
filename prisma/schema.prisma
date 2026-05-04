@@ -253,6 +253,7 @@ model Board {
   languages             Languages[]              @default([EN])
   hiddenFromFeed        Boolean                  @default(false)
   reportCount           Int                      @default(0)
+  tabNames              Json?
   // Materialized fields for discovery feed ranking (updated by cron)
   memberCount           Int                      @default(0)
   recentPostCount7d     Int                      @default(0)
@@ -371,6 +372,7 @@ model Channel {
   boardId        String
   imageAssetId   String?
   lastMessageSeq Int                @default(0)
+  lastMessageAt  DateTime?
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
   board          Board              @relation(fields: [boardId], references: [id], onDelete: Cascade)

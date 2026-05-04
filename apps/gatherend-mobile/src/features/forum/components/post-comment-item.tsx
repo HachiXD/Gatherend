@@ -1,12 +1,10 @@
 import { Image } from "expo-image";
 import { useMemo, useState } from "react";
-import {
-  Pressable,
-  StyleSheet,
-  View,
-} from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { UserAvatar } from "@/src/components/user-avatar";
 import { useTheme } from "@/src/theme/theme-provider";
+import { useToggleCommentLike } from "../hooks/use-toggle-comment-like";
 import { PostContent } from "./post-content";
 import type { ForumPostComment } from "../domain/post";
 import { Text, TextInput } from "@/src/components/app-typography";
@@ -66,6 +64,8 @@ export function PostCommentItem({
   const trimmedDraft = editingContent?.trim() ?? "";
   const canSaveEdit = trimmedDraft.length > 0 || !!comment.imageAsset;
 
+  const toggleCommentLike = useToggleCommentLike(comment.postId);
+
   return (
     <View style={styles.container}>
       <UserAvatar
@@ -96,7 +96,10 @@ export function PostCommentItem({
               value={editingContent}
               onChangeText={onEditContentChange}
               multiline
-              style={[styles.editInput, { borderColor: colors.borderSecondary }]}
+              style={[
+                styles.editInput,
+                { borderColor: colors.borderSecondary },
+              ]}
               placeholderTextColor={colors.textTertiary}
               placeholder="Editar comentario..."
               editable={!isSavingEdit}
@@ -109,11 +112,16 @@ export function PostCommentItem({
                 style={({ pressed }) => [
                   styles.editButton,
                   styles.editButtonCancel,
-                  { borderColor: colors.borderPrimary, backgroundColor: colors.bgCancelButton },
+                  {
+                    borderColor: colors.borderPrimary,
+                    backgroundColor: colors.bgCancelButton,
+                  },
                   pressed && styles.pressed,
                 ]}
               >
-                <Text style={[styles.editButtonText, { color: colors.textSubtle }]}>
+                <Text
+                  style={[styles.editButtonText, { color: colors.textSubtle }]}
+                >
                   Cancelar
                 </Text>
               </Pressable>
@@ -127,7 +135,9 @@ export function PostCommentItem({
                   pressed && styles.pressed,
                 ]}
               >
-                <Text style={[styles.editButtonText, { color: colors.textPrimary }]}>
+                <Text
+                  style={[styles.editButtonText, { color: colors.textPrimary }]}
+                >
                   {isSavingEdit ? "Guardando..." : "Guardar"}
                 </Text>
               </Pressable>
@@ -144,7 +154,9 @@ export function PostCommentItem({
             ) : null}
 
             {comment.deleted ? (
-              <Text style={[styles.deletedText, { color: colors.textTertiary }]}>
+              <Text
+                style={[styles.deletedText, { color: colors.textTertiary }]}
+              >
                 [Comentario eliminado]
               </Text>
             ) : (
@@ -158,7 +170,12 @@ export function PostCommentItem({
                     onPress={() => onReply(comment.id)}
                     style={({ pressed }) => [pressed && styles.pressed]}
                   >
-                    <Text style={[styles.actionText, { color: colors.textTertiary }]}>
+                    <Text
+                      style={[
+                        styles.actionText,
+                        { color: colors.textTertiary },
+                      ]}
+                    >
                       Responder
                     </Text>
                   </Pressable>
@@ -168,7 +185,12 @@ export function PostCommentItem({
                     onPress={() => onEdit(comment.id)}
                     style={({ pressed }) => [pressed && styles.pressed]}
                   >
-                    <Text style={[styles.actionText, { color: colors.textTertiary }]}>
+                    <Text
+                      style={[
+                        styles.actionText,
+                        { color: colors.textTertiary },
+                      ]}
+                    >
                       Editar
                     </Text>
                   </Pressable>
@@ -178,7 +200,12 @@ export function PostCommentItem({
                     onPress={() => onDelete(comment.id)}
                     style={({ pressed }) => [pressed && styles.pressed]}
                   >
-                    <Text style={[styles.actionText, { color: colors.textTertiary }]}>
+                    <Text
+                      style={[
+                        styles.actionText,
+                        { color: colors.textTertiary },
+                      ]}
+                    >
                       Eliminar
                     </Text>
                   </Pressable>
@@ -188,11 +215,38 @@ export function PostCommentItem({
                     onPress={onReport}
                     style={({ pressed }) => [pressed && styles.pressed]}
                   >
-                    <Text style={[styles.actionText, { color: colors.textTertiary }]}>
+                    <Text
+                      style={[
+                        styles.actionText,
+                        { color: colors.textTertiary },
+                      ]}
+                    >
                       Reportar
                     </Text>
                   </Pressable>
                 ) : null}
+                <View style={styles.likeButtonWrapper}>
+                  <Pressable
+                    onPress={() =>
+                      toggleCommentLike.mutate({
+                        commentId: comment.id,
+                        isLiked: comment.isLikedByCurrentUser,
+                      })
+                    }
+                    style={({ pressed }) => [styles.likeButton, pressed && styles.pressed]}
+                  >
+                    <Ionicons
+                      name={comment.isLikedByCurrentUser ? "heart" : "heart-outline"}
+                      size={13}
+                      color={comment.isLikedByCurrentUser ? "#e74c3c" : colors.textTertiary}
+                    />
+                    {comment.likeCount > 0 ? (
+                      <Text style={[styles.actionText, { color: colors.textTertiary }]}>
+                        {comment.likeCount}
+                      </Text>
+                    ) : null}
+                  </Pressable>
+                </View>
               </View>
             )}
           </>
@@ -252,6 +306,16 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       flexDirection: "row",
       gap: 12,
       marginTop: 4,
+      alignItems: "center",
+    },
+    likeButtonWrapper: {
+      flex: 1,
+      alignItems: "flex-end",
+    },
+    likeButton: {
+      alignItems: "center",
+      flexDirection: "row",
+      gap: 3,
     },
     actionText: {
       fontSize: 12,

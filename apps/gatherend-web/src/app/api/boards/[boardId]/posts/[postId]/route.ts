@@ -141,6 +141,7 @@ export async function GET(
         title: true,
         content: true,
         commentCount: true,
+        likeCount: true,
         imageAsset: { select: uploadedAssetSummarySelect },
         createdAt: true,
         updatedAt: true,
@@ -157,7 +158,10 @@ export async function GET(
             profileTags: true,
             avatarAsset: { select: uploadedAssetSummarySelect },
             badgeSticker: {
-              select: { id: true, asset: { select: uploadedAssetSummarySelect } },
+              select: {
+                id: true,
+                asset: { select: uploadedAssetSummarySelect },
+              },
             },
           },
         },
@@ -183,7 +187,10 @@ export async function GET(
                 profileTags: true,
                 avatarAsset: { select: uploadedAssetSummarySelect },
                 badgeSticker: {
-                  select: { id: true, asset: { select: uploadedAssetSummarySelect } },
+                  select: {
+                    id: true,
+                    asset: { select: uploadedAssetSummarySelect },
+                  },
                 },
               },
             },
@@ -194,7 +201,9 @@ export async function GET(
                 content: true,
                 deleted: true,
                 createdAt: true,
-                author: { select: { id: true, username: true, discriminator: true } },
+                author: {
+                  select: { id: true, username: true, discriminator: true },
+                },
               },
             },
           },
@@ -206,6 +215,11 @@ export async function GET(
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
 
+    const postLike = await db.communityPostLike.findUnique({
+      where: { postId_profileId: { postId, profileId: profile.id } },
+      select: { id: true },
+    });
+
     return NextResponse.json({
       post: {
         id: post.id,
@@ -213,7 +227,11 @@ export async function GET(
         content: post.content,
         imageAsset: serializeUploadedAsset(post.imageAsset),
         commentCount: post.commentCount,
-        latestComments: [...post.comments].reverse().map(serializeCommentPreview),
+        likeCount: post.likeCount,
+        isLikedByCurrentUser: !!postLike,
+        latestComments: [...post.comments]
+          .reverse()
+          .map(serializeCommentPreview),
         createdAt: post.createdAt.toISOString(),
         updatedAt: post.updatedAt.toISOString(),
         pinnedAt: post.pinnedAt?.toISOString() ?? null,

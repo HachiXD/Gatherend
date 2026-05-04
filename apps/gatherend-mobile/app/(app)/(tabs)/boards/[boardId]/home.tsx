@@ -59,9 +59,7 @@ const INITIAL_TAB_INDEX = 1; // Chats
 function normalizeDominantColor(raw: string | null | undefined) {
   if (!raw) return null;
 
-  const rgbMatch = raw.match(
-    /^rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i,
-  );
+  const rgbMatch = raw.match(/^rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i);
   if (rgbMatch) {
     const [, r, g, b] = rgbMatch;
     return `#${Number(r).toString(16).padStart(2, "0")}${Number(g)
@@ -91,23 +89,79 @@ function getBoardDerivedColors(
 // ─── Report categories ────────────────────────────────────────────────────────
 
 const POST_REPORT_CATEGORIES: ReportCategoryConfig[] = [
-  { value: "CSAM", label: "Seguridad infantil", description: "El post involucra a menores de forma inapropiada" },
-  { value: "SEXUAL_CONTENT", label: "Contenido sexual", description: "El post contiene material explícito o no solicitado" },
-  { value: "HARASSMENT", label: "Acoso", description: "El post contiene amenazas o comportamiento intimidatorio" },
-  { value: "HATE_SPEECH", label: "Discurso de odio", description: "Promueve odio contra grupos o personas" },
-  { value: "SPAM", label: "Spam", description: "Contenido repetitivo, engañoso o no solicitado" },
-  { value: "IMPERSONATION", label: "Suplantación de identidad", description: "Se hace pasar por otra persona" },
-  { value: "OTHER", label: "Otro", description: "Razón no listada anteriormente" },
+  {
+    value: "CSAM",
+    label: "Seguridad infantil",
+    description: "El post involucra a menores de forma inapropiada",
+  },
+  {
+    value: "SEXUAL_CONTENT",
+    label: "Contenido sexual",
+    description: "El post contiene material explícito o no solicitado",
+  },
+  {
+    value: "HARASSMENT",
+    label: "Acoso",
+    description: "El post contiene amenazas o comportamiento intimidatorio",
+  },
+  {
+    value: "HATE_SPEECH",
+    label: "Discurso de odio",
+    description: "Promueve odio contra grupos o personas",
+  },
+  {
+    value: "SPAM",
+    label: "Spam",
+    description: "Contenido repetitivo, engañoso o no solicitado",
+  },
+  {
+    value: "IMPERSONATION",
+    label: "Suplantación de identidad",
+    description: "Se hace pasar por otra persona",
+  },
+  {
+    value: "OTHER",
+    label: "Otro",
+    description: "Razón no listada anteriormente",
+  },
 ];
 
 const COMMENT_REPORT_CATEGORIES: ReportCategoryConfig[] = [
-  { value: "CSAM", label: "Seguridad infantil", description: "El comentario involucra a menores de forma inapropiada" },
-  { value: "SEXUAL_CONTENT", label: "Contenido sexual", description: "El comentario contiene material explícito" },
-  { value: "HARASSMENT", label: "Acoso", description: "El comentario contiene amenazas o acoso" },
-  { value: "HATE_SPEECH", label: "Discurso de odio", description: "Promueve odio contra grupos o personas" },
-  { value: "SPAM", label: "Spam", description: "Contenido repetitivo, engañoso o no solicitado" },
-  { value: "IMPERSONATION", label: "Suplantación de identidad", description: "Se hace pasar por otra persona" },
-  { value: "OTHER", label: "Otro", description: "Razón no listada anteriormente" },
+  {
+    value: "CSAM",
+    label: "Seguridad infantil",
+    description: "El comentario involucra a menores de forma inapropiada",
+  },
+  {
+    value: "SEXUAL_CONTENT",
+    label: "Contenido sexual",
+    description: "El comentario contiene material explícito",
+  },
+  {
+    value: "HARASSMENT",
+    label: "Acoso",
+    description: "El comentario contiene amenazas o acoso",
+  },
+  {
+    value: "HATE_SPEECH",
+    label: "Discurso de odio",
+    description: "Promueve odio contra grupos o personas",
+  },
+  {
+    value: "SPAM",
+    label: "Spam",
+    description: "Contenido repetitivo, engañoso o no solicitado",
+  },
+  {
+    value: "IMPERSONATION",
+    label: "Suplantación de identidad",
+    description: "Se hace pasar por otra persona",
+  },
+  {
+    value: "OTHER",
+    label: "Otro",
+    description: "Razón no listada anteriormente",
+  },
 ];
 
 type ReportConfig = {
@@ -406,6 +460,7 @@ function ForumContent({
     ({ item }: { item: ForumPost }) => (
       <PostCard
         post={item}
+        boardId={boardId ?? ""}
         currentProfileId={profile.id}
         currentMemberRole={currentMemberRole}
         isExpanded={!!expandedPostsById[item.id]}
@@ -537,7 +592,10 @@ export default function BoardHomeScreen() {
     [board?.bannerAsset?.dominantColor, board?.imageAsset?.dominantColor, mode],
   );
   const effectiveColors = boardColors ?? colors;
-  const styles = useMemo(() => createStyles(effectiveColors), [effectiveColors]);
+  const styles = useMemo(
+    () => createStyles(effectiveColors),
+    [effectiveColors],
+  );
 
   const tabIndexRef = useRef(INITIAL_TAB_INDEX);
   const [displayTabIndex, setDisplayTabIndex] = useState(INITIAL_TAB_INDEX);
@@ -576,19 +634,15 @@ export default function BoardHomeScreen() {
           const maxRight =
             screenWidth * tabIndexRef.current + screenWidth * 0.25;
           const maxLeft =
-            -(
-              screenWidth * (HOME_TABS.length - 1 - tabIndexRef.current)
-            ) - screenWidth * 0.25;
+            -(screenWidth * (HOME_TABS.length - 1 - tabIndexRef.current)) -
+            screenWidth * 0.25;
           animPageValue.setValue(Math.max(maxLeft, Math.min(maxRight, g.dx)));
         },
         onPanResponderRelease: (_e, g) => {
           animPageValue.flattenOffset();
           let nextIndex = tabIndexRef.current;
           if (g.dx < -(screenWidth * 0.3) || g.vx < -0.5) {
-            nextIndex = Math.min(
-              tabIndexRef.current + 1,
-              HOME_TABS.length - 1,
-            );
+            nextIndex = Math.min(tabIndexRef.current + 1, HOME_TABS.length - 1);
           } else if (g.dx > screenWidth * 0.3 || g.vx > 0.5) {
             nextIndex = Math.max(tabIndexRef.current - 1, 0);
           }

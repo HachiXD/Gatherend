@@ -15,6 +15,7 @@ export type UpdateBoardSettingsInput = {
   description?: string | null;
   imageAssetId?: string | null;
   bannerAssetId?: string | null;
+  tabNames?: Record<string, string | null> | null;
 };
 
 export async function updateBoardSettings(

@@ -52,10 +52,11 @@ export default function BoardForumScreen() {
     ({ item }: { item: ForumPostPreview }) => (
       <PostPreviewCard
         post={item}
+        boardId={boardId ?? ""}
         onPress={() => handleOpenPost(item.id)}
       />
     ),
-    [handleOpenPost],
+    [boardId, handleOpenPost],
   );
 
   if (isLoading && allPosts.length === 0) {

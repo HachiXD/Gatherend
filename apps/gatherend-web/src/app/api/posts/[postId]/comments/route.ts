@@ -38,6 +38,7 @@ const commentSelect = {
   createdAt: true,
   updatedAt: true,
   deleted: true,
+  likeCount: true,
   imageAsset: {
     select: uploadedAssetSummarySelect,
   },
@@ -93,18 +94,21 @@ function serializeComment(
         createdAt: Date;
         updatedAt: Date;
         deleted: boolean;
-        imageAsset: typeof db.uploadedAsset extends never ? never : {
-          id: string;
-          key: string;
-          visibility: AssetVisibility;
-          context: AssetContext;
-          mimeType: string;
-          sizeBytes: number | null;
-          width: number | null;
-          height: number | null;
-          originalName: string | null;
-          dominantColor: string | null;
-        } | null;
+        likeCount: number;
+        imageAsset: typeof db.uploadedAsset extends never
+          ? never
+          : {
+              id: string;
+              key: string;
+              visibility: AssetVisibility;
+              context: AssetContext;
+              mimeType: string;
+              sizeBytes: number | null;
+              width: number | null;
+              height: number | null;
+              originalName: string | null;
+              dominantColor: string | null;
+            } | null;
         author: {
           id: string;
           username: string;
@@ -154,12 +158,15 @@ function serializeComment(
           };
         } | null;
       },
+  isLikedByCurrentUser: boolean,
 ) {
   return {
     id: comment.id,
     postId: comment.postId,
     content: comment.content,
     deleted: comment.deleted,
+    likeCount: comment.likeCount,
+    isLikedByCurrentUser,
     imageAsset: serializeUploadedAsset(comment.imageAsset),
     createdAt: comment.createdAt.toISOString(),
     updatedAt: comment.updatedAt.toISOString(),
@@ -187,6 +194,7 @@ export async function GET(
 
     const auth = await requireAuth();
     if (!auth.success) return auth.response;
+    const { profile } = auth;
 
     const { postId } = await context.params;
 
@@ -215,8 +223,15 @@ export async function GET(
       select: commentSelect,
     });
 
+    const commentIds = comments.map((c) => c.id);
+    const likedComments = await db.communityPostCommentLike.findMany({
+      where: { profileId: profile.id, commentId: { in: commentIds } },
+      select: { commentId: true },
+    });
+    const likedCommentSet = new Set(likedComments.map((l) => l.commentId));
+
     return NextResponse.json({
-      items: comments.map(serializeComment),
+      items: comments.map((c) => serializeComment(c, likedCommentSet.has(c.id))),
       totalCount: post.commentCount,
     });
   } catch (error) {
@@ -275,7 +290,11 @@ export async function POST(
     }
 
     let resolvedImageAssetId: string | null = null;
-    if (imageAssetId !== undefined && imageAssetId !== null && imageAssetId !== "") {
+    if (
+      imageAssetId !== undefined &&
+      imageAssetId !== null &&
+      imageAssetId !== ""
+    ) {
       if (typeof imageAssetId !== "string" || !UUID_REGEX.test(imageAssetId)) {
         return NextResponse.json(
           { error: "Image asset ID must be a valid UUID" },

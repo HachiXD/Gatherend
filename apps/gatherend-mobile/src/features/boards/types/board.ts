@@ -29,6 +29,7 @@ export type BoardChannel = {
   imageAsset: BoardImageAsset | null;
   channelMemberCount: number;
   isJoined: boolean;
+  lastMessageAt: string | null;
 };
 
 export type BoardCurrentMember = {
@@ -42,6 +43,17 @@ export type BoardCurrentMember = {
   updatedAt: string;
 };
 
+export type BoardTabNames = {
+  home?: string | null;
+  chats?: string | null;
+  forum?: string | null;
+  rules?: string | null;
+  wiki?: string | null;
+  ranking?: string | null;
+  members?: string | null;
+  invite?: string | null;
+};
+
 export type BoardWithData = {
   id: string;
   name: string;
@@ -53,6 +65,7 @@ export type BoardWithData = {
   memberCount: number;
   inviteCode: string;
   inviteEnabled: boolean;
+  tabNames: BoardTabNames | null;
 };
 
 export type CreateBoardInput = {

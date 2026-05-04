@@ -27,6 +27,7 @@ export type BoardSettingsUpdatedBoard = Pick<
   | "bannerAsset"
   | "inviteCode"
   | "inviteEnabled"
+  | "tabNames"
 >;
 
 export type BoardSettingsMemberProfile = {

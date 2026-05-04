@@ -26,6 +26,8 @@ interface CommunityPostPreviewItem {
   contentSnippet: string;
   imageAsset: ReturnType<typeof serializeUploadedAsset>;
   commentCount: number;
+  likeCount: number;
+  isLikedByCurrentUser: boolean;
   createdAt: string;
   updatedAt: string;
   pinnedAt: string | null;
@@ -47,6 +49,8 @@ interface CommunityPostFeedItem {
   content: string;
   imageAsset: ReturnType<typeof serializeUploadedAsset>;
   commentCount: number;
+  likeCount: number;
+  isLikedByCurrentUser: boolean;
   latestComments: Array<{
     id: string;
     postId: string;
@@ -300,6 +304,7 @@ export async function GET(
           title: true,
           content: true,
           commentCount: true,
+          likeCount: true,
           imageAsset: { select: uploadedAssetSummarySelect },
           createdAt: true,
           updatedAt: true,
@@ -331,12 +336,21 @@ export async function GET(
           ? `${lastPreviewItem.createdAt.toISOString()}|${lastPreviewItem.id}`
           : null;
 
+      const previewPostIds = previewItems.map((p) => p.id);
+      const previewLikedByUser = await db.communityPostLike.findMany({
+        where: { profileId: profile.id, postId: { in: previewPostIds } },
+        select: { postId: true },
+      });
+      const previewLikedSet = new Set(previewLikedByUser.map((l) => l.postId));
+
       const previewResult: CommunityPostPreviewItem[] = previewItems.map((post) => ({
         id: post.id,
         title: post.title ?? null,
         contentSnippet: toSnippet(post.content),
         imageAsset: serializeUploadedAsset(post.imageAsset),
         commentCount: post.commentCount,
+        likeCount: post.likeCount,
+        isLikedByCurrentUser: previewLikedSet.has(post.id),
         createdAt: post.createdAt.toISOString(),
         updatedAt: post.updatedAt.toISOString(),
         pinnedAt: post.pinnedAt?.toISOString() ?? null,
@@ -374,6 +388,7 @@ export async function GET(
         title: true,
         content: true,
         commentCount: true,
+        likeCount: true,
         imageAsset: {
           select: uploadedAssetSummarySelect,
         },
@@ -462,12 +477,21 @@ export async function GET(
     const hasMore = posts.length > limit;
     const items = hasMore ? posts.slice(0, limit) : posts;
 
+    const feedPostIds = items.map((p) => p.id);
+    const feedLikedByUser = await db.communityPostLike.findMany({
+      where: { profileId: profile.id, postId: { in: feedPostIds } },
+      select: { postId: true },
+    });
+    const feedLikedSet = new Set(feedLikedByUser.map((l) => l.postId));
+
     const result: CommunityPostFeedItem[] = items.map((post) => ({
       id: post.id,
       title: post.title ?? null,
       content: post.content,
       imageAsset: serializeUploadedAsset(post.imageAsset),
       commentCount: post.commentCount,
+      likeCount: post.likeCount,
+      isLikedByCurrentUser: feedLikedSet.has(post.id),
       latestComments: [...post.comments]
         .reverse()
         .map(serializeCommentPreview),

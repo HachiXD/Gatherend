@@ -27,6 +27,7 @@ export function useCreateChannel() {
         imageAsset: null,
         channelMemberCount: 1,
         isJoined: true,
+        lastMessageAt: null,
       };
 
       queryClient.setQueryData<BoardWithData>(

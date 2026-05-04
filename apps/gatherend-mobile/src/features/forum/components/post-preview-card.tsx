@@ -4,6 +4,7 @@ import { memo, useMemo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { UserAvatar } from "@/src/components/user-avatar";
 import { useTheme } from "@/src/theme/theme-provider";
+import { useTogglePostLike } from "../hooks/use-toggle-post-like";
 import { PostContent } from "./post-content";
 import type { ForumPostPreview } from "../domain/post";
 import { Text } from "@/src/components/app-typography";
@@ -17,19 +18,28 @@ function formatDate(value: string): string {
 
 type PostPreviewCardProps = {
   post: ForumPostPreview;
+  boardId: string;
   onPress: () => void;
 };
 
-function PostPreviewCardInner({ post, onPress }: PostPreviewCardProps) {
+function PostPreviewCardInner({
+  post,
+  boardId,
+  onPress,
+}: PostPreviewCardProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const togglePostLike = useTogglePostLike(boardId);
 
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
         styles.card,
-        { borderColor: colors.borderPrimary, backgroundColor: colors.bgEditForm },
+        {
+          borderColor: colors.borderPrimary,
+          backgroundColor: colors.bgEditForm,
+        },
         pressed && styles.pressed,
       ]}
     >
@@ -41,7 +51,10 @@ function PostPreviewCardInner({ post, onPress }: PostPreviewCardProps) {
           size={36}
         />
         <View style={styles.authorMeta}>
-          <Text style={[styles.username, { color: colors.textPrimary }]} numberOfLines={1}>
+          <Text
+            style={[styles.username, { color: colors.textPrimary }]}
+            numberOfLines={1}
+          >
             {post.author.username}
           </Text>
           <View style={styles.authorSubRow}>
@@ -50,22 +63,38 @@ function PostPreviewCardInner({ post, onPress }: PostPreviewCardProps) {
                 <Text style={[styles.badge, { color: colors.textTertiary }]}>
                   {post.author.badge}
                 </Text>
-                <Text style={[styles.separator, { color: colors.textTertiary }]}>|</Text>
+                <Text
+                  style={[styles.separator, { color: colors.textTertiary }]}
+                >
+                  |
+                </Text>
               </>
             ) : null}
             <Text style={[styles.date, { color: colors.textTertiary }]}>
               {formatDate(post.createdAt)}
             </Text>
             {post.pinnedAt ? (
-              <View style={[styles.pill, { backgroundColor: colors.bgTertiary }]}>
+              <View
+                style={[styles.pill, { backgroundColor: colors.bgTertiary }]}
+              >
                 <Ionicons name="pin" size={10} color={colors.textSubtle} />
-                <Text style={[styles.pillText, { color: colors.textSubtle }]}>Fijado</Text>
+                <Text style={[styles.pillText, { color: colors.textSubtle }]}>
+                  Fijado
+                </Text>
               </View>
             ) : null}
             {post.lockedAt ? (
-              <View style={[styles.pill, { backgroundColor: colors.bgTertiary }]}>
-                <Ionicons name="lock-closed" size={10} color={colors.textSubtle} />
-                <Text style={[styles.pillText, { color: colors.textSubtle }]}>Cerrado</Text>
+              <View
+                style={[styles.pill, { backgroundColor: colors.bgTertiary }]}
+              >
+                <Ionicons
+                  name="lock-closed"
+                  size={10}
+                  color={colors.textSubtle}
+                />
+                <Text style={[styles.pillText, { color: colors.textSubtle }]}>
+                  Cerrado
+                </Text>
               </View>
             ) : null}
           </View>
@@ -93,10 +122,35 @@ function PostPreviewCardInner({ post, onPress }: PostPreviewCardProps) {
 
       {/* Footer */}
       <View style={[styles.footer, { borderTopColor: colors.borderPrimary }]}>
-        <Ionicons name="chatbubble-outline" size={14} color={colors.textTertiary} />
-        <Text style={[styles.commentCount, { color: colors.textTertiary }]}>
-          {post.commentCount}
-        </Text>
+        <View style={styles.footerLeft}>
+          <Ionicons
+            name="chatbubble-outline"
+            size={14}
+            color={colors.textTertiary}
+          />
+          <Text style={[styles.commentCount, { color: colors.textTertiary }]}>
+            {post.commentCount}
+          </Text>
+        </View>
+        <View style={styles.footerSpacer} />
+        <Pressable
+          onPress={(e) => {
+            e.stopPropagation();
+            togglePostLike.mutate({ postId: post.id, isLiked: post.isLikedByCurrentUser });
+          }}
+          style={({ pressed }) => [styles.likeButton, pressed && styles.likePressed]}
+        >
+          <Ionicons
+            name={post.isLikedByCurrentUser ? "heart" : "heart-outline"}
+            size={14}
+            color={post.isLikedByCurrentUser ? "#e74c3c" : colors.textTertiary}
+          />
+          {post.likeCount > 0 ? (
+            <Text style={[styles.commentCount, { color: colors.textTertiary }]}>
+              {post.likeCount}
+            </Text>
+          ) : null}
+        </Pressable>
       </View>
     </Pressable>
   );
@@ -180,8 +234,26 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       marginTop: 10,
       paddingTop: 8,
     },
+    footerLeft: {
+      alignItems: "center",
+      flexDirection: "row",
+      gap: 5,
+    },
+    footerSpacer: {
+      flex: 1,
+    },
     commentCount: {
       fontSize: 13,
+    },
+    likeButton: {
+      alignItems: "center",
+      flexDirection: "row",
+      gap: 4,
+      paddingHorizontal: 4,
+      paddingVertical: 2,
+    },
+    likePressed: {
+      opacity: 0.7,
     },
   });
 }
