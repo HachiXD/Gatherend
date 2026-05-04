@@ -1306,10 +1306,10 @@ export const es: TranslationKeys = {
         "Android puede pedirte permitir instalaciones desde esta fuente antes de instalar el APK.",
       releases: [
         {
-          version: "1.0.1",
+          version: "1.1.0",
           notes:
             "Se agregaron notificaciones push, se fixearon muchos bugs en el frontend y se mejoró la estabilidad de la app.",
-          href: "https://downloads.gatherend.com/android/gatherend-android-1.0.1.apk",
+          href: "https://downloads.gatherend.com/android/gatherend-android-1.1.0.apk",
         },
         {
           version: "1.0.0",
