@@ -19,7 +19,10 @@ import {
   outranks as _outranks,
   canAssignRole as _canAssignRole,
   assignableBy as _assignableBy,
+  MEMBER_LEVEL_XP_THRESHOLDS,
 } from "@/lib/domain";
+
+export { MEMBER_LEVEL_XP_THRESHOLDS };
 
 export const isModerator = (role: MemberRole | undefined): boolean =>
   !!role && _isModerator(role);

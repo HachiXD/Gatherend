@@ -11,7 +11,7 @@ import {
 import { Text } from "@/src/components/app-typography";
 import { useTheme } from "@/src/theme/theme-provider";
 
-export type BoardQuickActionKey = "chat" | "post" | "rules";
+export type BoardQuickActionKey = "chat" | "post" | "rules" | "wiki";
 
 interface QuickAction {
   key: BoardQuickActionKey;
@@ -39,6 +39,12 @@ const QUICK_ACTIONS: QuickAction[] = [
     label: "Reglas",
     icon: "document-text-outline",
     angleDeg: 330,
+  },
+  {
+    key: "wiki",
+    label: "Wiki",
+    icon: "book-outline",
+    angleDeg: 150,
   },
 ];
 

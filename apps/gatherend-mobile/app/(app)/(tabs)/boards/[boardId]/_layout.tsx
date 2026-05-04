@@ -206,6 +206,12 @@ export default function BoardShellLayout() {
             params: { boardId: routeBoardId },
           });
           break;
+        case "wiki":
+          router.push({
+            pathname: "/modal/create-wiki",
+            params: { boardId: routeBoardId },
+          });
+          break;
       }
     },
     [routeBoardId, router],

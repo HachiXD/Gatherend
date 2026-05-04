@@ -496,6 +496,9 @@ export const MembersTab = ({ board, currentProfileId }: MembersTabProps) => {
                                 />
                               )}
                               {currentCanKick && (
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    kickMutation.mutate({
                                       memberId: member.id,
                                       targetProfileId: member.profile.id,
                                     })
