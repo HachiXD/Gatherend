@@ -4,6 +4,13 @@ import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
 import { expressMemberCache } from "@/lib/redis";
 import { MemberRole } from "@prisma/client";
+import {
+  ASSIGNABLE_ROLES,
+  assignableBy,
+  canAssignRole,
+  outranks,
+  isOwner,
+} from "@/lib/domain";
 
 // No cachear PATCH
 export const revalidate = 0;
@@ -11,25 +18,6 @@ export const revalidate = 0;
 // UUID validation regex
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-// Valid roles that can be assigned (OWNER cannot be assigned via this endpoint)
-const ASSIGNABLE_ROLES: MemberRole[] = ["ADMIN", "MODERATOR", "GUEST"];
-
-// Role hierarchy (lower index = higher rank)
-const ROLE_HIERARCHY: Record<MemberRole, number> = {
-  OWNER: 0,
-  ADMIN: 1,
-  MODERATOR: 2,
-  GUEST: 3,
-};
-
-// Roles each actor can assign
-const ASSIGNABLE_BY_ROLE: Record<MemberRole, MemberRole[]> = {
-  OWNER: ["ADMIN", "MODERATOR", "GUEST"],
-  ADMIN: ["MODERATOR", "GUEST"],
-  MODERATOR: [], // Cannot change roles
-  GUEST: [], // Cannot change roles
-};
 
 async function notifyMemberRoleChanged(
   boardId: string,
@@ -151,13 +139,13 @@ export async function PATCH(
       }
 
       // 2. Check if actor can assign roles at all
-      const rolesActorCanAssign = ASSIGNABLE_BY_ROLE[actor.role];
+      const rolesActorCanAssign = assignableBy(actor.role);
       if (rolesActorCanAssign.length === 0) {
         throw new Error("FORBIDDEN");
       }
 
       // 3. Check if actor can assign this specific role
-      if (!rolesActorCanAssign.includes(newRole as MemberRole)) {
+      if (!canAssignRole(actor.role, newRole as MemberRole)) {
         throw new Error("CANNOT_ASSIGN_ROLE");
       }
 
@@ -177,15 +165,12 @@ export async function PATCH(
       }
 
       // 6. Cannot change OWNER's role
-      if (target.role === MemberRole.OWNER) {
+      if (isOwner(target.role)) {
         throw new Error("CANNOT_MODIFY_OWNER");
       }
 
       // 7. Hierarchy check: Actor can only modify members with lower rank
-      const actorRank = ROLE_HIERARCHY[actor.role];
-      const targetRank = ROLE_HIERARCHY[target.role];
-
-      if (actorRank >= targetRank) {
+      if (!outranks(actor.role, target.role)) {
         throw new Error("INSUFFICIENT_PERMISSIONS");
       }
 

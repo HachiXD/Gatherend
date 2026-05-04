@@ -18,6 +18,7 @@ import { LeftbarChannel } from "./leftbar-channel";
 import { SortableItem } from "./leftbar-sortable-item";
 
 import { MemberRole } from "@prisma/client";
+import { isModerator } from "@/lib/domain-client";
 import { useBoardData } from "@/hooks/use-board-data";
 import { useVoiceParticipantsSocket } from "@/hooks/use-voice-participants-socket";
 import {
@@ -31,10 +32,7 @@ interface LeftbarClientProps {
   twoColumns?: boolean;
 }
 
-const canReorder = (role?: MemberRole) =>
-  role === MemberRole.OWNER ||
-  role === MemberRole.ADMIN ||
-  role === MemberRole.MODERATOR;
+const canReorder = (role?: MemberRole) => isModerator(role as MemberRole);
 
 /**
  * Lista de canales con drag & drop para reordenar.

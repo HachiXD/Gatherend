@@ -1,11 +1,11 @@
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
-import { MemberRole } from "@prisma/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
 import { expressMemberCache } from "@/lib/redis";
 import { kickBoardMember } from "@/lib/board-moderation";
 import { UUID_REGEX } from "@/lib/platform-moderation";
+import { canKick, outranks, isOwner } from "@/lib/domain";
 
 async function notifyBoardMembership(
   profileId: string,
@@ -124,11 +124,7 @@ export async function POST(
         throw new Error("NOT_A_MEMBER");
       }
 
-      if (
-        actor.role !== MemberRole.OWNER &&
-        actor.role !== MemberRole.ADMIN &&
-        actor.role !== MemberRole.MODERATOR
-      ) {
+      if (!canKick(actor.role)) {
         throw new Error("FORBIDDEN");
       }
 
@@ -145,19 +141,11 @@ export async function POST(
         throw new Error("CANNOT_KICK_SELF");
       }
 
-      if (target.role === MemberRole.OWNER) {
+      if (isOwner(target.role)) {
         throw new Error("CANNOT_KICK_OWNER");
       }
 
-      if (actor.role === MemberRole.ADMIN && target.role === MemberRole.ADMIN) {
-        throw new Error("ADMIN_CANNOT_KICK_ADMIN");
-      }
-
-      if (
-        actor.role === MemberRole.MODERATOR &&
-        (target.role === MemberRole.ADMIN ||
-          target.role === MemberRole.MODERATOR)
-      ) {
+      if (!outranks(actor.role, target.role)) {
         throw new Error("INSUFFICIENT_PERMISSIONS");
       }
 
@@ -208,13 +196,6 @@ export async function POST(
       if (error.message === "CANNOT_KICK_OWNER") {
         return NextResponse.json(
           { error: "Cannot kick the owner" },
-          { status: 403 },
-        );
-      }
-
-      if (error.message === "ADMIN_CANNOT_KICK_ADMIN") {
-        return NextResponse.json(
-          { error: "Admins cannot kick other admins" },
           { status: 403 },
         );
       }

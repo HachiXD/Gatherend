@@ -3,6 +3,7 @@
 import { memo, useCallback, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MemberRole } from "@prisma/client";
+import { isModerator } from "@/lib/domain-client";
 import type { BoardCurrentMember } from "@/lib/boards/board-types";
 import type { ClientProfile } from "@/hooks/use-current-profile";
 import {
@@ -146,14 +147,10 @@ export const ChatItemActions = memo(function ChatItemActions({
   let canPinMessage = false;
 
   if (isChannel) {
-    const isOwner = currentMember?.role === MemberRole.OWNER;
-    const isAdmin = currentMember?.role === MemberRole.ADMIN;
-    const isModerator = currentMember?.role === MemberRole.MODERATOR;
-
-    canDeleteMessage =
-      !deleted && (isOwner || isAdmin || isModerator || isOwnMessage);
+    const memberIsModerator = isModerator(currentMember?.role as MemberRole);
+    canDeleteMessage = !deleted && (memberIsModerator || isOwnMessage);
     canEditMessage = !deleted && isOwnMessage && !fileUrl && !sticker;
-    canPinMessage = !deleted && (isOwner || isAdmin || isModerator);
+    canPinMessage = !deleted && memberIsModerator;
   } else {
     canDeleteMessage = !deleted && isOwnMessage;
     canEditMessage = !deleted && isOwnMessage && !fileUrl && !sticker;

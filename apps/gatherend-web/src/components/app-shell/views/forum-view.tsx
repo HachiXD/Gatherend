@@ -9,6 +9,7 @@ import { useCurrentBoardId } from "@/contexts/board-switch-context";
 import { MemberRole } from "@prisma/client";
 import { CommunityPostsSection } from "./community-posts-section";
 import { InlineCommunityPostForm } from "./inline-community-post-form";
+import { isModerator } from "@/lib/domain-client";
 
 function ForumViewInner() {
   const boardId = useCurrentBoardId();
@@ -20,10 +21,7 @@ function ForumViewInner() {
   } = useBoardData(boardId, { enableFetch: true });
   const profile = useProfile();
   const role = useCurrentMemberRole(profile.id);
-  const _canDeleteAnyPost =
-    role === MemberRole.OWNER ||
-    role === MemberRole.ADMIN ||
-    role === MemberRole.MODERATOR;
+  const _canDeleteAnyPost = isModerator(role as MemberRole);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showPostForm, setShowPostForm] = useState(false);

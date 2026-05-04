@@ -7,6 +7,7 @@ import {
   serializeUploadedAsset,
   uploadedAssetSummarySelect,
 } from "@/lib/uploaded-assets";
+import { isModerator } from "@/lib/domain";
 
 // UUID validation regex
 const UUID_REGEX =
@@ -27,10 +28,7 @@ export async function GET(
     const { boardId } = await params;
 
     if (!boardId || !UUID_REGEX.test(boardId)) {
-      return NextResponse.json(
-        { error: "Invalid board ID" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Invalid board ID" }, { status: 400 });
     }
 
     const auth = await requireAuth();
@@ -59,17 +57,12 @@ export async function GET(
     });
 
     if (!board) {
-      return NextResponse.json(
-        { error: "Board not found" },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: "Board not found" }, { status: 404 });
     }
 
     const myMember = board.members[0] ?? null;
     const isOwner = board.profileId === profile.id;
-    const isModerator =
-      myMember?.role === MemberRole.MODERATOR ||
-      myMember?.role === MemberRole.ADMIN;
+    const memberIsModerator = isModerator(myMember?.role as MemberRole);
 
     return NextResponse.json({
       id: board.id,
@@ -78,7 +71,7 @@ export async function GET(
       bannerAsset: serializeUploadedAsset(board.bannerAsset),
       memberCount: board.memberCount,
       recentPostCount7d: board.recentPostCount7d,
-      canDeleteAnyPost: isOwner || isModerator,
+      canDeleteAnyPost: isOwner || memberIsModerator,
       isMember: myMember !== null,
     });
   } catch (error) {

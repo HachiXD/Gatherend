@@ -59,6 +59,25 @@ export type ForumPostCommentsResult = {
   totalCount: number;
 };
 
+export type ForumPostPreview = {
+  id: string;
+  title: string | null;
+  contentSnippet: string;
+  imageAsset: ClientPublicAsset | null;
+  commentCount: number;
+  createdAt: string;
+  updatedAt: string;
+  pinnedAt: string | null;
+  lockedAt: string | null;
+  author: ForumPostAuthor;
+};
+
+export type ForumPostPreviewsPage = {
+  items: ForumPostPreview[];
+  nextCursor: string | null;
+  hasMore: boolean;
+};
+
 export type EditedPost = {
   id: string;
   content: string;

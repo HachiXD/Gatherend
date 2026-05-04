@@ -12,6 +12,8 @@ import { ModerationHistoryTab } from "@/components/overlays/board-settings/tabs/
 import { DangerZoneTab } from "@/components/overlays/board-settings/tabs/danger-zone";
 import { SettingsSidebar } from "@/components/overlays/board-settings/sidebar";
 import { useBoardData } from "@/hooks/use-board-data";
+import { isModerator, isAdmin } from "@/lib/domain-client";
+import { MemberRole } from "@prisma/client";
 
 interface BoardSettingsOverlayProps {
   boardId: string;
@@ -35,16 +37,13 @@ export const BoardSettingsOverlay = ({
   } = useBoardData(boardId, { enableFetch: true });
   const currentMember =
     board?.currentMember?.profileId === currentProfileId
-      ? board?.currentMember ?? null
+      ? (board?.currentMember ?? null)
       : null;
   const currentRole = currentMember?.role;
-  const canViewGeneral = currentRole === "OWNER" || currentRole === "ADMIN";
-  const canViewMembers =
-    currentRole === "OWNER" ||
-    currentRole === "ADMIN" ||
-    currentRole === "MODERATOR";
-  const canViewBans = currentRole === "OWNER" || currentRole === "ADMIN";
-  const canViewHistory = currentRole === "OWNER" || currentRole === "ADMIN";
+  const canViewGeneral = isAdmin(currentRole as MemberRole);
+  const canViewMembers = isModerator(currentRole as MemberRole);
+  const canViewBans = isAdmin(currentRole as MemberRole);
+  const canViewHistory = isAdmin(currentRole as MemberRole);
   const canSeeDangerZone = currentMember?.role === "OWNER";
   const fallbackTab = canViewMembers ? "members" : "general";
   const activeTab =

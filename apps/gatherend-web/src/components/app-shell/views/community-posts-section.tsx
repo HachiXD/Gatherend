@@ -42,6 +42,7 @@ import { cn } from "@/lib/utils";
 import { useModal } from "@/hooks/use-modal-store";
 import { useCurrentMemberRole } from "@/hooks/use-board-data";
 import { MemberRole } from "@prisma/client";
+import { isModerator } from "@/lib/domain-client";
 import { getOptimizedStaticUiImageUrl } from "@/lib/ui-image-optimizer";
 import { Flag, ImagePlus, Pencil, Send, Trash2, X } from "lucide-react";
 import { useTranslation } from "@/i18n";
@@ -881,10 +882,7 @@ function CommunityPostsSectionInner({
   );
   const expandedCommentsOrderRef = useRef<string[]>([]);
   const role = useCurrentMemberRole(profile.id);
-  const canDeleteAnyPost =
-    role === MemberRole.OWNER ||
-    role === MemberRole.ADMIN ||
-    role === MemberRole.MODERATOR;
+  const canDeleteAnyPost = isModerator(role as MemberRole);
   const {
     allPosts,
     pageSlots,

@@ -6,6 +6,10 @@ const forumHttpDataSource = createForumHttpDataSource();
 export const forumRepository: ForumRepository = {
   getBoardPosts: (boardId, cursor) =>
     forumHttpDataSource.getBoardPosts(boardId, cursor),
+  getBoardPostPreviews: (boardId, cursor) =>
+    forumHttpDataSource.getBoardPostPreviews(boardId, cursor),
+  getPost: (boardId, postId) =>
+    forumHttpDataSource.getPost(boardId, postId),
   getPostComments: (postId) =>
     forumHttpDataSource.getPostComments(postId),
   createPost: (input) =>

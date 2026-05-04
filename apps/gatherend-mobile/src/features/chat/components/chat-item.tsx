@@ -488,7 +488,7 @@ export const ChatItem = memo(function ChatItem({
   const chatBubbleStyle = parseChatBubbleStyle(author?.chatBubbleStyle);
   const bubbleStyle = getBubbleCustomStyle(
     chatBubbleStyle,
-    isOwnMessage ? colors.buttonPrimary : colors.accentPrimary,
+    colors.buttonPrimary,
   );
 
   const hasSticker = Boolean(message.sticker?.asset?.url);
@@ -562,132 +562,132 @@ export const ChatItem = memo(function ChatItem({
           isOptimistic ? styles.optimistic : null,
         ]}
       >
-      {/* Avatar column — 36 px wide in both states */}
-      {!isCompact ? (
-        <Pressable
-          onPress={onAvatarPress ? () => onAvatarPress(author) : undefined}
-        >
-          <UserAvatar avatarUrl={avatarUrl} size={40} username={username} />
-        </Pressable>
-      ) : (
-        <View style={styles.avatarSpacer} />
-      )}
-
-      <View
-        style={[
-          styles.content,
-          isOwnMessage ? styles.contentOwn : styles.contentOther,
-        ]}
-      >
-        {/* Header — only in non-compact */}
+        {/* Avatar column — 36 px wide in both states */}
         {!isCompact ? (
-          <View
-            style={[
-              styles.headerRow,
-              isOwnMessage ? styles.headerRowOwn : styles.headerRowOther,
-            ]}
+          <Pressable
+            onPress={onAvatarPress ? () => onAvatarPress(author) : undefined}
           >
-            <Text
-              numberOfLines={1}
+            <UserAvatar avatarUrl={avatarUrl} size={40} username={username} />
+          </Pressable>
+        ) : (
+          <View style={styles.avatarSpacer} />
+        )}
+
+        <View
+          style={[
+            styles.content,
+            isOwnMessage ? styles.contentOwn : styles.contentOther,
+          ]}
+        >
+          {/* Header — only in non-compact */}
+          {!isCompact ? (
+            <View
               style={[
-                styles.username,
-                isOwnMessage ? styles.usernameOwn : null,
-                { color: colors.textPrimary },
+                styles.headerRow,
+                isOwnMessage ? styles.headerRowOwn : styles.headerRowOther,
               ]}
             >
-              {username}
-            </Text>
-            {badge ? (
-              <View
-                style={[
-                  styles.badgePill,
-                  {
-                    backgroundColor: badgeColor,
-                    borderColor: mixHexWithBlack(badgeColor, 0.24),
-                  },
-                ]}
-              >
-                <Text numberOfLines={1} style={styles.badgePillText}>
-                  {badge}
-                </Text>
-              </View>
-            ) : null}
-          </View>
-        ) : null}
-
-        {/* Body */}
-        {showBubbleView ? (
-          <View style={[styles.bubble, bubbleStyle]}>
-            {message.replyTo ? (
-              <ReplyPreview replyTo={message.replyTo} />
-            ) : null}
-
-            {hasTextContent ? (
               <Text
+                numberOfLines={1}
                 style={[
-                  styles.bodyText,
-                  {
-                    color: colors.textChat,
-                  },
+                  styles.username,
+                  isOwnMessage ? styles.usernameOwn : null,
+                  { color: colors.textPrimary },
                 ]}
               >
-                {cleanContent}
-                {edited ? (
-                  <Text
-                    style={[
-                      styles.editedLabel,
-                      {
-                        color: isOwnMessage
-                          ? colors.textInverse
-                          : colors.textMuted,
-                      },
-                    ]}
-                  >
-                    {" "}
-                    (editado)
-                  </Text>
-                ) : null}
+                {username}
               </Text>
-            ) : null}
-          </View>
-        ) : !showBubble ? (
-          /* Unbubbled: sticker / image / file */
-          <View>
-            {message.replyTo ? (
-              <ReplyPreview replyTo={message.replyTo} />
-            ) : null}
+              {badge ? (
+                <View
+                  style={[
+                    styles.badgePill,
+                    {
+                      backgroundColor: badgeColor,
+                      borderColor: mixHexWithBlack(badgeColor, 0.24),
+                    },
+                  ]}
+                >
+                  <Text numberOfLines={1} style={styles.badgePillText}>
+                    {badge}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
 
-            {hasSticker ? (
-              <Image
-                contentFit="contain"
-                source={{ uri: message.sticker!.asset!.url! }}
-                style={styles.sticker}
-              />
-            ) : hasImage ? (
-              <ImageBody asset={message.attachmentAsset!} />
-            ) : hasFile ? (
-              <FileBody asset={message.attachmentAsset!} />
-            ) : null}
-          </View>
-        ) : null}
+          {/* Body */}
+          {showBubbleView ? (
+            <View style={[styles.bubble, bubbleStyle]}>
+              {message.replyTo ? (
+                <ReplyPreview replyTo={message.replyTo} />
+              ) : null}
 
-        {hasInviteLinks ? (
-          <View style={styles.invitePreviews}>
-            {inviteCodes.map((code) => (
-              <InviteLinkPreview key={code} inviteCode={code} />
-            ))}
-          </View>
-        ) : previewUrl ? (
-          <LinkPreviewCard url={previewUrl} />
-        ) : null}
+              {hasTextContent ? (
+                <Text
+                  style={[
+                    styles.bodyText,
+                    {
+                      color: colors.textChat,
+                    },
+                  ]}
+                >
+                  {cleanContent}
+                  {edited ? (
+                    <Text
+                      style={[
+                        styles.editedLabel,
+                        {
+                          color: isOwnMessage
+                            ? colors.textInverse
+                            : colors.textMuted,
+                        },
+                      ]}
+                    >
+                      {" "}
+                      (editado)
+                    </Text>
+                  ) : null}
+                </Text>
+              ) : null}
+            </View>
+          ) : !showBubble ? (
+            /* Unbubbled: sticker / image / file */
+            <View>
+              {message.replyTo ? (
+                <ReplyPreview replyTo={message.replyTo} />
+              ) : null}
 
-        {reactions.length > 0 && !message.deleted ? (
-          <ReactionsRow
-            currentProfileId={currentProfileId}
-            reactions={reactions}
-          />
-        ) : null}
-      </View>
+              {hasSticker ? (
+                <Image
+                  contentFit="contain"
+                  source={{ uri: message.sticker!.asset!.url! }}
+                  style={styles.sticker}
+                />
+              ) : hasImage ? (
+                <ImageBody asset={message.attachmentAsset!} />
+              ) : hasFile ? (
+                <FileBody asset={message.attachmentAsset!} />
+              ) : null}
+            </View>
+          ) : null}
+
+          {hasInviteLinks ? (
+            <View style={styles.invitePreviews}>
+              {inviteCodes.map((code) => (
+                <InviteLinkPreview key={code} inviteCode={code} />
+              ))}
+            </View>
+          ) : previewUrl ? (
+            <LinkPreviewCard url={previewUrl} />
+          ) : null}
+
+          {reactions.length > 0 && !message.deleted ? (
+            <ReactionsRow
+              currentProfileId={currentProfileId}
+              reactions={reactions}
+            />
+          ) : null}
+        </View>
       </Pressable>
     </>
   );

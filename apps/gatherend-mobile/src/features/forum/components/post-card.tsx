@@ -1,15 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import {
-  memo,
-  useMemo,
-  useState,
-} from "react";
-import {
-  Alert,
-  Pressable,
-  StyleSheet,
-  View,
-} from "react-native";
+import { memo, useMemo, useState } from "react";
+import { Alert, Pressable, StyleSheet, View } from "react-native";
 import { UserAvatar } from "@/src/components/user-avatar";
 import { useTheme } from "@/src/theme/theme-provider";
 import { usePostComments } from "../hooks/use-post-comments";
@@ -20,14 +11,14 @@ import { PostInlineCommentInput } from "./post-inline-comment-input";
 import type { ForumPost, ForumPostComment } from "../domain/post";
 import { Text, TextInput } from "@/src/components/app-typography";
 
+import { isModerator } from "@/src/features/boards/member-role";
+
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat("es", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
 }
-
-const MODERATOR_ROLES = new Set(["OWNER", "ADMIN", "MODERATOR"]);
 
 type PostCardProps = {
   post: ForumPost;
@@ -64,7 +55,7 @@ function PostCardInner({
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const isOwnPost = post.author.id === currentProfileId;
-  const canModerate = MODERATOR_ROLES.has(currentMemberRole ?? "");
+  const canModerate = isModerator(currentMemberRole);
   const canDeletePost = isOwnPost || canModerate;
 
   // Post edit state
@@ -76,7 +67,9 @@ function PostCardInner({
   const [commentEditDraft, setCommentEditDraft] = useState("");
 
   // Reply state
-  const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
+  const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(
+    null,
+  );
 
   const { data: expandedData, isLoading: isLoadingExpanded } = usePostComments(
     isExpanded ? post.id : null,
@@ -105,7 +98,10 @@ function PostCardInner({
     ? [...latestDescending, ...omittedDescending]
     : latestDescending;
 
-  const omittedCount = Math.max(0, post.commentCount - post.latestComments.length);
+  const omittedCount = Math.max(
+    0,
+    post.commentCount - post.latestComments.length,
+  );
 
   const handleStartEditPost = () => {
     setPostEditDraft(post.content);
@@ -120,24 +116,21 @@ function PostCardInner({
   };
 
   const handleConfirmDeletePost = () => {
-    Alert.alert(
-      "Eliminar post",
-      "Esta acción no se puede deshacer.",
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Eliminar",
-          style: "destructive",
-          onPress: () => onDeletePost(post.id),
-        },
-      ],
-    );
+    Alert.alert("Eliminar post", "Esta acción no se puede deshacer.", [
+      { text: "Cancelar", style: "cancel" },
+      {
+        text: "Eliminar",
+        style: "destructive",
+        onPress: () => onDeletePost(post.id),
+      },
+    ]);
   };
 
   const handleStartEditComment = (commentId: string) => {
-    const comment = [...post.latestComments, ...(expandedData?.items ?? [])].find(
-      (c) => c.id === commentId,
-    );
+    const comment = [
+      ...post.latestComments,
+      ...(expandedData?.items ?? []),
+    ].find((c) => c.id === commentId);
     if (!comment) return;
     setReplyingToCommentId(null);
     setCommentEditDraft(comment.content);
@@ -153,29 +146,31 @@ function PostCardInner({
   };
 
   const handleConfirmDeleteComment = (commentId: string) => {
-    Alert.alert(
-      "Eliminar comentario",
-      "Esta acción no se puede deshacer.",
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Eliminar",
-          style: "destructive",
-          onPress: () => onDeleteComment(post.id, commentId),
-        },
-      ],
-    );
+    Alert.alert("Eliminar comentario", "Esta acción no se puede deshacer.", [
+      { text: "Cancelar", style: "cancel" },
+      {
+        text: "Eliminar",
+        style: "destructive",
+        onPress: () => onDeleteComment(post.id, commentId),
+      },
+    ]);
   };
 
   const handleReply = (commentId: string) => {
     setEditingCommentId(null);
-    setReplyingToCommentId((prev) =>
-      prev === commentId ? null : commentId,
-    );
+    setReplyingToCommentId((prev) => (prev === commentId ? null : commentId));
   };
 
   return (
-    <View style={[styles.card, { borderColor: colors.borderPrimary, backgroundColor: colors.bgEditForm }]}>
+    <View
+      style={[
+        styles.card,
+        {
+          borderColor: colors.borderPrimary,
+          backgroundColor: colors.bgEditForm,
+        },
+      ]}
+    >
       {/* Author header */}
       <View style={styles.authorRow}>
         <UserAvatar
@@ -184,7 +179,10 @@ function PostCardInner({
           size={36}
         />
         <View style={styles.authorMeta}>
-          <Text style={[styles.username, { color: colors.textPrimary }]} numberOfLines={1}>
+          <Text
+            style={[styles.username, { color: colors.textPrimary }]}
+            numberOfLines={1}
+          >
             {post.author.username}
           </Text>
           <View style={styles.authorSubRow}>
@@ -193,22 +191,38 @@ function PostCardInner({
                 <Text style={[styles.badge, { color: colors.textTertiary }]}>
                   {post.author.badge}
                 </Text>
-                <Text style={[styles.separator, { color: colors.textTertiary }]}>|</Text>
+                <Text
+                  style={[styles.separator, { color: colors.textTertiary }]}
+                >
+                  |
+                </Text>
               </>
             ) : null}
             <Text style={[styles.date, { color: colors.textTertiary }]}>
               {formatDate(post.createdAt)}
             </Text>
             {post.pinnedAt ? (
-              <View style={[styles.pill, { backgroundColor: colors.bgTertiary }]}>
+              <View
+                style={[styles.pill, { backgroundColor: colors.bgTertiary }]}
+              >
                 <Ionicons name="pin" size={10} color={colors.textSubtle} />
-                <Text style={[styles.pillText, { color: colors.textSubtle }]}>Fijado</Text>
+                <Text style={[styles.pillText, { color: colors.textSubtle }]}>
+                  Fijado
+                </Text>
               </View>
             ) : null}
             {post.lockedAt ? (
-              <View style={[styles.pill, { backgroundColor: colors.bgTertiary }]}>
-                <Ionicons name="lock-closed" size={10} color={colors.textSubtle} />
-                <Text style={[styles.pillText, { color: colors.textSubtle }]}>Cerrado</Text>
+              <View
+                style={[styles.pill, { backgroundColor: colors.bgTertiary }]}
+              >
+                <Ionicons
+                  name="lock-closed"
+                  size={10}
+                  color={colors.textSubtle}
+                />
+                <Text style={[styles.pillText, { color: colors.textSubtle }]}>
+                  Cerrado
+                </Text>
               </View>
             ) : null}
           </View>
@@ -224,7 +238,10 @@ function PostCardInner({
             multiline
             style={[
               styles.editInput,
-              { borderColor: colors.borderSecondary, color: colors.textPrimary },
+              {
+                borderColor: colors.borderSecondary,
+                color: colors.textPrimary,
+              },
             ]}
             placeholderTextColor={colors.textTertiary}
             placeholder="Editar post..."
@@ -236,11 +253,16 @@ function PostCardInner({
               style={({ pressed }) => [
                 styles.editButton,
                 styles.editButtonCancel,
-                { borderColor: colors.borderPrimary, backgroundColor: colors.bgCancelButton },
+                {
+                  borderColor: colors.borderPrimary,
+                  backgroundColor: colors.bgCancelButton,
+                },
                 pressed && styles.pressed,
               ]}
             >
-              <Text style={[styles.editButtonText, { color: colors.textSubtle }]}>
+              <Text
+                style={[styles.editButtonText, { color: colors.textSubtle }]}
+              >
                 Cancelar
               </Text>
             </Pressable>
@@ -252,7 +274,9 @@ function PostCardInner({
                 pressed && styles.pressed,
               ]}
             >
-              <Text style={[styles.editButtonText, { color: colors.textPrimary }]}>
+              <Text
+                style={[styles.editButtonText, { color: colors.textPrimary }]}
+              >
                 Guardar
               </Text>
             </Pressable>
@@ -292,7 +316,9 @@ function PostCardInner({
             </Pressable>
           )}
           {isOwnPost && canDeletePost && (
-            <Text style={[styles.actionSep, { color: colors.textTertiary }]}>|</Text>
+            <Text style={[styles.actionSep, { color: colors.textTertiary }]}>
+              |
+            </Text>
           )}
           {canDeletePost && (
             <Pressable
@@ -307,13 +333,19 @@ function PostCardInner({
           {!isOwnPost && onReportPost ? (
             <>
               {canDeletePost ? (
-                <Text style={[styles.actionSep, { color: colors.textTertiary }]}>|</Text>
+                <Text
+                  style={[styles.actionSep, { color: colors.textTertiary }]}
+                >
+                  |
+                </Text>
               ) : null}
               <Pressable
                 onPress={() => onReportPost(post)}
                 style={({ pressed }) => [pressed && styles.pressed]}
               >
-                <Text style={[styles.actionText, { color: colors.textTertiary }]}>
+                <Text
+                  style={[styles.actionText, { color: colors.textTertiary }]}
+                >
                   Reportar
                 </Text>
               </Pressable>
@@ -345,12 +377,15 @@ function PostCardInner({
                     : undefined
                 }
                 onDelete={
-                  (comment.author.id === currentProfileId || canModerate) && !comment.deleted
+                  (comment.author.id === currentProfileId || canModerate) &&
+                  !comment.deleted
                     ? handleConfirmDeleteComment
                     : undefined
                 }
                 onReport={
-                  comment.author.id !== currentProfileId && !comment.deleted && onReportComment
+                  comment.author.id !== currentProfileId &&
+                  !comment.deleted &&
+                  onReportComment
                     ? () => onReportComment(comment)
                     : undefined
                 }
@@ -365,7 +400,12 @@ function PostCardInner({
 
               {/* Reply composer */}
               {replyingToCommentId === comment.id && !post.lockedAt && (
-                <View style={[styles.replyComposer, { borderLeftColor: colors.borderPrimary }]}>
+                <View
+                  style={[
+                    styles.replyComposer,
+                    { borderLeftColor: colors.borderPrimary },
+                  ]}
+                >
                   <PostInlineCommentInput
                     postId={post.id}
                     isSubmitting={isSubmittingComment}
@@ -380,12 +420,19 @@ function PostCardInner({
           ))}
 
           {omittedCount > 0 && (
-            <View style={[styles.omittedRow, { borderTopColor: colors.borderPrimary }]}>
+            <View
+              style={[
+                styles.omittedRow,
+                { borderTopColor: colors.borderPrimary },
+              ]}
+            >
               <Pressable
                 onPress={() => onToggleExpand(post.id)}
                 style={({ pressed }) => [pressed && styles.pressed]}
               >
-                <Text style={[styles.omittedText, { color: colors.textTertiary }]}>
+                <Text
+                  style={[styles.omittedText, { color: colors.textTertiary }]}
+                >
                   {isLoadingExpanded && isExpanded
                     ? "Cargando comentarios..."
                     : isExpanded

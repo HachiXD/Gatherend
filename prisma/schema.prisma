@@ -55,6 +55,7 @@ model UploadedAsset {
   directMessageAttachmentFor               DirectMessage[]        @relation("DirectMessageAttachmentAsset")
   stickerImageFor                          Sticker[]              @relation("StickerImageAsset")
   boardRulesImageFor                       BoardRules[]           @relation("BoardRulesImageAsset")
+  wikiPageImageFor                         WikiPage[]             @relation("WikiPageImageAsset")
 
   @@index([ownerProfileId])
   @@index([boardId])
@@ -115,6 +116,9 @@ model Profile {
   channels                                     Channel[]
   communityPosts                               CommunityPost[]
   communityPostComments                        CommunityPostComment[]
+  communityPostLikes                           CommunityPostLike[]
+  communityPostCommentLikes                    CommunityPostCommentLike[]
+  wikiPages                                    WikiPage[]
   conversationsInitiated                       Conversation[]             @relation("ProfileOne")
   conversationsReceived                        Conversation[]             @relation("ProfileTwo")
   directMessages                               DirectMessage[]
@@ -185,6 +189,7 @@ model CommunityPost {
   content         String
   imageAssetId    String?
   commentCount    Int                    @default(0)
+  likeCount       Int                    @default(0)
   deleted         Boolean                @default(false)
   pinnedAt        DateTime?
   lockedAt        DateTime?
@@ -195,6 +200,7 @@ model CommunityPost {
   author          Profile                @relation(fields: [authorProfileId], references: [id], onDelete: Cascade)
   imageAsset      UploadedAsset?         @relation("CommunityPostImageAsset", fields: [imageAssetId], references: [id], onDelete: SetNull)
   comments        CommunityPostComment[]
+  likes           CommunityPostLike[]
 
   @@index([memberId])
   @@index([authorProfileId])
@@ -204,22 +210,24 @@ model CommunityPost {
 }
 
 model CommunityPostComment {
-  id               String                 @id @default(uuid())
+  id               String                    @id @default(uuid())
   postId           String
   memberId         String?
   authorProfileId  String
   content          String
   imageAssetId     String?
   replyToCommentId String?
-  deleted          Boolean                @default(false)
-  createdAt        DateTime               @default(now())
-  updatedAt        DateTime               @updatedAt
-  post             CommunityPost          @relation(fields: [postId], references: [id], onDelete: Cascade)
-  member           Member?                @relation("MemberCommunityPostComments", fields: [memberId], references: [id], onDelete: SetNull)
-  author           Profile                @relation(fields: [authorProfileId], references: [id], onDelete: Cascade)
-  imageAsset       UploadedAsset?         @relation("CommunityPostCommentImageAsset", fields: [imageAssetId], references: [id], onDelete: SetNull)
-  replyToComment   CommunityPostComment?  @relation("CommunityPostCommentReplies", fields: [replyToCommentId], references: [id], onDelete: SetNull)
-  replies          CommunityPostComment[] @relation("CommunityPostCommentReplies")
+  deleted          Boolean                   @default(false)
+  likeCount        Int                       @default(0)
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  post             CommunityPost             @relation(fields: [postId], references: [id], onDelete: Cascade)
+  member           Member?                   @relation("MemberCommunityPostComments", fields: [memberId], references: [id], onDelete: SetNull)
+  author           Profile                   @relation(fields: [authorProfileId], references: [id], onDelete: Cascade)
+  imageAsset       UploadedAsset?            @relation("CommunityPostCommentImageAsset", fields: [imageAssetId], references: [id], onDelete: SetNull)
+  replyToComment   CommunityPostComment?     @relation("CommunityPostCommentReplies", fields: [replyToCommentId], references: [id], onDelete: SetNull)
+  replies          CommunityPostComment[]    @relation("CommunityPostCommentReplies")
+  likes            CommunityPostCommentLike[]
 
   @@index([postId, deleted, createdAt, id])
   @@index([memberId])
@@ -270,6 +278,7 @@ model Board {
   memberXpEvents        MemberXpEvent[]
   riskEvents            BoardRiskEvent[]
   rules                 BoardRules?
+  wikiPages             WikiPage[]
   scopedUploadedAssets  UploadedAsset[]          @relation("UploadedAssetBoardScope")
 
   @@index([profileId])
@@ -330,6 +339,7 @@ model BoardWarning {
 model Member {
   id                    String                 @id @default(uuid())
   role                  MemberRole             @default(GUEST)
+  permissions           MemberPermission[]     @default([])
   profileId             String
   boardId               String
   xp                    Int                    @default(0)
@@ -921,6 +931,7 @@ enum AssetContext {
   MESSAGE_ATTACHMENT
   DM_ATTACHMENT
   STICKER_IMAGE
+  WIKI_PAGE_IMAGE
 }
 
 enum ReportTargetType {
@@ -1015,6 +1026,10 @@ enum MemberRole {
   ADMIN
   MODERATOR
   GUEST
+}
+
+enum MemberPermission {
+  WRITE_WIKI
 }
 
 enum ChannelType {
@@ -1139,6 +1154,50 @@ model BoardRules {
   imageAsset   UploadedAsset? @relation("BoardRulesImageAsset", fields: [imageAssetId], references: [id], onDelete: SetNull)
 
   @@index([imageAssetId])
+}
+
+model WikiPage {
+  id              String         @id @default(uuid())
+  boardId         String
+  authorProfileId String
+  title           String
+  content         String         @default("")
+  imageAssetId    String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  board           Board          @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  author          Profile        @relation(fields: [authorProfileId], references: [id], onDelete: Cascade)
+  imageAsset      UploadedAsset? @relation("WikiPageImageAsset", fields: [imageAssetId], references: [id], onDelete: SetNull)
+
+  @@index([boardId, title])
+  @@index([authorProfileId])
+  @@index([imageAssetId])
+}
+
+model CommunityPostLike {
+  id        String        @id @default(uuid())
+  postId    String
+  profileId String
+  createdAt DateTime      @default(now())
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  profile   Profile       @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, profileId])
+  @@index([postId])
+  @@index([profileId])
+}
+
+model CommunityPostCommentLike {
+  id        String               @id @default(uuid())
+  commentId String
+  profileId String
+  createdAt DateTime             @default(now())
+  comment   CommunityPostComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  profile   Profile              @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, profileId])
+  @@index([commentId])
+  @@index([profileId])
 }
 
 model EmailSuppression {

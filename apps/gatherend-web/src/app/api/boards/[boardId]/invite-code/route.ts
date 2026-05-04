@@ -1,9 +1,9 @@
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
-import { MemberRole } from "@prisma/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
+import { isAdmin } from "@/lib/domain";
 
 // UUID validation regex
 const UUID_REGEX =
@@ -63,10 +63,7 @@ export async function PATCH(
       }
 
       // Solo OWNER y ADMIN pueden gestionar invite codes
-      if (
-        member.role !== MemberRole.OWNER &&
-        member.role !== MemberRole.ADMIN
-      ) {
+      if (!isAdmin(member.role)) {
         throw new Error("FORBIDDEN");
       }
 

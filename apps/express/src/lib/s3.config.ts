@@ -12,17 +12,13 @@ import {
   PutObjectCommand,
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
+import fs from "fs";
+import path from "path";
+import dotenv from "dotenv";
 
 // Railway inyecta las variables de entorno automáticamente
 if (process.env.NODE_ENV !== "production") {
   // Keep this file resilient to different working directories in dev.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const fs = require("fs");
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const path = require("path");
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const dotenv = require("dotenv");
-
   const candidatePaths = [
     path.resolve(process.cwd(), ".env"),
     path.resolve(process.cwd(), "../.env"),

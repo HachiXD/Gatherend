@@ -3,6 +3,7 @@ import type {
   ForumPost,
   ForumPostComment,
   ForumPostCommentsResult,
+  ForumPostPreviewsPage,
   ForumPostsPage,
 } from "./post";
 
@@ -15,6 +16,8 @@ export type CreatePostInput = {
 
 export type ForumRepository = {
   getBoardPosts: (boardId: string, cursor?: string | null) => Promise<ForumPostsPage>;
+  getBoardPostPreviews: (boardId: string, cursor?: string | null) => Promise<ForumPostPreviewsPage>;
+  getPost: (boardId: string, postId: string) => Promise<ForumPost>;
   getPostComments: (postId: string) => Promise<ForumPostCommentsResult>;
   createPost: (input: CreatePostInput) => Promise<ForumPost>;
   createComment: (input: {

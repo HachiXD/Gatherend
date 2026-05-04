@@ -3,6 +3,7 @@
 import { memo, useTransition, useCallback, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { ChannelType, MemberRole } from "@prisma/client";
+import { isAdmin } from "@/lib/domain-client";
 import { Edit, Mic, Trash, AtSign, Users } from "lucide-react";
 import { ActionTooltip } from "@/components/action-tooltip";
 import { ModalType, useModal } from "@/hooks/use-modal-store";
@@ -75,8 +76,7 @@ const LeftbarChannelComponent = ({
 
   const isText = channel.type === ChannelType.TEXT;
   const hasUnread = unreadCount > 0;
-  const canManageChannel =
-    role === MemberRole.OWNER || role === MemberRole.ADMIN;
+  const canManageChannel = isAdmin(role as MemberRole);
 
   const onClick = () => {
     const isVoice = channel.type === ChannelType.VOICE;
@@ -141,9 +141,7 @@ const LeftbarChannelComponent = ({
         className={cn(
           "group relative flex h-26 w-full min-w-0 max-w-full cursor-pointer items-center overflow-hidden rounded-2xl border border-theme-channel-type-active-border px-0 text-left transition",
           channelImageUrl
-            ? [
-                "bg-cover bg-center bg-no-repeat",
-              ]
+            ? ["bg-cover bg-center bg-no-repeat"]
             : [
                 "bg-theme-channel-type-active-border",
                 !isActive && "hover:bg-theme-channel-type-active-border",

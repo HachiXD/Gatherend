@@ -1,22 +1,16 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
-import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { BottomSheet } from "@/src/components/bottom-sheet";
 import { Text, TextInput } from "@/src/components/app-typography";
 import { useMessageActions } from "../hooks/use-message-actions";
 import { getMessageOwnerProfileId } from "../utils/message-author";
 import { useTheme } from "@/src/theme/theme-provider";
+import { isModerator } from "@/src/features/boards/member-role";
 import type { ChatMessage } from "../lib/chat-message";
 import type { ChannelMessage, ChatReaction } from "../types";
 
 const REACTION_EMOJIS = ["👍", "❤️", "😂", "💀", "😭", "🤑"] as const;
-const MOD_ROLES = new Set(["OWNER", "ADMIN", "MODERATOR"]);
 
 type MessageActionsSheetProps = {
   message: ChatMessage | null;
@@ -62,7 +56,7 @@ export function MessageActionsSheet({
   });
 
   const isChannel = context.type === "channel";
-  const isMod = isChannel && MOD_ROLES.has(currentMemberRole ?? "");
+  const isMod = isChannel && isModerator(currentMemberRole);
   const ownerId = message ? getMessageOwnerProfileId(message) : null;
   const isOwn = ownerId === currentProfileId;
   const isDeleted = !!(message as ChannelMessage | null)?.deleted;
@@ -78,7 +72,8 @@ export function MessageActionsSheet({
     if (!message) return;
     const reactions = (message as ChannelMessage).reactions ?? [];
     const myReaction = reactions.find(
-      (r: ChatReaction) => r.profileId === currentProfileId && r.emoji === emoji,
+      (r: ChatReaction) =>
+        r.profileId === currentProfileId && r.emoji === emoji,
     );
     if (myReaction) {
       actions.removeReaction.mutate({
@@ -109,21 +104,17 @@ export function MessageActionsSheet({
 
   const handleDeletePress = () => {
     if (!message) return;
-    Alert.alert(
-      "Eliminar mensaje",
-      "Esta acción no se puede deshacer.",
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Eliminar",
-          style: "destructive",
-          onPress: () => {
-            actions.deleteMessage.mutate({ messageId: message.id });
-            onClose();
-          },
+    Alert.alert("Eliminar mensaje", "Esta acción no se puede deshacer.", [
+      { text: "Cancelar", style: "cancel" },
+      {
+        text: "Eliminar",
+        style: "destructive",
+        onPress: () => {
+          actions.deleteMessage.mutate({ messageId: message.id });
+          onClose();
         },
-      ],
-    );
+      },
+    ]);
   };
 
   const handleReplyPress = () => {
@@ -232,10 +223,7 @@ export function MessageActionsSheet({
                 ]}
               >
                 <Text
-                  style={[
-                    styles.editButtonText,
-                    { color: colors.bgPrimary },
-                  ]}
+                  style={[styles.editButtonText, { color: colors.bgPrimary }]}
                 >
                   Guardar
                 </Text>

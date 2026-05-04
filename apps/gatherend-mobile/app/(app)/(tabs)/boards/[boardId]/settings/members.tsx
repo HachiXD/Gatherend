@@ -27,7 +27,6 @@ import {
   canModifyRole,
   canViewSettingsSection,
   getAssignableRoles,
-  normalizeRole,
 } from "@/src/features/board-settings/utils/permissions";
 import { useTheme } from "@/src/theme/theme-provider";
 import { Text } from "@/src/components/app-typography";
@@ -47,7 +46,7 @@ export default function BoardMembersSettingsScreen() {
   const { data: board, isLoading: boardLoading } = useBoard(boardId);
   const query = useBoardSettingsMembers(boardId);
   const actions = useBoardMemberActions(boardId ?? "");
-  const actorRole = normalizeRole(board?.currentMember?.role);
+  const actorRole = board?.currentMember?.role ?? null;
   const [selectedMember, setSelectedMember] =
     useState<BoardSettingsMember | null>(null);
 
@@ -279,43 +278,44 @@ export default function BoardMembersSettingsScreen() {
 
   return (
     <>
-    <FlashList
-      data={members}
-      keyExtractor={(item) => item.id}
-      renderItem={renderItem}
-      onEndReached={() => {
-        if (query.hasNextPage && !query.isFetchingNextPage) {
-          void query.fetchNextPage();
+      <FlashList
+        data={members}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        onEndReached={() => {
+          if (query.hasNextPage && !query.isFetchingNextPage) {
+            void query.fetchNextPage();
+          }
+        }}
+        onEndReachedThreshold={0.3}
+        refreshControl={
+          <RefreshControl
+            refreshing={query.isRefetching}
+            onRefresh={() => void query.refetch()}
+            tintColor={colors.accentPrimary}
+          />
         }
-      }}
-      onEndReachedThreshold={0.3}
-      refreshControl={
-        <RefreshControl
-          refreshing={query.isRefetching}
-          onRefresh={() => void query.refetch()}
-          tintColor={colors.accentPrimary}
-        />
-      }
-      contentContainerStyle={styles.listContent}
-      ListHeaderComponent={
-        <Text style={styles.summary}>
-          {board.memberCount} {board.memberCount === 1 ? "miembro" : "miembros"}
-        </Text>
-      }
-      ListEmptyComponent={
-        <BoardSettingsCenterState
-          title="Sin miembros"
-          message="No hay miembros para mostrar."
-        />
-      }
-      ListFooterComponent={
-        query.isFetchingNextPage ? (
-          <View style={styles.footerLoader}>
-            <ActivityIndicator color={colors.accentPrimary} size="small" />
-          </View>
-        ) : null
-      }
-    />
+        contentContainerStyle={styles.listContent}
+        ListHeaderComponent={
+          <Text style={styles.summary}>
+            {board.memberCount}{" "}
+            {board.memberCount === 1 ? "miembro" : "miembros"}
+          </Text>
+        }
+        ListEmptyComponent={
+          <BoardSettingsCenterState
+            title="Sin miembros"
+            message="No hay miembros para mostrar."
+          />
+        }
+        ListFooterComponent={
+          query.isFetchingNextPage ? (
+            <View style={styles.footerLoader}>
+              <ActivityIndicator color={colors.accentPrimary} size="small" />
+            </View>
+          ) : null
+        }
+      />
       <Modal
         transparent
         animationType="fade"
@@ -386,7 +386,9 @@ export default function BoardMembersSettingsScreen() {
                       <Text style={styles.sheetRowText}>Advertir</Text>
                     </Pressable>
                     <Pressable
-                      disabled={isActionPending || !selectedMember.latestActiveWarningId}
+                      disabled={
+                        isActionPending || !selectedMember.latestActiveWarningId
+                      }
                       onPress={() => handleRemoveWarning(selectedMember)}
                       style={({ pressed }) => [
                         styles.sheetRow,
@@ -401,7 +403,9 @@ export default function BoardMembersSettingsScreen() {
                         size={18}
                         color={colors.textPrimary}
                       />
-                      <Text style={styles.sheetRowText}>Remover advertencia</Text>
+                      <Text style={styles.sheetRowText}>
+                        Remover advertencia
+                      </Text>
                     </Pressable>
                   </>
                 ) : null}

@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { ChannelType, MemberRole } from "@prisma/client";
 import { ActionTooltip } from "@/components/action-tooltip";
 import { useModal } from "@/hooks/use-modal-store";
+import { isModerator } from "@/lib/domain-client";
 
 import {
   SortableContext,
@@ -80,7 +81,7 @@ const LeftbarCategoryComponent = ({
           </span>
         </div>
 
-        {role !== MemberRole.GUEST && (
+        {isModerator(role) && (
           <div className="flex items-center gap-x-1">
             <ActionTooltip label="Add Room">
               <Plus

@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
-import { MemberRole } from "@prisma/client";
+import { isOwner } from "@/lib/domain";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
 import { expressMemberCache } from "@/lib/redis";
@@ -106,7 +106,7 @@ async function handleLeaveBoard(
       }
 
       // 2. El OWNER NO PUEDE abandonar
-      if (member.role === MemberRole.OWNER) {
+      if (isOwner(member.role)) {
         throw new Error("OWNER_CANNOT_LEAVE");
       }
 

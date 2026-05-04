@@ -1,6 +1,5 @@
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
-import { MemberRole } from "@prisma/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
 import {
@@ -13,6 +12,7 @@ import {
   moderationProfileSelect,
   serializeModerationProfile,
 } from "@/lib/moderation-serialization";
+import { isAdmin } from "@/lib/domain";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -50,7 +50,7 @@ export async function GET(
       return NextResponse.json({ error: "Not a member" }, { status: 403 });
     }
 
-    if (actor.role !== MemberRole.OWNER && actor.role !== MemberRole.ADMIN) {
+    if (!isAdmin(actor.role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -66,7 +66,10 @@ export async function GET(
               OR: [
                 { createdAt: { lt: cursor.createdAt } },
                 {
-                  AND: [{ createdAt: cursor.createdAt }, { id: { lt: cursor.id } }],
+                  AND: [
+                    { createdAt: cursor.createdAt },
+                    { id: { lt: cursor.id } },
+                  ],
                 },
               ],
             }

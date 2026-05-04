@@ -8,6 +8,7 @@ import type {
   ForumPost,
   ForumPostComment,
   ForumPostCommentsResult,
+  ForumPostPreviewsPage,
   ForumPostsPage,
 } from "../domain/post";
 
@@ -43,6 +44,29 @@ export function createForumHttpDataSource(): ForumRepository {
         );
       }
       return (await response.json()) as ForumPostsPage;
+    },
+
+    async getBoardPostPreviews(boardId, cursor) {
+      const base = `/api/boards/${boardId}/posts?preview=true`;
+      const url = cursor ? `${base}&cursor=${encodeURIComponent(cursor)}` : base;
+      const response = await nextApiFetch(url);
+      if (!response.ok) {
+        throw new Error(
+          await readNextApiError(response, "Error al cargar posts del foro"),
+        );
+      }
+      return (await response.json()) as ForumPostPreviewsPage;
+    },
+
+    async getPost(boardId, postId) {
+      const response = await nextApiFetch(`/api/boards/${boardId}/posts/${postId}`);
+      if (!response.ok) {
+        throw new Error(
+          await readNextApiError(response, "Error al cargar el post"),
+        );
+      }
+      const data = (await response.json()) as { post: ForumPost };
+      return data.post;
     },
 
     async getPostComments(postId) {

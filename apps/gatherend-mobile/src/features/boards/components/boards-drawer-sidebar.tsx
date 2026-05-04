@@ -43,8 +43,17 @@ type BoardDrawerItemProps = {
   onSelectBoard: (boardId: string) => void;
 };
 
-function BoardDrawerItem({ item, isActive, styles, colors, onSelectBoard }: BoardDrawerItemProps) {
-  const channelIds = useMemo(() => item.channels.map((c) => c.id), [item.channels]);
+function BoardDrawerItem({
+  item,
+  isActive,
+  styles,
+  colors,
+  onSelectBoard,
+}: BoardDrawerItemProps) {
+  const channelIds = useMemo(
+    () => item.channels.map((c) => c.id),
+    [item.channels],
+  );
 
   const hasUnread = useUnreadStore(
     useCallback(
@@ -59,14 +68,18 @@ function BoardDrawerItem({ item, isActive, styles, colors, onSelectBoard }: Boar
     ),
   );
 
-  const fallbackColor = item.imageAsset?.dominantColor ?? colors.avatarFallbackBg;
-  const imageUrl = getBoardImageUrl(item.imageAsset?.url, item.id, item.name, 128);
+  const fallbackColor =
+    item.imageAsset?.dominantColor ?? colors.avatarFallbackBg;
+  const imageUrl = getBoardImageUrl(
+    item.imageAsset?.url,
+    item.id,
+    item.name,
+    128,
+  );
 
   return (
     <View style={styles.itemOuter}>
-      {hasUnread && !isActive ? (
-        <View style={styles.unreadBar} />
-      ) : null}
+      {hasUnread ? <View style={styles.unreadBar} /> : null}
       <Pressable
         onPress={() => onSelectBoard(item.id)}
         style={({ pressed }) => [
@@ -95,7 +108,7 @@ function BoardDrawerItem({ item, isActive, styles, colors, onSelectBoard }: Boar
           </View>
         )}
       </Pressable>
-      {hasMention && !isActive ? (
+      {hasMention ? (
         <View style={styles.mentionBadge}>
           <Ionicons color={colors.textLight} name="at" size={10} />
         </View>
@@ -111,8 +124,13 @@ export function BoardsDrawerSidebar({
 }: BoardsDrawerSidebarProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { data: boards = [], isLoading, isError, refetch, isFetching } =
-    useUserBoards();
+  const {
+    data: boards = [],
+    isLoading,
+    isError,
+    refetch,
+    isFetching,
+  } = useUserBoards();
 
   return (
     <View style={styles.sidebar}>
@@ -126,6 +144,8 @@ export function BoardsDrawerSidebar({
       >
         <Ionicons color={colors.textSecondary} name="arrow-back" size={22} />
       </Pressable>
+
+      <View style={styles.separator} />
 
       {isLoading ? (
         <View style={styles.centerState}>
@@ -158,6 +178,7 @@ export function BoardsDrawerSidebar({
           contentContainerStyle={styles.listContent}
           data={boards}
           keyExtractor={(item) => item.id}
+          style={{ width: "100%" }}
           renderItem={({ item }) => (
             <BoardDrawerItem
               colors={colors}
@@ -176,116 +197,122 @@ export function BoardsDrawerSidebar({
 
 function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
   return StyleSheet.create({
-  sidebar: {
-    alignItems: "center",
-    backgroundColor: colors.bgPrimary,
-    borderRightColor: colors.borderPrimary,
-    borderRightWidth: 1,
-    gap: 12,
-    paddingHorizontal: 10,
-    paddingTop: 16,
-    paddingBottom: 14,
-    width: 88,
-  },
-  backButton: {
-    alignItems: "center",
-    backgroundColor: colors.bgQuaternary,
-    borderColor: colors.borderPrimary,
-    borderRadius: 18,
-    borderWidth: 1,
-    height: 54,
-    justifyContent: "center",
-    width: 54,
-  },
-  centerState: {
-    alignItems: "center",
-    gap: 8,
-    justifyContent: "center",
-    marginTop: 8,
-    width: "100%",
-  },
-  helperText: {
-    color: colors.textMuted,
-    fontSize: 11,
-    textAlign: "center",
-  },
-  retryPill: {
-    alignItems: "center",
-    backgroundColor: colors.bgTertiary,
-    borderColor: colors.borderSecondary,
-    borderRadius: 999,
-    borderWidth: 1,
-    justifyContent: "center",
-    minHeight: 30,
-    minWidth: 56,
-    paddingHorizontal: 10,
-  },
-  retryPillText: {
-    color: colors.textPrimary,
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  listContent: {
-    alignItems: "center",
-    gap: 12,
-    paddingBottom: 24,
-  },
-  itemButton: {
-    alignItems: "center",
-    borderColor: "transparent",
-    borderRadius: 999,
-    borderWidth: 2,
-    justifyContent: "center",
-    padding: 2,
-  },
-  itemButtonActive: {
-    borderColor: colors.accentPrimary,
-  },
-  itemPressed: {
-    opacity: 0.92,
-  },
-  itemImage: {
-    backgroundColor: colors.bgQuaternary,
-    borderRadius: 999,
-    height: 54,
-    width: 54,
-  },
-  itemFallback: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  itemFallbackText: {
-    color: colors.textLight,
-    fontSize: 16,
-    fontWeight: "700",
-    letterSpacing: 0.6,
-  },
-  itemOuter: {
-    alignItems: "center",
-    flexDirection: "row",
-    position: "relative",
-    width: "100%",
-    justifyContent: "center",
-  },
-  unreadBar: {
-    backgroundColor: colors.accentPrimary,
-    borderRadius: 4,
-    bottom: 8,
-    left: -4,
-    position: "absolute",
-    top: 8,
-    width: 4,
-  },
-  mentionBadge: {
-    alignItems: "center",
-    backgroundColor: colors.notificationBg,
-    borderRadius: 999,
-    bottom: 0,
-    height: 18,
-    justifyContent: "center",
-    position: "absolute",
-    right: 0,
-    width: 18,
-  },
+    sidebar: {
+      alignItems: "center",
+      backgroundColor: colors.bgPrimary,
+      borderRightColor: colors.borderPrimary,
+      borderRightWidth: 1,
+      gap: 10,
+      paddingHorizontal: 0,
+      paddingTop: 16,
+      paddingBottom: 14,
+      width: 88,
+    },
+    backButton: {
+      alignItems: "center",
+      backgroundColor: colors.bgQuaternary,
+      borderColor: colors.borderPrimary,
+      borderRadius: 18,
+      borderWidth: 1,
+      height: 54,
+      justifyContent: "center",
+      width: 54,
+    },
+    separator: {
+      backgroundColor: colors.borderPrimary,
+      height: 1,
+      width: "70%",
+      marginBottom: -4,
+    },
+    centerState: {
+      alignItems: "center",
+      gap: 8,
+      justifyContent: "center",
+      marginTop: 8,
+      width: "100%",
+    },
+    helperText: {
+      color: colors.textMuted,
+      fontSize: 11,
+      textAlign: "center",
+    },
+    retryPill: {
+      alignItems: "center",
+      backgroundColor: colors.bgTertiary,
+      borderColor: colors.borderSecondary,
+      borderRadius: 999,
+      borderWidth: 1,
+      justifyContent: "center",
+      minHeight: 30,
+      minWidth: 56,
+      paddingHorizontal: 10,
+    },
+    retryPillText: {
+      color: colors.textPrimary,
+      fontSize: 11,
+      fontWeight: "700",
+    },
+    listContent: {
+      alignItems: "stretch",
+      gap: 4,
+      paddingBottom: 24,
+    },
+    itemButton: {
+      alignItems: "center",
+      borderColor: "transparent",
+      borderRadius: 999,
+      borderWidth: 2,
+      justifyContent: "center",
+      padding: 2,
+    },
+    itemButtonActive: {
+      borderColor: colors.accentPrimary,
+    },
+    itemPressed: {
+      opacity: 0.92,
+    },
+    itemImage: {
+      backgroundColor: colors.bgQuaternary,
+      borderRadius: 999,
+      height: 54,
+      width: 54,
+    },
+    itemFallback: {
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    itemFallbackText: {
+      color: colors.textLight,
+      fontSize: 16,
+      fontWeight: "700",
+      letterSpacing: 0.6,
+    },
+    itemOuter: {
+      alignItems: "center",
+      flexDirection: "row",
+      position: "relative",
+      width: "100%",
+      justifyContent: "center",
+    },
+    unreadBar: {
+      backgroundColor: colors.accentPrimary,
+      borderRadius: 4,
+      bottom: 16,
+      left: 0,
+      position: "absolute",
+      top: 16,
+      width: 4,
+    },
+    mentionBadge: {
+      alignItems: "center",
+      backgroundColor: colors.notificationBg,
+      borderRadius: 999,
+      bottom: 0,
+      height: 18,
+      justifyContent: "center",
+      position: "absolute",
+      right: 0,
+      width: 18,
+    },
   });
 }

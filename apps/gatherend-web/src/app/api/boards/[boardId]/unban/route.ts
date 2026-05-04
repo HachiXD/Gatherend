@@ -1,10 +1,10 @@
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
-import { MemberRole } from "@prisma/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
 import { removeBoardBan } from "@/lib/board-moderation";
 import { UUID_REGEX } from "@/lib/platform-moderation";
+import { isAdmin } from "@/lib/domain";
 
 async function notifyMemberUnbanned(boardId: string, profileId: string) {
   try {
@@ -85,7 +85,7 @@ export async function POST(
         throw new Error("NOT_A_MEMBER");
       }
 
-      if (actor.role !== MemberRole.OWNER && actor.role !== MemberRole.ADMIN) {
+      if (!isAdmin(actor.role)) {
         throw new Error("FORBIDDEN");
       }
 

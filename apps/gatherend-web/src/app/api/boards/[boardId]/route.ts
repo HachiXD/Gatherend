@@ -1,13 +1,10 @@
-import {
-  MemberRole,
-  AssetContext,
-  AssetVisibility,
-} from "@prisma/client";
+import { AssetContext, AssetVisibility } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/require-auth";
 import { moderateDescription } from "@/lib/text-moderation";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { isAdmin, isOwner } from "@/lib/domain";
 import {
   UUID_REGEX,
   findOwnedUploadedAsset,
@@ -100,7 +97,8 @@ export async function GET(
       return NextResponse.json({ error: "Board not found" }, { status: 404 });
     }
 
-    const { members, _count, channels, imageAsset, bannerAsset, ...boardData } = board;
+    const { members, _count, channels, imageAsset, bannerAsset, ...boardData } =
+      board;
     const currentMember = members[0] ?? null;
 
     return NextResponse.json({
@@ -158,7 +156,7 @@ export async function DELETE(
         throw new Error("NOT_A_MEMBER");
       }
 
-      if (member.role !== MemberRole.OWNER) {
+      if (!isOwner(member.role)) {
         throw new Error("FORBIDDEN");
       }
 
@@ -240,13 +238,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const {
-      name,
-      imageAssetId,
-      bannerAssetId,
-      description,
-      isPrivate,
-    } = body;
+    const { name, imageAssetId, bannerAssetId, description, isPrivate } = body;
 
     if (name !== undefined) {
       if (typeof name !== "string" || name.trim().length < 2) {
@@ -393,10 +385,7 @@ export async function PATCH(
         throw new Error("NOT_A_MEMBER");
       }
 
-      if (
-        member.role !== MemberRole.OWNER &&
-        member.role !== MemberRole.ADMIN
-      ) {
+      if (!isAdmin(member.role)) {
         throw new Error("FORBIDDEN");
       }
 

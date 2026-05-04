@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useBoardNavigationStore } from "@/stores/board-navigation-store";
 import { cn } from "@/lib/utils";
-import { MEMBER_LEVEL_XP_THRESHOLDS } from "@/lib/domain";
+import { MEMBER_LEVEL_XP_THRESHOLDS } from "@/lib/domain-client";
 import { useUnreadStore } from "@/hooks/use-unread-store";
 import { useMentionStore } from "@/hooks/use-mention-store";
 

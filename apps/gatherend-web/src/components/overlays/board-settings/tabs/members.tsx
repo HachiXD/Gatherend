@@ -34,6 +34,7 @@ import {
   patchBoardMemberInCache,
   removeBoardMemberFromCache,
 } from "@/hooks/board-cache";
+import { assignableBy, canKick, canBan, canWarn, outranks } from "@/lib/domain-client";
 
 const roleIconMap = {
   GUEST: null,
@@ -41,25 +42,6 @@ const roleIconMap = {
   ADMIN: <HardHat className="ml-2 h-4 w-4 text-rose-500" />,
   OWNER: <Crown className="ml-2 h-4 w-4 text-[#FFD700]" />,
 };
-
-// Role hierarchy (lower index = higher rank)
-const ROLE_HIERARCHY: Record<MemberRole, number> = {
-  OWNER: 0,
-  ADMIN: 1,
-  MODERATOR: 2,
-  GUEST: 3,
-};
-
-// Roles each actor can assign
-const ASSIGNABLE_BY_ROLE: Record<MemberRole, MemberRole[]> = {
-  OWNER: ["ADMIN", "MODERATOR", "GUEST"],
-  ADMIN: ["MODERATOR", "GUEST"],
-  MODERATOR: [],
-  GUEST: [],
-};
-
-// Roles that can kick (OWNER, ADMIN, MODERATOR)
-const CAN_KICK_ROLES: MemberRole[] = ["OWNER", "ADMIN", "MODERATOR"];
 const HEADER_PANEL_SHELL =
   "rounded-lg border border-theme-border bg-theme-bg-overlay-primary/78 px-4 mr-1.5 pt-4 pb-0 sm:px-5 sm:py-5";
 const MEMBER_ROW_CLASS =
@@ -109,16 +91,15 @@ export const MembersTab = ({ board, currentProfileId }: MembersTabProps) => {
   const currentRole = currentMember?.role || "GUEST";
 
   // What roles can the current user assign?
-  const assignableRoles = ASSIGNABLE_BY_ROLE[currentRole];
+  const assignableRoles = assignableBy(currentRole);
   const canAssignRoles = assignableRoles.length > 0;
-  const canKick = CAN_KICK_ROLES.includes(currentRole);
-  const canBan = currentRole === "OWNER" || currentRole === "ADMIN";
-  const canWarn = currentRole === "OWNER" || currentRole === "ADMIN";
+  const currentCanKick = canKick(currentRole);
+  const currentCanBan = canBan(currentRole);
+  const currentCanWarn = canWarn(currentRole);
 
   // Check if current user can modify a specific member
   const canModifyMember = (targetRole: MemberRole) => {
-    // Cannot modify someone with equal or higher rank
-    return ROLE_HIERARCHY[currentRole] < ROLE_HIERARCHY[targetRole];
+    return outranks(currentRole, targetRole);
   };
 
   // Mutation para kick - uses POST /api/boards/[boardId]/kick
@@ -375,7 +356,7 @@ export const MembersTab = ({ board, currentProfileId }: MembersTabProps) => {
                     member.profile.id !== currentProfileId &&
                     loadingId !== member.id &&
                     canModify &&
-                    (canAssignRoles || canKick || canWarn || canBan);
+                    (canAssignRoles || currentCanKick || currentCanWarn || currentCanBan);
 
                   return (
                     <div
@@ -509,15 +490,12 @@ export const MembersTab = ({ board, currentProfileId }: MembersTabProps) => {
                                   )}
                                 </>
                               )}
-                              {canAssignRoles && (canKick || canBan) && (
+                              {canAssignRoles && (currentCanKick || currentCanBan) && (
                                 <DropdownMenuSeparator
                                   className={menuSectionSeparatorClass}
                                 />
                               )}
-                              {canKick && (
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    kickMutation.mutate({
+                              {currentCanKick && (
                                       memberId: member.id,
                                       targetProfileId: member.profile.id,
                                     })
@@ -530,12 +508,12 @@ export const MembersTab = ({ board, currentProfileId }: MembersTabProps) => {
                                   {t.overlays.boardSettings.members.kick}
                                 </DropdownMenuItem>
                               )}
-                              {canKick && canBan && (
+                              {currentCanKick && currentCanBan && (
                                 <DropdownMenuSeparator
                                   className={menuSectionSeparatorClass}
                                 />
                               )}
-                              {canWarn && (
+                              {currentCanWarn && (
                                 <>
                                   <DropdownMenuItem
                                     onClick={() =>
@@ -574,17 +552,13 @@ export const MembersTab = ({ board, currentProfileId }: MembersTabProps) => {
                                         .removeWarning
                                     }
                                   </DropdownMenuItem>
-                                  {canBan && (
-                                    <DropdownMenuSeparator
+                                  {currentCanBan && (
                                       className={menuSectionSeparatorClass}
                                     />
                                   )}
                                 </>
                               )}
-                              {canBan && (
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    banMutation.mutate({
+                              {currentCanBan && (
                                       memberId: member.id,
                                       targetProfileId: member.profile.id,
                                     })

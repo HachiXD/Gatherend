@@ -13,6 +13,7 @@ import {
   type RefObject,
 } from "react";
 import { MemberRole } from "@prisma/client";
+import { isModerator } from "@/lib/domain-client";
 import type { BoardCurrentMember } from "@/lib/boards/board-types";
 import { UserAvatarMenu } from "../user-avatar-menu";
 import { AvatarGroupHoverContext, UserAvatar } from "../user-avatar";
@@ -688,11 +689,8 @@ const ChatItemOptimizedComponent = ({
   // Compute permissions without hooks
   let canDeleteMessage = false;
   if (isChannel) {
-    const isOwner = currentMember?.role === MemberRole.OWNER;
-    const isAdmin = currentMember?.role === MemberRole.ADMIN;
-    const isModerator = currentMember?.role === MemberRole.MODERATOR;
     canDeleteMessage =
-      !deleted && (isOwner || isAdmin || isModerator || isOwnMessage);
+      !deleted && (isModerator(currentMember?.role as MemberRole) || isOwnMessage);
   } else {
     canDeleteMessage = !deleted && isOwnMessage;
   }

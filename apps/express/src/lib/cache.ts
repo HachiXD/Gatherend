@@ -1,6 +1,4 @@
 /**
- * Redis Cache Service
- *
  * Caching layer for frequently accessed data to reduce DB load.
  *
  * Cache Keys (Might be outdated xD):
@@ -16,7 +14,7 @@
 import { getRedisClient, isRedisConfigured } from "./redis.js";
 import { db } from "./db.js";
 import { logger } from "./logger.js";
-import { AuthProvider, type Prisma } from "@prisma/client";
+import { AuthProvider, MemberRole, type Prisma } from "@prisma/client";
 import { uploadedAssetSelect } from "./uploaded-assets.js";
 
 // Cache TTLs in seconds
@@ -166,7 +164,7 @@ interface CachedMemberProfile {
 
 interface CachedMember {
   id: string;
-  role: string;
+  role: MemberRole;
   profileId: string;
   boardId: string;
   xp?: number;

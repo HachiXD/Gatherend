@@ -1,13 +1,10 @@
 // Express + Socket.IO Server
 // If you are using Railway, it injects env vars automatically; in local dev, load from .env.
-if (process.env.NODE_ENV !== "production") {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const fs = require("fs");
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const path = require("path");
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const dotenv = require("dotenv");
+import fs from "fs";
+import path from "path";
+import dotenv from "dotenv";
 
+if (process.env.NODE_ENV !== "production") {
   // Load both repo root `.env` (DB, etc.) and `apps/express/.env` (IMGPROXY, secrets, etc)
   // regardless of where the process is started from (root, apps/express, dist, etc.).
   const candidatePaths = [

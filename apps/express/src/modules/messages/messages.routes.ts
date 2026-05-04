@@ -22,7 +22,6 @@ import {
 import {
   AssetContext,
   AssetVisibility,
-  MemberRole,
   MessageType,
 } from "@prisma/client";
 import { db } from "../../lib/db.js";
@@ -35,6 +34,7 @@ import {
   hasMinimumMeaningfulTextLength,
   MEMBER_XP_REWARDS,
   REPUTATION_LIMITS,
+  isModerator,
 } from "../../lib/domain.js";
 import { logger } from "../../lib/logger.js";
 import { attachFilePreviews } from "../../lib/chat-image-previews.js";
@@ -81,7 +81,8 @@ router.post("/", async (req, res) => {
   try {
     const profileId = req.profile?.id;
     const { boardId, channelId } = req.query;
-    const { content, attachmentAssetId, stickerId, replyToId, tempId } = req.body;
+    const { content, attachmentAssetId, stickerId, replyToId, tempId } =
+      req.body;
     const trimmedContent = typeof content === "string" ? content.trim() : "";
     const reputationScore = getReputationScore(req.profile?.reputationScore);
 
@@ -119,8 +120,15 @@ router.post("/", async (req, res) => {
       return res.status(403).json({ error: "Not a channel member" });
 
     let resolvedAttachmentAssetId: string | null = null;
-    if (attachmentAssetId !== undefined && attachmentAssetId !== null && attachmentAssetId !== "") {
-      if (typeof attachmentAssetId !== "string" || !UUID_REGEX.test(attachmentAssetId)) {
+    if (
+      attachmentAssetId !== undefined &&
+      attachmentAssetId !== null &&
+      attachmentAssetId !== ""
+    ) {
+      if (
+        typeof attachmentAssetId !== "string" ||
+        !UUID_REGEX.test(attachmentAssetId)
+      ) {
         return res.status(400).json({ error: "Invalid attachment" });
       }
 
@@ -264,12 +272,11 @@ router.post("/", async (req, res) => {
     // Procesar menciones si hay contenido
     if (trimmedContent) {
       const mentionIdentifiers = extractMentionIdentifiers(trimmedContent);
-      const mentionedProfileIds =
-        await resolveMentionedChannelMemberProfileIds(
-          channelId as string,
-          mentionIdentifiers,
-          member.profileId,
-        );
+      const mentionedProfileIds = await resolveMentionedChannelMemberProfileIds(
+        channelId as string,
+        mentionIdentifiers,
+        member.profileId,
+      );
 
       if (mentionedProfileIds.length > 0) {
         // Crear las menciones en la base de datos
@@ -279,14 +286,16 @@ router.post("/", async (req, res) => {
         for (const mentionedProfileId of mentionedProfileIds) {
           // No notificar si se menciona a sí mismo
           if (mentionedProfileId !== member.profileId) {
-            req.io.to(`profile:${mentionedProfileId}`).emit(`mention:${mentionedProfileId}`, {
-              messageId: message.id,
-              channelId,
-              boardId,
-              messageSeq: message.seq,
-              sender: senderProfile,
-              content: trimmedContent.substring(0, 100), // Preview del mensaje
-            });
+            req.io
+              .to(`profile:${mentionedProfileId}`)
+              .emit(`mention:${mentionedProfileId}`, {
+                messageId: message.id,
+                channelId,
+                boardId,
+                messageSeq: message.seq,
+                sender: senderProfile,
+                content: trimmedContent.substring(0, 100), // Preview del mensaje
+              });
           }
         }
 
@@ -436,9 +445,7 @@ router.post("/by-ids", async (req, res) => {
     if (rawIds.length > MAX_BATCH_MESSAGE_IDS) {
       return res.status(400).json({ error: "Too many message IDs" });
     }
-    if (
-      rawIds.some((id) => typeof id !== "string" || !UUID_REGEX.test(id))
-    ) {
+    if (rawIds.some((id) => typeof id !== "string" || !UUID_REGEX.test(id))) {
       return res.status(400).json({ error: "Invalid message IDs" });
     }
 
@@ -490,7 +497,8 @@ router.patch("/:messageId", async (req, res) => {
       return res.status(400).json({ error: "Invalid board ID" });
     if (!channelId || !UUID_REGEX.test(channelId as string))
       return res.status(400).json({ error: "Invalid channel ID" });
-    if (!trimmedContent) return res.status(400).json({ error: "Content missing" });
+    if (!trimmedContent)
+      return res.status(400).json({ error: "Content missing" });
 
     const board = await verifyMemberInBoardCached(profileId, boardId as string);
     if (!board) return res.status(404).json({ error: "Board not found" });
@@ -571,11 +579,9 @@ router.delete("/:messageId", async (req, res) => {
       return res.status(404).json({ error: "Message not found" });
 
     const isMessageOwner = message.messageSenderId === profileId;
-    const isBoardOwner = member.role === MemberRole.OWNER;
-    const isAdmin = member.role === MemberRole.ADMIN;
-    const isModerator = member.role === MemberRole.MODERATOR;
+    const memberIsModerator = isModerator(member.role);
 
-    if (!isMessageOwner && !isBoardOwner && !isAdmin && !isModerator)
+    if (!isMessageOwner && !memberIsModerator)
       return res.status(401).json({ error: "Unauthorized" });
 
     // Hard delete the message from DB
@@ -624,11 +630,7 @@ router.post("/:messageId/pin", async (req, res) => {
     if (!member) return res.status(404).json({ error: "Member not found" });
 
     // Check permissions (only admins, mods, or owner can pin)
-    const isOwner = member.role === MemberRole.OWNER;
-    const isAdmin = member.role === MemberRole.ADMIN;
-    const isModerator = member.role === MemberRole.MODERATOR;
-
-    if (!isOwner && !isAdmin && !isModerator) {
+    if (!isModerator(member.role)) {
       return res.status(403).json({ error: "Insufficient permissions" });
     }
 
@@ -658,7 +660,9 @@ router.post("/:messageId/pin", async (req, res) => {
     });
 
     const updateKey = `chat:${channelId}:messages:update`;
-    const serializedMessage = attachFilePreviews(serializeMessageRecord(message));
+    const serializedMessage = attachFilePreviews(
+      serializeMessageRecord(message),
+    );
     req.io.to(`channel:${channelId}`).emit(updateKey, serializedMessage);
 
     return res.json(serializedMessage);
@@ -698,11 +702,7 @@ router.delete("/:messageId/pin", async (req, res) => {
     if (!member) return res.status(404).json({ error: "Member not found" });
 
     // Check permissions
-    const isOwner = member.role === MemberRole.OWNER;
-    const isAdmin = member.role === MemberRole.ADMIN;
-    const isModerator = member.role === MemberRole.MODERATOR;
-
-    if (!isOwner && !isAdmin && !isModerator) {
+    if (!isModerator(member.role)) {
       return res.status(403).json({ error: "Insufficient permissions" });
     }
 
@@ -732,7 +732,9 @@ router.delete("/:messageId/pin", async (req, res) => {
     });
 
     const updateKey = `chat:${channelId}:messages:update`;
-    const serializedMessage = attachFilePreviews(serializeMessageRecord(message));
+    const serializedMessage = attachFilePreviews(
+      serializeMessageRecord(message),
+    );
     req.io.to(`channel:${channelId}`).emit(updateKey, serializedMessage);
 
     return res.json(serializedMessage);

@@ -2,10 +2,7 @@ import express from "express";
 import multer from "multer";
 import crypto from "crypto";
 import { AssetContext, AssetVisibility } from "@prisma/client";
-import {
-  uploadToStorage,
-  isStorageConfigured,
-} from "../../lib/s3.config.js";
+import { uploadToStorage, isStorageConfigured } from "../../lib/s3.config.js";
 import { getSignedAttachmentsUrl } from "../../lib/attachments-gateway.js";
 import {
   getSafeImageMetadata,
@@ -78,6 +75,7 @@ const ALWAYS_MODERATED_CONTEXTS: ModerationContext[] = [
   "profile_avatar",
   "profile_banner",
   "profile_card_image",
+  "wiki_page_image",
   "sticker",
 ];
 
@@ -98,6 +96,7 @@ const CONTEXT_TO_ASSET_CONTEXT: Record<ModerationContext, AssetContext> = {
   message_attachment: AssetContext.MESSAGE_ATTACHMENT,
   dm_attachment: AssetContext.DM_ATTACHMENT,
   sticker: AssetContext.STICKER_IMAGE,
+  wiki_page_image: AssetContext.WIKI_PAGE_IMAGE,
 };
 
 router.post("/", upload.single("image"), async (req, res) => {

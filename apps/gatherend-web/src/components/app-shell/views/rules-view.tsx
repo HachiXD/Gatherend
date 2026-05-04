@@ -13,6 +13,7 @@ import { useBoardData, useCurrentMemberRole } from "@/hooks/use-board-data";
 import { useProfile } from "@/components/app-shell/providers/profile-provider";
 import { useCurrentBoardId } from "@/contexts/board-switch-context";
 import { MemberRole } from "@prisma/client";
+import { isAdmin } from "@/lib/domain-client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { toast } from "sonner";
@@ -498,7 +499,7 @@ function RulesViewInner() {
   const queryClient = useQueryClient();
   const themeMode = useEffectiveThemeMode();
 
-  const canEdit = role === MemberRole.OWNER || role === MemberRole.ADMIN;
+  const canEdit = isAdmin(role as MemberRole);
 
   const [mode, setMode] = useState<"view" | "create" | "edit">("view");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);

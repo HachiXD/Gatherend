@@ -18,6 +18,20 @@ export const revalidate = 0;
 const PAGE_SIZE = 10;
 const MAX_LIMIT = 50;
 const MAX_CURSOR_LENGTH = 128;
+const SNIPPET_MAX_CHARS = 200;
+
+interface CommunityPostPreviewItem {
+  id: string;
+  title: string | null;
+  contentSnippet: string;
+  imageAsset: ReturnType<typeof serializeUploadedAsset>;
+  commentCount: number;
+  createdAt: string;
+  updatedAt: string;
+  pinnedAt: string | null;
+  lockedAt: string | null;
+  author: ReturnType<typeof serializeProfileSummary>;
+}
 
 interface BoardMetadata {
   id: string;
@@ -152,6 +166,12 @@ function serializeCommentPreview(comment: {
   };
 }
 
+function toSnippet(content: string): string {
+  if (content.length <= SNIPPET_MAX_CHARS) return content;
+  const cut = content.lastIndexOf(" ", SNIPPET_MAX_CHARS);
+  return (cut > 0 ? content.slice(0, cut) : content.slice(0, SNIPPET_MAX_CHARS)) + "…";
+}
+
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ boardId: string }> },
@@ -174,6 +194,7 @@ export async function GET(
       );
     }
 
+    const isPreview = searchParams.get("preview") === "true";
     const cursorParam = searchParams.get("cursor");
     const limitParam = parseInt(
       searchParams.get("limit") || String(PAGE_SIZE),
@@ -256,6 +277,79 @@ export async function GET(
           { status: 404 },
         );
       }
+    }
+
+    if (isPreview) {
+      const previewPosts = await db.communityPost.findMany({
+        where: {
+          boardId,
+          deleted: false,
+          ...(cursorCreatedAt && cursorId
+            ? {
+                OR: [
+                  { createdAt: { lt: cursorCreatedAt } },
+                  { AND: [{ createdAt: cursorCreatedAt }, { id: { lt: cursorId } }] },
+                ],
+              }
+            : {}),
+        },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        take: limit + 1,
+        select: {
+          id: true,
+          title: true,
+          content: true,
+          commentCount: true,
+          imageAsset: { select: uploadedAssetSummarySelect },
+          createdAt: true,
+          updatedAt: true,
+          pinnedAt: true,
+          lockedAt: true,
+          author: {
+            select: {
+              id: true,
+              username: true,
+              discriminator: true,
+              badge: true,
+              usernameColor: true,
+              usernameFormat: true,
+              profileTags: true,
+              avatarAsset: { select: uploadedAssetSummarySelect },
+              badgeSticker: {
+                select: { id: true, asset: { select: uploadedAssetSummarySelect } },
+              },
+            },
+          },
+        },
+      });
+
+      const previewHasMore = previewPosts.length > limit;
+      const previewItems = previewHasMore ? previewPosts.slice(0, limit) : previewPosts;
+      const lastPreviewItem = previewItems.length > 0 ? previewItems[previewItems.length - 1] : null;
+      const previewNextCursor =
+        previewHasMore && lastPreviewItem
+          ? `${lastPreviewItem.createdAt.toISOString()}|${lastPreviewItem.id}`
+          : null;
+
+      const previewResult: CommunityPostPreviewItem[] = previewItems.map((post) => ({
+        id: post.id,
+        title: post.title ?? null,
+        contentSnippet: toSnippet(post.content),
+        imageAsset: serializeUploadedAsset(post.imageAsset),
+        commentCount: post.commentCount,
+        createdAt: post.createdAt.toISOString(),
+        updatedAt: post.updatedAt.toISOString(),
+        pinnedAt: post.pinnedAt?.toISOString() ?? null,
+        lockedAt: post.lockedAt?.toISOString() ?? null,
+        author: serializeProfileSummary(post.author),
+      }));
+
+      return NextResponse.json({
+        items: previewResult,
+        nextCursor: previewNextCursor,
+        hasMore: previewHasMore,
+        ...(boardMetadata && { board: boardMetadata }),
+      });
     }
 
     const posts = await db.communityPost.findMany({

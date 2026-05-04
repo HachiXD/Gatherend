@@ -1,6 +1,12 @@
 export const boardPostsQueryKey = (boardId: string) =>
   ["forum", "posts", boardId] as const;
 
+export const boardPostPreviewsQueryKey = (boardId: string) =>
+  ["forum", "posts", boardId, "previews"] as const;
+
+export const postQueryKey = (postId: string) =>
+  ["forum", "post", postId] as const;
+
 export const postCommentsQueryKey = (postId: string) =>
   ["forum", "comments", postId] as const;
 

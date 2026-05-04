@@ -5,28 +5,16 @@
  * The external service only returns raw class scores; policy lives here.
  */
 
-export type ModerationContext =
-  | "board_image"
-  | "board_banner"
-  | "channel_image"
-  | "community_post_image"
-  | "community_post_comment_image"
-  | "board_rules_image"
-  | "profile_avatar"
-  | "profile_banner"
-  | "profile_card_image"
-  | "message_attachment"
-  | "sticker"
-  | "dm_attachment";
+import type { UploadContext } from "../../../../packages/domain/src/assets/upload-context.js";
+
+// ModerationContext is the same contract as UploadContext — the string
+// sent in the HTTP body by clients. Aliased here so internal express code
+// can keep using the familiar name.
+export type ModerationContext = UploadContext;
 
 export type StrikeSeverity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 export type ModerationReason = "SEXY" | "PORN" | "HENTAI" | "moderation_error";
-export type NsfwClassName =
-  | "Drawing"
-  | "Hentai"
-  | "Neutral"
-  | "Porn"
-  | "Sexy";
+export type NsfwClassName = "Drawing" | "Hentai" | "Neutral" | "Porn" | "Sexy";
 
 export interface NsfwThresholdConfig {
   sexy: number;
@@ -51,23 +39,6 @@ export const NSFW_CLASS_THRESHOLDS: NsfwThresholdConfig = {
 export const MODERATION_ENGINE = "nsfwjs";
 export const MODERATION_POLICY_VERSION = "nsfwjs-v1";
 
-export type StorageBackend = "s3";
-
-export const CONTEXT_STORAGE_MAP: Record<ModerationContext, StorageBackend> = {
-  board_image: "s3",
-  board_banner: "s3",
-  channel_image: "s3",
-  community_post_image: "s3",
-  community_post_comment_image: "s3",
-  board_rules_image: "s3",
-  profile_avatar: "s3",
-  profile_banner: "s3",
-  profile_card_image: "s3",
-  sticker: "s3",
-  message_attachment: "s3",
-  dm_attachment: "s3",
-};
-
 export const STORAGE_FOLDERS: Record<ModerationContext, string> = {
   board_image: "boards",
   board_banner: "boards",
@@ -81,6 +52,7 @@ export const STORAGE_FOLDERS: Record<ModerationContext, string> = {
   sticker: "stickers",
   message_attachment: "chat-attachments",
   dm_attachment: "dm-attachments",
+  wiki_page_image: "wiki-pages",
 };
 
 export const CACHE_CONFIG = {

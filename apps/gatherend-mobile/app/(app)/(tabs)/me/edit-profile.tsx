@@ -209,6 +209,9 @@ export default function EditProfileScreen() {
   const isUsernameColorValid = HEX_REGEX.test(normalizedUsernameColor);
   const normalizedCardBgColor = normalizeHexDraft(cardBgColor);
   const isCardBgColorValid = HEX_REGEX.test(normalizedCardBgColor);
+  const isBubbleColorValid =
+    !chatBubbleStyle.background ||
+    HEX_REGEX.test(chatBubbleStyle.background);
   const canSave =
     !isSaving &&
     !uploadingAvatar &&
@@ -866,8 +869,11 @@ export default function EditProfileScreen() {
                   style={[
                     styles.colorSwatch,
                     {
-                      backgroundColor:
-                        chatBubbleStyle.background ?? "transparent",
+                      backgroundColor: HEX_REGEX.test(
+                        chatBubbleStyle.background ?? "",
+                      )
+                        ? chatBubbleStyle.background!
+                        : "transparent",
                       borderColor: showBubblePicker
                         ? colors.channelTypeActiveBorder
                         : colors.borderPrimary,
@@ -883,23 +889,16 @@ export default function EditProfileScreen() {
                   )}
                 </Pressable>
                 <TextInput
-                  autoCapitalize="none"
+                  autoCapitalize="characters"
                   autoCorrect={false}
                   editable={!isSaving}
                   maxLength={7}
                   onChangeText={(val) =>
                     setChatBubbleStyle((s) => ({
                       ...s,
-                      background: val || null,
+                      background: val ? normalizeHexDraft(val) : null,
                     }))
                   }
-                  onBlur={(e) => {
-                    const v = e.nativeEvent.text.trim();
-                    setChatBubbleStyle((s) => ({
-                      ...s,
-                      background: HEX_REGEX.test(v) ? v : null,
-                    }));
-                  }}
                   placeholder="#sin color"
                   placeholderTextColor={colors.textMuted}
                   style={[
@@ -935,6 +934,11 @@ export default function EditProfileScreen() {
                   <HueSlider style={styles.colorPickerSlider} />
                 </ColorPicker>
               </View>
+              {!isBubbleColorValid ? (
+                <Text style={[styles.validationMsg, { color: "#f87171" }]}>
+                  Ingresa un color hex válido.
+                </Text>
+              ) : null}
             </View>
 
             <View
@@ -1001,7 +1005,7 @@ export default function EditProfileScreen() {
                       },
                     ]}
                   >
-                    Cuadradas
+                    CuadradasJAJAJ
                   </Text>
                 </Pressable>
               </View>
@@ -1078,7 +1082,6 @@ export default function EditProfileScreen() {
             </View>
           </View>
         </View>
-
       </ScrollView>
     </KeyboardAvoidingView>
   );

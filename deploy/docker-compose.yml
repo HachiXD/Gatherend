@@ -141,8 +141,9 @@ services:
         [
           "CMD",
           "node",
+          "--input-type=module",
           "-e",
-          "require('http').get('http://localhost:3001/health', (res) => process.exit(res.statusCode >= 200 && res.statusCode < 400 ? 0 : 1)).on('error', () => process.exit(1))",
+          "import http from 'http'; http.get('http://localhost:3001/health', (res) => process.exit(res.statusCode >= 200 && res.statusCode < 400 ? 0 : 1)).on('error', () => process.exit(1))",
         ]
       interval: 30s
       timeout: 10s

@@ -25,7 +25,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useModal } from "@/hooks/use-modal-store";
-import { ChannelType, MemberRole } from "@prisma/client";
+import { ChannelType } from "@prisma/client";
+import { isModerator } from "@/lib/domain-client";
 import { Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SlashSVG } from "@/lib/slash";
@@ -35,10 +36,7 @@ import {
   getStoredUploadAssetId,
   parseStoredUploadValue,
 } from "@/lib/upload-values";
-import type {
-  BoardWithData,
-  BoardChannel,
-} from "@/lib/boards/board-types";
+import type { BoardWithData, BoardChannel } from "@/lib/boards/board-types";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
 function getOptimisticChannelImageAsset(
@@ -60,11 +58,7 @@ function getOptimisticChannelImageAsset(
 
 function getOptimisticChannelMemberCount(board: BoardWithData | undefined) {
   const currentRole = board?.currentMember?.role;
-  return currentRole === MemberRole.OWNER ||
-    currentRole === MemberRole.ADMIN ||
-    currentRole === MemberRole.MODERATOR
-    ? 1
-    : 0;
+  return isModerator(currentRole) ? 1 : 0;
 }
 
 export const CreateChannelModal = () => {

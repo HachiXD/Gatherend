@@ -1,11 +1,12 @@
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
-import { BoardBanSourceType, MemberRole } from "@prisma/client";
+import { BoardBanSourceType } from "@prisma/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
 import { expressMemberCache } from "@/lib/redis";
 import { issueBoardBan } from "@/lib/board-moderation";
 import { UUID_REGEX } from "@/lib/platform-moderation";
+import { canBan, outranks, isOwner } from "@/lib/domain";
 
 async function notifyBoardMembership(
   profileId: string,
@@ -154,7 +155,7 @@ export async function POST(
         throw new Error("NOT_A_MEMBER");
       }
 
-      if (actor.role !== MemberRole.OWNER && actor.role !== MemberRole.ADMIN) {
+      if (!canBan(actor.role)) {
         throw new Error("FORBIDDEN");
       }
 
@@ -162,14 +163,11 @@ export async function POST(
         throw new Error("TARGET_NOT_MEMBER");
       }
 
-      if (targetMember.role === MemberRole.OWNER) {
+      if (isOwner(targetMember.role)) {
         throw new Error("CANNOT_BAN_OWNER");
       }
 
-      if (
-        actor.role === MemberRole.ADMIN &&
-        targetMember.role === MemberRole.ADMIN
-      ) {
+      if (!outranks(actor.role, targetMember.role)) {
         throw new Error("INSUFFICIENT_PERMISSIONS");
       }
 

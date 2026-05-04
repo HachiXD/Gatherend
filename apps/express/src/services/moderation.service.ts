@@ -100,7 +100,8 @@ export async function moderateImage(
     return {
       allowed: false,
       reason: "moderation_error",
-      userMessage: "Image moderation is currently unavailable. Please try again later.",
+      userMessage:
+        "Image moderation is currently unavailable. Please try again later.",
       cached: false,
       processingTimeMs: Date.now() - startTime,
       hash: processed.hash,
@@ -111,8 +112,7 @@ export async function moderateImage(
   try {
     const prepared = await prepareForModeration(processed.buffer);
     const inference = await analyzeImage(prepared.buffer, {
-      contentType:
-        prepared.format === "png" ? "image/png" : "image/jpeg",
+      contentType: prepared.format === "png" ? "image/png" : "image/jpeg",
       filename: prepared.format === "png" ? "moderation.png" : "moderation.jpg",
     });
     const decision = getNsfwDecision(inference.classes);
@@ -154,7 +154,8 @@ export async function moderateImage(
     return {
       allowed: false,
       reason: "moderation_error",
-      userMessage: "Image moderation is currently unavailable. Please try again later.",
+      userMessage:
+        "Image moderation is currently unavailable. Please try again later.",
       cached: false,
       processingTimeMs: Date.now() - startTime,
       hash: processed.hash,
@@ -172,7 +173,9 @@ export async function moderateSticker(
   });
 }
 
-async function checkCache(hash: string): Promise<CachedModerationResult | null> {
+async function checkCache(
+  hash: string,
+): Promise<CachedModerationResult | null> {
   try {
     const cached = await db.moderationCache.findUnique({
       where: {
@@ -324,6 +327,7 @@ function getContentType(context: ModerationContext): string {
     case "profile_avatar":
     case "profile_banner":
     case "profile_card_image":
+    case "wiki_page_image":
       return "image";
     case "message_attachment":
     case "dm_attachment":

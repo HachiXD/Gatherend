@@ -7,21 +7,9 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from "react";
+import type { UploadContext } from "@/lib/domain";
 
-// Context types that match the backend
-export type UploadContext =
-  | "board_image"
-  | "board_banner"
-  | "channel_image"
-  | "community_post_image"
-  | "community_post_comment_image"
-  | "board_rules_image"
-  | "profile_avatar"
-  | "profile_banner"
-  | "profile_card_image"
-  | "message_attachment"
-  | "sticker"
-  | "dm_attachment";
+export type { UploadContext } from "@/lib/domain";
 
 const ENDPOINT_TO_CONTEXT: Record<string, UploadContext> = {
   messageFile: "message_attachment",

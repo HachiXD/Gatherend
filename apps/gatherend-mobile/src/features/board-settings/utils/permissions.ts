@@ -1,12 +1,11 @@
-import type {
-  BoardMemberRole,
-  BoardSettingsSection,
-  BoardSettingsTabId,
-} from "../types";
-
-const GENERAL_ROLES = new Set<BoardMemberRole>(["OWNER", "ADMIN"]);
-const MEMBER_ROLES = new Set<BoardMemberRole>(["OWNER", "ADMIN", "MODERATOR"]);
-const OWNER_ONLY = new Set<BoardMemberRole>(["OWNER"]);
+import {
+  isModerator,
+  isAdmin,
+  isOwner,
+  outranks,
+  assignableBy,
+} from "../../boards/member-role";
+import type { BoardSettingsSection, BoardSettingsTabId } from "../types";
 
 export const BOARD_SETTINGS_SECTIONS: BoardSettingsSection[] = [
   {
@@ -46,35 +45,19 @@ export const BOARD_SETTINGS_SECTIONS: BoardSettingsSection[] = [
   },
 ];
 
-export function normalizeRole(role: string | null | undefined) {
-  if (
-    role === "OWNER" ||
-    role === "ADMIN" ||
-    role === "MODERATOR" ||
-    role === "GUEST"
-  ) {
-    return role;
-  }
-
-  return null;
-}
-
 export function canViewSettingsSection(
   role: string | null | undefined,
   section: BoardSettingsTabId,
 ) {
-  const normalizedRole = normalizeRole(role);
-  if (!normalizedRole) return false;
-
   if (section === "general" || section === "bans" || section === "history") {
-    return GENERAL_ROLES.has(normalizedRole);
+    return isAdmin(role);
   }
 
   if (section === "members") {
-    return MEMBER_ROLES.has(normalizedRole);
+    return isModerator(role);
   }
 
-  return OWNER_ONLY.has(normalizedRole);
+  return isOwner(role);
 }
 
 export function getVisibleSettingsSections(role: string | null | undefined) {
@@ -84,21 +67,12 @@ export function getVisibleSettingsSections(role: string | null | undefined) {
 }
 
 export function canModifyRole(
-  actorRole: BoardMemberRole,
-  targetRole: BoardMemberRole,
+  actorRole: string | null | undefined,
+  targetRole: string | null | undefined,
 ) {
-  const hierarchy: Record<BoardMemberRole, number> = {
-    OWNER: 0,
-    ADMIN: 1,
-    MODERATOR: 2,
-    GUEST: 3,
-  };
-
-  return hierarchy[actorRole] < hierarchy[targetRole];
+  return outranks(actorRole, targetRole);
 }
 
-export function getAssignableRoles(role: BoardMemberRole) {
-  if (role === "OWNER") return ["ADMIN", "MODERATOR", "GUEST"] as const;
-  if (role === "ADMIN") return ["MODERATOR", "GUEST"] as const;
-  return [] as const;
+export function getAssignableRoles(role: string | null | undefined) {
+  return assignableBy(role);
 }

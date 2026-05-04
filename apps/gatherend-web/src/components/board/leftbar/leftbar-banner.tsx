@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { MemberRole } from "@prisma/client";
+import { isModerator, isAdmin, isOwner } from "@/lib/domain-client";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,9 +51,9 @@ export const LeftbarBanner = ({
   const { t } = useTranslation();
   const boardImageUrl = (bannerAsset ?? imageAsset)?.url ?? null;
 
-  const isOwner = role === MemberRole.OWNER;
-  const isAdmin = isOwner || role === MemberRole.ADMIN;
-  const isModerator = isAdmin || role === MemberRole.MODERATOR;
+  const memberIsModerator = isModerator(role);
+  const memberIsAdmin = isAdmin(role);
+  const memberIsOwner = isOwner(role);
   const menuPanelShadow = "";
   const menuRowClass =
     "h-9 cursor-pointer rounded-lg border border-transparent px-3 py-2 text-[15px] hover:border-theme-border hover:bg-theme-bg-secondary/30 focus:border-theme-border focus:bg-theme-bg-secondary/30";
@@ -139,7 +140,7 @@ export const LeftbarBanner = ({
                 align="end"
                 className={`w-64 rounded-lg border-theme-border bg-theme-bg-dropdown-menu-primary px-1 py-1 text-sm font-medium text-theme-text-secondary ${menuPanelShadow}`}
               >
-                {isModerator && (
+                {memberIsModerator && (
                   <DropdownMenuItem
                     onClick={() => onOpen("invite", { board })}
                     className={`${menuRowClass} text-theme-menu-accent-text`}
@@ -148,7 +149,7 @@ export const LeftbarBanner = ({
                     <UserPlus className="ml-auto size-5 text-theme-menu-accent-text" />
                   </DropdownMenuItem>
                 )}
-                {isModerator && (
+                {memberIsModerator && (
                   <DropdownMenuItem
                     onClick={() =>
                       onOpenOverlay("boardSettings", {
@@ -162,7 +163,7 @@ export const LeftbarBanner = ({
                     <Settings className="ml-auto size-5" />
                   </DropdownMenuItem>
                 )}
-                {FEATURES.CATEGORIES_ENABLED && isModerator && (
+                {FEATURES.CATEGORIES_ENABLED && memberIsModerator && (
                   <DropdownMenuItem
                     onClick={() => onOpen("createCategory", { board })}
                     className={menuRowClass}
@@ -171,7 +172,7 @@ export const LeftbarBanner = ({
                     <PlusCircle className="ml-auto size-5" />
                   </DropdownMenuItem>
                 )}
-                {isAdmin && (
+                {memberIsAdmin && (
                   <DropdownMenuItem
                     onClick={() =>
                       onOpen("createChannel", { board, categoryId: null })
@@ -182,10 +183,10 @@ export const LeftbarBanner = ({
                     <PlusCircle className="ml-auto size-5" />
                   </DropdownMenuItem>
                 )}
-                {!isOwner && (
+                {!memberIsOwner && (
                   <DropdownMenuSeparator className="mx-0 my-1 bg-theme-border" />
                 )}
-                {!isOwner && (
+                {!memberIsOwner && (
                   <DropdownMenuItem
                     onClick={() => onOpen("leaveBoard", { board })}
                     className={menuDangerRowClass}

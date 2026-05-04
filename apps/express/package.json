@@ -2,7 +2,7 @@
   "name": "chat-module",
   "version": "1.0.0",
   "description": "",
-  "type": "commonjs",
+  "type": "module",
   "main": "src/server.ts",
   "prisma": {
     "schema": "../../prisma/schema.prisma"
