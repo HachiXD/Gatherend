@@ -1,1 +1,1 @@
-export * from "../../../../packages/domain/src/index.js";
+export * from "../../../../packages/domain/dist/cjs/index.js";

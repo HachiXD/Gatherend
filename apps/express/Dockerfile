@@ -43,11 +43,15 @@ COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 # Copy Prisma schema
 COPY --from=builder /app/prisma ./prisma
 
-# Copy node_modules and compiled code from the express app
-COPY --from=builder /app/apps/express/node_modules ./node_modules
-COPY --from=builder /app/apps/express/dist ./dist
-COPY --from=builder /app/apps/express/package.json ./package.json
+# Copy node_modules and compiled code — preserve apps/express/dist/ depth so that
+# relative imports like ../../../../packages/domain/... resolve correctly at runtime.
+COPY --from=builder /app/apps/express/node_modules ./apps/express/node_modules
+COPY --from=builder /app/apps/express/dist ./apps/express/dist
+COPY --from=builder /app/apps/express/package.json ./apps/express/package.json
+
+# Copy compiled packages/domain CJS output (imported by apps/express/dist/lib/domain.js)
+COPY --from=builder /app/packages/domain/dist/cjs ./packages/domain/dist/cjs
 
 EXPOSE 3001
 
-CMD ["node", "dist/server.js"]
+CMD ["node", "apps/express/dist/server.js"]
