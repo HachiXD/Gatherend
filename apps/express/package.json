@@ -8,7 +8,7 @@
     "schema": "../../prisma/schema.prisma"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --build",
     "watch": "tsc -w",
     "dev:server": "nodemon dist/apps/express/src/server.js",
     "dev:full": "concurrently \"npm run watch\" \"npm run dev:server\"",
