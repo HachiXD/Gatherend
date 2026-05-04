@@ -167,6 +167,7 @@ export async function DELETE(
 
     const result = await db.$transaction(async (tx) =>
       removeBoardWarning(tx, {
+        boardId,
         warningId,
         issuedById: profile.id,
       }),

@@ -556,12 +556,16 @@ export const MembersTab = ({ board, currentProfileId }: MembersTabProps) => {
                                     }
                                   </DropdownMenuItem>
                                   {currentCanBan && (
+                                    <DropdownMenuSeparator
                                       className={menuSectionSeparatorClass}
                                     />
                                   )}
                                 </>
                               )}
                               {currentCanBan && (
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    banMutation.mutate({
                                       memberId: member.id,
                                       targetProfileId: member.profile.id,
                                     })
