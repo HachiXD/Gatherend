@@ -1282,7 +1282,7 @@ export const en: TranslationKeys = {
       title: "GATHEREND ANDROID DOWNLOADS",
       subtitle:
         "Download signed Android APK releases for manual installation outside Google Play.",
-      effectiveDate: "Last updated: 05/02/2026",
+      effectiveDate: "Last updated: 05/03/2026",
       versionHeader: "Version",
       notesHeader: "Notes",
       downloadHeader: "Download",
@@ -1290,6 +1290,12 @@ export const en: TranslationKeys = {
       installNote:
         "Android may ask you to allow installs from this source before installing the APK.",
       releases: [
+        {
+          version: "1.0.1",
+          notes:
+            "Added push notifications, fixed many frontend bugs and improved app stability.",
+          href: "https://downloads.gatherend.com/android/gatherend-android-1.0.1.apk",
+        },
         {
           version: "1.0.0",
           notes: "Initial Android release.",

@@ -37,7 +37,7 @@ export default function PublicIndexScreen() {
           <View style={styles.brandRow}>
             <Image
               contentFit="contain"
-              source={require("../../assets/images/GATHEREND_OUTLINE_RELLENADO_V1_BOTAS.webp")}
+              source={require("../../assets/images/GATHEREND_OUTLINE_RELLENADO_V1_BOTAS.png")}
               style={styles.brandIcon}
             />
             <Image

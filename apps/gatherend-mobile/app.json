@@ -2,7 +2,7 @@
   "expo": {
     "name": "Gatherend",
     "slug": "gatherend",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/GATHEREND_SQUARE_RELLENADO.png",
     "scheme": "gatherendmobile",
@@ -31,7 +31,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/GATHEREND_SQUARE_RELLENADO.png",
+          "icon": "./assets/images/GATHEREND_OUTLINE_RELLENADO_V1_BOTAS_ICONO_MONOCHROME_PUSH.png",
           "color": "#3D6E58",
           "defaultChannel": "default"
         }

@@ -1297,7 +1297,7 @@ export const es: TranslationKeys = {
       title: "DESCARGAS DE GATHEREND PARA ANDROID",
       subtitle:
         "Descarga versiones APK firmadas de Android para instalacion manual fuera de Google Play.",
-      effectiveDate: "Ultima actualizacion: 02/05/2026",
+      effectiveDate: "Ultima actualizacion: 03/05/2026",
       versionHeader: "Version",
       notesHeader: "Notas",
       downloadHeader: "Descarga",
@@ -1305,6 +1305,12 @@ export const es: TranslationKeys = {
       installNote:
         "Android puede pedirte permitir instalaciones desde esta fuente antes de instalar el APK.",
       releases: [
+        {
+          version: "1.0.1",
+          notes:
+            "Se agregaron notificaciones push, se fixearon muchos bugs en el frontend y se mejoró la estabilidad de la app.",
+          href: "https://downloads.gatherend.com/android/gatherend-android-1.0.1.apk",
+        },
         {
           version: "1.0.0",
           notes: "Primera version de Android.",

@@ -48,8 +48,8 @@ export function usePushTokenRegistration(profileId: string | undefined) {
         if (res.ok) {
           registeredTokenRef.current = token;
         }
-      } catch {
-        // Silent fail — will retry on next app open
+      } catch (err) {
+        console.error("[push] register failed:", err);
       }
     };
 
@@ -80,13 +80,13 @@ export function usePushTokenRegistration(profileId: string | undefined) {
               const { data: refreshedToken } =
                 await Notifications.getExpoPushTokenAsync(opts);
               await register(refreshedToken);
-            } catch {
-              // ignore
+            } catch (err) {
+              console.error("[push] token refresh failed:", err);
             }
           },
         );
-      } catch {
-        // Push notifications unavailable — simulator, Expo Go, or no permission
+      } catch (err) {
+        console.error("[push] setup failed:", err);
       }
     };
 
