@@ -5,6 +5,7 @@ export type FeaturedChannel = {
   name: string;
   type: "TEXT" | "VOICE";
   memberCount: number;
+  imageAsset: { url: string } | null;
 };
 
 export type FeaturedData = {

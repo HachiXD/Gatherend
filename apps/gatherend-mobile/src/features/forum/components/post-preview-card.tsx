@@ -1,7 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { memo, useMemo } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { memo, useEffect, useMemo, useRef } from "react";
+import {
+  Animated,
+  Easing,
+  Pressable,
+  StyleSheet,
+  View,
+  type ViewStyle,
+} from "react-native";
 import { UserAvatar } from "@/src/components/user-avatar";
 import { useTheme } from "@/src/theme/theme-provider";
 import { useTogglePostLike } from "../hooks/use-toggle-post-like";
@@ -20,16 +27,42 @@ type PostPreviewCardProps = {
   post: ForumPostPreview;
   boardId: string;
   onPress: () => void;
+  style?: ViewStyle;
 };
 
 function PostPreviewCardInner({
   post,
   boardId,
   onPress,
+  style,
 }: PostPreviewCardProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const togglePostLike = useTogglePostLike(boardId);
+  const likeAnim = useRef(
+    new Animated.Value(post.isLikedByCurrentUser ? 1 : 0),
+  ).current;
+
+  useEffect(() => {
+    Animated.timing(likeAnim, {
+      toValue: post.isLikedByCurrentUser ? 1 : 0,
+      duration: 180,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [likeAnim, post.isLikedByCurrentUser]);
+
+  const heartOutlineOpacity = likeAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 0],
+  });
+
+  const heartFilledOpacity = likeAnim;
+
+  const heartScale = likeAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.08],
+  });
 
   return (
     <Pressable
@@ -40,6 +73,7 @@ function PostPreviewCardInner({
           borderColor: colors.borderPrimary,
           backgroundColor: colors.bgEditForm,
         },
+        style,
         pressed && styles.pressed,
       ]}
     >
@@ -123,34 +157,68 @@ function PostPreviewCardInner({
       {/* Footer */}
       <View style={[styles.footer, { borderTopColor: colors.borderPrimary }]}>
         <View style={styles.footerLeft}>
-          <Ionicons
-            name="chatbubble-outline"
-            size={14}
-            color={colors.textTertiary}
-          />
-          <Text style={[styles.commentCount, { color: colors.textTertiary }]}>
-            {post.commentCount}
-          </Text>
-        </View>
-        <View style={styles.footerSpacer} />
-        <Pressable
-          onPress={(e) => {
-            e.stopPropagation();
-            togglePostLike.mutate({ postId: post.id, isLiked: post.isLikedByCurrentUser });
-          }}
-          style={({ pressed }) => [styles.likeButton, pressed && styles.likePressed]}
-        >
-          <Ionicons
-            name={post.isLikedByCurrentUser ? "heart" : "heart-outline"}
-            size={14}
-            color={post.isLikedByCurrentUser ? "#e74c3c" : colors.textTertiary}
-          />
-          {post.likeCount > 0 ? (
+          <View
+            style={[
+              styles.statPill,
+              {
+                backgroundColor: colors.bgTertiary,
+                borderColor: colors.borderPrimary,
+              },
+            ]}
+          >
+            <Ionicons
+              name="chatbubble-outline"
+              size={20}
+              color={colors.textTertiary}
+            />
             <Text style={[styles.commentCount, { color: colors.textTertiary }]}>
-              {post.likeCount}
+              {post.commentCount}
             </Text>
-          ) : null}
-        </Pressable>
+          </View>
+          <Pressable
+            onPress={(e) => {
+              e.stopPropagation();
+              togglePostLike.mutate({
+                postId: post.id,
+                isLiked: post.isLikedByCurrentUser,
+              });
+            }}
+            style={({ pressed }) => [
+              styles.statPill,
+              styles.likeButton,
+              {
+                backgroundColor: colors.bgTertiary,
+                borderColor: colors.borderPrimary,
+              },
+              pressed && styles.likePressed,
+            ]}
+          >
+            <Animated.View
+              style={[
+                styles.likeIconSwap,
+                { transform: [{ scale: heartScale }] },
+              ]}
+            >
+              <Animated.View
+                style={[styles.likeIconLayer, { opacity: heartOutlineOpacity }]}
+              >
+                <Ionicons
+                  name="heart-outline"
+                  size={18}
+                  color={colors.textTertiary}
+                />
+              </Animated.View>
+              <Animated.View
+                style={[styles.likeIconLayer, { opacity: heartFilledOpacity }]}
+              >
+                <Ionicons name="heart" size={18} color="#e74c3c" />
+              </Animated.View>
+            </Animated.View>
+            <Text style={[styles.commentCount, { color: colors.textTertiary }]}>
+              {post.likeCount ?? 0}
+            </Text>
+          </Pressable>
+        </View>
       </View>
     </Pressable>
   );
@@ -166,7 +234,8 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       marginHorizontal: 12,
       marginVertical: 6,
       paddingHorizontal: 14,
-      paddingVertical: 12,
+      paddingTop: 12,
+      paddingBottom: 8,
     },
     pressed: {
       opacity: 0.8,
@@ -237,20 +306,40 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     footerLeft: {
       alignItems: "center",
       flexDirection: "row",
-      gap: 5,
+      gap: 8,
     },
-    footerSpacer: {
-      flex: 1,
-    },
-    commentCount: {
-      fontSize: 13,
-    },
-    likeButton: {
+    statPill: {
       alignItems: "center",
+      borderRadius: 999,
+      borderWidth: 1,
       flexDirection: "row",
       gap: 4,
-      paddingHorizontal: 4,
-      paddingVertical: 2,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+    },
+    commentCount: {
+      fontSize: 16,
+    },
+    likeButton: {
+      minHeight: 32,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+    },
+    likeIconSwap: {
+      alignItems: "center",
+      height: 18,
+      justifyContent: "center",
+      position: "relative",
+      width: 18,
+    },
+    likeIconLayer: {
+      alignItems: "center",
+      height: 18,
+      justifyContent: "center",
+      left: 0,
+      position: "absolute",
+      top: 0,
+      width: 18,
     },
     likePressed: {
       opacity: 0.7,

@@ -10,10 +10,7 @@ import {
 } from "react-native";
 import { useBoard } from "@/src/features/boards/hooks/use-board";
 import { BoardSettingsCenterState } from "@/src/features/board-settings/components/settings-states";
-import {
-  getVisibleSettingsSections,
-  normalizeRole,
-} from "@/src/features/board-settings/utils/permissions";
+import { getVisibleSettingsSections } from "@/src/features/board-settings/utils/permissions";
 import { useTheme } from "@/src/theme/theme-provider";
 import { Text } from "@/src/components/app-typography";
 
@@ -48,7 +45,7 @@ export default function BoardSettingsIndexScreen() {
     );
   }
 
-  const role = normalizeRole(board?.currentMember?.role);
+  const role = board?.currentMember?.role ?? null;
   const sections = getVisibleSettingsSections(role);
 
   if (!board || !role || sections.length === 0) {

@@ -32,13 +32,23 @@ type PostImageProps = {
   imageHeight?: number | null;
 };
 
-export function PostImage({ imageUrl, imageWidth, imageHeight }: PostImageProps) {
+export function PostImage({
+  imageUrl,
+  imageWidth,
+  imageHeight,
+}: PostImageProps) {
   const { colors } = useTheme();
   const { width: screenWidth } = useWindowDimensions();
-  const [measuredContainerWidth, setMeasuredContainerWidth] = useState<number | null>(null);
+  const [measuredContainerWidth, setMeasuredContainerWidth] = useState<
+    number | null
+  >(null);
   const fallbackContainerWidth = Math.max(0, screenWidth - 54);
   const containerWidth = measuredContainerWidth ?? fallbackContainerWidth;
-  const { width, height } = getImageDimensions(imageWidth, imageHeight, containerWidth);
+  const { width, height } = getImageDimensions(
+    imageWidth,
+    imageHeight,
+    containerWidth,
+  );
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const handleContainerLayout = (event: LayoutChangeEvent) => {
@@ -104,6 +114,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     marginTop: 8,
+    marginBottom: 4,
     overflow: "hidden",
   },
   lightboxBackdrop: {

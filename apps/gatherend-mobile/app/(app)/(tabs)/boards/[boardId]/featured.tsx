@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { type Href, useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo } from "react";
 import {
@@ -10,15 +11,183 @@ import {
   View,
 } from "react-native";
 import { Text } from "@/src/components/app-typography";
+import { UserAvatar } from "@/src/components/user-avatar";
 import { PostPreviewCard } from "@/src/features/forum/components/post-preview-card";
 import type { ForumPostPreview } from "@/src/features/forum/domain/post";
 import { useBoardFeatured } from "@/src/features/featured/hooks/use-board-featured";
 import type { FeaturedChannel } from "@/src/features/featured/domain/featured";
 import { useTheme } from "@/src/theme/theme-provider";
 
+type HeroPostProps = {
+  post: ForumPostPreview;
+  boardId: string;
+  styles: ReturnType<typeof createStyles>;
+  colors: ReturnType<typeof useTheme>["colors"];
+  mode: "dark" | "light";
+  onPress: () => void;
+};
+
+function HeroPost({ post, boardId, styles, colors, mode, onPress }: HeroPostProps) {
+  const hasImage = !!post.imageAsset?.url;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.hero, pressed && styles.pressed]}
+    >
+      {hasImage ? (
+        <>
+          <Image
+            contentFit="cover"
+            source={{ uri: post.imageAsset!.url }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View
+            pointerEvents="none"
+            style={[
+              StyleSheet.absoluteFill,
+              {
+                backgroundColor:
+                  mode === "light"
+                    ? "rgba(240,240,245,0.38)"
+                    : "rgba(2,6,23,0.58)",
+              },
+            ]}
+          />
+        </>
+      ) : null}
+
+      <View style={styles.heroContent}>
+        <View style={styles.heroAuthorRow}>
+          <UserAvatar
+            avatarUrl={post.author.avatarAsset?.url}
+            username={post.author.username}
+            size={28}
+          />
+          <Text style={[styles.heroAuthor, { color: colors.textPrimary }]} numberOfLines={1}>
+            {post.author.username}
+          </Text>
+          {post.pinnedAt ? (
+            <View style={[styles.heroPill, { backgroundColor: colors.bgTertiary }]}>
+              <Ionicons name="pin" size={9} color={colors.textSubtle} />
+            </View>
+          ) : null}
+          {post.lockedAt ? (
+            <View style={[styles.heroPill, { backgroundColor: colors.bgTertiary }]}>
+              <Ionicons name="lock-closed" size={9} color={colors.textSubtle} />
+            </View>
+          ) : null}
+        </View>
+
+        {post.title ? (
+          <Text style={[styles.heroTitle, { color: colors.textPrimary }]} numberOfLines={3}>
+            {post.title}
+          </Text>
+        ) : null}
+
+        {post.contentSnippet ? (
+          <Text style={[styles.heroSnippet, { color: colors.textSecondary }]} numberOfLines={2}>
+            {post.contentSnippet}
+          </Text>
+        ) : null}
+
+        <View style={[styles.heroFooter, { borderTopColor: colors.borderPrimary }]}>
+          <Ionicons name="chatbubble-outline" size={13} color={colors.textTertiary} />
+          <Text style={[styles.heroMeta, { color: colors.textTertiary }]}>
+            {post.commentCount}
+          </Text>
+          <View style={{ flex: 1 }} />
+          <Ionicons
+            name={post.isLikedByCurrentUser ? "heart" : "heart-outline"}
+            size={13}
+            color={post.isLikedByCurrentUser ? "#e74c3c" : colors.textTertiary}
+          />
+          {post.likeCount > 0 ? (
+            <Text style={[styles.heroMeta, { color: colors.textTertiary }]}>
+              {post.likeCount}
+            </Text>
+          ) : null}
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
+type FeaturedChannelCardProps = {
+  channel: FeaturedChannel;
+  styles: ReturnType<typeof createStyles>;
+  colors: ReturnType<typeof useTheme>["colors"];
+  mode: "dark" | "light";
+  onPress: () => void;
+};
+
+function FeaturedChannelCard({ channel, styles, colors, mode, onPress }: FeaturedChannelCardProps) {
+  const imageUrl = channel.imageAsset?.url ?? null;
+  const memberLabel = channel.memberCount === 1 ? "miembro" : "miembros";
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.channelCard,
+        { backgroundColor: colors.bgTertiary, borderColor: colors.borderPrimary },
+        imageUrl ? styles.channelCardWithImage : null,
+        pressed && styles.channelCardPressed,
+      ]}
+    >
+      {imageUrl ? (
+        <>
+          <Image
+            contentFit="cover"
+            source={{ uri: imageUrl }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View
+            pointerEvents="none"
+            style={[
+              StyleSheet.absoluteFill,
+              {
+                backgroundColor:
+                  mode === "light"
+                    ? "rgba(240,240,245,0.42)"
+                    : "rgba(2,6,23,0.52)",
+              },
+            ]}
+          />
+        </>
+      ) : null}
+
+      <View style={styles.channelIconWrap}>
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            styles.channelIconBg,
+            { backgroundColor: colors.bgQuaternary },
+            imageUrl ? styles.channelIconBgDimmed : null,
+          ]}
+        />
+        <Ionicons
+          color={colors.textPrimary}
+          name={channel.type === "VOICE" ? "volume-high" : "chatbubble-ellipses"}
+          size={18}
+        />
+      </View>
+
+      <View style={styles.channelCopy}>
+        <Text numberOfLines={1} style={[styles.channelName, { color: colors.textPrimary }]}>
+          /{channel.name}
+        </Text>
+        <Text numberOfLines={1} style={[styles.channelMeta, { color: colors.textMuted }]}>
+          {channel.memberCount} {memberLabel}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
 export default function BoardFeaturedScreen() {
   const { boardId } = useLocalSearchParams<{ boardId?: string }>();
-  const { colors } = useTheme();
+  const { colors, mode } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
 
@@ -102,98 +271,46 @@ export default function BoardFeaturedScreen() {
         />
       }
     >
-      {/* Hero post — full width */}
-      <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
-        🔥 Post más popular
-      </Text>
-      <PostPreviewCard
+      {/* Hero post — full width, bg image if available */}
+      <HeroPost
         post={heroPost}
         boardId={boardId ?? ""}
+        styles={styles}
+        colors={colors}
+        mode={mode}
         onPress={() => openPost(heroPost.id)}
       />
 
-      {/* Grid — 2 columns */}
+      {/* Grid — 2×2, no padding */}
       {gridPosts.length > 0 ? (
-        <>
-          <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
-            También populares
-          </Text>
-          <View style={styles.grid}>
-            {gridPosts.map((post) => (
-              <View key={post.id} style={styles.gridCell}>
-                <PostPreviewCard
-                  post={post}
-                  boardId={boardId ?? ""}
-                  onPress={() => openPost(post.id)}
-                />
-              </View>
-            ))}
-          </View>
-        </>
+        <View style={styles.grid}>
+          {gridPosts.slice(0, 4).map((post) => (
+            <View key={post.id} style={styles.gridCell}>
+              <PostPreviewCard
+                post={post}
+                boardId={boardId ?? ""}
+                onPress={() => openPost(post.id)}
+                style={styles.gridCard}
+              />
+            </View>
+          ))}
+        </View>
       ) : null}
 
-      {/* Top channels */}
+      {/* Top channels — identical to chats tab */}
       {channels.length > 0 ? (
-        <>
-          <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
-            Chats con más miembros
-          </Text>
-          <View
-            style={[styles.channelList, { borderColor: colors.borderPrimary }]}
-          >
-            {channels.map((channel, idx) => (
-              <Pressable
-                key={channel.id}
-                onPress={() => openChannel(channel.id)}
-                style={({ pressed }) => [
-                  styles.channelRow,
-                  {
-                    backgroundColor: colors.bgEditForm,
-                    borderBottomColor: colors.borderPrimary,
-                  },
-                  idx === channels.length - 1 && styles.channelRowLast,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <View
-                  style={[
-                    styles.channelIcon,
-                    { backgroundColor: colors.bgTertiary },
-                  ]}
-                >
-                  <Ionicons
-                    name={
-                      channel.type === "VOICE"
-                        ? "volume-medium-outline"
-                        : "chatbubble-ellipses-outline"
-                    }
-                    size={18}
-                    color={colors.textSecondary}
-                  />
-                </View>
-                <View style={styles.channelMeta}>
-                  <Text
-                    style={[styles.channelName, { color: colors.textPrimary }]}
-                    numberOfLines={1}
-                  >
-                    {channel.name}
-                  </Text>
-                  <Text
-                    style={[styles.channelCount, { color: colors.textMuted }]}
-                  >
-                    {channel.memberCount}{" "}
-                    {channel.memberCount === 1 ? "miembro" : "miembros"}
-                  </Text>
-                </View>
-                <Ionicons
-                  name="chevron-forward"
-                  size={16}
-                  color={colors.textMuted}
-                />
-              </Pressable>
-            ))}
-          </View>
-        </>
+        <View style={styles.channelList}>
+          {channels.map((channel) => (
+            <FeaturedChannelCard
+              key={channel.id}
+              channel={channel}
+              styles={styles}
+              colors={colors}
+              mode={mode}
+              onPress={() => openChannel(channel.id)}
+            />
+          ))}
+        </View>
       ) : null}
     </ScrollView>
   );
@@ -203,7 +320,6 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
   return StyleSheet.create({
     scrollContent: {
       paddingBottom: 32,
-      paddingTop: 8,
     },
     center: {
       alignItems: "center",
@@ -213,59 +329,127 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       paddingHorizontal: 24,
       paddingVertical: 60,
     },
-    sectionLabel: {
-      fontSize: 12,
-      fontWeight: "600",
-      letterSpacing: 0.5,
-      marginBottom: 4,
-      marginHorizontal: 16,
-      marginTop: 20,
-      textTransform: "uppercase",
+
+    // Hero
+    hero: {
+      backgroundColor: colors.bgEditForm,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.borderPrimary,
+      minHeight: 200,
+      overflow: "hidden",
     },
+    heroContent: {
+      gap: 6,
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+    },
+    heroAuthorRow: {
+      alignItems: "center",
+      flexDirection: "row",
+      gap: 8,
+      marginBottom: 4,
+    },
+    heroAuthor: {
+      flex: 1,
+      fontSize: 13,
+      fontWeight: "700",
+      minWidth: 0,
+    },
+    heroPill: {
+      alignItems: "center",
+      borderRadius: 999,
+      height: 18,
+      justifyContent: "center",
+      width: 18,
+    },
+    heroTitle: {
+      fontSize: 20,
+      fontWeight: "800",
+      lineHeight: 26,
+    },
+    heroSnippet: {
+      fontSize: 14,
+      lineHeight: 20,
+    },
+    heroFooter: {
+      alignItems: "center",
+      borderTopWidth: 1,
+      flexDirection: "row",
+      gap: 5,
+      marginTop: 8,
+      paddingTop: 8,
+    },
+    heroMeta: {
+      fontSize: 13,
+    },
+
+    // Grid
     grid: {
       flexDirection: "row",
       flexWrap: "wrap",
-      paddingHorizontal: 6,
     },
     gridCell: {
       width: "50%",
     },
-    channelList: {
-      borderRadius: 12,
-      borderWidth: 1,
-      marginHorizontal: 12,
-      overflow: "hidden",
+    gridCard: {
+      borderLeftWidth: 0,
+      borderRadius: 0,
+      borderRightWidth: 0,
+      borderTopWidth: 0,
+      marginHorizontal: 0,
+      marginVertical: 0,
     },
-    channelRow: {
+
+    // Channel cards — identical to chats tab
+    channelList: {
+      gap: 12,
+      paddingHorizontal: 16,
+      paddingTop: 16,
+    },
+    channelCard: {
       alignItems: "center",
-      borderBottomWidth: 1,
+      borderRadius: 20,
+      borderWidth: 1,
       flexDirection: "row",
       gap: 12,
+      overflow: "hidden",
       paddingHorizontal: 14,
-      paddingVertical: 12,
+      paddingVertical: 14,
     },
-    channelRowLast: {
-      borderBottomWidth: 0,
+    channelCardWithImage: {
+      minHeight: 88,
     },
-    channelIcon: {
+    channelCardPressed: {
+      opacity: 0.92,
+    },
+    channelIconWrap: {
       alignItems: "center",
-      borderRadius: 10,
-      height: 36,
+      borderRadius: 14,
+      height: 42,
       justifyContent: "center",
-      width: 36,
+      overflow: "hidden",
+      width: 42,
     },
-    channelMeta: {
+    channelIconBg: {
+      borderRadius: 14,
+    },
+    channelIconBgDimmed: {
+      opacity: 0.6,
+    },
+    channelCopy: {
       flex: 1,
-      gap: 2,
+      gap: 4,
       minWidth: 0,
     },
     channelName: {
       fontSize: 15,
-      fontWeight: "600",
+      fontWeight: "700",
     },
-    channelCount: {
-      fontSize: 12,
+    channelMeta: {
+      fontSize: 13,
     },
+
+    // States
     stateTitle: {
       fontSize: 18,
       fontWeight: "700",

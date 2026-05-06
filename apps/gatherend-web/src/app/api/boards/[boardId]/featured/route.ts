@@ -109,6 +109,7 @@ export async function GET(
           name: true,
           type: true,
           _count: { select: { channelMembers: true } },
+          imageAsset: { select: uploadedAssetSummarySelect },
         },
       }),
     ]);
@@ -140,6 +141,7 @@ export async function GET(
       name: ch.name,
       type: ch.type,
       memberCount: ch._count.channelMembers,
+      imageAsset: serializeUploadedAsset(ch.imageAsset),
     }));
 
     return NextResponse.json({ topPosts, topChannels });

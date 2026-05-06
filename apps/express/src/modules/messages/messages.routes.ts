@@ -209,7 +209,7 @@ router.post("/", async (req, res) => {
 
       await tx.channel.update({
         where: { id: channelId as string },
-        data: { lastMessageSeq: reservedSeq },
+        data: { lastMessageSeq: reservedSeq, lastMessageAt: new Date() },
       });
 
       let memberTarget = {

@@ -1,6 +1,10 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { useProfile } from "@/src/features/profile/providers/current-profile-provider";
 import { useBoard } from "@/src/features/boards/hooks/use-board";
 import { usePost } from "@/src/features/forum/hooks/use-post";
@@ -10,6 +14,8 @@ import { useDeletePost } from "@/src/features/forum/hooks/use-delete-post";
 import { useEditComment } from "@/src/features/forum/hooks/use-edit-comment";
 import { useEditPost } from "@/src/features/forum/hooks/use-edit-post";
 import { PostCard } from "@/src/features/forum/components/post-card";
+import { PostCommentFakeInput } from "@/src/features/forum/components/post-comment-fake-input";
+import { PostCommentComposerModal } from "@/src/features/forum/components/post-comment-composer-modal";
 import {
   ReportScreen,
   type ReportCategoryConfig,
@@ -116,12 +122,13 @@ export default function PostDetailScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
-
+  const insets = useSafeAreaInsets();
   const profile = useProfile();
   const { data: board } = useBoard(boardId);
   const { data: post, isLoading, isError } = usePost(boardId, postId);
 
   const [isExpanded, setIsExpanded] = useState(false);
+  const [composerVisible, setComposerVisible] = useState(false);
   const [reportConfig, setReportConfig] = useState<ReportConfig | null>(null);
 
   const createComment = useCreateComment(boardId ?? "");
@@ -135,8 +142,8 @@ export default function PostDetailScreen() {
   }, []);
 
   const handleCreateComment = useCallback(
-    (pid: string, content: string) => {
-      createComment.mutate({ postId: pid, content });
+    (pid: string, content: string, imageAssetId?: string | null) => {
+      createComment.mutate({ postId: pid, content, imageAssetId });
     },
     [createComment],
   );
@@ -231,16 +238,17 @@ export default function PostDetailScreen() {
   }
 
   return (
-    <>
+    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
-        style={{ backgroundColor: colors.bgPrimary }}
+        style={[styles.scrollView, { backgroundColor: colors.bgPrimary }]}
       >
         <PostCard
           post={post}
           boardId={boardId ?? ""}
           currentProfileId={profile.id}
           currentMemberRole={currentMemberRole}
+          showMainCommentInput={false}
           isExpanded={isExpanded}
           isSubmittingComment={createComment.isPending}
           onToggleExpand={handleToggleExpand}
@@ -253,6 +261,28 @@ export default function PostDetailScreen() {
           onReportComment={handleReportComment}
         />
       </ScrollView>
+
+      <View
+        style={[
+          styles.bottomComposerInner,
+          {
+            backgroundColor: colors.bgPrimary,
+            borderTopColor: colors.borderPrimary,
+            paddingBottom: 8 + insets.bottom,
+          },
+        ]}
+      >
+        <PostCommentFakeInput onPress={() => setComposerVisible(true)} />
+      </View>
+
+      <PostCommentComposerModal
+        visible={composerVisible}
+        onClose={() => setComposerVisible(false)}
+        postId={post.id}
+        isSubmitting={createComment.isPending}
+        onSubmit={handleCreateComment}
+        post={post}
+      />
 
       {reportConfig ? (
         <ReportScreen
@@ -267,14 +297,28 @@ export default function PostDetailScreen() {
           snapshot={reportConfig.snapshot}
         />
       ) : null}
-    </>
+    </SafeAreaView>
   );
 }
 
 function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
   return StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: colors.bgPrimary,
+    },
     scrollContent: {
       paddingVertical: 8,
+      paddingBottom: 12,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    bottomComposerInner: {
+      borderTopWidth: 1,
+      paddingHorizontal: 6,
+      paddingTop: 8,
+      // paddingBottom is applied inline (safe area aware)
     },
     centerState: {
       alignItems: "center",

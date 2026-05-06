@@ -1,6 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
-import { memo, useMemo, useState } from "react";
-import { Alert, Pressable, StyleSheet, View } from "react-native";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Animated,
+  Alert,
+  Easing,
+  Pressable,
+  StyleSheet,
+  View,
+} from "react-native";
 import { UserAvatar } from "@/src/components/user-avatar";
 import { useTheme } from "@/src/theme/theme-provider";
 import { usePostComments } from "../hooks/use-post-comments";
@@ -26,10 +33,15 @@ type PostCardProps = {
   boardId: string;
   currentProfileId: string;
   currentMemberRole: string | null;
+  showMainCommentInput?: boolean;
   isExpanded: boolean;
   isSubmittingComment: boolean;
   onToggleExpand: (postId: string) => void;
-  onCreateComment: (postId: string, content: string) => void;
+  onCreateComment: (
+    postId: string,
+    content: string,
+    imageAssetId?: string | null,
+  ) => void;
   onDeletePost: (postId: string) => void;
   onDeleteComment: (postId: string, commentId: string) => void;
   onEditPost: (postId: string, content: string) => void;
@@ -43,6 +55,7 @@ function PostCardInner({
   boardId,
   currentProfileId,
   currentMemberRole,
+  showMainCommentInput = true,
   isExpanded,
   isSubmittingComment,
   onToggleExpand,
@@ -58,6 +71,30 @@ function PostCardInner({
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const togglePostLike = useTogglePostLike(boardId);
+  const likeAnim = useRef(
+    new Animated.Value(post.isLikedByCurrentUser ? 1 : 0),
+  ).current;
+
+  useEffect(() => {
+    Animated.timing(likeAnim, {
+      toValue: post.isLikedByCurrentUser ? 1 : 0,
+      duration: 180,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [likeAnim, post.isLikedByCurrentUser]);
+
+  const heartOutlineOpacity = likeAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 0],
+  });
+
+  const heartFilledOpacity = likeAnim;
+
+  const heartScale = likeAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.08],
+  });
 
   const isOwnPost = post.author.id === currentProfileId;
   const canModerate = isModerator(currentMemberRole);
@@ -313,79 +350,142 @@ function PostCardInner({
           {/* Like button */}
           <Pressable
             onPress={() =>
-              togglePostLike.mutate({ postId: post.id, isLiked: post.isLikedByCurrentUser })
+              togglePostLike.mutate({
+                postId: post.id,
+                isLiked: post.isLikedByCurrentUser,
+              })
             }
-            style={({ pressed }) => [styles.likeButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.statPill,
+              styles.likeButton,
+              {
+                backgroundColor: colors.bgTertiary,
+                borderColor: colors.borderPrimary,
+              },
+              pressed && styles.pressed,
+            ]}
           >
-            <Ionicons
-              name={post.isLikedByCurrentUser ? "heart" : "heart-outline"}
-              size={16}
-              color={post.isLikedByCurrentUser ? "#e74c3c" : colors.textTertiary}
-            />
-            {post.likeCount > 0 ? (
-              <Text style={[styles.likeCount, { color: colors.textTertiary }]}>
-                {post.likeCount}
-              </Text>
-            ) : null}
+            <Animated.View
+              style={[
+                styles.likeIconSwap,
+                { transform: [{ scale: heartScale }] },
+              ]}
+            >
+              <Animated.View
+                style={[styles.likeIconLayer, { opacity: heartOutlineOpacity }]}
+              >
+                <Ionicons
+                  name="heart-outline"
+                  size={18}
+                  color={colors.textTertiary}
+                />
+              </Animated.View>
+              <Animated.View
+                style={[styles.likeIconLayer, { opacity: heartFilledOpacity }]}
+              >
+                <Ionicons name="heart" size={18} color="#e74c3c" />
+              </Animated.View>
+            </Animated.View>
+            <Text style={[styles.likeCount, { color: colors.textTertiary }]}>
+              {post.likeCount ?? 0}
+            </Text>
           </Pressable>
 
-          <View style={styles.actionBarRight}>
-          {isOwnPost && (
-            <Pressable
-              onPress={handleStartEditPost}
-              style={({ pressed }) => [pressed && styles.pressed]}
+          {isOwnPost || canDeletePost || (!isOwnPost && onReportPost) ? (
+            <View
+              style={[
+                styles.actionPillGroup,
+                {
+                  borderColor: colors.borderPrimary,
+                  backgroundColor: colors.bgTertiary,
+                },
+              ]}
             >
-              <Text style={[styles.actionText, { color: colors.textTertiary }]}>
-                Editar
-              </Text>
-            </Pressable>
-          )}
-          {isOwnPost && canDeletePost && (
-            <Text style={[styles.actionSep, { color: colors.textTertiary }]}>
-              |
-            </Text>
-          )}
-          {canDeletePost && (
-            <Pressable
-              onPress={handleConfirmDeletePost}
-              style={({ pressed }) => [pressed && styles.pressed]}
-            >
-              <Text style={[styles.actionText, { color: colors.textTertiary }]}>
-                Eliminar
-              </Text>
-            </Pressable>
-          )}
-          {!isOwnPost && onReportPost ? (
-            <>
-              {canDeletePost ? (
-                <Text
-                  style={[styles.actionSep, { color: colors.textTertiary }]}
+              {isOwnPost && (
+                <Pressable
+                  onPress={handleStartEditPost}
+                  style={({ pressed }) => [
+                    styles.actionPillItem,
+                    pressed && styles.pressed,
+                  ]}
                 >
-                  |
-                </Text>
+                  <Text
+                    style={[
+                      styles.actionPillText,
+                      { color: colors.textTertiary },
+                    ]}
+                  >
+                    Editar
+                  </Text>
+                </Pressable>
+              )}
+              {isOwnPost && canDeletePost && (
+                <View
+                  style={[
+                    styles.actionPillSep,
+                    { backgroundColor: colors.borderPrimary },
+                  ]}
+                />
+              )}
+              {canDeletePost && (
+                <Pressable
+                  onPress={handleConfirmDeletePost}
+                  style={({ pressed }) => [
+                    styles.actionPillItem,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.actionPillText,
+                      { color: colors.textTertiary },
+                    ]}
+                  >
+                    Eliminar
+                  </Text>
+                </Pressable>
+              )}
+              {!isOwnPost && onReportPost ? (
+                <>
+                  {canDeletePost ? (
+                    <View
+                      style={[
+                        styles.actionPillSep,
+                        { backgroundColor: colors.borderPrimary },
+                      ]}
+                    />
+                  ) : null}
+                  <Pressable
+                    onPress={() => onReportPost(post)}
+                    style={({ pressed }) => [
+                      styles.actionPillItem,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.actionPillText,
+                        { color: colors.textTertiary },
+                      ]}
+                    >
+                      Reportar
+                    </Text>
+                  </Pressable>
+                </>
               ) : null}
-              <Pressable
-                onPress={() => onReportPost(post)}
-                style={({ pressed }) => [pressed && styles.pressed]}
-              >
-                <Text
-                  style={[styles.actionText, { color: colors.textTertiary }]}
-                >
-                  Reportar
-                </Text>
-              </Pressable>
-            </>
+            </View>
           ) : null}
-          </View>
         </View>
       )}
 
       {/* Inline comment input */}
-      <PostInlineCommentInput
-        postId={post.id}
-        isSubmitting={isSubmittingComment}
-        onSubmit={onCreateComment}
-      />
+      {showMainCommentInput ? (
+        <PostInlineCommentInput
+          postId={post.id}
+          isSubmitting={isSubmittingComment}
+          onSubmit={onCreateComment}
+        />
+      ) : null}
 
       {/* Comments */}
       {commentsToRender.length > 0 || omittedCount > 0 ? (
@@ -435,8 +535,8 @@ function PostCardInner({
                   <PostInlineCommentInput
                     postId={post.id}
                     isSubmitting={isSubmittingComment}
-                    onSubmit={(postId, content) => {
-                      onCreateComment(postId, content);
+                    onSubmit={(postId, content, imageAssetId) => {
+                      onCreateComment(postId, content, imageAssetId);
                       setReplyingToCommentId(null);
                     }}
                   />
@@ -546,26 +646,61 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       marginTop: 10,
       paddingVertical: 8,
     },
-    likeButton: {
+    statPill: {
       alignItems: "center",
+      borderRadius: 999,
+      borderWidth: 1,
       flexDirection: "row",
       gap: 4,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+    },
+    likeButton: {
+      minHeight: 32,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
     },
     likeCount: {
-      fontSize: 13,
+      fontSize: 16,
     },
-    actionBarRight: {
+    likeIconSwap: {
       alignItems: "center",
-      flex: 1,
+      height: 18,
+      justifyContent: "center",
+      position: "relative",
+      width: 18,
+    },
+    likeIconLayer: {
+      alignItems: "center",
+      height: 18,
+      justifyContent: "center",
+      left: 0,
+      position: "absolute",
+      top: 0,
+      width: 18,
+    },
+    actionPillGroup: {
+      alignItems: "center",
+      borderRadius: 999,
+      borderWidth: 1,
       flexDirection: "row",
-      gap: 10,
-      justifyContent: "flex-end",
+      height: 32,
+      marginLeft: "auto",
+      overflow: "hidden",
     },
-    actionText: {
-      fontSize: 13,
+    actionPillItem: {
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 12,
+      height: "100%",
     },
-    actionSep: {
+    actionPillSep: {
+      width: 1,
+      height: 16,
+    },
+    actionPillText: {
       fontSize: 13,
+      fontWeight: "500",
     },
     commentsSection: {
       gap: 10,
