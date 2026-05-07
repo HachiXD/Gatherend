@@ -1,15 +1,5 @@
-import {
-  createContext,
-  useContext,
-  type Context,
-  type ReactNode,
-} from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  View,
-} from "react-native";
+import { createContext, useContext, type Context, type ReactNode } from "react";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { useCurrentProfile } from "../hooks/use-current-profile";
 import type { ClientProfile } from "../types/current-profile";
 import { Text } from "@/src/components/app-typography";
@@ -28,13 +18,12 @@ export function CurrentProfileProvider({
   const {
     data: profile,
     isLoading,
-    isFetching,
     isError,
     error,
     refetch,
   } = useCurrentProfile();
 
-  if (isLoading || isFetching || !profile) {
+  if (!profile) {
     if (isError) {
       return (
         <View style={styles.container}>
@@ -57,6 +46,10 @@ export function CurrentProfileProvider({
       );
     }
 
+    if (!isLoading) {
+      return null;
+    }
+
     return (
       <View style={styles.container}>
         <ActivityIndicator size="small" color={BRAND_COLORS.primaryHover} />
@@ -76,9 +69,7 @@ export function useProfile() {
   const context = useContext(CurrentProfileContext);
 
   if (!context) {
-    throw new Error(
-      "useProfile must be used within a CurrentProfileProvider.",
-    );
+    throw new Error("useProfile must be used within a CurrentProfileProvider.");
   }
 
   return context;

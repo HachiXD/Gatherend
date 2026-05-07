@@ -1,5 +1,5 @@
-import { useRouter, useFocusEffect } from "expo-router";
-import { useCallback, useMemo, useRef } from "react";
+import { Redirect, useRouter } from "expo-router";
+import { useMemo } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -11,18 +11,12 @@ import {
   initialWindowMetrics,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
-import { BoardsGrid } from "@/src/features/boards/components/boards-grid";
+import { Text } from "@/src/components/app-typography";
 import { useUserBoards } from "@/src/features/boards/hooks/use-user-boards";
 import { useTheme } from "@/src/theme/theme-provider";
-import { Text } from "@/src/components/app-typography";
 
-export default function BoardsScreen() {
+export default function BoardsEntryScreen() {
   const router = useRouter();
-  const navigating = useRef(false);
-
-  useFocusEffect(useCallback(() => {
-    navigating.current = false;
-  }, []));
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const topInset = Math.max(
@@ -37,76 +31,69 @@ export default function BoardsScreen() {
     refetch,
     isFetching,
   } = useUserBoards();
-  const hasBoards = boards.length > 0;
+
+  const firstBoard = boards[0];
+  if (firstBoard) {
+    return (
+      <Redirect
+        href={{
+          pathname: "/(app)/(tabs)/boards/[boardId]/home",
+          params: { boardId: firstBoard.id },
+        }}
+      />
+    );
+  }
 
   return (
     <View style={[styles.safeArea, { paddingTop: topInset }]}>
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Mis Boards</Text>
+      {isLoading ? (
+        <View style={styles.centerState}>
+          <ActivityIndicator color={colors.accentPrimary} size="small" />
+          <Text style={styles.stateText}>Cargando boards...</Text>
         </View>
+      ) : null}
 
-        <Pressable
-          onPress={() => {
-            if (navigating.current) return;
-            navigating.current = true;
-            router.push("/modal/create-board");
-          }}
-          style={({ pressed }) => [
-            styles.createButton,
-            pressed ? styles.createButtonPressed : null,
-          ]}
-        >
-          <Text style={styles.createButtonText}>Crea tu board +</Text>
-        </Pressable>
-
-        <View style={styles.content}>
-          {isLoading ? (
-            <View style={styles.centerState}>
-              <ActivityIndicator color={colors.accentPrimary} size="small" />
-              <Text style={styles.stateText}>Cargando tus boards...</Text>
-            </View>
-          ) : null}
-
-          {!isLoading && isError ? (
-            <View style={styles.centerState}>
-              <Text style={styles.stateTitle}>
-                No se pudieron cargar tus boards
-              </Text>
-              <Text style={styles.stateText}>
-                Reintenta para volver a consultar el backend autenticado.
-              </Text>
-              <Pressable
-                onPress={() => {
-                  void refetch();
-                }}
-                style={({ pressed }) => [
-                  styles.retryButton,
-                  pressed ? styles.retryButtonPressed : null,
-                ]}
-              >
-                <Text style={styles.retryButtonText}>
-                  {isFetching ? "Reintentando..." : "Reintentar"}
-                </Text>
-              </Pressable>
-            </View>
-          ) : null}
-
-          {!isLoading && !isError && !hasBoards ? (
-            <View style={styles.centerState}>
-              <Text style={styles.stateTitle}>Todavia no tienes boards</Text>
-              <Text style={styles.stateText}>
-                En cuanto formes parte de uno, lo veras aqui en un grid simple
-                de dos columnas.
-              </Text>
-            </View>
-          ) : null}
-
-          {!isLoading && !isError && hasBoards ? (
-            <BoardsGrid boards={boards} />
-          ) : null}
+      {!isLoading && isError ? (
+        <View style={styles.centerState}>
+          <Text style={styles.stateTitle}>No se pudieron cargar tus boards</Text>
+          <Text style={styles.stateText}>
+            Reintenta para volver a consultar el backend autenticado.
+          </Text>
+          <Pressable
+            onPress={() => {
+              void refetch();
+            }}
+            style={({ pressed }) => [
+              styles.secondaryButton,
+              pressed ? styles.buttonPressed : null,
+            ]}
+          >
+            <Text style={styles.secondaryButtonText}>
+              {isFetching ? "Reintentando..." : "Reintentar"}
+            </Text>
+          </Pressable>
         </View>
-      </View>
+      ) : null}
+
+      {!isLoading && !isError ? (
+        <View style={styles.centerState}>
+          <Text style={styles.stateTitle}>Crea tu primer board</Text>
+          <Text style={styles.stateText}>
+            Cuando tengas uno, entraras directo a su shell con el drawer.
+          </Text>
+          <Pressable
+            onPress={() => {
+              router.push("/modal/create-board");
+            }}
+            style={({ pressed }) => [
+              styles.primaryButton,
+              pressed ? styles.buttonPressed : null,
+            ]}
+          >
+            <Text style={styles.primaryButtonText}>Crea tu board +</Text>
+          </Pressable>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -117,37 +104,17 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       flex: 1,
       backgroundColor: colors.bgPrimary,
     },
-    container: {
-      flex: 1,
-      paddingHorizontal: 20,
-      paddingTop: 12,
-      gap: 20,
-    },
-    header: {
-      borderBottomColor: colors.borderPrimary,
-      borderBottomWidth: 1,
-      paddingBottom: 14,
-    },
-    title: {
-      color: colors.textPrimary,
-      fontSize: 30,
-      fontWeight: "700",
-      lineHeight: 36,
-    },
-    content: {
-      flex: 1,
-    },
     centerState: {
       alignItems: "center",
       flex: 1,
-      gap: 10,
+      gap: 12,
       justifyContent: "center",
-      paddingHorizontal: 8,
+      paddingHorizontal: 28,
     },
     stateTitle: {
       color: colors.textPrimary,
-      fontSize: 18,
-      fontWeight: "700",
+      fontSize: 20,
+      fontWeight: "800",
       textAlign: "center",
     },
     stateText: {
@@ -156,22 +123,21 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       lineHeight: 21,
       textAlign: "center",
     },
-    createButton: {
+    primaryButton: {
       alignItems: "center",
       backgroundColor: colors.buttonPrimary,
       borderRadius: 18,
-      paddingHorizontal: 20,
-      paddingVertical: 18,
+      marginTop: 6,
+      minHeight: 52,
+      justifyContent: "center",
+      paddingHorizontal: 22,
     },
-    createButtonPressed: {
-      opacity: 0.92,
-    },
-    createButtonText: {
+    primaryButtonText: {
       color: colors.textPrimary,
-      fontSize: 16,
-      fontWeight: "700",
+      fontSize: 15,
+      fontWeight: "800",
     },
-    retryButton: {
+    secondaryButton: {
       alignItems: "center",
       backgroundColor: colors.bgTertiary,
       borderColor: colors.borderSecondary,
@@ -181,13 +147,13 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       minHeight: 48,
       paddingHorizontal: 18,
     },
-    retryButtonPressed: {
-      opacity: 0.92,
-    },
-    retryButtonText: {
+    secondaryButtonText: {
       color: colors.textPrimary,
       fontSize: 14,
       fontWeight: "700",
+    },
+    buttonPressed: {
+      opacity: 0.92,
     },
   });
 }

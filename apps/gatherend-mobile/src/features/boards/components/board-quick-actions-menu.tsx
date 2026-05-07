@@ -2,12 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { runOnJS } from "react-native-reanimated";
-import {
-  Animated,
-  Pressable,
-  StyleSheet,
-  View,
-} from "react-native";
+import { Animated, Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/src/components/app-typography";
 import { useTheme } from "@/src/theme/theme-provider";
 
@@ -17,48 +12,46 @@ interface QuickAction {
   key: BoardQuickActionKey;
   label: string;
   icon: React.ComponentProps<typeof Ionicons>["name"];
-  angleDeg: number;
 }
 
-// Fan above the press point (standard math angles: 0°=right, 90°=down)
+// Ordered actions; angle distribution is computed uniformly at render time.
 const QUICK_ACTIONS: QuickAction[] = [
   {
     key: "chat",
     label: "Chat",
     icon: "chatbubble-ellipses-outline",
-    angleDeg: 270,
   },
   {
     key: "post",
     label: "Post",
     icon: "create-outline",
-    angleDeg: 210,
   },
   {
     key: "rules",
     label: "Reglas",
     icon: "document-text-outline",
-    angleDeg: 330,
   },
   {
     key: "wiki",
     label: "Wiki",
     icon: "book-outline",
-    angleDeg: 150,
   },
 ];
 
 const RADIUS = 92;
 const BUTTON_SIZE = 62;
+const START_ANGLE_DEG = -90;
 
 interface BoardQuickActionsMenuProps {
   children: React.ReactNode;
   onAction?: (key: BoardQuickActionKey) => void;
+  allowedActions?: BoardQuickActionKey[];
 }
 
 export function BoardQuickActionsMenu({
   children,
   onAction,
+  allowedActions,
 }: BoardQuickActionsMenuProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -70,6 +63,11 @@ export function BoardQuickActionsMenu({
   const buttonAnims = useRef(
     QUICK_ACTIONS.map(() => new Animated.Value(0)),
   ).current;
+  const visibleActions = useMemo(() => {
+    if (!allowedActions) return QUICK_ACTIONS;
+    const allowed = new Set(allowedActions);
+    return QUICK_ACTIONS.filter((action) => allowed.has(action.key));
+  }, [allowedActions]);
 
   const show = useCallback(
     (x: number, y: number) => {
@@ -110,11 +108,11 @@ export function BoardQuickActionsMenu({
     () =>
       Gesture.LongPress()
         .minDuration(450)
-        .enabled(!isVisible)
+        .enabled(!isVisible && visibleActions.length > 0)
         .onStart((e) => {
-          runOnJS(show)(e.absoluteX, e.absoluteY);
+          runOnJS(show)(e.x, e.y);
         }),
-    [isVisible, show],
+    [isVisible, show, visibleActions.length],
   );
 
   return (
@@ -130,17 +128,10 @@ export function BoardQuickActionsMenu({
               onPress={hide}
             />
 
-            {/* Small dot at the press origin */}
-            <View
-              pointerEvents="none"
-              style={[
-                styles.originDot,
-                { left: origin.x - 5, top: origin.y - 5 },
-              ]}
-            />
-
-            {QUICK_ACTIONS.map((action, i) => {
-              const rad = (action.angleDeg * Math.PI) / 180;
+            {visibleActions.map((action, i) => {
+              const stepDeg = 360 / visibleActions.length;
+              const angleDeg = START_ANGLE_DEG + i * stepDeg;
+              const rad = (angleDeg * Math.PI) / 180;
               const finalTx = Math.cos(rad) * RADIUS;
               const finalTy = Math.sin(rad) * RADIUS;
               const anim = buttonAnims[i];
@@ -171,11 +162,7 @@ export function BoardQuickActionsMenu({
                       left: origin.x - BUTTON_SIZE / 2,
                       top: origin.y - BUTTON_SIZE / 2,
                       opacity,
-                      transform: [
-                        { translateX },
-                        { translateY },
-                        { scale },
-                      ],
+                      transform: [{ translateX }, { translateY }, { scale }],
                     },
                   ]}
                 >
@@ -192,7 +179,7 @@ export function BoardQuickActionsMenu({
                     <Ionicons
                       color={colors.textPrimary}
                       name={action.icon}
-                      size={24}
+                      size={32}
                     />
                   </Pressable>
 
@@ -216,13 +203,6 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     backdrop: {
       backgroundColor: "rgba(2, 6, 23, 0.42)",
-    },
-    originDot: {
-      backgroundColor: colors.accentPrimary,
-      borderRadius: 5,
-      height: 10,
-      position: "absolute",
-      width: 10,
     },
     actionContainer: {
       alignItems: "center",
@@ -251,7 +231,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     actionLabel: {
       color: colors.textPrimary,
-      fontSize: 11,
+      fontSize: 15,
       fontWeight: "700",
       textAlign: "center",
       textShadowColor: "rgba(2, 6, 23, 0.9)",

@@ -18,7 +18,7 @@ import type { UserBoard } from "../types/board";
 
 type BoardsDrawerSidebarProps = {
   currentBoardId?: string;
-  onBackToBoards: () => void;
+  onCreateBoard: () => void;
   onSelectBoard: (boardId: string) => void;
 };
 
@@ -119,7 +119,7 @@ function BoardDrawerItem({
 
 export function BoardsDrawerSidebar({
   currentBoardId,
-  onBackToBoards,
+  onCreateBoard,
   onSelectBoard,
 }: BoardsDrawerSidebarProps) {
   const { colors } = useTheme();
@@ -135,14 +135,14 @@ export function BoardsDrawerSidebar({
   return (
     <View style={styles.sidebar}>
       <Pressable
-        accessibilityLabel="Volver a Mis Boards"
-        onPress={onBackToBoards}
+        accessibilityLabel="Crear board"
+        onPress={onCreateBoard}
         style={({ pressed }) => [
           styles.backButton,
           pressed ? styles.itemPressed : null,
         ]}
       >
-        <Ionicons color={colors.textSecondary} name="arrow-back" size={22} />
+        <Ionicons color={colors.textSecondary} name="add" size={25} />
       </Pressable>
 
       <View style={styles.separator} />

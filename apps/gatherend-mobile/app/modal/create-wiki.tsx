@@ -57,7 +57,10 @@ export default function CreateWikiModalScreen() {
     createMutation.error instanceof Error ? createMutation.error.message : null;
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+    <SafeAreaView
+      style={styles.safeArea}
+      edges={["top", "bottom", "left", "right"]}
+    >
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.flex}

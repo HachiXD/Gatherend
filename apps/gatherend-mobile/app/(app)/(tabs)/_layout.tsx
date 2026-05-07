@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { DarkTheme, ThemeProvider as NavigationThemeProvider } from "@react-navigation/native";
-import { Tabs } from "expo-router";
+import { Tabs, usePathname } from "expo-router";
 import { useEffect, useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import Animated, {
@@ -107,6 +107,7 @@ function TabIcon({
 export default function TabsLayout() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const pathname = usePathname();
   const bottomInset = Math.max(insets.bottom, TAB_BAR_BOTTOM_PADDING);
   const mentionCount = useMentionStore(
     (state) => Object.values(state.mentions).filter(Boolean).length,
@@ -129,6 +130,7 @@ export default function TabsLayout() {
     }),
     [colors],
   );
+  const isBoardsRoute = pathname.startsWith("/boards");
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
@@ -150,7 +152,7 @@ export default function TabsLayout() {
               backgroundColor: colors.bgSecondary,
               borderTopColor: colors.borderSecondary,
               borderTopWidth: 1,
-              display: "flex",
+              display: isBoardsRoute ? "none" : "flex",
               height: TAB_BAR_CONTENT_HEIGHT + bottomInset,
               paddingBottom: bottomInset,
               paddingTop: 0,

@@ -1,3 +1,5 @@
+import type { MemberPermission } from "../member-role";
+
 export type BoardImageAsset = {
   id: string;
   width: number | null;
@@ -35,6 +37,7 @@ export type BoardChannel = {
 export type BoardCurrentMember = {
   id: string;
   role: string;
+  permissions?: MemberPermission[] | null;
   profileId: string;
   boardId: string;
   level: number;

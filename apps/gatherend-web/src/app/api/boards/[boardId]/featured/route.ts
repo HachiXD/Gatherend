@@ -109,6 +109,7 @@ export async function GET(
           id: true,
           name: true,
           type: true,
+          lastMessageAt: true,
           _count: { select: { channelMembers: true } },
           imageAsset: { select: uploadedAssetSummarySelect },
         },
@@ -142,6 +143,7 @@ export async function GET(
       name: ch.name,
       type: ch.type,
       memberCount: ch._count.channelMembers,
+      lastMessageAt: ch.lastMessageAt?.toISOString() ?? null,
       imageAsset: serializeUploadedAsset(ch.imageAsset),
     }));
 

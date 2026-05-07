@@ -1,8 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -12,10 +15,25 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useCreatePost } from "@/src/features/forum/hooks/use-create-post";
-import { ImageUploadPicker } from "@/src/features/uploads/components/image-upload-picker";
-import { getStoredUploadAssetId } from "@/src/features/uploads/utils/upload-values";
+import type { UploadedFile } from "@/src/features/uploads/domain/uploaded-file";
+import { useUpload } from "@/src/features/uploads/hooks/use-upload";
 import { Text, TextInput } from "@/src/components/app-typography";
 import { useTheme } from "@/src/theme/theme-provider";
+
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
+function getImageName(uri: string) {
+  const clean = uri.split("?")[0] ?? uri;
+  return clean.split("/").pop() || `image-${Date.now()}.jpg`;
+}
+
+function getImageType(uri: string) {
+  const ext = uri.split("?")[0]?.split(".").pop()?.toLowerCase();
+  if (ext === "png") return "image/png";
+  if (ext === "webp") return "image/webp";
+  if (ext === "heic") return "image/heic";
+  return "image/jpeg";
+}
 
 const MAX_TITLE = 200;
 const MAX_CONTENT = 2000;
@@ -29,16 +47,40 @@ export default function CreatePostModalScreen() {
   const createPostMutation = useCreatePost(boardId ?? "");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [imageUpload, setImageUpload] = useState("");
+  const [imagePreview, setImagePreview] = useState<UploadedFile | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const { uploadFile, isUploading } = useUpload({
+    onUploadError: setUploadError,
+    onModerationBlock: setUploadError,
+  });
+
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+
+    const showSub = Keyboard.addListener("keyboardDidShow", () => {
+      setKeyboardVisible(true);
+    });
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   if (!boardId) {
     return <Redirect href="/(app)/(tabs)/boards" />;
   }
 
   const isSubmitting = createPostMutation.isPending;
-  const hasImage = imageUpload.length > 0;
-  const hasContent = content.trim().length > 0;
-  const canSubmit = !isSubmitting && (hasContent || hasImage);
+  const isBusy = isSubmitting || isUploading;
+  const canSubmit =
+    !isBusy && (content.trim().length > 0 || imagePreview !== null);
 
   const handlePublish = async () => {
     if (!canSubmit) return;
@@ -47,123 +89,252 @@ export default function CreatePostModalScreen() {
         boardId,
         title: title.trim() || null,
         content: content.trim() || null,
-        imageAssetId: getStoredUploadAssetId(imageUpload),
+        imageAssetId: imagePreview?.assetId ?? null,
       });
       router.back();
     } catch {
-      // el error se expone vía mutation.error
+      // error exposed via mutation.error
     }
   };
 
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const handlePickImage = useCallback(async () => {
+    if (isBusy) return;
+    setUploadError(null);
+
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setUploadError("Permiso de galería requerido.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      mediaTypes: ["images"],
+      quality: 0.9,
+    });
+
+    if (result.canceled) return;
+
+    const asset = result.assets[0];
+    if (!asset?.uri) {
+      setUploadError("No se pudo leer la imagen.");
+      return;
+    }
+
+    if (
+      typeof asset.fileSize === "number" &&
+      asset.fileSize > MAX_IMAGE_BYTES
+    ) {
+      setUploadError(
+        `La imagen supera el límite de ${Math.round(MAX_IMAGE_BYTES / 1024 / 1024)} MB.`,
+      );
+      return;
+    }
+
+    try {
+      const uploaded = await uploadFile({
+        boardId,
+        context: "community_post_image",
+        file: {
+          uri: asset.uri,
+          name: asset.fileName ?? getImageName(asset.uri),
+          type: asset.mimeType ?? getImageType(asset.uri),
+          size: asset.fileSize,
+        },
+      });
+      setImagePreview(uploaded);
+    } catch {
+      // forwarded via onUploadError
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boardId, isBusy, uploadFile]);
+
   const errorMessage =
-    createPostMutation.error instanceof Error
+    uploadError ??
+    (createPostMutation.error instanceof Error
       ? createPostMutation.error.message
-      : null;
+      : null);
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.flex}
+    <SafeAreaView
+      style={styles.root}
+      edges={["top", "bottom", "left", "right"]}
+    >
+      {/* Header */}
+      <View
+        style={[styles.header, { borderBottomColor: colors.borderPrimary }]}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Crear post</Text>
+        <View style={styles.headerLeftGroup}>
           <Pressable
             accessibilityLabel="Cerrar"
             accessibilityRole="button"
             onPress={() => router.back()}
             style={({ pressed }) => [
               styles.closeButton,
-              pressed ? styles.closeButtonPressed : null,
+              pressed ? styles.pressed : null,
             ]}
           >
-            <Ionicons color={colors.textPrimary} name="close" size={20} />
+            <Ionicons color={colors.textMuted} name="close" size={22} />
           </Pressable>
+          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
+            Crear post
+          </Text>
         </View>
+        <Pressable
+          disabled={!canSubmit}
+          onPress={() => {
+            void handlePublish();
+          }}
+          style={({ pressed }) => [
+            styles.headerButton,
+            !canSubmit ? styles.disabledButton : null,
+            pressed && canSubmit ? styles.pressed : null,
+          ]}
+        >
+          {isSubmitting ? (
+            <ActivityIndicator color={colors.accentPrimary} size="small" />
+          ) : (
+            <Text
+              style={[
+                styles.headerAction,
+                styles.headerActionPublish,
+                { color: colors.accentPrimary },
+                !canSubmit ? styles.disabledButton : null,
+              ]}
+            >
+              Publicar
+            </Text>
+          )}
+        </Pressable>
+      </View>
 
+      <KeyboardAvoidingView
+        behavior={
+          Platform.OS === "ios"
+            ? "padding"
+            : keyboardVisible
+              ? "height"
+              : undefined
+        }
+        style={styles.flex}
+      >
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={styles.bodyContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          style={styles.body}
         >
-          {/* Imagen */}
-          <View style={styles.field}>
-            <Text style={styles.label}>Imagen (opcional)</Text>
-            <View style={styles.imagePickerWrap}>
-              <ImageUploadPicker
-                allowEditing
-                boardId={boardId}
-                context="post_image"
-                label="Imagen del post"
-                onChange={setImageUpload}
-                size={96}
-                value={imageUpload}
-              />
-            </View>
-          </View>
-
-          {/* Título */}
-          <View style={styles.field}>
-            <Text style={styles.label}>Título (opcional)</Text>
+          {/* Title input */}
+          <View style={styles.titleRow}>
             <TextInput
-              editable={!isSubmitting}
+              editable={!isBusy}
               maxLength={MAX_TITLE}
               onChangeText={setTitle}
-              placeholder="Añade un título..."
-              placeholderTextColor={colors.textMuted}
-              style={styles.input}
+              placeholder="Título (opcional)"
+              placeholderTextColor={colors.textTertiary}
+              style={[styles.titleInput, { color: colors.textPrimary }]}
               value={title}
+              returnKeyType="next"
             />
-            <Text style={styles.helperText}>{title.trim().length}/{MAX_TITLE}</Text>
           </View>
 
-          {/* Contenido */}
-          <View style={styles.field}>
-            <Text style={styles.label}>
-              Contenido{hasImage ? " (opcional)" : " *"}
-            </Text>
+          {/* Content input */}
+          <View style={styles.composerRow}>
             <TextInput
-              editable={!isSubmitting}
+              editable={!isBusy}
               maxLength={MAX_CONTENT}
               multiline
-              numberOfLines={6}
               onChangeText={setContent}
               placeholder="¿Qué quieres compartir?"
-              placeholderTextColor={colors.textMuted}
-              style={[styles.input, styles.textarea]}
+              placeholderTextColor={colors.textTertiary}
+              scrollEnabled={false}
+              style={[styles.input, { color: colors.textPrimary }]}
               textAlignVertical="top"
               value={content}
             />
-            <Text style={styles.helperText}>{content.length}/{MAX_CONTENT}</Text>
           </View>
 
           {errorMessage ? (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{errorMessage}</Text>
-            </View>
+            <Text style={styles.errorText}>{errorMessage}</Text>
           ) : null}
         </ScrollView>
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Pressable
-            disabled={!canSubmit}
-            onPress={() => {
-              void handlePublish();
-            }}
-            style={({ pressed }) => [
-              styles.publishButton,
-              !canSubmit ? styles.publishButtonDisabled : null,
-              pressed && canSubmit ? styles.buttonPressed : null,
-            ]}
+        {/* Bottom area */}
+        <View style={styles.bottomArea}>
+          {imagePreview ? (
+            <View
+              style={[
+                styles.filePreview,
+                {
+                  backgroundColor: colors.bgTertiary,
+                  borderColor: colors.borderPrimary,
+                },
+              ]}
+            >
+              <Image
+                contentFit="cover"
+                source={{ uri: imagePreview.url }}
+                style={styles.filePreviewImage}
+              />
+              <View style={styles.filePreviewCopy}>
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    styles.filePreviewName,
+                    { color: colors.textPrimary },
+                  ]}
+                >
+                  {imagePreview.name}
+                </Text>
+                <Text
+                  numberOfLines={1}
+                  style={[styles.filePreviewMeta, { color: colors.textMuted }]}
+                >
+                  Imagen · {Math.max(1, Math.round(imagePreview.size / 1024))}{" "}
+                  KB
+                </Text>
+              </View>
+              <Pressable
+                disabled={isBusy}
+                onPress={() => setImagePreview(null)}
+                style={({ pressed }) => [
+                  styles.filePreviewRemoveButton,
+                  pressed && !isBusy ? styles.pressed : null,
+                ]}
+              >
+                <Ionicons color={colors.textMuted} name="close" size={19} />
+              </Pressable>
+            </View>
+          ) : null}
+
+          <View
+            style={[styles.footer, { borderTopColor: colors.borderPrimary }]}
           >
-            {isSubmitting ? (
-              <ActivityIndicator color={colors.bgPrimary} size="small" />
-            ) : (
-              <Text style={styles.publishButtonText}>Publicar</Text>
-            )}
-          </Pressable>
+            <View style={styles.footerActions}>
+              <Pressable
+                disabled={isBusy}
+                onPress={() => {
+                  void handlePickImage();
+                }}
+                style={({ pressed }) => [
+                  styles.footerIconButton,
+                  isBusy ? styles.disabledButton : null,
+                  pressed && !isBusy ? styles.pressed : null,
+                ]}
+              >
+                {isUploading ? (
+                  <ActivityIndicator color={colors.textMuted} size="small" />
+                ) : (
+                  <Ionicons
+                    color={colors.textMuted}
+                    name="image-outline"
+                    size={21}
+                  />
+                )}
+              </Pressable>
+            </View>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -172,115 +343,144 @@ export default function CreatePostModalScreen() {
 
 function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
   return StyleSheet.create({
-    safeArea: {
+    root: {
       backgroundColor: colors.bgPrimary,
       flex: 1,
     },
     flex: {
       flex: 1,
     },
+    body: {
+      flex: 1,
+      minHeight: 0,
+    },
+    bodyContent: {
+      flexGrow: 1,
+    },
+    bottomArea: {
+      paddingBottom: 2,
+    },
+    // Header
     header: {
       alignItems: "center",
-      borderBottomColor: colors.borderPrimary,
       borderBottomWidth: 1,
       flexDirection: "row",
       justifyContent: "space-between",
-      paddingBottom: 14,
-      paddingHorizontal: 20,
-      paddingTop: 16,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
     },
-    title: {
-      color: colors.textPrimary,
-      fontSize: 22,
-      fontWeight: "700",
+    headerLeftGroup: {
+      alignItems: "center",
+      flexDirection: "row",
+      gap: 8,
+      minWidth: 0,
+    },
+    headerTitle: {
+      fontSize: 16,
+      fontWeight: "600",
     },
     closeButton: {
       alignItems: "center",
-      backgroundColor: colors.bgQuaternary,
-      borderColor: colors.borderPrimary,
-      borderRadius: 14,
+      height: 28,
+      justifyContent: "center",
+      width: 28,
+    },
+    headerButton: {
+      minWidth: 70,
+      paddingVertical: 4,
+    },
+    headerAction: {
+      fontSize: 15,
+    },
+    headerActionPublish: {
+      fontWeight: "600",
+      textAlign: "right",
+    },
+    // Body inputs
+    titleRow: {
+      paddingHorizontal: 16,
+      paddingTop: 16,
+      paddingBottom: 0,
+    },
+    titleInput: {
+      fontSize: 20,
+      fontWeight: "700",
+      lineHeight: 28,
+    },
+    composerRow: {
+      paddingHorizontal: 16,
+      paddingTop: 0,
+      paddingBottom: 16,
+    },
+    input: {
+      fontSize: 15,
+      lineHeight: 22,
+      minHeight: 120,
+    },
+    errorText: {
+      color: "#fca5a5",
+      fontSize: 13,
+      lineHeight: 19,
+      marginHorizontal: 16,
+      marginBottom: 12,
+    },
+    // Image preview
+    filePreview: {
+      alignItems: "center",
+      borderRadius: 12,
       borderWidth: 1,
+      flexDirection: "row",
+      gap: 10,
+      marginHorizontal: 10,
+      marginBottom: 8,
+      overflow: "hidden",
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+    },
+    filePreviewImage: {
+      borderRadius: 6,
+      height: 44,
+      width: 44,
+    },
+    filePreviewCopy: {
+      flex: 1,
+      gap: 2,
+    },
+    filePreviewName: {
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    filePreviewMeta: {
+      fontSize: 12,
+    },
+    filePreviewRemoveButton: {
+      alignItems: "center",
+      height: 28,
+      justifyContent: "center",
+      width: 28,
+    },
+    // Footer
+    footer: {
+      borderTopWidth: 1,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+    },
+    footerActions: {
+      flexDirection: "row",
+      gap: 4,
+    },
+    footerIconButton: {
+      alignItems: "center",
       height: 36,
       justifyContent: "center",
       width: 36,
     },
-    closeButtonPressed: {
-      opacity: 0.8,
+    // Shared states
+    pressed: {
+      opacity: 0.6,
     },
-    scrollContent: {
-      gap: 22,
-      paddingBottom: 24,
-      paddingHorizontal: 20,
-      paddingTop: 22,
-    },
-    field: {
-      gap: 8,
-    },
-    imagePickerWrap: {
-      alignItems: "flex-start",
-    },
-    label: {
-      color: colors.textSubtle,
-      fontSize: 12,
-      fontWeight: "700",
-      letterSpacing: 0.6,
-      textTransform: "uppercase",
-    },
-    input: {
-      backgroundColor: colors.bgInput,
-      borderColor: colors.borderPrimary,
-      borderRadius: 16,
-      borderWidth: 1,
-      color: colors.textPrimary,
-      fontSize: 15,
-      paddingHorizontal: 16,
-      paddingVertical: 14,
-    },
-    textarea: {
-      minHeight: 140,
-    },
-    helperText: {
-      color: colors.textMuted,
-      fontSize: 12,
-    },
-    errorBox: {
-      backgroundColor: "rgba(239, 68, 68, 0.12)",
-      borderColor: "rgba(248, 113, 113, 0.35)",
-      borderRadius: 16,
-      borderWidth: 1,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-    },
-    errorText: {
-      color: "#fecaca",
-      fontSize: 13,
-      lineHeight: 19,
-    },
-    footer: {
-      borderTopColor: colors.borderPrimary,
-      borderTopWidth: 1,
-      paddingBottom: 20,
-      paddingHorizontal: 20,
-      paddingTop: 14,
-    },
-    publishButton: {
-      alignItems: "center",
-      backgroundColor: colors.textPrimary,
-      borderRadius: 18,
-      justifyContent: "center",
-      minHeight: 52,
-      paddingHorizontal: 16,
-    },
-    publishButtonDisabled: {
-      opacity: 0.45,
-    },
-    publishButtonText: {
-      color: colors.bgPrimary,
-      fontSize: 15,
-      fontWeight: "700",
-    },
-    buttonPressed: {
-      opacity: 0.88,
+    disabledButton: {
+      opacity: 0.4,
     },
   });
 }

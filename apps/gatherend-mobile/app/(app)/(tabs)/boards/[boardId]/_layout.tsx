@@ -19,9 +19,15 @@ import {
   type BoardQuickActionKey,
 } from "@/src/features/boards/components/board-quick-actions-menu";
 import {
+  canWriteWiki,
+  isAdmin,
+  type MemberPermission,
+} from "@/src/features/boards/member-role";
+import {
   Animated,
   PanResponder,
   Pressable,
+  ScrollView,
   StyleSheet,
   View,
   useWindowDimensions,
@@ -30,8 +36,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BoardsDrawerSidebar } from "@/src/features/boards/components/boards-drawer-sidebar";
 import { useBoard } from "@/src/features/boards/hooks/use-board";
 import { useUserBoards } from "@/src/features/boards/hooks/use-user-boards";
+import { useBoardVoiceParticipantsSocket } from "@/src/features/voice/hooks/use-board-voice-participants-socket";
+import { useVoiceStore } from "@/src/features/voice/store/use-voice-store";
 import { getBoardImageUrl } from "@/src/lib/avatar-utils";
 import { useTheme } from "@/src/theme/theme-provider";
+import type { BoardChannel } from "@/src/features/boards/types/board";
 import {
   generatePaletteFromBase,
   generateLightPaletteFromBase,
@@ -54,9 +63,133 @@ const BOARD_SECTION_TABS = [
   { key: "settings", label: "Ajustes", icon: "settings-outline" },
 ] as const;
 
-const DRAWER_WIDTH = 356;
+const DRAWER_MARGIN = 0;
 
 type BoardSectionKey = (typeof BOARD_SECTION_TABS)[number]["key"];
+
+type DrawerChannelsPreviewProps = {
+  channels: BoardChannel[];
+  isLoading: boolean;
+  activeChannelId?: string;
+  styles: ReturnType<typeof createStyles>;
+  colors: ReturnType<typeof useTheme>["colors"];
+  boardColors: ReturnType<typeof generatePaletteFromBase> | null;
+  onSelectChannel: (channel: BoardChannel) => void;
+};
+
+function DrawerChannelsPreview({
+  channels,
+  isLoading,
+  activeChannelId,
+  styles,
+  colors,
+  boardColors,
+  onSelectChannel,
+}: DrawerChannelsPreviewProps) {
+  const sortedChannels = useMemo(
+    () => [...channels].sort((a, b) => a.position - b.position),
+    [channels],
+  );
+
+  return (
+    <View style={styles.drawerChannelsSection}>
+      {isLoading ? (
+        <View style={styles.drawerChannelsList}>
+          {Array.from({ length: 5 }).map((_, index) => (
+            <View key={index} style={styles.drawerChannelSkeletonRow}>
+              <View style={styles.drawerChannelSkeletonIcon} />
+              <View style={styles.drawerChannelSkeletonCopy}>
+                <View style={styles.drawerChannelSkeletonTitle} />
+                <View style={styles.drawerChannelSkeletonMeta} />
+              </View>
+            </View>
+          ))}
+        </View>
+      ) : sortedChannels.length > 0 ? (
+        <View style={styles.drawerChannelsList}>
+          {sortedChannels.map((channel) => {
+            const isActive = channel.id === activeChannelId;
+            const imageUrl = channel.imageAsset?.url ?? null;
+            return (
+              <Pressable
+                key={channel.id}
+                onPress={() => onSelectChannel(channel)}
+                style={[
+                  styles.drawerChannelRow,
+                  isActive ? styles.drawerChannelRowActive : null,
+                  boardColors && isActive
+                    ? {
+                        backgroundColor: boardColors.channelTypeActiveSoftBg,
+                        borderColor: boardColors.channelTypeActiveSoftBg,
+                      }
+                    : null,
+                ]}
+              >
+                <View
+                  style={[
+                    styles.drawerChannelIcon,
+                    imageUrl ? styles.drawerChannelIconWithImage : null,
+                  ]}
+                >
+                  {imageUrl ? (
+                    <>
+                      <Image
+                        contentFit="cover"
+                        source={{ uri: imageUrl }}
+                        style={StyleSheet.absoluteFill}
+                      />
+                      <View
+                        pointerEvents="none"
+                        style={[
+                          StyleSheet.absoluteFill,
+                          styles.drawerChannelIconImageOverlay,
+                        ]}
+                      />
+                    </>
+                  ) : null}
+                  <Ionicons
+                    color={
+                      isActive
+                        ? colors.accentPrimary
+                        : (boardColors?.textPrimary ?? colors.textPrimary)
+                    }
+                    name={
+                      channel.type === "VOICE"
+                        ? "volume-high-outline"
+                        : "chatbubble-ellipses-outline"
+                    }
+                    size={16}
+                  />
+                </View>
+                <View style={styles.drawerChannelCopy}>
+                  <Text
+                    numberOfLines={1}
+                    style={[
+                      styles.drawerChannelName,
+                      boardColors ? { color: boardColors.textPrimary } : null,
+                      isActive ? styles.drawerChannelNameActive : null,
+                    ]}
+                  >
+                    /{channel.name}
+                  </Text>
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : (
+        <Text
+          style={[
+            styles.drawerChannelsEmpty,
+            boardColors ? { color: boardColors.textMuted } : null,
+          ]}
+        >
+          Todavia no hay chats.
+        </Text>
+      )}
+    </View>
+  );
+}
 
 function getSettingsSubviewTitle(pathname: string) {
   if (pathname.includes("/settings/general")) return "General";
@@ -103,15 +236,19 @@ export default function BoardShellLayout() {
   const { colors, mode } = useTheme();
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
-  const { boardId } = useLocalSearchParams<{
+  const { boardId, channelId } = useLocalSearchParams<{
     boardId?: string;
+    channelId?: string;
   }>();
   const routeBoardId = Array.isArray(boardId) ? boardId[0] : boardId;
+  const routeChannelId = Array.isArray(channelId) ? channelId[0] : channelId;
   const {
     data: board,
     isError: boardError,
     isLoading: boardLoading,
   } = useBoard(routeBoardId);
+  const startConnecting = useVoiceStore((s) => s.startConnecting);
+  useBoardVoiceParticipantsSocket(routeBoardId);
   const { data: userBoards = [], isFetched: userBoardsFetched } =
     useUserBoards();
   const boardDisplayAsset = board?.bannerAsset ?? board?.imageAsset ?? null;
@@ -172,16 +309,19 @@ export default function BoardShellLayout() {
     router,
   ]);
   const [isDrawerVisible, setIsDrawerVisible] = useState(false);
-  const drawerWidth = Math.min(DRAWER_WIDTH, Math.max(0, screenWidth - 24));
+  const drawerWidth = Math.max(0, screenWidth - DRAWER_MARGIN);
   const drawerTranslateX = useRef(new Animated.Value(-screenWidth)).current;
   const currentSection =
     BOARD_SECTION_TABS.find((tab) => pathname.includes(`/${tab.key}`))?.key ??
     "home";
   const isHome = currentSection === "home";
-  const resolvedTabLabel = (key: (typeof BOARD_SECTION_TABS)[number]["key"]) => {
+  const resolvedTabLabel = (
+    key: (typeof BOARD_SECTION_TABS)[number]["key"],
+  ) => {
     const custom = board?.tabNames?.[key as keyof typeof board.tabNames];
-    const fallback = BOARD_SECTION_TABS.find((t) => t.key === key)?.label ?? key;
-    return (custom && custom.trim()) ? custom.trim() : fallback;
+    const fallback =
+      BOARD_SECTION_TABS.find((t) => t.key === key)?.label ?? key;
+    return custom && custom.trim() ? custom.trim() : fallback;
   };
   const currentSectionTitle = resolvedTabLabel(currentSection);
   const settingsSubviewTitle = getSettingsSubviewTitle(pathname);
@@ -189,6 +329,23 @@ export default function BoardShellLayout() {
 
   const boardTitle = board?.name ?? "Loading...";
   const styles = useMemo(() => createStyles(colors, mode), [colors, mode]);
+  const currentMemberRole = board?.currentMember?.role;
+  const currentMemberPermissions = board?.currentMember?.permissions;
+  const allowedQuickActions = useMemo<BoardQuickActionKey[]>(() => {
+    const permissions: MemberPermission[] = currentMemberPermissions ?? [];
+    const actions: BoardQuickActionKey[] = ["post"];
+
+    if (isAdmin(currentMemberRole)) {
+      actions.push("chat");
+      actions.push("rules");
+    }
+
+    if (canWriteWiki(currentMemberRole, permissions)) {
+      actions.push("wiki");
+    }
+
+    return actions;
+  }, [currentMemberPermissions, currentMemberRole]);
 
   const handleQuickAction = useCallback(
     (key: BoardQuickActionKey) => {
@@ -252,6 +409,33 @@ export default function BoardShellLayout() {
       }
     });
   }, [drawerTranslateX, drawerWidth]);
+
+  const handleSelectDrawerChannel = useCallback(
+    (channel: BoardChannel) => {
+      if (!routeBoardId) return;
+
+      if (channel.type === "VOICE") {
+        const voiceState = useVoiceStore.getState();
+        const isInThisVoiceChannel =
+          voiceState.context === "board" &&
+          voiceState.channelId === channel.id &&
+          (voiceState.isConnected || voiceState.isConnecting);
+
+        if (!isInThisVoiceChannel) {
+          startConnecting(channel.id, channel.name, "board", routeBoardId);
+          closeDrawer();
+          return;
+        }
+      }
+
+      closeDrawer();
+      router.replace({
+        pathname: "/(app)/boards/[boardId]/chats/[channelId]",
+        params: { boardId: routeBoardId, channelId: channel.id },
+      });
+    },
+    [closeDrawer, routeBoardId, router, startConnecting],
+  );
 
   const openEdgePanResponder = useMemo(
     () =>
@@ -379,7 +563,10 @@ export default function BoardShellLayout() {
         </View>
 
         <View style={styles.content}>
-          <BoardQuickActionsMenu onAction={handleQuickAction}>
+          <BoardQuickActionsMenu
+            allowedActions={allowedQuickActions}
+            onAction={handleQuickAction}
+          >
             <Slot />
           </BoardQuickActionsMenu>
         </View>
@@ -424,9 +611,9 @@ export default function BoardShellLayout() {
             >
               <BoardsDrawerSidebar
                 currentBoardId={routeBoardId}
-                onBackToBoards={() => {
+                onCreateBoard={() => {
                   closeDrawer();
-                  router.replace("/boards");
+                  router.push("/modal/create-board");
                 }}
                 onSelectBoard={(nextBoardId) => {
                   if (!nextBoardId || nextBoardId === routeBoardId) {
@@ -492,7 +679,14 @@ export default function BoardShellLayout() {
 
                 <View style={styles.drawerGroup}>
                   <View style={styles.tabsColumn}>
-                    {BOARD_SECTION_TABS.map((tab) => {
+                    {BOARD_SECTION_TABS.filter(
+                      (tab) =>
+                        tab.key !== "chats" &&
+                        tab.key !== "featured" &&
+                        tab.key !== "rules" &&
+                        tab.key !== "ranking" &&
+                        tab.key !== "members",
+                    ).map((tab) => {
                       const isActive = tab.key === currentSection;
                       const iconColor = boardColors
                         ? boardColors.textPrimary
@@ -512,6 +706,26 @@ export default function BoardShellLayout() {
                                   : null,
                               ]}
                             />
+                          )}
+                          {tab.key === "invite" && (
+                            <ScrollView
+                              key="channels-preview"
+                              contentContainerStyle={
+                                styles.drawerChannelsScrollContent
+                              }
+                              showsVerticalScrollIndicator={false}
+                              style={styles.drawerChannelsScroll}
+                            >
+                              <DrawerChannelsPreview
+                                activeChannelId={routeChannelId}
+                                boardColors={boardColors}
+                                channels={board?.channels ?? []}
+                                colors={colors}
+                                isLoading={boardLoading && !board}
+                                onSelectChannel={handleSelectDrawerChannel}
+                                styles={styles}
+                              />
+                            </ScrollView>
                           )}
                           {tab.key === "invite" && (
                             <View
@@ -718,6 +932,106 @@ function createStyles(
       paddingBottom: 16,
       paddingHorizontal: 12,
     },
+    drawerChannelsScroll: {
+      maxHeight: 270,
+      marginBottom: 4,
+      marginTop: 2,
+    },
+    drawerChannelsScrollContent: {
+      paddingBottom: 2,
+    },
+    drawerChannelsSection: {
+      gap: 7,
+    },
+    drawerChannelsList: {
+      gap: 5,
+    },
+    drawerChannelRow: {
+      alignItems: "center",
+      backgroundColor: "transparent",
+      borderColor: "transparent",
+      borderRadius: 11,
+      borderWidth: 1,
+      flexDirection: "row",
+      gap: 9,
+      minHeight: 44,
+      paddingHorizontal: 9,
+      paddingVertical: 6,
+      overflow: "hidden",
+      position: "relative",
+    },
+    drawerChannelRowActive: {
+      backgroundColor: colors.channelTypeActiveSoftBg,
+      borderColor: colors.channelTypeActiveSoftBg,
+    },
+    drawerChannelIcon: {
+      alignItems: "center",
+      borderRadius: 8,
+      height: 30,
+      justifyContent: "center",
+      overflow: "hidden",
+      width: 30,
+    },
+    drawerChannelIconWithImage: {
+      backgroundColor: colors.bgQuaternary,
+    },
+    drawerChannelIconImageOverlay: {
+      backgroundColor:
+        mode === "light" ? "rgba(248,250,252,0.52)" : "rgba(2,6,23,0.48)",
+    },
+    drawerChannelCopy: {
+      flex: 1,
+      minWidth: 0,
+    },
+    drawerChannelName: {
+      color: colors.textPrimary,
+      fontSize: 14,
+      fontWeight: "700",
+      lineHeight: 18,
+    },
+    drawerChannelNameActive: {
+      color: colors.accentPrimary,
+    },
+    drawerChannelsEmpty: {
+      color: colors.textMuted,
+      fontSize: 12,
+      lineHeight: 17,
+      paddingHorizontal: 2,
+      paddingVertical: 8,
+    },
+    drawerChannelSkeletonRow: {
+      alignItems: "center",
+      flexDirection: "row",
+      gap: 9,
+      minHeight: 44,
+      paddingHorizontal: 9,
+      paddingVertical: 6,
+    },
+    drawerChannelSkeletonIcon: {
+      backgroundColor: colors.bgQuaternary,
+      borderRadius: 9,
+      height: 30,
+      opacity: 0.7,
+      width: 30,
+    },
+    drawerChannelSkeletonCopy: {
+      flex: 1,
+      gap: 5,
+    },
+    drawerChannelSkeletonTitle: {
+      backgroundColor: colors.bgQuaternary,
+      borderRadius: 999,
+      height: 10,
+      opacity: 0.75,
+      width: "72%",
+    },
+    drawerChannelSkeletonMeta: {
+      backgroundColor: colors.bgQuaternary,
+      borderRadius: 999,
+      height: 8,
+      opacity: 0.45,
+      width: "46%",
+    },
     tabsColumn: {
       gap: 6,
     },
@@ -737,6 +1051,7 @@ function createStyles(
       justifyContent: "flex-start",
       minHeight: 42,
       paddingHorizontal: 12,
+      paddingVertical: 6,
       width: "100%",
     },
     tabButtonActive: {

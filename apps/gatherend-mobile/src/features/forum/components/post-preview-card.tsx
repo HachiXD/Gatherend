@@ -7,6 +7,7 @@ import {
   Pressable,
   StyleSheet,
   View,
+  type StyleProp,
   type ViewStyle,
 } from "react-native";
 import { UserAvatar } from "@/src/components/user-avatar";
@@ -27,7 +28,7 @@ type PostPreviewCardProps = {
   post: ForumPostPreview;
   boardId: string;
   onPress: () => void;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 };
 
 function PostPreviewCardInner({
