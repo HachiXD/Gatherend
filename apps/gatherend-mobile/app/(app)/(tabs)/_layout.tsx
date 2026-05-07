@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { DarkTheme, ThemeProvider as NavigationThemeProvider } from "@react-navigation/native";
-import { Tabs, usePathname } from "expo-router";
+import { Tabs } from "expo-router";
 import { useEffect, useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import Animated, {
@@ -107,8 +107,8 @@ function TabIcon({
 export default function TabsLayout() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const pathname = usePathname();
   const bottomInset = Math.max(insets.bottom, TAB_BAR_BOTTOM_PADDING);
+  const tabBarHeight = TAB_BAR_CONTENT_HEIGHT + bottomInset;
   const mentionCount = useMentionStore(
     (state) => Object.values(state.mentions).filter(Boolean).length,
   );
@@ -130,8 +130,6 @@ export default function TabsLayout() {
     }),
     [colors],
   );
-  const isBoardsRoute = pathname.startsWith("/boards");
-
   return (
     <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
       <NavigationThemeProvider value={navigationTheme}>
@@ -152,10 +150,14 @@ export default function TabsLayout() {
               backgroundColor: colors.bgSecondary,
               borderTopColor: colors.borderSecondary,
               borderTopWidth: 1,
-              display: isBoardsRoute ? "none" : "flex",
-              height: TAB_BAR_CONTENT_HEIGHT + bottomInset,
+              bottom: 0,
+              display: "flex",
+              height: tabBarHeight,
+              left: 0,
               paddingBottom: bottomInset,
               paddingTop: 0,
+              position: "absolute",
+              right: 0,
               overflow: "hidden",
             },
             sceneStyle: {

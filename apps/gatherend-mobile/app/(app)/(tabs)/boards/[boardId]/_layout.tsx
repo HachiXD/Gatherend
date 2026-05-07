@@ -310,7 +310,7 @@ export default function BoardShellLayout() {
   ]);
   const [isDrawerVisible, setIsDrawerVisible] = useState(false);
   const drawerWidth = Math.max(0, screenWidth - DRAWER_MARGIN);
-  const drawerTranslateX = useRef(new Animated.Value(-screenWidth)).current;
+  const foregroundTranslateX = useRef(new Animated.Value(0)).current;
   const currentSection =
     BOARD_SECTION_TABS.find((tab) => pathname.includes(`/${tab.key}`))?.key ??
     "home";
@@ -329,6 +329,7 @@ export default function BoardShellLayout() {
 
   const boardTitle = board?.name ?? "Loading...";
   const styles = useMemo(() => createStyles(colors, mode), [colors, mode]);
+
   const currentMemberRole = board?.currentMember?.role;
   const currentMemberPermissions = board?.currentMember?.permissions;
   const allowedQuickActions = useMemo<BoardQuickActionKey[]>(() => {
@@ -382,33 +383,33 @@ export default function BoardShellLayout() {
 
   useEffect(() => {
     if (!isDrawerVisible) {
-      drawerTranslateX.setValue(-drawerWidth);
+      foregroundTranslateX.setValue(0);
     }
-  }, [drawerTranslateX, drawerWidth, isDrawerVisible]);
+  }, [foregroundTranslateX, isDrawerVisible]);
 
   const openDrawer = useCallback(() => {
     setIsDrawerVisible(true);
-    Animated.spring(drawerTranslateX, {
-      toValue: 0,
+    Animated.spring(foregroundTranslateX, {
+      toValue: drawerWidth,
       damping: 22,
       stiffness: 230,
       mass: 0.8,
       useNativeDriver: true,
     }).start();
-  }, [drawerTranslateX]);
+  }, [drawerWidth, foregroundTranslateX]);
 
   const closeDrawer = useCallback(() => {
-    Animated.timing(drawerTranslateX, {
-      toValue: -drawerWidth,
+    Animated.timing(foregroundTranslateX, {
+      toValue: 0,
       duration: 180,
       useNativeDriver: true,
     }).start(({ finished }) => {
       if (finished) {
-        drawerTranslateX.setValue(-drawerWidth);
+        foregroundTranslateX.setValue(0);
         setIsDrawerVisible(false);
       }
     });
-  }, [drawerTranslateX, drawerWidth]);
+  }, [foregroundTranslateX]);
 
   const handleSelectDrawerChannel = useCallback(
     (channel: BoardChannel) => {
@@ -443,11 +444,11 @@ export default function BoardShellLayout() {
         onMoveShouldSetPanResponder: (_event, gesture) =>
           !isDrawerVisible && gesture.dx > 8 && Math.abs(gesture.dy) < 20,
         onPanResponderGrant: () => {
-          drawerTranslateX.setValue(-drawerWidth);
+          foregroundTranslateX.setValue(0);
         },
         onPanResponderMove: (_event, gesture) => {
-          const nextValue = Math.min(0, -drawerWidth + Math.max(0, gesture.dx));
-          drawerTranslateX.setValue(nextValue);
+          const nextValue = Math.min(drawerWidth, Math.max(0, gesture.dx));
+          foregroundTranslateX.setValue(nextValue);
         },
         onPanResponderRelease: (_event, gesture) => {
           if (gesture.dx > drawerWidth * 0.34 || gesture.vx > 0.5) {
@@ -458,7 +459,7 @@ export default function BoardShellLayout() {
         },
         onPanResponderTerminate: closeDrawer,
       }),
-    [closeDrawer, drawerTranslateX, drawerWidth, isDrawerVisible, openDrawer],
+    [closeDrawer, drawerWidth, foregroundTranslateX, isDrawerVisible, openDrawer],
   );
 
   const drawerPanResponder = useMemo(
@@ -468,9 +469,15 @@ export default function BoardShellLayout() {
           isDrawerVisible &&
           Math.abs(gesture.dx) > 8 &&
           Math.abs(gesture.dx) > Math.abs(gesture.dy),
+        onPanResponderGrant: () => {
+          foregroundTranslateX.setValue(drawerWidth);
+        },
         onPanResponderMove: (_event, gesture) => {
-          const nextValue = Math.max(-drawerWidth, Math.min(0, gesture.dx));
-          drawerTranslateX.setValue(nextValue);
+          const nextValue = Math.max(
+            0,
+            Math.min(drawerWidth, drawerWidth + gesture.dx),
+          );
+          foregroundTranslateX.setValue(nextValue);
         },
         onPanResponderRelease: (_event, gesture) => {
           if (gesture.dx < -drawerWidth * 0.26 || gesture.vx < -0.45) {
@@ -481,10 +488,10 @@ export default function BoardShellLayout() {
         },
         onPanResponderTerminate: openDrawer,
       }),
-    [closeDrawer, drawerTranslateX, drawerWidth, isDrawerVisible, openDrawer],
+    [closeDrawer, drawerWidth, foregroundTranslateX, isDrawerVisible, openDrawer],
   );
-  const backdropOpacity = drawerTranslateX.interpolate({
-    inputRange: [-drawerWidth, 0],
+  const backdropOpacity = foregroundTranslateX.interpolate({
+    inputRange: [0, drawerWidth],
     outputRange: [0, 1],
     extrapolate: "clamp",
   });
@@ -492,7 +499,210 @@ export default function BoardShellLayout() {
   return (
     <View style={styles.safeArea}>
       <View
-        style={styles.container}
+        pointerEvents={isDrawerVisible ? "box-none" : "none"}
+        style={styles.drawerLayer}
+      >
+        <Animated.View
+          pointerEvents={isDrawerVisible ? "auto" : "none"}
+          style={[
+            styles.backdrop,
+            {
+              opacity: backdropOpacity,
+            },
+          ]}
+        >
+          <Pressable onPress={closeDrawer} style={StyleSheet.absoluteFill} />
+        </Animated.View>
+
+        <View
+          style={[
+            styles.drawer,
+            {
+              top: insets.top,
+              width: drawerWidth,
+            },
+          ]}
+          {...drawerPanResponder.panHandlers}
+        >
+          <BoardsDrawerSidebar
+            currentBoardId={routeBoardId}
+            onCreateBoard={() => {
+              closeDrawer();
+              router.push("/modal/create-board");
+            }}
+            onSelectBoard={(nextBoardId) => {
+              if (!nextBoardId || nextBoardId === routeBoardId) {
+                closeDrawer();
+                return;
+              }
+
+              closeDrawer();
+              router.replace({
+                pathname: getBoardSectionPathname(currentSection),
+                params: { boardId: nextBoardId },
+              });
+            }}
+          />
+
+          <View
+            style={[
+              styles.drawerMain,
+              boardColors ? { backgroundColor: boardColors.bgSecondary } : null,
+            ]}
+          >
+            <View style={styles.boardHeader}>
+              {boardImageUrl ? (
+                <Image
+                  contentFit="cover"
+                  source={{ uri: boardImageUrl }}
+                  style={styles.boardImage}
+                />
+              ) : (
+                <View
+                  style={[
+                    styles.boardImageFallback,
+                    boardColors
+                      ? { backgroundColor: boardColors.bgQuaternary }
+                      : null,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.boardImageFallbackText,
+                      boardColors ? { color: boardColors.textPrimary } : null,
+                    ]}
+                  >
+                    {getBoardInitial(board?.name)}
+                  </Text>
+                </View>
+              )}
+
+              <Text
+                numberOfLines={2}
+                style={[
+                  styles.boardName,
+                  boardColors ? { color: boardColors.textPrimary } : null,
+                ]}
+              >
+                {boardTitle}
+              </Text>
+            </View>
+
+            <View style={styles.drawerGroup}>
+              <View style={styles.tabsColumn}>
+                {BOARD_SECTION_TABS.filter(
+                  (tab) =>
+                    tab.key !== "chats" &&
+                    tab.key !== "featured" &&
+                    tab.key !== "rules" &&
+                    tab.key !== "ranking" &&
+                    tab.key !== "members",
+                ).map((tab) => {
+                  const isActive = tab.key === currentSection;
+                  const iconColor = boardColors
+                    ? boardColors.textPrimary
+                    : colors.textPrimary;
+
+                  return (
+                    <Fragment key={tab.key}>
+                      {tab.key === "home" && (
+                        <View
+                          key="separator-top"
+                          style={[
+                            styles.tabSeparator,
+                            boardColors
+                              ? { borderTopColor: boardColors.borderPrimary }
+                              : null,
+                          ]}
+                        />
+                      )}
+                      {tab.key === "invite" && (
+                        <ScrollView
+                          key="channels-preview"
+                          contentContainerStyle={
+                            styles.drawerChannelsScrollContent
+                          }
+                          showsVerticalScrollIndicator={false}
+                          style={styles.drawerChannelsScroll}
+                        >
+                          <DrawerChannelsPreview
+                            activeChannelId={routeChannelId}
+                            boardColors={boardColors}
+                            channels={board?.channels ?? []}
+                            colors={colors}
+                            isLoading={boardLoading && !board}
+                            onSelectChannel={handleSelectDrawerChannel}
+                            styles={styles}
+                          />
+                        </ScrollView>
+                      )}
+                      {tab.key === "invite" && (
+                        <View
+                          key="separator"
+                          style={[
+                            styles.tabSeparator,
+                            boardColors
+                              ? { borderTopColor: boardColors.borderPrimary }
+                              : null,
+                          ]}
+                        />
+                      )}
+                      <Pressable
+                        key={tab.key}
+                        onPress={() => {
+                          if (!routeBoardId) return;
+
+                          closeDrawer();
+                          router.replace({
+                            pathname: getBoardSectionPathname(tab.key),
+                            params: { boardId: routeBoardId },
+                          });
+                        }}
+                        style={({ pressed }) => [
+                          styles.tabButton,
+                          isActive ? styles.tabButtonActive : null,
+                          boardColors && isActive
+                            ? {
+                                backgroundColor:
+                                  boardColors.channelTypeActiveSoftBg,
+                                borderColor:
+                                  boardColors.channelTypeActiveSoftBg,
+                              }
+                            : null,
+                          pressed ? styles.actionPressed : null,
+                        ]}
+                      >
+                        <Ionicons color={iconColor} name={tab.icon} size={19} />
+                        <Text
+                          ellipsizeMode="tail"
+                          numberOfLines={1}
+                          style={[
+                            styles.tabButtonText,
+                            boardColors
+                              ? { color: boardColors.textPrimary }
+                              : null,
+                          ]}
+                        >
+                          {resolvedTabLabel(tab.key)}
+                        </Text>
+                      </Pressable>
+                    </Fragment>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+        </View>
+      </View>
+
+      <Animated.View
+        style={[
+          styles.container,
+          isDrawerVisible ? styles.foregroundOpen : null,
+          {
+            transform: [{ translateX: foregroundTranslateX }],
+          },
+        ]}
         {...(!isDrawerVisible && !isHome
           ? openEdgePanResponder.panHandlers
           : {})}
@@ -526,20 +736,14 @@ export default function BoardShellLayout() {
                 pressed ? styles.menuButtonPressed : null,
               ]}
             >
-              <Ionicons
-                color={colors.textPrimary}
-                name="arrow-back"
-                size={21}
-              />
+              <Ionicons color={colors.textPrimary} name="arrow-back" size={21} />
             </Pressable>
           ) : (
             <Pressable
-              accessibilityHint={"Abre el drawer izquierdo del board"}
+              accessibilityHint="Abre el drawer izquierdo del board"
               accessibilityRole="button"
               accessibilityLabel="Abrir drawer"
-              onPress={() => {
-                openDrawer();
-              }}
+              onPress={openDrawer}
               style={({ pressed }) => [
                 styles.menuButton,
                 hasBoardHeaderImage
@@ -577,222 +781,8 @@ export default function BoardShellLayout() {
             {...openEdgePanResponder.panHandlers}
           />
         )}
+      </Animated.View>
 
-        {
-          <View
-            pointerEvents={isDrawerVisible ? "box-none" : "none"}
-            style={styles.drawerLayer}
-          >
-            <Animated.View
-              pointerEvents={isDrawerVisible ? "auto" : "none"}
-              style={[
-                styles.backdrop,
-                {
-                  opacity: backdropOpacity,
-                },
-              ]}
-            >
-              <Pressable
-                onPress={closeDrawer}
-                style={StyleSheet.absoluteFill}
-              />
-            </Animated.View>
-
-            <Animated.View
-              style={[
-                styles.drawer,
-                {
-                  top: insets.top,
-                  transform: [{ translateX: drawerTranslateX }],
-                  width: drawerWidth,
-                },
-              ]}
-              {...drawerPanResponder.panHandlers}
-            >
-              <BoardsDrawerSidebar
-                currentBoardId={routeBoardId}
-                onCreateBoard={() => {
-                  closeDrawer();
-                  router.push("/modal/create-board");
-                }}
-                onSelectBoard={(nextBoardId) => {
-                  if (!nextBoardId || nextBoardId === routeBoardId) {
-                    closeDrawer();
-                    return;
-                  }
-
-                  closeDrawer();
-                  router.replace({
-                    pathname: getBoardSectionPathname(currentSection),
-                    params: { boardId: nextBoardId },
-                  });
-                }}
-              />
-
-              <View
-                style={[
-                  styles.drawerMain,
-                  boardColors
-                    ? { backgroundColor: boardColors.bgSecondary }
-                    : null,
-                ]}
-              >
-                <View style={styles.boardHeader}>
-                  {boardImageUrl ? (
-                    <Image
-                      contentFit="cover"
-                      source={{ uri: boardImageUrl }}
-                      style={styles.boardImage}
-                    />
-                  ) : (
-                    <View
-                      style={[
-                        styles.boardImageFallback,
-                        boardColors
-                          ? { backgroundColor: boardColors.bgQuaternary }
-                          : null,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.boardImageFallbackText,
-                          boardColors
-                            ? { color: boardColors.textPrimary }
-                            : null,
-                        ]}
-                      >
-                        {getBoardInitial(board?.name)}
-                      </Text>
-                    </View>
-                  )}
-
-                  <Text
-                    numberOfLines={2}
-                    style={[
-                      styles.boardName,
-                      boardColors ? { color: boardColors.textPrimary } : null,
-                    ]}
-                  >
-                    {boardTitle}
-                  </Text>
-                </View>
-
-                <View style={styles.drawerGroup}>
-                  <View style={styles.tabsColumn}>
-                    {BOARD_SECTION_TABS.filter(
-                      (tab) =>
-                        tab.key !== "chats" &&
-                        tab.key !== "featured" &&
-                        tab.key !== "rules" &&
-                        tab.key !== "ranking" &&
-                        tab.key !== "members",
-                    ).map((tab) => {
-                      const isActive = tab.key === currentSection;
-                      const iconColor = boardColors
-                        ? boardColors.textPrimary
-                        : colors.textPrimary;
-
-                      return (
-                        <Fragment key={tab.key}>
-                          {tab.key === "home" && (
-                            <View
-                              key="separator-top"
-                              style={[
-                                styles.tabSeparator,
-                                boardColors
-                                  ? {
-                                      borderTopColor: boardColors.borderPrimary,
-                                    }
-                                  : null,
-                              ]}
-                            />
-                          )}
-                          {tab.key === "invite" && (
-                            <ScrollView
-                              key="channels-preview"
-                              contentContainerStyle={
-                                styles.drawerChannelsScrollContent
-                              }
-                              showsVerticalScrollIndicator={false}
-                              style={styles.drawerChannelsScroll}
-                            >
-                              <DrawerChannelsPreview
-                                activeChannelId={routeChannelId}
-                                boardColors={boardColors}
-                                channels={board?.channels ?? []}
-                                colors={colors}
-                                isLoading={boardLoading && !board}
-                                onSelectChannel={handleSelectDrawerChannel}
-                                styles={styles}
-                              />
-                            </ScrollView>
-                          )}
-                          {tab.key === "invite" && (
-                            <View
-                              key="separator"
-                              style={[
-                                styles.tabSeparator,
-                                boardColors
-                                  ? {
-                                      borderTopColor: boardColors.borderPrimary,
-                                    }
-                                  : null,
-                              ]}
-                            />
-                          )}
-                          <Pressable
-                            key={tab.key}
-                            onPress={() => {
-                              if (!routeBoardId) return;
-
-                              closeDrawer();
-                              router.replace({
-                                pathname: getBoardSectionPathname(tab.key),
-                                params: { boardId: routeBoardId },
-                              });
-                            }}
-                            style={({ pressed }) => [
-                              styles.tabButton,
-                              isActive ? styles.tabButtonActive : null,
-                              boardColors && isActive
-                                ? {
-                                    backgroundColor:
-                                      boardColors.channelTypeActiveSoftBg,
-                                    borderColor:
-                                      boardColors.channelTypeActiveSoftBg,
-                                  }
-                                : null,
-                              pressed ? styles.actionPressed : null,
-                            ]}
-                          >
-                            <Ionicons
-                              color={iconColor}
-                              name={tab.icon}
-                              size={19}
-                            />
-                            <Text
-                              ellipsizeMode="tail"
-                              numberOfLines={1}
-                              style={[
-                                styles.tabButtonText,
-                                boardColors
-                                  ? { color: boardColors.textPrimary }
-                                  : null,
-                              ]}
-                            >
-                              {resolvedTabLabel(tab.key)}
-                            </Text>
-                          </Pressable>
-                        </Fragment>
-                      );
-                    })}
-                  </View>
-                </View>
-              </View>
-            </Animated.View>
-          </View>
-        }
-      </View>
     </View>
   );
 }
@@ -807,7 +797,21 @@ function createStyles(
       backgroundColor: colors.bgPrimary,
     },
     container: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: colors.bgPrimary,
+      elevation: 10,
       flex: 1,
+      overflow: "hidden",
+      zIndex: 10,
+    },
+    foregroundOpen: {
+      borderLeftColor: colors.borderPrimary,
+      borderLeftWidth: 1,
+      elevation: 12,
+      shadowColor: "#000000",
+      shadowOffset: { width: -8, height: 0 },
+      shadowOpacity: 0.22,
+      shadowRadius: 18,
     },
     header: {
       alignItems: "center",
@@ -881,6 +885,7 @@ function createStyles(
     drawerLayer: {
       ...StyleSheet.absoluteFillObject,
       flexDirection: "row",
+      zIndex: 0,
     },
     backdrop: {
       ...StyleSheet.absoluteFillObject,
@@ -895,7 +900,7 @@ function createStyles(
       left: 0,
       position: "absolute",
       top: 0,
-      zIndex: 2,
+      zIndex: 1,
     },
     drawerMain: {
       flex: 1,
