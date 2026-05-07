@@ -1,4 +1,4 @@
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { useMemo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { UserAvatar } from "@/src/components/user-avatar";
@@ -10,9 +10,13 @@ const MIN_INPUT_HEIGHT = 42;
 
 type PostCommentFakeInputProps = {
   onPress: () => void;
+  onImagePress: () => void;
 };
 
-export function PostCommentFakeInput({ onPress }: PostCommentFakeInputProps) {
+export function PostCommentFakeInput({
+  onPress,
+  onImagePress,
+}: PostCommentFakeInputProps) {
   const profile = useProfile();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -25,37 +29,46 @@ export function PostCommentFakeInput({ onPress }: PostCommentFakeInputProps) {
         size={32}
       />
 
-      <Pressable
-        onPress={onPress}
-        style={({ pressed }) => [
+      <View
+        style={[
           styles.inputShell,
           {
             backgroundColor: colors.bgQuaternary,
             borderColor: colors.borderPrimary,
           },
-          pressed ? styles.pressed : null,
         ]}
       >
-        <Text
-          style={[styles.placeholder, { color: colors.textTertiary }]}
-          numberOfLines={1}
+        <Pressable
+          onPress={() => {
+            onPress();
+          }}
+          style={({ pressed }) => [
+            styles.inputPressArea,
+            pressed ? styles.pressed : null,
+          ]}
         >
-          Comentar...
-        </Text>
+          <Text
+            style={[styles.placeholder, { color: colors.textTertiary }]}
+            numberOfLines={1}
+          >
+            Comentar...
+          </Text>
+        </Pressable>
 
         <View style={styles.inputActions}>
-          <View style={styles.inputActionButton}>
+          <Pressable
+            onPress={() => {
+              onImagePress();
+            }}
+            style={({ pressed }) => [
+              styles.inputActionButton,
+              pressed ? styles.pressed : null,
+            ]}
+          >
             <Ionicons color={colors.textMuted} name="image-outline" size={20} />
-          </View>
-          <View style={styles.inputActionButton}>
-            <MaterialCommunityIcons
-              color={colors.textMuted}
-              name="emoticon-outline"
-              size={20}
-            />
-          </View>
+          </Pressable>
         </View>
-      </Pressable>
+      </View>
     </View>
   );
 }
@@ -77,9 +90,13 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       overflow: "hidden",
     },
     placeholder: {
-      flex: 1,
       fontSize: 15,
       paddingHorizontal: 11,
+    },
+    inputPressArea: {
+      alignSelf: "stretch",
+      flex: 1,
+      justifyContent: "center",
     },
     inputActions: {
       alignItems: "center",

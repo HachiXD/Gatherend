@@ -231,7 +231,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     card: {
       borderRadius: 12,
       borderWidth: 1,
-      marginHorizontal: 12,
+      marginHorizontal: 0,
       marginVertical: 6,
       paddingHorizontal: 14,
       paddingTop: 12,

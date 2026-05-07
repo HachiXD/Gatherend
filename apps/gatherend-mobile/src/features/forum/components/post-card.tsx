@@ -16,8 +16,9 @@ import { PostCommentItem } from "./post-comment-item";
 import { PostContent } from "./post-content";
 import { PostImage } from "./post-image";
 import { PostInlineCommentInput } from "./post-inline-comment-input";
+import { PostCommentComposerModal } from "./post-comment-composer-modal";
 import type { ForumPost, ForumPostComment } from "../domain/post";
-import { Text, TextInput } from "@/src/components/app-typography";
+import { Text } from "@/src/components/app-typography";
 
 import { isModerator } from "@/src/features/boards/member-role";
 
@@ -49,6 +50,10 @@ type PostCardProps = {
   onReportPost?: (post: ForumPost) => void;
   onReportComment?: (comment: ForumPostComment) => void;
 };
+
+type EditTarget =
+  | { type: "post" }
+  | { type: "comment"; comment: ForumPostComment };
 
 function PostCardInner({
   post,
@@ -100,13 +105,7 @@ function PostCardInner({
   const canModerate = isModerator(currentMemberRole);
   const canDeletePost = isOwnPost || canModerate;
 
-  // Post edit state
-  const [isEditingPost, setIsEditingPost] = useState(false);
-  const [postEditDraft, setPostEditDraft] = useState("");
-
-  // Comment edit state
-  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
-  const [commentEditDraft, setCommentEditDraft] = useState("");
+  const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
 
   // Reply state
   const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(
@@ -146,15 +145,7 @@ function PostCardInner({
   );
 
   const handleStartEditPost = () => {
-    setPostEditDraft(post.content);
-    setIsEditingPost(true);
-  };
-
-  const handleSavePost = () => {
-    const trimmed = postEditDraft.trim();
-    if (!trimmed && !post.imageAsset) return;
-    onEditPost(post.id, trimmed);
-    setIsEditingPost(false);
+    setEditTarget({ type: "post" });
   };
 
   const handleConfirmDeletePost = () => {
@@ -175,16 +166,7 @@ function PostCardInner({
     ].find((c) => c.id === commentId);
     if (!comment) return;
     setReplyingToCommentId(null);
-    setCommentEditDraft(comment.content);
-    setEditingCommentId(commentId);
-  };
-
-  const handleSaveComment = () => {
-    if (!editingCommentId) return;
-    const trimmed = commentEditDraft.trim();
-    if (!trimmed) return;
-    onEditComment(post.id, editingCommentId, trimmed);
-    setEditingCommentId(null);
+    setEditTarget({ type: "comment", comment });
   };
 
   const handleConfirmDeleteComment = (commentId: string) => {
@@ -199,7 +181,6 @@ function PostCardInner({
   };
 
   const handleReply = (commentId: string) => {
-    setEditingCommentId(null);
     setReplyingToCommentId((prev) => (prev === commentId ? null : commentId));
   };
 
@@ -272,164 +253,136 @@ function PostCardInner({
       </View>
 
       {/* Post body */}
-      {isEditingPost ? (
-        <View style={styles.editForm}>
-          <TextInput
-            value={postEditDraft}
-            onChangeText={setPostEditDraft}
-            multiline
-            style={[
-              styles.editInput,
-              {
-                borderColor: colors.borderSecondary,
-                color: colors.textPrimary,
-              },
-            ]}
-            placeholderTextColor={colors.textTertiary}
-            placeholder="Editar post..."
-            autoFocus
+      <View style={styles.postBody}>
+        {post.title ? (
+          <Text style={[styles.postTitle, { color: colors.textPrimary }]}>
+            {post.title}
+          </Text>
+        ) : null}
+        {post.imageAsset?.url ? (
+          <PostImage
+            imageUrl={post.imageAsset.url}
+            imageWidth={post.imageAsset.width}
+            imageHeight={post.imageAsset.height}
           />
-          <View style={styles.editActions}>
-            <Pressable
-              onPress={() => setIsEditingPost(false)}
-              style={({ pressed }) => [
-                styles.editButton,
-                styles.editButtonCancel,
-                {
-                  borderColor: colors.borderPrimary,
-                  backgroundColor: colors.bgCancelButton,
-                },
-                pressed && styles.pressed,
-              ]}
-            >
-              <Text
-                style={[styles.editButtonText, { color: colors.textSubtle }]}
-              >
-                Cancelar
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={handleSavePost}
-              style={({ pressed }) => [
-                styles.editButton,
-                { backgroundColor: colors.tabButtonBg },
-                pressed && styles.pressed,
-              ]}
-            >
-              <Text
-                style={[styles.editButtonText, { color: colors.textPrimary }]}
-              >
-                Guardar
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-      ) : (
-        <View style={styles.postBody}>
-          {post.title ? (
-            <Text style={[styles.postTitle, { color: colors.textPrimary }]}>
-              {post.title}
-            </Text>
-          ) : null}
-          {post.imageAsset?.url ? (
-            <PostImage
-              imageUrl={post.imageAsset.url}
-              imageWidth={post.imageAsset.width}
-              imageHeight={post.imageAsset.height}
-            />
-          ) : null}
-          {post.content ? (
-            <PostContent content={post.content} fontSize={15} />
-          ) : null}
-        </View>
-      )}
+        ) : null}
+        {post.content ? (
+          <PostContent content={post.content} fontSize={15} />
+        ) : null}
+      </View>
 
       {/* Action bar */}
-      {!isEditingPost && (
-        <View style={[styles.actionBar, { borderColor: colors.borderPrimary }]}>
-          {/* Like button */}
-          <Pressable
-            onPress={() =>
-              togglePostLike.mutate({
-                postId: post.id,
-                isLiked: post.isLikedByCurrentUser,
-              })
-            }
-            style={({ pressed }) => [
-              styles.statPill,
-              styles.likeButton,
-              {
-                backgroundColor: colors.bgTertiary,
-                borderColor: colors.borderPrimary,
-              },
-              pressed && styles.pressed,
+      <View style={[styles.actionBar, { borderColor: colors.borderPrimary }]}>
+        {/* Like button */}
+        <Pressable
+          onPress={() =>
+            togglePostLike.mutate({
+              postId: post.id,
+              isLiked: post.isLikedByCurrentUser,
+            })
+          }
+          style={({ pressed }) => [
+            styles.statPill,
+            styles.likeButton,
+            {
+              backgroundColor: colors.bgTertiary,
+              borderColor: colors.borderPrimary,
+            },
+            pressed && styles.pressed,
+          ]}
+        >
+          <Animated.View
+            style={[
+              styles.likeIconSwap,
+              { transform: [{ scale: heartScale }] },
             ]}
           >
             <Animated.View
-              style={[
-                styles.likeIconSwap,
-                { transform: [{ scale: heartScale }] },
-              ]}
+              style={[styles.likeIconLayer, { opacity: heartOutlineOpacity }]}
             >
-              <Animated.View
-                style={[styles.likeIconLayer, { opacity: heartOutlineOpacity }]}
-              >
-                <Ionicons
-                  name="heart-outline"
-                  size={18}
-                  color={colors.textTertiary}
-                />
-              </Animated.View>
-              <Animated.View
-                style={[styles.likeIconLayer, { opacity: heartFilledOpacity }]}
-              >
-                <Ionicons name="heart" size={18} color="#e74c3c" />
-              </Animated.View>
+              <Ionicons
+                name="heart-outline"
+                size={18}
+                color={colors.textTertiary}
+              />
             </Animated.View>
-            <Text style={[styles.likeCount, { color: colors.textTertiary }]}>
-              {post.likeCount ?? 0}
-            </Text>
-          </Pressable>
-
-          {isOwnPost || canDeletePost || (!isOwnPost && onReportPost) ? (
-            <View
-              style={[
-                styles.actionPillGroup,
-                {
-                  borderColor: colors.borderPrimary,
-                  backgroundColor: colors.bgTertiary,
-                },
-              ]}
+            <Animated.View
+              style={[styles.likeIconLayer, { opacity: heartFilledOpacity }]}
             >
-              {isOwnPost && (
-                <Pressable
-                  onPress={handleStartEditPost}
-                  style={({ pressed }) => [
-                    styles.actionPillItem,
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.actionPillText,
-                      { color: colors.textTertiary },
-                    ]}
-                  >
-                    Editar
-                  </Text>
-                </Pressable>
-              )}
-              {isOwnPost && canDeletePost && (
-                <View
+              <Ionicons name="heart" size={18} color="#e74c3c" />
+            </Animated.View>
+          </Animated.View>
+          <Text style={[styles.likeCount, { color: colors.textTertiary }]}>
+            {post.likeCount ?? 0}
+          </Text>
+        </Pressable>
+
+        {isOwnPost || canDeletePost || (!isOwnPost && onReportPost) ? (
+          <View
+            style={[
+              styles.actionPillGroup,
+              {
+                borderColor: colors.borderPrimary,
+                backgroundColor: colors.bgTertiary,
+              },
+            ]}
+          >
+            {isOwnPost && (
+              <Pressable
+                onPress={handleStartEditPost}
+                style={({ pressed }) => [
+                  styles.actionPillItem,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text
                   style={[
-                    styles.actionPillSep,
-                    { backgroundColor: colors.borderPrimary },
+                    styles.actionPillText,
+                    { color: colors.textTertiary },
                   ]}
-                />
-              )}
-              {canDeletePost && (
+                >
+                  Editar
+                </Text>
+              </Pressable>
+            )}
+            {isOwnPost && canDeletePost && (
+              <View
+                style={[
+                  styles.actionPillSep,
+                  { backgroundColor: colors.borderPrimary },
+                ]}
+              />
+            )}
+            {canDeletePost && (
+              <Pressable
+                onPress={handleConfirmDeletePost}
+                style={({ pressed }) => [
+                  styles.actionPillItem,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.actionPillText,
+                    { color: colors.textTertiary },
+                  ]}
+                >
+                  Eliminar
+                </Text>
+              </Pressable>
+            )}
+            {!isOwnPost && onReportPost ? (
+              <>
+                {canDeletePost ? (
+                  <View
+                    style={[
+                      styles.actionPillSep,
+                      { backgroundColor: colors.borderPrimary },
+                    ]}
+                  />
+                ) : null}
                 <Pressable
-                  onPress={handleConfirmDeletePost}
+                  onPress={() => onReportPost(post)}
                   style={({ pressed }) => [
                     styles.actionPillItem,
                     pressed && styles.pressed,
@@ -441,42 +394,14 @@ function PostCardInner({
                       { color: colors.textTertiary },
                     ]}
                   >
-                    Eliminar
+                    Reportar
                   </Text>
                 </Pressable>
-              )}
-              {!isOwnPost && onReportPost ? (
-                <>
-                  {canDeletePost ? (
-                    <View
-                      style={[
-                        styles.actionPillSep,
-                        { backgroundColor: colors.borderPrimary },
-                      ]}
-                    />
-                  ) : null}
-                  <Pressable
-                    onPress={() => onReportPost(post)}
-                    style={({ pressed }) => [
-                      styles.actionPillItem,
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.actionPillText,
-                        { color: colors.textTertiary },
-                      ]}
-                    >
-                      Reportar
-                    </Text>
-                  </Pressable>
-                </>
-              ) : null}
-            </View>
-          ) : null}
-        </View>
-      )}
+              </>
+            ) : null}
+          </View>
+        ) : null}
+      </View>
 
       {/* Inline comment input */}
       {showMainCommentInput ? (
@@ -515,13 +440,6 @@ function PostCardInner({
                     ? () => onReportComment(comment)
                     : undefined
                 }
-                editingContent={
-                  editingCommentId === comment.id ? commentEditDraft : null
-                }
-                onEditContentChange={setCommentEditDraft}
-                onEditSave={handleSaveComment}
-                onEditCancel={() => setEditingCommentId(null)}
-                isSavingEdit={false}
               />
 
               {/* Reply composer */}
@@ -570,6 +488,33 @@ function PostCardInner({
           )}
         </View>
       ) : null}
+
+      <PostCommentComposerModal
+        visible={Boolean(editTarget)}
+        onClose={() => setEditTarget(null)}
+        postId={post.id}
+        isSubmitting={false}
+        post={post}
+        mode={editTarget?.type === "comment" ? "edit-comment" : "edit-post"}
+        initialContent={
+          editTarget?.type === "comment"
+            ? editTarget.comment.content
+            : post.content
+        }
+        canSubmitEmptyContent={
+          editTarget?.type === "comment"
+            ? Boolean(editTarget.comment.imageAsset)
+            : Boolean(post.imageAsset)
+        }
+        onEditSubmit={(content) => {
+          if (editTarget?.type === "comment") {
+            onEditComment(post.id, editTarget.comment.id, content);
+          } else {
+            onEditPost(post.id, content);
+          }
+          setEditTarget(null);
+        }}
+      />
     </View>
   );
 }
@@ -581,8 +526,9 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     card: {
       borderRadius: 12,
       borderWidth: 1,
-      marginHorizontal: 12,
-      marginVertical: 6,
+      marginHorizontal: 0,
+      marginBottom: 6,
+      marginTop: 0,
       paddingHorizontal: 14,
       paddingVertical: 12,
     },
@@ -721,39 +667,6 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     omittedText: {
       fontSize: 13,
       textAlign: "center",
-    },
-    editForm: {
-      gap: 8,
-      marginVertical: 4,
-    },
-    editInput: {
-      borderRadius: 8,
-      borderWidth: 1,
-      fontSize: 14,
-      lineHeight: 21,
-      minHeight: 88,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      textAlignVertical: "top",
-    },
-    editActions: {
-      flexDirection: "row",
-      gap: 8,
-    },
-    editButton: {
-      borderRadius: 8,
-      paddingHorizontal: 14,
-      paddingVertical: 7,
-    },
-    editButtonCancel: {
-      borderWidth: 1,
-    },
-    editButtonDisabled: {
-      opacity: 0.5,
-    },
-    editButtonText: {
-      fontSize: 13,
-      fontWeight: "600",
     },
     pressed: {
       opacity: 0.7,

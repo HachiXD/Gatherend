@@ -129,6 +129,7 @@ export default function PostDetailScreen() {
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [composerVisible, setComposerVisible] = useState(false);
+  const [openComposerImagePicker, setOpenComposerImagePicker] = useState(false);
   const [reportConfig, setReportConfig] = useState<ReportConfig | null>(null);
 
   const createComment = useCreateComment(boardId ?? "");
@@ -272,16 +273,31 @@ export default function PostDetailScreen() {
           },
         ]}
       >
-        <PostCommentFakeInput onPress={() => setComposerVisible(true)} />
+        <PostCommentFakeInput
+          onPress={() => {
+            setComposerVisible(true);
+          }}
+          onImagePress={() => {
+            setOpenComposerImagePicker(true);
+            setComposerVisible(true);
+          }}
+        />
       </View>
 
       <PostCommentComposerModal
         visible={composerVisible}
-        onClose={() => setComposerVisible(false)}
+        onClose={() => {
+          setComposerVisible(false);
+          setOpenComposerImagePicker(false);
+        }}
         postId={post.id}
         isSubmitting={createComment.isPending}
         onSubmit={handleCreateComment}
         post={post}
+        openImagePickerOnShow={openComposerImagePicker}
+        onImagePickerOpened={() => {
+          setOpenComposerImagePicker(false);
+        }}
       />
 
       {reportConfig ? (

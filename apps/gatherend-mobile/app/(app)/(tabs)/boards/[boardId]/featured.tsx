@@ -1,9 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { type Href, useLocalSearchParams, useRouter } from "expo-router";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   ActivityIndicator,
+  Animated,
+  Easing,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -17,6 +19,14 @@ import type { ForumPostPreview } from "@/src/features/forum/domain/post";
 import { useBoardFeatured } from "@/src/features/featured/hooks/use-board-featured";
 import type { FeaturedChannel } from "@/src/features/featured/domain/featured";
 import { useTheme } from "@/src/theme/theme-provider";
+import { useTogglePostLike } from "@/src/features/forum/hooks/use-toggle-post-like";
+
+function formatDate(value: string): string {
+  return new Intl.DateTimeFormat("es", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
 
 type HeroPostProps = {
   post: ForumPostPreview;
@@ -27,19 +37,56 @@ type HeroPostProps = {
   onPress: () => void;
 };
 
-function HeroPost({ post, boardId, styles, colors, mode, onPress }: HeroPostProps) {
+function HeroPost({
+  post,
+  boardId,
+  styles,
+  colors,
+  mode,
+  onPress,
+}: HeroPostProps) {
   const hasImage = !!post.imageAsset?.url;
+  const togglePostLike = useTogglePostLike(boardId);
+  const likeAnim = useRef(
+    new Animated.Value(post.isLikedByCurrentUser ? 1 : 0),
+  ).current;
+
+  useEffect(() => {
+    Animated.timing(likeAnim, {
+      toValue: post.isLikedByCurrentUser ? 1 : 0,
+      duration: 180,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [likeAnim, post.isLikedByCurrentUser]);
+
+  const heartOutlineOpacity = likeAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 0],
+  });
+  const heartFilledOpacity = likeAnim;
+  const heartScale = likeAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.08],
+  });
 
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.hero, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.hero,
+        {
+          borderColor: colors.borderPrimary,
+          backgroundColor: colors.bgEditForm,
+        },
+        pressed && styles.pressed,
+      ]}
     >
       {hasImage ? (
         <>
           <Image
             contentFit="cover"
-            source={{ uri: post.imageAsset!.url }}
+            source={{ uri: post.imageAsset!.url ?? undefined }}
             style={StyleSheet.absoluteFill}
           />
           <View
@@ -58,55 +105,159 @@ function HeroPost({ post, boardId, styles, colors, mode, onPress }: HeroPostProp
       ) : null}
 
       <View style={styles.heroContent}>
-        <View style={styles.heroAuthorRow}>
+        {/* Author row */}
+        <View style={styles.authorRow}>
           <UserAvatar
             avatarUrl={post.author.avatarAsset?.url}
             username={post.author.username}
-            size={28}
+            size={36}
           />
-          <Text style={[styles.heroAuthor, { color: colors.textPrimary }]} numberOfLines={1}>
-            {post.author.username}
-          </Text>
-          {post.pinnedAt ? (
-            <View style={[styles.heroPill, { backgroundColor: colors.bgTertiary }]}>
-              <Ionicons name="pin" size={9} color={colors.textSubtle} />
+          <View style={styles.authorMeta}>
+            <Text
+              style={[styles.username, { color: colors.textPrimary }]}
+              numberOfLines={1}
+            >
+              {post.author.username}
+            </Text>
+            <View style={styles.authorSubRow}>
+              {post.author.badge ? (
+                <>
+                  <Text style={[styles.badge, { color: colors.textTertiary }]}>
+                    {post.author.badge}
+                  </Text>
+                  <Text
+                    style={[styles.separator, { color: colors.textTertiary }]}
+                  >
+                    |
+                  </Text>
+                </>
+              ) : null}
+              <Text style={[styles.date, { color: colors.textTertiary }]}>
+                {formatDate(post.createdAt)}
+              </Text>
+              {post.pinnedAt ? (
+                <View
+                  style={[styles.pill, { backgroundColor: colors.bgTertiary }]}
+                >
+                  <Ionicons name="pin" size={10} color={colors.textSubtle} />
+                  <Text style={[styles.pillText, { color: colors.textSubtle }]}>
+                    Fijado
+                  </Text>
+                </View>
+              ) : null}
+              {post.lockedAt ? (
+                <View
+                  style={[styles.pill, { backgroundColor: colors.bgTertiary }]}
+                >
+                  <Ionicons
+                    name="lock-closed"
+                    size={10}
+                    color={colors.textSubtle}
+                  />
+                  <Text style={[styles.pillText, { color: colors.textSubtle }]}>
+                    Cerrado
+                  </Text>
+                </View>
+              ) : null}
             </View>
+          </View>
+        </View>
+
+        {/* Post body */}
+        <View style={styles.postBody}>
+          {post.title ? (
+            <Text
+              style={[styles.postTitle, { color: colors.textPrimary }]}
+              numberOfLines={3}
+            >
+              {post.title}
+            </Text>
           ) : null}
-          {post.lockedAt ? (
-            <View style={[styles.heroPill, { backgroundColor: colors.bgTertiary }]}>
-              <Ionicons name="lock-closed" size={9} color={colors.textSubtle} />
-            </View>
+          {post.contentSnippet ? (
+            <Text
+              style={[styles.heroSnippet, { color: colors.textSecondary }]}
+              numberOfLines={2}
+            >
+              {post.contentSnippet}
+            </Text>
           ) : null}
         </View>
 
-        {post.title ? (
-          <Text style={[styles.heroTitle, { color: colors.textPrimary }]} numberOfLines={3}>
-            {post.title}
-          </Text>
-        ) : null}
-
-        {post.contentSnippet ? (
-          <Text style={[styles.heroSnippet, { color: colors.textSecondary }]} numberOfLines={2}>
-            {post.contentSnippet}
-          </Text>
-        ) : null}
-
-        <View style={[styles.heroFooter, { borderTopColor: colors.borderPrimary }]}>
-          <Ionicons name="chatbubble-outline" size={13} color={colors.textTertiary} />
-          <Text style={[styles.heroMeta, { color: colors.textTertiary }]}>
-            {post.commentCount}
-          </Text>
-          <View style={{ flex: 1 }} />
-          <Ionicons
-            name={post.isLikedByCurrentUser ? "heart" : "heart-outline"}
-            size={13}
-            color={post.isLikedByCurrentUser ? "#e74c3c" : colors.textTertiary}
-          />
-          {post.likeCount > 0 ? (
-            <Text style={[styles.heroMeta, { color: colors.textTertiary }]}>
-              {post.likeCount}
-            </Text>
-          ) : null}
+        {/* Footer */}
+        <View style={[styles.footer, { borderTopColor: colors.borderPrimary }]}>
+          <View style={styles.footerLeft}>
+            <View
+              style={[
+                styles.statPill,
+                {
+                  backgroundColor: colors.bgTertiary,
+                  borderColor: colors.borderPrimary,
+                },
+              ]}
+            >
+              <Ionicons
+                name="chatbubble-outline"
+                size={20}
+                color={colors.textTertiary}
+              />
+              <Text
+                style={[styles.commentCount, { color: colors.textTertiary }]}
+              >
+                {post.commentCount}
+              </Text>
+            </View>
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation();
+                togglePostLike.mutate({
+                  postId: post.id,
+                  isLiked: post.isLikedByCurrentUser,
+                });
+              }}
+              style={({ pressed }) => [
+                styles.statPill,
+                styles.likeButton,
+                {
+                  backgroundColor: colors.bgTertiary,
+                  borderColor: colors.borderPrimary,
+                },
+                pressed && styles.likePressed,
+              ]}
+            >
+              <Animated.View
+                style={[
+                  styles.likeIconSwap,
+                  { transform: [{ scale: heartScale }] },
+                ]}
+              >
+                <Animated.View
+                  style={[
+                    styles.likeIconLayer,
+                    { opacity: heartOutlineOpacity },
+                  ]}
+                >
+                  <Ionicons
+                    name="heart-outline"
+                    size={18}
+                    color={colors.textTertiary}
+                  />
+                </Animated.View>
+                <Animated.View
+                  style={[
+                    styles.likeIconLayer,
+                    { opacity: heartFilledOpacity },
+                  ]}
+                >
+                  <Ionicons name="heart" size={18} color="#e74c3c" />
+                </Animated.View>
+              </Animated.View>
+              <Text
+                style={[styles.commentCount, { color: colors.textTertiary }]}
+              >
+                {post.likeCount ?? 0}
+              </Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     </Pressable>
@@ -121,7 +272,13 @@ type FeaturedChannelCardProps = {
   onPress: () => void;
 };
 
-function FeaturedChannelCard({ channel, styles, colors, mode, onPress }: FeaturedChannelCardProps) {
+function FeaturedChannelCard({
+  channel,
+  styles,
+  colors,
+  mode,
+  onPress,
+}: FeaturedChannelCardProps) {
   const imageUrl = channel.imageAsset?.url ?? null;
   const memberLabel = channel.memberCount === 1 ? "miembro" : "miembros";
 
@@ -130,7 +287,10 @@ function FeaturedChannelCard({ channel, styles, colors, mode, onPress }: Feature
       onPress={onPress}
       style={({ pressed }) => [
         styles.channelCard,
-        { backgroundColor: colors.bgTertiary, borderColor: colors.borderPrimary },
+        {
+          backgroundColor: colors.bgTertiary,
+          borderColor: colors.borderPrimary,
+        },
         imageUrl ? styles.channelCardWithImage : null,
         pressed && styles.channelCardPressed,
       ]}
@@ -168,16 +328,24 @@ function FeaturedChannelCard({ channel, styles, colors, mode, onPress }: Feature
         />
         <Ionicons
           color={colors.textPrimary}
-          name={channel.type === "VOICE" ? "volume-high" : "chatbubble-ellipses"}
+          name={
+            channel.type === "VOICE" ? "volume-high" : "chatbubble-ellipses"
+          }
           size={18}
         />
       </View>
 
       <View style={styles.channelCopy}>
-        <Text numberOfLines={1} style={[styles.channelName, { color: colors.textPrimary }]}>
+        <Text
+          numberOfLines={1}
+          style={[styles.channelName, { color: colors.textPrimary }]}
+        >
           /{channel.name}
         </Text>
-        <Text numberOfLines={1} style={[styles.channelMeta, { color: colors.textMuted }]}>
+        <Text
+          numberOfLines={1}
+          style={[styles.channelMeta, { color: colors.textMuted }]}
+        >
           {channel.memberCount} {memberLabel}
         </Text>
       </View>
@@ -332,55 +500,122 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
 
     // Hero
     hero: {
-      backgroundColor: colors.bgEditForm,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.borderPrimary,
-      minHeight: 200,
+      borderRadius: 12,
+      borderWidth: 1,
+      marginHorizontal: 0,
+      marginTop: 12,
+      marginBottom: 6,
       overflow: "hidden",
     },
     heroContent: {
-      gap: 6,
-      paddingHorizontal: 16,
-      paddingVertical: 16,
-    },
-    heroAuthorRow: {
-      alignItems: "center",
-      flexDirection: "row",
-      gap: 8,
-      marginBottom: 4,
-    },
-    heroAuthor: {
-      flex: 1,
-      fontSize: 13,
-      fontWeight: "700",
-      minWidth: 0,
-    },
-    heroPill: {
-      alignItems: "center",
-      borderRadius: 999,
-      height: 18,
-      justifyContent: "center",
-      width: 18,
-    },
-    heroTitle: {
-      fontSize: 20,
-      fontWeight: "800",
-      lineHeight: 26,
+      paddingHorizontal: 14,
+      paddingTop: 12,
+      paddingBottom: 8,
     },
     heroSnippet: {
-      fontSize: 14,
-      lineHeight: 20,
+      fontSize: 15,
+      lineHeight: 22,
     },
-    heroFooter: {
+
+    // Shared card styles (author row, body, footer)
+    authorRow: {
+      alignItems: "flex-start",
+      flexDirection: "row",
+      gap: 10,
+      marginBottom: 8,
+    },
+    authorMeta: {
+      flex: 1,
+      minWidth: 0,
+    },
+    username: {
+      fontSize: 15,
+      fontWeight: "700",
+    },
+    authorSubRow: {
+      alignItems: "center",
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 4,
+      marginTop: 1,
+    },
+    badge: {
+      fontSize: 12,
+    },
+    separator: {
+      fontSize: 12,
+    },
+    date: {
+      fontSize: 12,
+    },
+    pill: {
+      alignItems: "center",
+      borderRadius: 999,
+      flexDirection: "row",
+      gap: 3,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+    },
+    pillText: {
+      fontSize: 11,
+      fontWeight: "600",
+    },
+    postBody: {
+      gap: 6,
+    },
+    postTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      lineHeight: 24,
+    },
+    footer: {
       alignItems: "center",
       borderTopWidth: 1,
       flexDirection: "row",
       gap: 5,
-      marginTop: 8,
+      marginTop: 10,
       paddingTop: 8,
     },
-    heroMeta: {
-      fontSize: 13,
+    footerLeft: {
+      alignItems: "center",
+      flexDirection: "row",
+      gap: 8,
+    },
+    statPill: {
+      alignItems: "center",
+      borderRadius: 999,
+      borderWidth: 1,
+      flexDirection: "row",
+      gap: 4,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+    },
+    commentCount: {
+      fontSize: 16,
+    },
+    likeButton: {
+      minHeight: 32,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+    },
+    likeIconSwap: {
+      alignItems: "center",
+      height: 18,
+      justifyContent: "center",
+      position: "relative",
+      width: 18,
+    },
+    likeIconLayer: {
+      alignItems: "center",
+      height: 18,
+      justifyContent: "center",
+      left: 0,
+      position: "absolute",
+      top: 0,
+      width: 18,
+    },
+    likePressed: {
+      opacity: 0.7,
     },
 
     // Grid

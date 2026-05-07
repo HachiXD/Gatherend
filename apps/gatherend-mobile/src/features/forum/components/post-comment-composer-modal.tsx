@@ -1,13 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import { Image } from "expo-image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   View,
   type TextInput as NativeTextInput,
@@ -15,7 +17,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Text, TextInput } from "@/src/components/app-typography";
 import { UserAvatar } from "@/src/components/user-avatar";
-import { EmojiPanel } from "@/src/features/chat/components/emoji-panel";
 import type { UploadedFile } from "@/src/features/uploads/domain/uploaded-file";
 import { useUpload } from "@/src/features/uploads/hooks/use-upload";
 import { useTheme } from "@/src/theme/theme-provider";
@@ -23,18 +24,26 @@ import type { ForumPost, ForumPostComment } from "../domain/post";
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
+type ComposerMode = "create-comment" | "edit-post" | "edit-comment";
+
 type PostCommentComposerModalProps = {
   visible: boolean;
   onClose: () => void;
   postId: string;
   isSubmitting: boolean;
-  onSubmit: (
+  onSubmit?: (
     postId: string,
     content: string,
     imageAssetId?: string | null,
   ) => void;
   post: ForumPost;
   replyToComment?: ForumPostComment | null;
+  openImagePickerOnShow?: boolean;
+  onImagePickerOpened?: () => void;
+  mode?: ComposerMode;
+  initialContent?: string;
+  canSubmitEmptyContent?: boolean;
+  onEditSubmit?: (content: string) => void;
 };
 
 export function PostCommentComposerModal({
@@ -45,37 +54,78 @@ export function PostCommentComposerModal({
   onSubmit,
   post,
   replyToComment,
+  openImagePickerOnShow = false,
+  onImagePickerOpened,
+  mode = "create-comment",
+  initialContent = "",
+  canSubmitEmptyContent = false,
+  onEditSubmit,
 }: PostCommentComposerModalProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const inputRef = useRef<NativeTextInput>(null);
+  const imagePickerRequestHandledRef = useRef(false);
   const [content, setContent] = useState("");
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [filePreview, setFilePreview] = useState<UploadedFile | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   const { uploadFile, isUploading } = useUpload({
     onUploadError: setLocalError,
     onModerationBlock: setLocalError,
   });
 
-  const isReplying = Boolean(replyToComment);
-  const title = isReplying ? "Responder" : "Comentar";
+  const isEditing = mode !== "create-comment";
+  const isReplying = !isEditing && Boolean(replyToComment);
+  const title =
+    mode === "edit-post"
+      ? "Editar post"
+      : mode === "edit-comment"
+        ? "Editar comentario"
+        : isReplying
+          ? "Responder"
+          : "Comentar";
   const isBusy = isSubmitting || isUploading;
   const canSubmit =
-    (content.trim().length > 0 || Boolean(filePreview)) && !isBusy;
+    (content.trim().length > 0 ||
+      (!isEditing && Boolean(filePreview)) ||
+      (isEditing && canSubmitEmptyContent)) &&
+    !isBusy;
 
   useEffect(() => {
-    if (visible) {
+    if (visible && !openImagePickerOnShow) {
       // Small delay so modal animation completes before focusing
       const t = setTimeout(() => inputRef.current?.focus(), 150);
       return () => clearTimeout(t);
     }
-  }, [visible]);
+  }, [openImagePickerOnShow, visible]);
+
+  useEffect(() => {
+    if (!visible) return;
+
+    setContent(isEditing ? initialContent : "");
+    setFilePreview(null);
+    setLocalError(null);
+  }, [initialContent, isEditing, visible]);
+
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+
+    const showSubscription = Keyboard.addListener("keyboardDidShow", () => {
+      setKeyboardVisible(true);
+    });
+    const hideSubscription = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   function handleClose() {
     setContent("");
-    setShowEmojiPicker(false);
     setFilePreview(null);
     setLocalError(null);
     onClose();
@@ -83,15 +133,21 @@ export function PostCommentComposerModal({
 
   function handleSubmit() {
     if (!canSubmit) return;
-    onSubmit(postId, content.trim(), filePreview?.assetId ?? null);
+
+    if (isEditing) {
+      onEditSubmit?.(content.trim());
+    } else {
+      onSubmit?.(postId, content.trim(), filePreview?.assetId ?? null);
+    }
+
     setContent("");
-    setShowEmojiPicker(false);
     setFilePreview(null);
     setLocalError(null);
     onClose();
   }
 
-  async function handlePickImage() {
+  const handlePickImage = useCallback(async () => {
+    if (isEditing) return;
     if (isBusy) return;
     setLocalError(null);
 
@@ -132,15 +188,36 @@ export function PostCommentComposerModal({
         },
       });
       setFilePreview(uploaded);
-      setShowEmojiPicker(false);
     } catch {
       // error forwarded via onUploadError callback
     }
-  }
+  }, [filePreview, isBusy, isEditing, uploadFile]);
 
-  function handleEmojiSelect(emoji: string) {
-    setContent((prev) => `${prev}${emoji}`);
-  }
+  useEffect(() => {
+    if (isEditing) return;
+    if (!visible || !openImagePickerOnShow) return;
+    if (imagePickerRequestHandledRef.current) return;
+
+    imagePickerRequestHandledRef.current = true;
+    const t = setTimeout(() => {
+      onImagePickerOpened?.();
+      void handlePickImage();
+    }, 250);
+
+    return () => clearTimeout(t);
+  }, [
+    handlePickImage,
+    isEditing,
+    onImagePickerOpened,
+    openImagePickerOnShow,
+    visible,
+  ]);
+
+  useEffect(() => {
+    if (!visible || !openImagePickerOnShow) {
+      imagePickerRequestHandledRef.current = false;
+    }
+  }, [openImagePickerOnShow, visible]);
 
   const previewAuthor = isReplying
     ? replyToComment!.author.username
@@ -204,54 +281,68 @@ export function PostCommentComposerModal({
                   { color: colors.accentPrimary },
                 ]}
               >
-                Enviar
+                {isEditing ? "Guardar" : "Enviar"}
               </Text>
             )}
           </Pressable>
         </View>
 
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior={
+            Platform.OS === "ios"
+              ? "padding"
+              : keyboardVisible
+                ? "height"
+                : undefined
+          }
           style={styles.flex}
         >
-          <View style={styles.body}>
-            {/* Preview of post / comment being replied to */}
-            <View
-              style={[
-                styles.previewSection,
-                { borderBottomColor: colors.borderPrimary },
-              ]}
-            >
-              <View style={styles.previewRow}>
-                <UserAvatar
-                  avatarUrl={previewAvatarUrl}
-                  username={previewAuthor}
-                  size={32}
-                />
-                <View style={styles.previewContent}>
-                  <Text
-                    style={[styles.previewAuthor, { color: colors.textMuted }]}
-                  >
-                    {previewAuthor}
-                  </Text>
-                  <Text
-                    numberOfLines={3}
+          <ScrollView
+            contentContainerStyle={styles.bodyContent}
+            keyboardShouldPersistTaps="handled"
+            style={styles.body}
+          >
+            {!isEditing ? (
+              <View
+                style={[
+                  styles.previewSection,
+                  { borderBottomColor: colors.borderPrimary },
+                ]}
+              >
+                <View style={styles.previewRow}>
+                  <UserAvatar
+                    avatarUrl={previewAvatarUrl}
+                    username={previewAuthor}
+                    size={32}
+                  />
+                  <View style={styles.previewContent}>
+                    <Text
+                      style={[
+                        styles.previewAuthor,
+                        { color: colors.textMuted },
+                      ]}
+                    >
+                      {previewAuthor}
+                    </Text>
+                    <Text
+                      numberOfLines={3}
+                      style={[
+                        styles.previewText,
+                        { color: colors.textSecondary },
+                      ]}
+                    >
+                      {previewText}
+                    </Text>
+                  </View>
+                  <View
                     style={[
-                      styles.previewText,
-                      { color: colors.textSecondary },
+                      styles.replyLine,
+                      { backgroundColor: colors.borderPrimary },
                     ]}
-                  >
-                    {previewText}
-                  </Text>
+                  />
                 </View>
-                <View
-                  style={[
-                    styles.replyLine,
-                    { backgroundColor: colors.borderPrimary },
-                  ]}
-                />
               </View>
-            </View>
+            ) : null}
 
             {/* Composer */}
             <View style={styles.composerRow}>
@@ -260,14 +351,19 @@ export function PostCommentComposerModal({
                 value={content}
                 onChangeText={setContent}
                 placeholder={
-                  isReplying
-                    ? `Responder a ${previewAuthor}...`
-                    : "Escribe un comentario..."
+                  mode === "edit-post"
+                    ? "Editar post..."
+                    : mode === "edit-comment"
+                      ? "Editar comentario..."
+                      : isReplying
+                        ? `Responder a ${previewAuthor}...`
+                        : "Escribe un comentario..."
                 }
                 placeholderTextColor={colors.textTertiary}
                 style={[styles.input, { color: colors.textPrimary }]}
                 multiline
-                scrollEnabled
+                scrollEnabled={false}
+                preventTransientVerticalScroll
                 editable={!isBusy}
                 returnKeyType="default"
                 autoFocus={false}
@@ -277,116 +373,94 @@ export function PostCommentComposerModal({
             {localError ? (
               <Text style={styles.errorText}>{localError}</Text>
             ) : null}
-          </View>
+          </ScrollView>
 
-          <View style={styles.bottomArea}>
-            {filePreview ? (
+          {!isEditing ? (
+            <View style={styles.bottomArea}>
+              {filePreview ? (
+                <View
+                  style={[
+                    styles.filePreview,
+                    {
+                      backgroundColor: colors.bgTertiary,
+                      borderColor: colors.borderPrimary,
+                    },
+                  ]}
+                >
+                  <Image
+                    contentFit="cover"
+                    source={{ uri: filePreview.url }}
+                    style={styles.filePreviewImage}
+                  />
+                  <View style={styles.filePreviewCopy}>
+                    <Text
+                      numberOfLines={1}
+                      style={[
+                        styles.filePreviewName,
+                        { color: colors.textPrimary },
+                      ]}
+                    >
+                      {filePreview.name}
+                    </Text>
+                    <Text
+                      numberOfLines={1}
+                      style={[
+                        styles.filePreviewMeta,
+                        { color: colors.textMuted },
+                      ]}
+                    >
+                      Imagen ·{" "}
+                      {Math.max(1, Math.round(filePreview.size / 1024))} KB
+                    </Text>
+                  </View>
+                  <Pressable
+                    disabled={isBusy}
+                    onPress={() => setFilePreview(null)}
+                    style={({ pressed }) => [
+                      styles.filePreviewRemoveButton,
+                      pressed && !isBusy ? styles.pressed : null,
+                    ]}
+                  >
+                    <Ionicons color={colors.textMuted} name="close" size={19} />
+                  </Pressable>
+                </View>
+              ) : null}
+
               <View
                 style={[
-                  styles.filePreview,
-                  {
-                    backgroundColor: colors.bgTertiary,
-                    borderColor: colors.borderPrimary,
-                  },
+                  styles.footer,
+                  { borderTopColor: colors.borderPrimary },
                 ]}
               >
-                <Image
-                  contentFit="cover"
-                  source={{ uri: filePreview.url }}
-                  style={styles.filePreviewImage}
-                />
-                <View style={styles.filePreviewCopy}>
-                  <Text
-                    numberOfLines={1}
-                    style={[
-                      styles.filePreviewName,
-                      { color: colors.textPrimary },
+                <View style={styles.footerActions}>
+                  <Pressable
+                    disabled={isBusy}
+                    onPress={() => {
+                      void handlePickImage();
+                    }}
+                    style={({ pressed }) => [
+                      styles.footerIconButton,
+                      isBusy ? styles.disabledButton : null,
+                      pressed && !isBusy ? styles.pressed : null,
                     ]}
                   >
-                    {filePreview.name}
-                  </Text>
-                  <Text
-                    numberOfLines={1}
-                    style={[
-                      styles.filePreviewMeta,
-                      { color: colors.textMuted },
-                    ]}
-                  >
-                    Imagen · {Math.max(1, Math.round(filePreview.size / 1024))}{" "}
-                    KB
-                  </Text>
+                    {isUploading ? (
+                      <ActivityIndicator
+                        color={colors.textMuted}
+                        size="small"
+                      />
+                    ) : (
+                      <Ionicons
+                        color={colors.textMuted}
+                        name="image-outline"
+                        size={21}
+                      />
+                    )}
+                  </Pressable>
                 </View>
-                <Pressable
-                  disabled={isBusy}
-                  onPress={() => setFilePreview(null)}
-                  style={({ pressed }) => [
-                    styles.filePreviewRemoveButton,
-                    pressed && !isBusy ? styles.pressed : null,
-                  ]}
-                >
-                  <Ionicons color={colors.textMuted} name="close" size={19} />
-                </Pressable>
-              </View>
-            ) : null}
-
-            <View
-              style={[styles.footer, { borderTopColor: colors.borderPrimary }]}
-            >
-              <View style={styles.footerActions}>
-                <Pressable
-                  onPress={() => {
-                    setShowEmojiPicker((prev) => !prev);
-                  }}
-                  style={({ pressed }) => [
-                    styles.footerIconButton,
-                    showEmojiPicker ? styles.activeIconButton : null,
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <Ionicons
-                    color={colors.textMuted}
-                    name="happy-outline"
-                    size={21}
-                  />
-                </Pressable>
-                <Pressable
-                  disabled={isBusy}
-                  onPress={() => {
-                    void handlePickImage();
-                  }}
-                  style={({ pressed }) => [
-                    styles.footerIconButton,
-                    isBusy ? styles.disabledButton : null,
-                    pressed && !isBusy ? styles.pressed : null,
-                  ]}
-                >
-                  {isUploading ? (
-                    <ActivityIndicator color={colors.textMuted} size="small" />
-                  ) : (
-                    <Ionicons
-                      color={colors.textMuted}
-                      name="image-outline"
-                      size={21}
-                    />
-                  )}
-                </Pressable>
               </View>
             </View>
-
-            {showEmojiPicker ? (
-              <View
-                style={[
-                  styles.emojiPanel,
-                  {
-                    backgroundColor: colors.bgPrimary,
-                    borderColor: colors.borderPrimary,
-                  },
-                ]}
-              >
-                <EmojiPanel onSelect={handleEmojiSelect} />
-              </View>
-            ) : null}
-          </View>
+          ) : null}
         </KeyboardAvoidingView>
       </SafeAreaView>
     </Modal>
@@ -404,6 +478,9 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     body: {
       flex: 1,
       minHeight: 0,
+    },
+    bodyContent: {
+      flexGrow: 1,
     },
     bottomArea: {
       paddingBottom: 2,
@@ -474,10 +551,9 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     composerRow: {
       alignItems: "flex-start",
-      flex: 1,
       flexDirection: "row",
+      flexGrow: 1,
       minHeight: 0,
-
       paddingHorizontal: 16,
       paddingTop: 12,
     },
@@ -504,8 +580,9 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       borderWidth: 1,
       flexDirection: "row",
       gap: 10,
-      marginHorizontal: 16,
+      marginHorizontal: 10,
       marginTop: 10,
+      marginBottom: 10,
       minHeight: 56,
       paddingHorizontal: 10,
       paddingVertical: 8,
@@ -533,11 +610,6 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       justifyContent: "center",
       width: 32,
     },
-    emojiPanel: {
-      borderTopWidth: 1,
-      height: 290,
-      overflow: "hidden",
-    },
     footer: {
       borderTopWidth: 1,
       paddingHorizontal: 16,
@@ -554,9 +626,6 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       height: 32,
       justifyContent: "center",
       width: 32,
-    },
-    activeIconButton: {
-      opacity: 0.88,
     },
     disabledButton: {
       opacity: 0.4,

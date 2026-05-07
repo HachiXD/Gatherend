@@ -1,13 +1,7 @@
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import { Image } from "expo-image";
-import {
-  forwardRef,
-  useImperativeHandle,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -25,10 +19,6 @@ import type { UploadedFile } from "@/src/features/uploads/domain/uploaded-file";
 const MIN_INPUT_HEIGHT = 42;
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
-export type PostInlineCommentInputHandle = {
-  appendEmoji: (emoji: string) => void;
-};
-
 type PostInlineCommentInputProps = {
   postId: string;
   isSubmitting: boolean;
@@ -37,17 +27,15 @@ type PostInlineCommentInputProps = {
     content: string,
     imageAssetId?: string | null,
   ) => void;
-  onEmojiPickerPress?: () => void;
   onInputFocus?: () => void;
 };
 
-export const PostInlineCommentInput = forwardRef<
-  PostInlineCommentInputHandle,
-  PostInlineCommentInputProps
->(function PostInlineCommentInput(
-  { postId, isSubmitting, onSubmit, onEmojiPickerPress, onInputFocus },
-  ref,
-) {
+export function PostInlineCommentInput({
+  postId,
+  isSubmitting,
+  onSubmit,
+  onInputFocus,
+}: PostInlineCommentInputProps) {
   const profile = useProfile();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -55,7 +43,6 @@ export const PostInlineCommentInput = forwardRef<
   const [filePreview, setFilePreview] = useState<UploadedFile | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
   const inputRef = useRef<NativeTextInput>(null);
-  const contentRef = useRef("");
 
   const { uploadFile, isUploading } = useUpload({
     onUploadError: setLocalError,
@@ -66,16 +53,7 @@ export const PostInlineCommentInput = forwardRef<
   const trimmed = content.trim();
   const canSubmit = (trimmed.length > 0 || Boolean(filePreview)) && !isBusy;
 
-  useImperativeHandle(ref, () => ({
-    appendEmoji: (emoji) => {
-      const next = contentRef.current + emoji;
-      contentRef.current = next;
-      setContent(next);
-    },
-  }));
-
   function updateContent(next: string) {
-    contentRef.current = next;
     setContent(next);
   }
 
@@ -234,26 +212,13 @@ export const PostInlineCommentInput = forwardRef<
                   />
                 )}
               </Pressable>
-              <Pressable
-                onPress={onEmojiPickerPress}
-                style={({ pressed }) => [
-                  styles.inputActionButton,
-                  pressed ? styles.pressed : null,
-                ]}
-              >
-                <MaterialCommunityIcons
-                  color={colors.textMuted}
-                  name="emoticon-outline"
-                  size={20}
-                />
-              </Pressable>
             </View>
           </View>
         </View>
       </View>
     </View>
   );
-});
+}
 
 function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
   return StyleSheet.create({

@@ -1,0 +1,127 @@
+diff --git a/node_modules/react-native/Libraries/Components/TextInput/AndroidTextInputNativeComponent.js b/node_modules/react-native/Libraries/Components/TextInput/AndroidTextInputNativeComponent.js
+index 8cc1369..2723098 100644
+--- a/node_modules/react-native/Libraries/Components/TextInput/AndroidTextInputNativeComponent.js
++++ b/node_modules/react-native/Libraries/Components/TextInput/AndroidTextInputNativeComponent.js
+@@ -598,6 +598,7 @@ export type AndroidTextInputNativeProps = $ReadOnly<{
+    */
+   textAlignVertical?: ?string,
+   cursorColor?: ?ColorValue,
++  preventTransientVerticalScroll?: ?boolean,
+ 
+   /**
+    * "Private" fields used by TextInput.js and not users of this component directly
+@@ -685,6 +686,7 @@ export const __INTERNAL_VIEW_CONFIG: PartialViewConfig = {
+     fontSize: true,
+     onKeyPress: true,
+     cursorColor: {process: require('../../StyleSheet/processColor').default},
++    preventTransientVerticalScroll: true,
+     text: true,
+     showSoftInputOnFocus: true,
+     textAlign: true,
+diff --git a/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/views/textinput/ReactEditText.kt b/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/views/textinput/ReactEditText.kt
+index fb8f4b1..b26ef60 100644
+--- a/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/views/textinput/ReactEditText.kt
++++ b/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/views/textinput/ReactEditText.kt
+@@ -145,6 +145,7 @@ public open class ReactEditText public constructor(context: Context) : AppCompat
+   public var stateWrapper: StateWrapper? = null
+   internal var disableTextDiffing: Boolean = false
+   protected var isSettingTextFromState: Boolean = false
++  public var preventTransientVerticalScroll: Boolean = false
+ 
+   private var eventDispatcher: EventDispatcher? = null
+ 
+@@ -338,7 +339,23 @@ public open class ReactEditText public constructor(context: Context) : AppCompat
+     // We don't call super.setLineHeight() because LineHeight is fully managed by ReactNative
+   }
+ 
++  override fun scrollTo(x: Int, y: Int) {
++    if (preventTransientVerticalScroll && y > 0) {
++      super.scrollTo(x, 0)
++      return
++    }
++
++    super.scrollTo(x, y)
++  }
++
+   override fun onScrollChanged(horiz: Int, vert: Int, oldHoriz: Int, oldVert: Int) {
++    if (preventTransientVerticalScroll && vert > 0) {
++      super.scrollTo(horiz, 0)
++      super.onScrollChanged(horiz, 0, oldHoriz, oldVert)
++      scrollWatcher?.onScrollChanged(horiz, 0, oldHoriz, oldVert)
++      return
++    }
++
+     super.onScrollChanged(horiz, vert, oldHoriz, oldVert)
+     scrollWatcher?.onScrollChanged(horiz, vert, oldHoriz, oldVert)
+   }
+diff --git a/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/views/textinput/ReactTextInputManager.kt b/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/views/textinput/ReactTextInputManager.kt
+index 21244cd..b3e71c3 100644
+--- a/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/views/textinput/ReactTextInputManager.kt
++++ b/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/views/textinput/ReactTextInputManager.kt
+@@ -351,6 +351,16 @@ public open class ReactTextInputManager public constructor() :
+     }
+   }
+ 
++  @ReactProp(name = "preventTransientVerticalScroll", defaultBoolean = false)
++  public fun setPreventTransientVerticalScroll(
++      view: ReactEditText,
++      preventTransientVerticalScroll: Boolean,
++  ) {
++    view.preventTransientVerticalScroll = preventTransientVerticalScroll
++    if (preventTransientVerticalScroll && view.scrollY > 0) {
++      view.scrollTo(view.scrollX, 0)
++    }
++  }
++
+  @ReactProp(name = "onKeyPress", defaultBoolean = false)
+  public fun setOnKeyPress(view: ReactEditText, onKeyPress: Boolean) {
+    view.setOnKeyPress(onKeyPress)
+diff --git a/node_modules/react-native/ReactAndroid/hermes-engine/build.gradle.kts b/node_modules/react-native/ReactAndroid/hermes-engine/build.gradle.kts
+index 0a70ade..6dd8c48 100644
+--- a/node_modules/react-native/ReactAndroid/hermes-engine/build.gradle.kts
++++ b/node_modules/react-native/ReactAndroid/hermes-engine/build.gradle.kts
+@@ -103,6 +103,7 @@ val prefabHeadersDir = File("$buildDir/prefab-headers")
+ 
+ // We inject the JSI directory used inside the Hermes build with the -DJSI_DIR config.
+ val jsiDir = File(reactNativeRootDir, "ReactCommon/jsi")
++val jsiDirForCMake = jsiDir.absolutePath.replace("\\", "/")
+ 
+ val downloadHermesDest = File(downloadsDir, "hermes.tar.gz")
+ val downloadHermes by
+@@ -166,7 +167,7 @@ val configureBuildForHermes by
+               "-S",
+               ".",
+               "-B",
+               hermesBuildDir.toString(),
+-              "-DJSI_DIR=" + jsiDir.absolutePath,
++              "-DJSI_DIR=$jsiDirForCMake",
+               "-DCMAKE_BUILD_TYPE=Release",
+           )
+       if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+@@ -277,7 +278,7 @@ val buildCmakeBuildTask by
+             "-DANDROID_PIE=True",
+             "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON",
+             "-DIMPORT_HOST_COMPILERS=${File(hermesBuildDir, "ImportHostCompilers.cmake").toString()}",
+-            "-DJSI_DIR=${jsiDir}",
++            "-DJSI_DIR=$jsiDirForCMake",
+             "-DHERMES_BUILD_SHARED_JSI=True",
+             "-DHERMES_RELEASE_VERSION=for RN ${version}",
+             "-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True",
+diff --git a/node_modules/react-native/settings.gradle.kts b/node_modules/react-native/settings.gradle.kts
+index 62527f0..a90d431 100644
+--- a/node_modules/react-native/settings.gradle.kts
++++ b/node_modules/react-native/settings.gradle.kts
+@@ -35,9 +35,11 @@ project(":packages:react-native:ReactAndroid:hermes-engine").projectDir =
+ // for :packages and :packages:react-native as well as otherwise the build from
+ // source will fail with a missing folder exception.
+ 
+-project(":packages").projectDir = file("/tmp")
++val placeholderProjectDir = file("build/placeholder-projects").apply { mkdirs() }
+ 
+-project(":packages:react-native").projectDir = file("/tmp")
++project(":packages").projectDir = placeholderProjectDir
++
++project(":packages:react-native").projectDir = placeholderProjectDir
+ 
+ // Gradle properties defined in `gradle.properties` are not inherited by
+ // included builds, see https://github.com/gradle/gradle/issues/2534.

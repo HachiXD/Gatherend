@@ -1,4 +1,3 @@
-import { AssetContext, AssetVisibility } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import {
@@ -16,7 +15,6 @@ import { moderateDescription } from "@/lib/text-moderation";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import {
   UUID_REGEX,
-  findOwnedUploadedAsset,
   serializeProfileSummary,
   serializeUploadedAsset,
   uploadedAssetSummarySelect,
@@ -58,7 +56,14 @@ export async function PATCH(
 
     const { content, imageAssetId } = body;
 
-    if (content === undefined && imageAssetId === undefined) {
+    if (imageAssetId !== undefined) {
+      return NextResponse.json(
+        { error: "Post image cannot be edited" },
+        { status: 400 },
+      );
+    }
+
+    if (content === undefined) {
       return NextResponse.json(
         { error: "Nothing to update" },
         { status: 400 },
@@ -80,37 +85,6 @@ export async function PATCH(
         },
         { status: 400 },
       );
-    }
-
-    let resolvedImageAssetId: string | null | undefined = undefined;
-    if (imageAssetId !== undefined) {
-      if (imageAssetId === null || imageAssetId === "") {
-        resolvedImageAssetId = null;
-      } else if (
-        typeof imageAssetId !== "string" ||
-        !UUID_REGEX.test(imageAssetId)
-      ) {
-        return NextResponse.json(
-          { error: "Image asset ID must be a valid UUID" },
-          { status: 400 },
-        );
-      } else {
-        const imageAsset = await findOwnedUploadedAsset(
-          imageAssetId,
-          profile.id,
-          AssetContext.COMMUNITY_POST_IMAGE,
-          AssetVisibility.PUBLIC,
-        );
-
-        if (!imageAsset) {
-          return NextResponse.json(
-            { error: "Community post image asset not found" },
-            { status: 400 },
-          );
-        }
-
-        resolvedImageAssetId = imageAsset.id;
-      }
     }
 
     if (
@@ -172,10 +146,7 @@ export async function PATCH(
 
       const nextContent =
         content !== undefined ? trimmedContent : existingPost.content;
-      const nextImageAssetId =
-        resolvedImageAssetId !== undefined
-          ? resolvedImageAssetId
-          : existingPost.imageAssetId;
+      const nextImageAssetId = existingPost.imageAssetId;
 
       if (!nextContent && !nextImageAssetId) {
         throw new Error("POST_EMPTY");
@@ -216,9 +187,6 @@ export async function PATCH(
         where: { id: postId },
         data: {
           ...(content !== undefined && { content: trimmedContent }),
-          ...(resolvedImageAssetId !== undefined && {
-            imageAssetId: resolvedImageAssetId,
-          }),
         },
         select: {
           id: true,

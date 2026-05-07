@@ -65,6 +65,7 @@ export async function GET(
           boardId,
           deleted: false,
           createdAt: { gte: since },
+          imageAssetId: { not: null },
         },
         orderBy: [{ likeCount: "desc" }, { createdAt: "desc" }],
         take: TOP_POSTS_COUNT,
