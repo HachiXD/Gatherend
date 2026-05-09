@@ -2,21 +2,11 @@
   Change Forum/Wiki from fixed board-level surfaces to channel-owned spaces.
 
   This migration intentionally performs the ownership change in phases:
-  1. Add FORUM/WIKI channel types.
-  2. Add nullable channelId columns.
-  3. Create default Foro/Wiki channels for existing boards.
-  4. Backfill existing posts/wiki pages to those channels.
-  5. Make channelId required and remove old boardId ownership columns.
+  1. Add nullable channelId columns.
+  2. Create default Foro/Wiki channels for existing boards.
+  3. Backfill existing posts/wiki pages to those channels.
+  4. Make channelId required and remove old boardId ownership columns.
 */
-
--- AlterEnum
--- This migration adds more than one value to an enum.
--- With PostgreSQL versions 11 and earlier, this is not possible
--- in a single migration. This can be worked around by creating
--- multiple migrations, each migration adding only one value to
--- the enum.
-ALTER TYPE "ChannelType" ADD VALUE 'FORUM';
-ALTER TYPE "ChannelType" ADD VALUE 'WIKI';
 
 -- Drop old ownership foreign keys before reshaping the tables.
 ALTER TABLE "CommunityPost" DROP CONSTRAINT "CommunityPost_boardId_fkey";
