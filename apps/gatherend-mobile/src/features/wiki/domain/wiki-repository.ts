@@ -9,6 +9,7 @@ export type WikiRepository = {
   getWikiPages: (
     boardId: string,
     cursor?: string | null,
+    channelId?: string | null,
   ) => Promise<WikiPagePreviewsPage>;
   getWikiPage: (boardId: string, pageId: string) => Promise<WikiPage>;
   createWikiPage: (input: CreateWikiPageInput) => Promise<WikiPage>;

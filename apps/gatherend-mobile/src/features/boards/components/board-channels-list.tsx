@@ -297,11 +297,18 @@ export function BoardChannelsList({
 }: BoardChannelsListProps) {
   const { colors, mode } = useTheme();
   const styles = useMemo(() => createStyles(colors, mode), [colors, mode]);
+  const chatChannels = useMemo(
+    () =>
+      channels.filter(
+        (channel) => channel.type === "TEXT" || channel.type === "VOICE",
+      ),
+    [channels],
+  );
 
   return (
     <FlatList
       contentContainerStyle={styles.content}
-      data={channels}
+      data={chatChannels}
       keyExtractor={(item) => item.id}
       renderItem={({ item }) => (
         <ChannelRow

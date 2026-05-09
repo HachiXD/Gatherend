@@ -27,7 +27,7 @@ import { Button } from "@/components/ui/button";
 import { useModal } from "@/hooks/use-modal-store";
 import { ChannelType } from "@prisma/client";
 import { isModerator } from "@/lib/domain-client";
-import { Mic } from "lucide-react";
+import { BookOpenText, MessageSquare, Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SlashSVG } from "@/lib/slash";
 import { useTranslation } from "@/i18n";
@@ -238,7 +238,7 @@ export const CreateChannelModal = () => {
                     </FormLabel>
                     <FormControl>
                       <div
-                        className="flex rounded-lg border border-theme-border bg-theme-bg-edit-form/60 p-1"
+                        className="grid grid-cols-2 gap-1 rounded-lg border border-theme-border bg-theme-bg-edit-form/60 p-1"
                         role="group"
                         aria-labelledby="create-channel-type-label"
                       >
@@ -247,7 +247,7 @@ export const CreateChannelModal = () => {
                           disabled={isLoading}
                           onClick={() => field.onChange(ChannelType.TEXT)}
                           className={cn(
-                            "flex h-8 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md text-[14px] transition disabled:cursor-not-allowed disabled:opacity-70",
+                            "flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-md text-[14px] transition disabled:cursor-not-allowed disabled:opacity-70",
                             field.value === ChannelType.TEXT
                               ? "bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
                               : "bg-transparent text-theme-text-subtle hover:bg-theme-bg-secondary hover:text-theme-text-primary",
@@ -261,7 +261,7 @@ export const CreateChannelModal = () => {
                           disabled={isLoading}
                           onClick={() => field.onChange(ChannelType.VOICE)}
                           className={cn(
-                            "flex h-8 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md text-[14px] transition disabled:cursor-not-allowed disabled:opacity-70",
+                            "flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-md text-[14px] transition disabled:cursor-not-allowed disabled:opacity-70",
                             field.value === ChannelType.VOICE
                               ? "bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
                               : "bg-transparent text-theme-text-subtle hover:bg-theme-bg-secondary hover:text-theme-text-primary",
@@ -269,6 +269,34 @@ export const CreateChannelModal = () => {
                         >
                           <Mic className="h-5 w-5 shrink-0" />
                           <span>{t.modals.createChannel.voice}</span>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isLoading}
+                          onClick={() => field.onChange(ChannelType.FORUM)}
+                          className={cn(
+                            "flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-md text-[14px] transition disabled:cursor-not-allowed disabled:opacity-70",
+                            field.value === ChannelType.FORUM
+                              ? "bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
+                              : "bg-transparent text-theme-text-subtle hover:bg-theme-bg-secondary hover:text-theme-text-primary",
+                          )}
+                        >
+                          <MessageSquare className="h-5 w-5 shrink-0" />
+                          <span>Foro</span>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isLoading}
+                          onClick={() => field.onChange(ChannelType.WIKI)}
+                          className={cn(
+                            "flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-md text-[14px] transition disabled:cursor-not-allowed disabled:opacity-70",
+                            field.value === ChannelType.WIKI
+                              ? "bg-theme-channel-type-active-bg text-theme-channel-type-active-text"
+                              : "bg-transparent text-theme-text-subtle hover:bg-theme-bg-secondary hover:text-theme-text-primary",
+                          )}
+                        >
+                          <BookOpenText className="h-5 w-5 shrink-0" />
+                          <span>Wiki</span>
                         </button>
                       </div>
                     </FormControl>

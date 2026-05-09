@@ -261,7 +261,7 @@ export async function PATCH(
           id: true,
           post: {
             select: {
-              boardId: true,
+              channel: { select: { boardId: true } },
             },
           },
           content: true,
@@ -281,8 +281,8 @@ export async function PATCH(
 
       const member = await tx.member.findUnique({
         where: {
-          boardId_profileId: {
-            boardId: existingComment.post.boardId,
+            boardId_profileId: {
+            boardId: existingComment.post.channel.boardId,
             profileId: profile.id,
           },
         },
@@ -428,16 +428,20 @@ export async function DELETE(
           authorProfileId: true,
           post: {
             select: {
-              board: {
+              channel: {
                 select: {
-                  profileId: true,
-                  members: {
-                    where: {
-                      profileId: profile.id,
-                      role: { in: ["OWNER", "ADMIN", "MODERATOR"] },
+                  board: {
+                    select: {
+                      profileId: true,
+                      members: {
+                        where: {
+                          profileId: profile.id,
+                          role: { in: ["OWNER", "ADMIN", "MODERATOR"] },
+                        },
+                        select: { id: true },
+                        take: 1,
+                      },
                     },
-                    select: { id: true },
-                    take: 1,
                   },
                 },
               },
@@ -451,8 +455,8 @@ export async function DELETE(
       }
 
       const isAuthor = comment.authorProfileId === profile.id;
-      const isBoardOwner = comment.post.board?.profileId === profile.id;
-      const isBoardModerator = (comment.post.board?.members.length ?? 0) > 0;
+      const isBoardOwner = comment.post.channel.board.profileId === profile.id;
+      const isBoardModerator = comment.post.channel.board.members.length > 0;
 
       if (!isAuthor && !isBoardOwner && !isBoardModerator) {
         throw new Error("FORBIDDEN");

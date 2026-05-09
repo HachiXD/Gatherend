@@ -89,7 +89,11 @@ export default function BoardChatsScreen() {
     return null;
   }
 
-  if (board.channels.length === 0) {
+  const chatChannels = board.channels.filter(
+    (channel) => channel.type === "TEXT" || channel.type === "VOICE",
+  );
+
+  if (chatChannels.length === 0) {
     return (
       <View style={styles.centerState}>
         <Text style={styles.stateTitle}>Todavia no hay chats</Text>
@@ -104,7 +108,7 @@ export default function BoardChatsScreen() {
   return (
     <View style={styles.container}>
       <BoardChannelsList
-        channels={board.channels}
+        channels={chatChannels}
         onSelectChannel={(channelId) => {
           if (!boardId) return;
           router.replace({

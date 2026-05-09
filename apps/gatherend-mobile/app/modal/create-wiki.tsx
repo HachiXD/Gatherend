@@ -24,14 +24,17 @@ export default function CreateWikiModalScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { boardId } = useLocalSearchParams<{ boardId?: string }>();
+  const { boardId, channelId } = useLocalSearchParams<{
+    boardId?: string;
+    channelId?: string;
+  }>();
 
-  const createMutation = useCreateWikiPage(boardId ?? "");
+  const createMutation = useCreateWikiPage(boardId ?? "", channelId);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [imageUpload, setImageUpload] = useState("");
 
-  if (!boardId) {
+  if (!boardId || !channelId) {
     return <Redirect href="/boards" />;
   }
 
@@ -43,6 +46,7 @@ export default function CreateWikiModalScreen() {
     try {
       await createMutation.mutateAsync({
         boardId,
+        channelId,
         title: title.trim(),
         content: content.trim() || null,
         imageAssetId: getStoredUploadAssetId(imageUpload),

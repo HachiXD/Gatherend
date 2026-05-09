@@ -1,5 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
-import { AppBottomTabBar } from "@/src/features/navigation/components/app-bottom-tab-bar";
+import {
+  APP_TAB_BAR_BOTTOM_PADDING,
+  APP_TAB_BAR_CONTENT_HEIGHT,
+} from "@/src/features/navigation/components/app-bottom-tab-bar";
 import { useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import {
@@ -20,7 +23,9 @@ import {
   BoardQuickActionsMenu,
   type BoardQuickActionKey,
 } from "@/src/features/boards/components/board-quick-actions-menu";
+import { ChannelComposerAccessory } from "@/src/features/chat/components/channel-composer-accessory";
 import { useAppShellStore } from "@/src/features/navigation/stores/use-app-shell-store";
+import type { BoardHomeTab } from "@/src/features/navigation/stores/use-app-shell-store";
 import {
   canWriteWiki,
   isAdmin,
@@ -51,6 +56,7 @@ import { getBoardRules } from "@/src/features/rules/api/get-board-rules";
 import { boardRulesQueryKey } from "@/src/features/rules/hooks/use-board-rules";
 import { useBoardVoiceParticipantsSocket } from "@/src/features/voice/hooks/use-board-voice-participants-socket";
 import { useVoiceStore } from "@/src/features/voice/store/use-voice-store";
+import { useProfile } from "@/src/features/profile/providers/current-profile-provider";
 import { getWikiPages } from "@/src/features/wiki/application/get-wiki-pages";
 import {
   wikiPagesQueryKey,
@@ -84,6 +90,29 @@ const BOARD_SECTION_TABS = [
 
 type BoardSectionKey = (typeof BOARD_SECTION_TABS)[number]["key"];
 
+const OPTIMISTIC_DRAWER_SECTIONS = new Set<BoardSectionKey>([
+  "forum",
+  "home",
+  "invite",
+  "settings",
+  "wiki",
+]);
+
+const HOME_OPTIMISTIC_TABS = [
+  { key: "rules", label: "Reglas" },
+  { key: "chats", label: "Chats" },
+  { key: "forum", label: "Foro" },
+  { key: "featured", label: "Destacado" },
+  { key: "ranking", label: "Ranking" },
+] as const;
+
+const HOME_OPTIMISTIC_TAB_WIDTH = 110;
+
+function getHomeOptimisticTabIndex(tab: BoardHomeTab) {
+  const index = HOME_OPTIMISTIC_TABS.findIndex((item) => item.key === tab);
+  return index >= 0 ? index : 0;
+}
+
 let lastResolvedBoardSection: BoardSectionKey = "home";
 
 type DrawerChannelsPreviewProps = {
@@ -93,6 +122,7 @@ type DrawerChannelsPreviewProps = {
   styles: ReturnType<typeof createStyles>;
   colors: ReturnType<typeof useTheme>["colors"];
   boardColors: ReturnType<typeof generatePaletteFromBase> | null;
+  onChannelPressIn?: () => void;
   onSelectChannel: (channel: BoardChannel) => void;
 };
 
@@ -103,6 +133,7 @@ function DrawerChannelsPreview({
   styles,
   colors,
   boardColors,
+  onChannelPressIn,
   onSelectChannel,
 }: DrawerChannelsPreviewProps) {
   const sortedChannels = useMemo(
@@ -132,6 +163,7 @@ function DrawerChannelsPreview({
             return (
               <Pressable
                 key={channel.id}
+                onPressIn={onChannelPressIn}
                 onPress={() => onSelectChannel(channel)}
                 style={[
                   styles.drawerChannelRow,
@@ -175,7 +207,11 @@ function DrawerChannelsPreview({
                     name={
                       channel.type === "VOICE"
                         ? "volume-high-outline"
-                        : "chatbubble-ellipses-outline"
+                        : channel.type === "FORUM"
+                          ? "chatbox-outline"
+                          : channel.type === "WIKI"
+                            ? "book-outline"
+                            : "chatbubble-ellipses-outline"
                     }
                     size={16}
                   />
@@ -203,7 +239,7 @@ function DrawerChannelsPreview({
             boardColors ? { color: boardColors.textMuted } : null,
           ]}
         >
-          Todavia no hay chats.
+          Todavia no hay canales.
         </Text>
       )}
     </View>
@@ -258,15 +294,16 @@ export default function BoardShellLayout() {
   const router = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
+  const profile = useProfile();
   const { colors, mode } = useTheme();
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const setLastBoardId = useAppShellStore((state) => state.setLastBoardId);
+  const setIsBoardDrawerOpen = useAppShellStore(
+    (state) => state.setIsBoardDrawerOpen,
+  );
   const setLastBoardSection = useAppShellStore(
     (state) => state.setLastBoardSection,
-  );
-  const setBoardsTabBarReady = useAppShellStore(
-    (state) => state.setBoardsTabBarReady,
   );
   const lastBoardSection = useAppShellStore((state) => state.lastBoardSection);
   const { boardId, channelId } = useGlobalSearchParams<{
@@ -279,6 +316,11 @@ export default function BoardShellLayout() {
   const routeChannelId = Array.isArray(channelId) ? channelId[0] : channelId;
   const [drawerBoardId, setDrawerBoardId] = useState(routeBoardId);
   const activeBoardId = drawerBoardId ?? routeBoardId;
+  const optimisticHomeTab =
+    useAppShellStore((state) =>
+      activeBoardId ? state.lastHomeTabByBoardId[activeBoardId] : undefined,
+    ) ?? "rules";
+  const optimisticHomeTabIndex = getHomeOptimisticTabIndex(optimisticHomeTab);
   const {
     data: board,
     isError: boardError,
@@ -289,6 +331,23 @@ export default function BoardShellLayout() {
   const { data: userBoards = [], isFetched: userBoardsFetched } =
     useUserBoards();
   const boardDisplayAsset = board?.bannerAsset ?? board?.imageAsset ?? null;
+  const chatChannels = useMemo(
+    () =>
+      (board?.channels ?? []).filter(
+        (channel) => channel.type === "TEXT" || channel.type === "VOICE",
+      ),
+    [board?.channels],
+  );
+  const forumChannels = useMemo(
+    () =>
+      (board?.channels ?? []).filter((channel) => channel.type === "FORUM"),
+    [board?.channels],
+  );
+  const wikiChannels = useMemo(
+    () =>
+      (board?.channels ?? []).filter((channel) => channel.type === "WIKI"),
+    [board?.channels],
+  );
   const boardImageUrl = board
     ? getBoardImageUrl(boardDisplayAsset?.url, board.id, board.name, 512)
     : null;
@@ -322,12 +381,6 @@ export default function BoardShellLayout() {
 
   const isBoardPathname = pathname.startsWith("/boards/");
 
-  const handleBoardsTabBarLayout = useCallback(() => {
-    if (isBoardPathname) {
-      setBoardsTabBarReady(true);
-    }
-  }, [isBoardPathname, setBoardsTabBarReady]);
-
   useEffect(() => {
     if (boardLoading || !boardError) return;
     if (!userBoardsFetched) return;
@@ -360,8 +413,38 @@ export default function BoardShellLayout() {
   )?.key;
   const savedSectionRef = useRef<BoardSectionKey>(lastResolvedBoardSection);
   const currentSection = matchedSection ?? savedSectionRef.current;
+  const [optimisticSection, setOptimisticSection] =
+    useState<BoardSectionKey | null>(null);
+  const [optimisticTextChannel, setOptimisticTextChannel] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const pendingOptimisticNavigationRef = useRef<{
+    boardId: string;
+    channelId?: string;
+    section: BoardSectionKey;
+  } | null>(null);
+  const displayedSection = optimisticSection ?? currentSection;
+  const isPendingOptimisticTextChannel =
+    optimisticSection === "chats" &&
+    optimisticTextChannel !== null &&
+    routeChannelId !== optimisticTextChannel.id;
+  const isShowingPendingOptimisticSection =
+    optimisticSection !== null &&
+    (currentSection !== optimisticSection || isPendingOptimisticTextChannel);
+  console.log("[BoardSectionOptimistic render]", {
+    currentSection,
+    displayedSection,
+    isShowingPendingOptimisticSection,
+    isPendingOptimisticTextChannel,
+    matchedSection,
+    optimisticSection,
+    optimisticTextChannel,
+    pathname,
+    routeChannelId,
+  });
   const drawerTargetSection = matchedSection ?? lastBoardSection;
-  const isHome = currentSection === "home";
+  const isHome = displayedSection === "home";
   const resolvedTabLabel = (
     key: (typeof BOARD_SECTION_TABS)[number]["key"],
   ) => {
@@ -370,12 +453,16 @@ export default function BoardShellLayout() {
       BOARD_SECTION_TABS.find((t) => t.key === key)?.label ?? key;
     return custom && custom.trim() ? custom.trim() : fallback;
   };
-  const currentSectionTitle = resolvedTabLabel(currentSection);
+  const currentSectionTitle = resolvedTabLabel(displayedSection);
   const settingsSubviewTitle = getSettingsSubviewTitle(pathname);
   const boardTitle = board?.name ?? "Loading...";
   const routeChannel = routeChannelId
     ? (board?.channels.find((c) => c.id === routeChannelId) ?? null)
     : null;
+  const displayedRouteChannel =
+    displayedSection === "chats" && optimisticTextChannel
+      ? optimisticTextChannel
+      : routeChannel;
   const styles = useMemo(() => createStyles(colors, mode), [colors, mode]);
 
   useEffect(() => {
@@ -392,6 +479,35 @@ export default function BoardShellLayout() {
       setLastBoardSection(matchedSection);
     }
   }, [matchedSection, setLastBoardSection]);
+
+  useEffect(() => {
+    if (!optimisticSection) return;
+    const hasReachedOptimisticSection =
+      optimisticSection === "chats" && optimisticTextChannel
+        ? currentSection === "chats" && routeChannelId === optimisticTextChannel.id
+        : optimisticTextChannel
+          ? optimisticSection === currentSection &&
+            routeChannelId === optimisticTextChannel.id
+          : optimisticSection === currentSection;
+
+    if (hasReachedOptimisticSection) {
+      console.log("[BoardSectionOptimistic clear]", {
+        currentSection,
+        optimisticSection,
+        optimisticTextChannel,
+        pathname,
+        routeChannelId,
+      });
+      setOptimisticSection(null);
+      setOptimisticTextChannel(null);
+    }
+  }, [
+    currentSection,
+    optimisticSection,
+    optimisticTextChannel,
+    pathname,
+    routeChannelId,
+  ]);
 
   useEffect(() => {
     if (routeBoardId) setDrawerBoardId(routeBoardId);
@@ -472,10 +588,17 @@ export default function BoardShellLayout() {
           });
           break;
         case "post":
-          router.push({
-            pathname: "/modal/create-post",
-            params: { boardId: activeBoardId },
-          });
+          if (routeChannel?.type === "FORUM") {
+            router.push({
+              pathname: "/modal/create-post",
+              params: { boardId: activeBoardId, channelId: routeChannel.id },
+            });
+          } else {
+            router.replace({
+              pathname: "/boards/[boardId]/forum",
+              params: { boardId: activeBoardId },
+            });
+          }
           break;
         case "rules":
           router.replace({
@@ -484,14 +607,21 @@ export default function BoardShellLayout() {
           });
           break;
         case "wiki":
-          router.push({
-            pathname: "/modal/create-wiki",
-            params: { boardId: activeBoardId },
-          });
+          if (routeChannel?.type === "WIKI") {
+            router.push({
+              pathname: "/modal/create-wiki",
+              params: { boardId: activeBoardId, channelId: routeChannel.id },
+            });
+          } else {
+            router.replace({
+              pathname: "/boards/[boardId]/wiki",
+              params: { boardId: activeBoardId },
+            });
+          }
           break;
       }
     },
-    [activeBoardId, router],
+    [activeBoardId, routeChannel, router],
   );
 
   // foregroundX: screenWidth = drawer visible (foreground off-screen right)
@@ -499,31 +629,92 @@ export default function BoardShellLayout() {
   const foregroundX = useRef(
     new Animated.Value(Dimensions.get("window").width),
   ).current;
+  const [isDrawerOpen, setIsDrawerOpen] = useState(true);
 
   // When leaving boards, reset so next entry always lands on drawer
   useEffect(() => {
     if (!isBoardPathname) {
       foregroundX.setValue(Dimensions.get("window").width);
+      setIsBoardDrawerOpen(false);
     }
-  }, [isBoardPathname, foregroundX]);
+  }, [isBoardPathname, foregroundX, setIsBoardDrawerOpen]);
 
-  const showForeground = useCallback(() => {
+  const showForeground = useCallback((onFinish?: () => void) => {
+    setIsDrawerOpen(false);
+    setIsBoardDrawerOpen(false);
     Animated.spring(foregroundX, {
       toValue: 0,
       damping: 22,
       stiffness: 230,
       mass: 0.8,
       useNativeDriver: true,
-    }).start();
-  }, [foregroundX]);
+    }).start(({ finished }) => {
+      if (finished) {
+        onFinish?.();
+      }
+    });
+  }, [foregroundX, isDrawerOpen, pathname, setIsBoardDrawerOpen]);
 
   const showDrawer = useCallback(() => {
     Animated.timing(foregroundX, {
       toValue: screenWidth,
       duration: 180,
       useNativeDriver: true,
-    }).start();
-  }, [foregroundX, screenWidth]);
+    }).start(({ finished }) => {
+      if (finished) {
+        setIsDrawerOpen(true);
+        setIsBoardDrawerOpen(true);
+      }
+    });
+  }, [foregroundX, isDrawerOpen, pathname, screenWidth, setIsBoardDrawerOpen]);
+
+  const startPendingOptimisticNavigation = useCallback(() => {
+    const pending = pendingOptimisticNavigationRef.current;
+    console.log("[BoardSectionOptimistic startPending]", {
+      currentSection,
+      hasPending: Boolean(pending),
+      optimisticSection,
+      pending,
+      pathname,
+    });
+    if (!pending) return;
+    if (optimisticSection !== pending.section) return;
+
+    pendingOptimisticNavigationRef.current = null;
+    console.log("[BoardSectionOptimistic navigate/start]", {
+      channelId: pending.channelId,
+      currentSection,
+      optimisticSection,
+      pathname,
+      targetBoardId: pending.boardId,
+      targetSection: pending.section,
+    });
+    showForeground();
+    if (pending.channelId) {
+      if (pending.section === "forum") {
+        router.replace({
+          pathname: "/boards/[boardId]/forum/[channelId]",
+          params: { boardId: pending.boardId, channelId: pending.channelId },
+        });
+      } else if (pending.section === "wiki") {
+        router.replace({
+          pathname: "/boards/[boardId]/wiki/[channelId]",
+          params: { boardId: pending.boardId, channelId: pending.channelId },
+        });
+      } else {
+        router.replace({
+          pathname: "/boards/[boardId]/chats/[channelId]",
+          params: { boardId: pending.boardId, channelId: pending.channelId },
+        });
+      }
+      return;
+    }
+
+    router.replace({
+      pathname: getBoardSectionPathname(pending.section),
+      params: { boardId: pending.boardId },
+    });
+  }, [currentSection, optimisticSection, pathname, router, showForeground]);
 
   const handleSelectDrawerChannel = useCallback(
     (channel: BoardChannel) => {
@@ -543,13 +734,30 @@ export default function BoardShellLayout() {
         }
       }
 
-      showForeground();
-      router.replace({
-        pathname: "/boards/[boardId]/chats/[channelId]",
-        params: { boardId: activeBoardId, channelId: channel.id },
-      });
+      pendingOptimisticNavigationRef.current = {
+        boardId: activeBoardId,
+        channelId: channel.id,
+        section:
+          channel.type === "FORUM"
+            ? "forum"
+            : channel.type === "WIKI"
+              ? "wiki"
+              : "chats",
+      };
+      setOptimisticTextChannel(
+        channel.type === "TEXT" || channel.type === "VOICE"
+          ? { id: channel.id, name: channel.name }
+          : null,
+      );
+      setOptimisticSection(
+        channel.type === "FORUM"
+          ? "forum"
+          : channel.type === "WIKI"
+            ? "wiki"
+            : "chats",
+      );
     },
-    [activeBoardId, showForeground, router, startConnecting],
+    [activeBoardId, showForeground, startConnecting],
   );
 
   // Swipe left on drawer → show foreground
@@ -559,6 +767,7 @@ export default function BoardShellLayout() {
         onMoveShouldSetPanResponder: (_event, gesture) =>
           gesture.dx < -8 && Math.abs(gesture.dy) < Math.abs(gesture.dx),
         onPanResponderGrant: () => {
+          setIsBoardDrawerOpen(false);
           foregroundX.stopAnimation();
         },
         onPanResponderMove: (_event, gesture) => {
@@ -574,7 +783,14 @@ export default function BoardShellLayout() {
         },
         onPanResponderTerminate: showDrawer,
       }),
-    [foregroundX, screenWidth, showForeground, showDrawer],
+    [
+      foregroundX,
+      isDrawerOpen,
+      pathname,
+      screenWidth,
+      showForeground,
+      showDrawer,
+    ],
   );
 
   // Swipe right on foreground → show drawer
@@ -597,10 +813,22 @@ export default function BoardShellLayout() {
             showForeground();
           }
         },
-        onPanResponderTerminate: showForeground,
+        onPanResponderTerminate: () => {
+          showForeground();
+        },
       }),
-    [foregroundX, screenWidth, showForeground, showDrawer],
+    [
+      foregroundX,
+      isDrawerOpen,
+      pathname,
+      screenWidth,
+      showForeground,
+      showDrawer,
+    ],
   );
+  const bottomTabBarHeight =
+    APP_TAB_BAR_CONTENT_HEIGHT +
+    Math.max(insets.bottom, APP_TAB_BAR_BOTTOM_PADDING);
 
   return (
     <View style={styles.safeArea}>
@@ -608,8 +836,16 @@ export default function BoardShellLayout() {
         <Slot />
       ) : (
         <>
-          {/* BACKGROUND: drawer + tab bar — fixed, never moves */}
-          <View style={styles.background}>
+          {/* BACKGROUND: drawer only — fixed, never moves */}
+          <View
+            pointerEvents="box-none"
+            style={[
+              styles.background,
+              {
+                bottom: bottomTabBarHeight,
+              },
+            ]}
+          >
             <View
               style={[styles.drawerRow, { paddingTop: insets.top }]}
               {...drawerPanResponder.panHandlers}
@@ -622,6 +858,8 @@ export default function BoardShellLayout() {
                 onSelectBoard={(nextBoardId) => {
                   if (!nextBoardId || nextBoardId === activeBoardId) return;
                   setDrawerBoardId(nextBoardId);
+                  setIsDrawerOpen(true);
+                  setIsBoardDrawerOpen(true);
                   foregroundX.setValue(screenWidth);
                   router.replace({
                     pathname: getBoardSectionPathname(currentSection),
@@ -688,7 +926,7 @@ export default function BoardShellLayout() {
                         tab.key !== "ranking" &&
                         tab.key !== "members",
                     ).map((tab) => {
-                      const isActive = tab.key === currentSection;
+                      const isActive = tab.key === displayedSection;
                       const iconColor = boardColors
                         ? boardColors.textPrimary
                         : colors.textPrimary;
@@ -724,6 +962,9 @@ export default function BoardShellLayout() {
                                 channels={board?.channels ?? []}
                                 colors={colors}
                                 isLoading={boardLoading && !board}
+                                onChannelPressIn={() => {
+                                  setIsBoardDrawerOpen(false);
+                                }}
                                 onSelectChannel={handleSelectDrawerChannel}
                                 styles={styles}
                               />
@@ -745,12 +986,32 @@ export default function BoardShellLayout() {
                           )}
                           <Pressable
                             key={tab.key}
+                            onPressIn={() => {
+                              setIsBoardDrawerOpen(false);
+                            }}
                             onPress={() => {
                               if (!activeBoardId) return;
-                              showForeground();
-                              router.replace({
-                                pathname: getBoardSectionPathname(tab.key),
-                                params: { boardId: activeBoardId },
+                              if (OPTIMISTIC_DRAWER_SECTIONS.has(tab.key)) {
+                                console.log("[BoardSectionOptimistic tap]", {
+                                  activeBoardId,
+                                  currentSection,
+                                  displayedSection,
+                                  pathname,
+                                  targetSection: tab.key,
+                                });
+                                pendingOptimisticNavigationRef.current = {
+                                  boardId: activeBoardId,
+                                  section: tab.key,
+                                };
+                                setOptimisticSection(tab.key);
+                                return;
+                              }
+
+                              showForeground(() => {
+                                router.replace({
+                                  pathname: getBoardSectionPathname(tab.key),
+                                  params: { boardId: activeBoardId },
+                                });
                               });
                             }}
                             style={({ pressed }) => [
@@ -793,13 +1054,11 @@ export default function BoardShellLayout() {
               </View>
             </View>
 
-            <View onLayout={handleBoardsTabBarLayout}>
-              <AppBottomTabBar activeTab="boards" />
-            </View>
           </View>
 
           {/* FOREGROUND: slides over background — translateX screenWidth=hidden, 0=visible */}
           <Animated.View
+            pointerEvents={isDrawerOpen ? "none" : "auto"}
             style={[
               styles.foreground,
               { transform: [{ translateX: foregroundX }] },
@@ -872,7 +1131,14 @@ export default function BoardShellLayout() {
                   {settingsSubviewTitle ?? boardTitle}
                 </Text>
                 <Text style={styles.headerSubtitle} numberOfLines={1}>
-                  {settingsSubviewTitle ? boardTitle : routeChannel ? `/ ${routeChannel.name}` : currentSectionTitle}
+                  {settingsSubviewTitle
+                    ? boardTitle
+                    : (displayedSection === "chats" ||
+                        displayedSection === "forum" ||
+                        displayedSection === "wiki") &&
+                      displayedRouteChannel
+                      ? `/ ${displayedRouteChannel.name}`
+                      : currentSectionTitle}
                 </Text>
               </View>
             </View>
@@ -882,7 +1148,86 @@ export default function BoardShellLayout() {
                 allowedActions={allowedQuickActions}
                 onAction={handleQuickAction}
               >
-                <Slot />
+                <View style={styles.routeContent}>
+                  <Slot />
+                  {isShowingPendingOptimisticSection ? (
+                    <View
+                      pointerEvents="auto"
+                      onLayout={() => {
+                        console.log("[BoardSectionOptimistic overlay/layout]", {
+                          currentSection,
+                          displayedSection,
+                          optimisticSection,
+                          pathname,
+                        });
+                        startPendingOptimisticNavigation();
+                      }}
+                      style={styles.pendingSectionOverlay}
+                    >
+                      {optimisticSection === "home" ? (
+                        <View style={styles.homeOptimisticShell}>
+                          <View style={styles.homeOptimisticTabBarWrapper}>
+                            <ScrollView
+                              horizontal
+                              bounces={false}
+                              contentContainerStyle={styles.homeOptimisticTabBar}
+                              showsHorizontalScrollIndicator={false}
+                            >
+                              {HOME_OPTIMISTIC_TABS.map((tab) => (
+                                <View
+                                  key={tab.key}
+                                  style={[
+                                    styles.homeOptimisticTabBarItem,
+                                    { width: HOME_OPTIMISTIC_TAB_WIDTH },
+                                  ]}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.homeOptimisticTabBarLabel,
+                                      tab.key === optimisticHomeTab
+                                        ? styles.homeOptimisticTabBarLabelActive
+                                        : null,
+                                    ]}
+                                  >
+                                    {tab.label}
+                                  </Text>
+                                </View>
+                              ))}
+                              <View
+                                style={[
+                                  styles.homeOptimisticTabBarIndicator,
+                                  {
+                                    transform: [
+                                      {
+                                        translateX:
+                                          HOME_OPTIMISTIC_TAB_WIDTH *
+                                          optimisticHomeTabIndex,
+                                      },
+                                    ],
+                                    width: HOME_OPTIMISTIC_TAB_WIDTH,
+                                  },
+                                ]}
+                              />
+                            </ScrollView>
+                          </View>
+                          <View style={styles.homeOptimisticContent} />
+                        </View>
+                      ) : null}
+                    </View>
+                  ) : null}
+                </View>
+                {isPendingOptimisticTextChannel &&
+                activeBoardId &&
+                optimisticTextChannel ? (
+                  <ChannelComposerAccessory
+                    boardId={activeBoardId}
+                    channelId={optimisticTextChannel.id}
+                    profileId={profile.id}
+                    windowKey={`channel:${optimisticTextChannel.id}`}
+                    replyTo={null}
+                    onClearReply={() => {}}
+                  />
+                ) : null}
               </BoardQuickActionsMenu>
             </View>
 
@@ -912,13 +1257,14 @@ function createStyles(
   return StyleSheet.create({
     safeArea: {
       flex: 1,
-      backgroundColor: colors.bgPrimary,
+      backgroundColor: "transparent",
     },
     // Fixed background: drawer + tab bar
     background: {
       ...StyleSheet.absoluteFillObject,
       backgroundColor: colors.bgSecondary,
       flexDirection: "column",
+      zIndex: 0,
     },
     drawerRow: {
       flex: 1,
@@ -929,6 +1275,7 @@ function createStyles(
       ...StyleSheet.absoluteFillObject,
       backgroundColor: colors.bgPrimary,
       flexDirection: "column",
+      zIndex: 1,
     },
     loadingOverlay: {
       alignItems: "center",
@@ -1000,6 +1347,49 @@ function createStyles(
       lineHeight: 22,
     },
     content: {
+      flex: 1,
+    },
+    routeContent: {
+      flex: 1,
+    },
+    pendingSectionOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: colors.bgPrimary,
+    },
+    homeOptimisticShell: {
+      flex: 1,
+    },
+    homeOptimisticTabBarWrapper: {
+      backgroundColor: colors.tabButtonBg,
+      borderBottomColor: colors.borderPrimary,
+      borderBottomWidth: 1,
+    },
+    homeOptimisticTabBar: {
+      flexDirection: "row",
+      position: "relative",
+    },
+    homeOptimisticTabBarItem: {
+      alignItems: "center",
+      paddingVertical: 11,
+    },
+    homeOptimisticTabBarLabel: {
+      color: colors.textMuted,
+      fontSize: 14,
+      fontWeight: "700",
+    },
+    homeOptimisticTabBarLabelActive: {
+      color: colors.textPrimary,
+    },
+    homeOptimisticTabBarIndicator: {
+      backgroundColor: colors.accentPrimary,
+      borderRadius: 1,
+      bottom: 0,
+      height: 2,
+      left: 0,
+      position: "absolute",
+    },
+    homeOptimisticContent: {
+      backgroundColor: colors.bgPrimary,
       flex: 1,
     },
     homeEdgeZone: {

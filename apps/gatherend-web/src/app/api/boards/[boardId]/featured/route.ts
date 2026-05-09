@@ -62,7 +62,7 @@ export async function GET(
     const [rawPosts, rawChannels] = await Promise.all([
       db.communityPost.findMany({
         where: {
-          boardId,
+          channel: { boardId, type: "FORUM" },
           deleted: false,
           createdAt: { gte: since },
           imageAssetId: { not: null },

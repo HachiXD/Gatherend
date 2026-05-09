@@ -7,11 +7,12 @@ import type { WikiPage, WikiPagePreviewsPage } from "../domain/wiki";
 
 export function createWikiHttpDataSource(): WikiRepository {
   return {
-    async getWikiPages(boardId, cursor) {
-      const base = `/api/boards/${boardId}/wiki`;
-      const url = cursor
-        ? `${base}?cursor=${encodeURIComponent(cursor)}`
-        : base;
+    async getWikiPages(boardId, cursor, channelId) {
+      const params = new URLSearchParams();
+      if (cursor) params.set("cursor", cursor);
+      if (channelId) params.set("channelId", channelId);
+      const query = params.toString();
+      const url = `/api/boards/${boardId}/wiki${query ? `?${query}` : ""}`;
       const response = await nextApiFetch(url);
       if (!response.ok) {
         throw new Error(
@@ -37,11 +38,12 @@ export function createWikiHttpDataSource(): WikiRepository {
       return data.page;
     },
 
-    async createWikiPage({ boardId, title, content, imageAssetId }) {
+    async createWikiPage({ boardId, channelId, title, content, imageAssetId }) {
       const response = await nextApiFetch(`/api/boards/${boardId}/wiki`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          channelId,
           title,
           content: content ?? null,
           imageAssetId: imageAssetId ?? null,

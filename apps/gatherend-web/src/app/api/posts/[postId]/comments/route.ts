@@ -370,7 +370,7 @@ export async function POST(
         where: { id: postId },
         select: {
           id: true,
-          boardId: true,
+          channel: { select: { boardId: true } },
           deleted: true,
           lockedAt: true,
         },
@@ -384,12 +384,12 @@ export async function POST(
         throw new Error("POST_LOCKED");
       }
 
-      commentBoardId = post.boardId;
+      commentBoardId = post.channel.boardId;
 
       const member = await tx.member.findUnique({
         where: {
-          boardId_profileId: {
-            boardId: post.boardId,
+            boardId_profileId: {
+            boardId: post.channel.boardId,
             profileId: profile.id,
           },
         },

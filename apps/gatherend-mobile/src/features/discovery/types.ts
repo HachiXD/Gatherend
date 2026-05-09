@@ -6,7 +6,6 @@ export type DiscoveryBoard = {
   imageAsset: BoardImageAsset | null;
   bannerAsset: BoardImageAsset | null;
   memberCount: number;
-  recentPostCount7d: number;
 };
 
 export type DiscoveryBoardsPage = {

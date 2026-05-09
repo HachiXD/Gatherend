@@ -34,6 +34,7 @@ export type WikiPage = {
 
 export type CreateWikiPageInput = {
   boardId: string;
+  channelId: string;
   title: string;
   content?: string | null;
   imageAssetId?: string | null;

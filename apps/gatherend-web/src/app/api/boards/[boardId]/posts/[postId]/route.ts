@@ -135,7 +135,7 @@ export async function GET(
     }
 
     const post = await db.communityPost.findFirst({
-      where: { id: postId, boardId, deleted: false },
+      where: { id: postId, channel: { boardId, type: "FORUM" }, deleted: false },
       select: {
         id: true,
         title: true,

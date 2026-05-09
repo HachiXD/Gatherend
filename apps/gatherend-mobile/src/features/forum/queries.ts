@@ -1,8 +1,10 @@
-export const boardPostsQueryKey = (boardId: string) =>
-  ["forum", "posts", boardId] as const;
+export const boardPostsQueryKey = (boardId: string, channelId?: string | null) =>
+  ["forum", "posts", boardId, channelId ?? "all"] as const;
 
-export const boardPostPreviewsQueryKey = (boardId: string) =>
-  ["forum", "posts", boardId, "previews"] as const;
+export const boardPostPreviewsQueryKey = (
+  boardId: string,
+  channelId?: string | null,
+) => ["forum", "posts", boardId, channelId ?? "all", "previews"] as const;
 
 export const postQueryKey = (postId: string) =>
   ["forum", "post", postId] as const;

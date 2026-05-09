@@ -40,7 +40,6 @@ interface BoardMetadata {
   name: string;
   imageAsset: ReturnType<typeof serializeUploadedAsset>;
   memberCount: number;
-  recentPostCount7d: number;
 }
 
 interface CommunityPostFeedItem {
@@ -199,6 +198,7 @@ export async function GET(
     }
 
     const isPreview = searchParams.get("preview") === "true";
+    const channelIdParam = searchParams.get("channelId");
     const cursorParam = searchParams.get("cursor");
     const limitParam = parseInt(
       searchParams.get("limit") || String(PAGE_SIZE),
@@ -212,6 +212,13 @@ export async function GET(
 
     let cursorCreatedAt: Date | null = null;
     let cursorId: string | null = null;
+
+    if (channelIdParam && !UUID_REGEX.test(channelIdParam)) {
+      return NextResponse.json(
+        { error: "Invalid channel ID" },
+        { status: 400 },
+      );
+    }
 
     if (cursorParam) {
       if (cursorParam.length > MAX_CURSOR_LENGTH) {
@@ -245,7 +252,6 @@ export async function GET(
           id: true,
           name: true,
           memberCount: true,
-          recentPostCount7d: true,
           imageAsset: {
             select: uploadedAssetSummarySelect,
           },
@@ -264,7 +270,6 @@ export async function GET(
         name: board.name,
         imageAsset: serializeUploadedAsset(board.imageAsset),
         memberCount: board.memberCount,
-        recentPostCount7d: board.recentPostCount7d,
       };
     } else {
       const boardExists = await db.board.findFirst({
@@ -286,7 +291,12 @@ export async function GET(
     if (isPreview) {
       const previewPosts = await db.communityPost.findMany({
         where: {
-          boardId,
+          ...(channelIdParam
+            ? {
+                channelId: channelIdParam,
+                channel: { boardId, type: "FORUM" },
+              }
+            : { channel: { boardId, type: "FORUM" } }),
           deleted: false,
           ...(cursorCreatedAt && cursorId
             ? {
@@ -368,7 +378,12 @@ export async function GET(
 
     const posts = await db.communityPost.findMany({
       where: {
-        boardId,
+        ...(channelIdParam
+          ? {
+              channelId: channelIdParam,
+              channel: { boardId, type: "FORUM" },
+            }
+          : { channel: { boardId, type: "FORUM" } }),
         deleted: false,
         ...(cursorCreatedAt && cursorId
           ? {

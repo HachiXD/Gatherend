@@ -3,7 +3,6 @@ import { Image } from "expo-image";
 import { FlashList, FlashListRef } from "@shopify/flash-list";
 import { Redirect, useLocalSearchParams, useFocusEffect } from "expo-router";
 import {
-  memo,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -20,10 +19,7 @@ import {
   View,
 } from "react-native";
 import { useBoard } from "@/src/features/boards/hooks/use-board";
-import {
-  ChatInput,
-  type ChatInputHandle,
-} from "@/src/features/chat/components/chat-input";
+import { ChannelComposerAccessory } from "@/src/features/chat/components/channel-composer-accessory";
 import {
   ChatItem,
   getChatDateSeparatorLabel,
@@ -37,9 +33,7 @@ import {
 } from "@/src/features/report/components/report-screen";
 import type { ReportTargetType } from "@/src/features/report/api/submit-report";
 import type { ChannelMessage } from "@/src/features/chat/types";
-import { EmojiPanel } from "@/src/features/chat/components/emoji-panel";
 import { GoToRecentButton } from "@/src/features/chat/components/go-to-recent-button";
-import { StickerPanel } from "@/src/features/chat/components/sticker-panel";
 import { WelcomeMessageCard } from "@/src/features/chat/components/welcome-message-card";
 import { getMessageAuthor } from "@/src/features/chat/utils/message-author";
 import { getChannelMessages } from "@/src/features/chat/api/get-channel-messages";
@@ -51,7 +45,6 @@ import {
 } from "@/src/features/chat/hooks/use-chat-message-window";
 import { useChannelRoomSubscription } from "@/src/features/chat/hooks/use-channel-room-subscription";
 import { useChannelSocket } from "@/src/features/chat/hooks/use-channel-socket";
-import { useChatAccessoryPanel } from "@/src/features/chat/hooks/use-chat-accessory-panel";
 import { useProfile } from "@/src/features/profile/providers/current-profile-provider";
 import { useChannelReadState } from "@/src/features/notifications/hooks/use-channel-read-state";
 import { VoiceCallView } from "@/src/features/voice/components/voice-call-view";
@@ -183,84 +176,6 @@ function ChatPaginationLoader({ placement }: { placement: "top" | "bottom" }) {
     </View>
   );
 }
-
-const ChannelComposerAccessory = memo(function ChannelComposerAccessory({
-  boardId,
-  channelId,
-  profileId,
-  windowKey,
-  replyTo,
-  onClearReply,
-}: {
-  boardId: string;
-  channelId: string;
-  profileId: string;
-  windowKey: string;
-  replyTo: ChatMessage | null;
-  onClearReply: () => void;
-}) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
-  const chatInputRef = useRef<ChatInputHandle>(null);
-  const {
-    activePanel,
-    closePanel,
-    isComposerCompact,
-    onInputFocus,
-    openPanel,
-    panelAnimatedStyle,
-  } = useChatAccessoryPanel();
-
-  return (
-    <>
-      <View pointerEvents="none" style={styles.composerTopSpacer} />
-      <ChatInput
-        ref={chatInputRef}
-        bottomInset={0}
-        context={{ type: "channel", boardId, channelId }}
-        isComposerCompact={isComposerCompact}
-        windowKey={windowKey}
-        replyTo={replyTo}
-        onClearReply={onClearReply}
-        onEmojiPickerPress={() => {
-          if (activePanel === "emoji") {
-            closePanel();
-          } else {
-            openPanel("emoji");
-          }
-        }}
-        onInputFocus={() => {
-          onInputFocus();
-        }}
-        onStickerPickerPress={() => {
-          if (activePanel === "sticker") {
-            closePanel();
-          } else {
-            openPanel("sticker");
-          }
-        }}
-      />
-
-      <View style={[styles.pickerPanel, panelAnimatedStyle]}>
-        {activePanel === "sticker" ? (
-          <StickerPanel
-            profileId={profileId}
-            onSelect={(sticker) => {
-              void chatInputRef.current?.sendSticker(sticker);
-            }}
-          />
-        ) : null}
-        {activePanel === "emoji" ? (
-          <EmojiPanel
-            onSelect={(emoji) => {
-              chatInputRef.current?.appendEmoji(emoji);
-            }}
-          />
-        ) : null}
-      </View>
-    </>
-  );
-});
 
 export default function BoardChannelScreen() {
   const { colors } = useTheme();
@@ -875,14 +790,6 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       backgroundColor: colors.borderPrimary,
       flex: 1,
       height: 1,
-    },
-    pickerPanel: {
-      backgroundColor: colors.bgPrimary,
-      borderTopColor: colors.borderPrimary,
-      borderTopWidth: 1,
-    },
-    composerTopSpacer: {
-      height: 8,
     },
     centerState: {
       alignItems: "center",

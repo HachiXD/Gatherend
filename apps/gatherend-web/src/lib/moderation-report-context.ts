@@ -169,10 +169,14 @@ export async function loadCommunityPostContextForReport(targetId: string) {
       content: true,
       deleted: true,
       createdAt: true,
-      board: {
+      channel: {
         select: {
-          id: true,
-          name: true,
+          board: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
       },
       author: {
@@ -190,7 +194,7 @@ export async function loadCommunityPostContextForReport(targetId: string) {
     content: post.content,
     deleted: post.deleted,
     createdAt: post.createdAt.toISOString(),
-    board: post.board,
+    board: post.channel.board,
     author: serializeModerationProfile(post.author),
   };
 }
@@ -207,10 +211,14 @@ export async function loadCommunityPostCommentContextForReport(targetId: string)
         select: {
           id: true,
           content: true,
-          board: {
+          channel: {
             select: {
-              id: true,
-              name: true,
+              board: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
             },
           },
         },
@@ -243,7 +251,7 @@ export async function loadCommunityPostCommentContextForReport(targetId: string)
     post: {
       id: comment.post.id,
       content: comment.post.content,
-      board: comment.post.board,
+      board: comment.post.channel.board,
     },
     author: serializeModerationProfile(comment.author),
     replyToComment: comment.replyToComment

@@ -9,10 +9,8 @@ import {
   Users,
   MessagesSquare,
   MessageSquare,
-  FileText,
   BookOpenText,
   ScrollText,
-  BarChart3,
   Trophy,
 } from "lucide-react";
 import { useBoardNavigationStore } from "@/stores/board-navigation-store";
@@ -293,19 +291,6 @@ export const BoardLeftbar = ({
                 {board.channels.length}
               </span>
             </div>
-          </div>
-
-          {/* Posts — full width horizontal */}
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-theme-border-secondary bg-[var(--theme-channel-type-active-soft-bg)] px-3 py-2">
-            <div className="flex items-center gap-2">
-              <FileText className="h-5.5 w-5.5 shrink-0 text-theme-text-primary/50" />
-              <p className="text-[15px] font-medium tracking-[0.06em] text-theme-text-primary/70">
-                Posts esta semana
-              </p>
-            </div>
-            <span className="text-[16px] font-medium leading-none text-theme-text-subtle tabular-nums">
-              {board.recentPostCount7d}
-            </span>
           </div>
 
           {/* Descripción */}

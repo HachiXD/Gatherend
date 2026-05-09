@@ -42,7 +42,6 @@ export async function GET(
         name: true,
         profileId: true,
         memberCount: true,
-        recentPostCount7d: true,
         imageAsset: {
           select: uploadedAssetSummarySelect,
         },
@@ -70,7 +69,6 @@ export async function GET(
       imageAsset: serializeUploadedAsset(board.imageAsset),
       bannerAsset: serializeUploadedAsset(board.bannerAsset),
       memberCount: board.memberCount,
-      recentPostCount7d: board.recentPostCount7d,
       canDeleteAnyPost: isOwner || memberIsModerator,
       isMember: myMember !== null,
     });

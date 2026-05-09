@@ -3,7 +3,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import BoardFeaturedScreen from "./featured";
 import BoardForumScreen from "./forum";
 import BoardRankingScreen from "./ranking";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -16,6 +16,10 @@ import {
 } from "react-native";
 import { BoardChannelsList } from "@/src/features/boards/components/board-channels-list";
 import { useBoard } from "@/src/features/boards/hooks/use-board";
+import {
+  type BoardHomeTab,
+  useAppShellStore,
+} from "@/src/features/navigation/stores/use-app-shell-store";
 import { useVoiceStore } from "@/src/features/voice/store/use-voice-store";
 import { useBoardRules } from "@/src/features/rules/hooks/use-board-rules";
 import { useTheme } from "@/src/theme/theme-provider";
@@ -30,7 +34,7 @@ import { Text } from "@/src/components/app-typography";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-type HomeTabKey = "rules" | "chats" | "forum" | "featured" | "ranking";
+type HomeTabKey = BoardHomeTab;
 
 const HOME_TABS: Array<{ key: HomeTabKey; label: string }> = [
   { key: "rules", label: "Reglas" },
@@ -40,12 +44,17 @@ const HOME_TABS: Array<{ key: HomeTabKey; label: string }> = [
   { key: "ranking", label: "Ranking" },
 ];
 
-const INITIAL_TAB_INDEX = 1; // Chats
+const INITIAL_TAB_INDEX = 0; // Rules
 const RULES_TAB_INDEX = 0;
 const CHATS_TAB_INDEX = 1;
 const FORUM_TAB_INDEX = 2;
 const FEATURED_TAB_INDEX = 3;
 const RANKING_TAB_INDEX = 4;
+
+function getHomeTabIndex(tab: HomeTabKey | undefined) {
+  const index = HOME_TABS.findIndex((item) => item.key === tab);
+  return index >= 0 ? index : INITIAL_TAB_INDEX;
+}
 
 function normalizeDominantColor(raw: string | null | undefined) {
   if (!raw) return null;
@@ -200,7 +209,11 @@ function ChatsContent({
 
   if (!board) return null;
 
-  if (board.channels.length === 0) {
+  const chatChannels = board.channels.filter(
+    (channel) => channel.type === "TEXT" || channel.type === "VOICE",
+  );
+
+  if (chatChannels.length === 0) {
     return (
       <View style={styles.centerState}>
         <Text style={styles.stateTitle}>Todavía no hay chats</Text>
@@ -214,7 +227,7 @@ function ChatsContent({
   return (
     <View style={styles.chatsContainer}>
       <BoardChannelsList
-        channels={board.channels}
+        channels={chatChannels}
         onSelectChannel={(channelId) => {
           if (!boardId) return;
           router.replace({
@@ -235,6 +248,10 @@ export default function BoardHomeScreen() {
   const { colors, mode } = useTheme();
   const { width: screenWidth } = useWindowDimensions();
   const { data: board } = useBoard(boardId);
+  const savedHomeTab = useAppShellStore((state) =>
+    boardId ? state.lastHomeTabByBoardId[boardId] : undefined,
+  );
+  const setLastHomeTab = useAppShellStore((state) => state.setLastHomeTab);
   const boardColors = useMemo(
     () =>
       getBoardDerivedColors(
@@ -250,17 +267,27 @@ export default function BoardHomeScreen() {
   );
 
   const TAB_WIDTH = 110;
+  const initialTabIndex = getHomeTabIndex(savedHomeTab);
 
-  const tabIndexRef = useRef(INITIAL_TAB_INDEX);
-  const [displayTabIndex, setDisplayTabIndex] = useState(INITIAL_TAB_INDEX);
+  const tabIndexRef = useRef(initialTabIndex);
+  const [displayTabIndex, setDisplayTabIndex] = useState(initialTabIndex);
   const animPageValue = useRef(
-    new Animated.Value(-screenWidth * INITIAL_TAB_INDEX),
+    new Animated.Value(-screenWidth * initialTabIndex),
   ).current;
+
+  useEffect(() => {
+    tabIndexRef.current = initialTabIndex;
+    setDisplayTabIndex(initialTabIndex);
+    animPageValue.setValue(-screenWidth * initialTabIndex);
+  }, [animPageValue, boardId, initialTabIndex, screenWidth]);
 
   const goToTab = useCallback(
     (index: number) => {
       tabIndexRef.current = index;
       setDisplayTabIndex(index);
+      if (boardId) {
+        setLastHomeTab(boardId, HOME_TABS[index]?.key ?? "rules");
+      }
       Animated.spring(animPageValue, {
         toValue: -screenWidth * index,
         damping: 22,
@@ -269,7 +296,7 @@ export default function BoardHomeScreen() {
         useNativeDriver: true,
       }).start();
     },
-    [animPageValue, screenWidth],
+    [animPageValue, boardId, screenWidth, setLastHomeTab],
   );
 
   const swipePanResponder = useMemo(

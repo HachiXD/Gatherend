@@ -20,7 +20,7 @@ export type UserBoard = {
   channels: UserBoardChannel[];
 };
 
-export type BoardChannelType = "TEXT" | "VOICE";
+export type BoardChannelType = "TEXT" | "VOICE" | "FORUM" | "WIKI";
 
 export type BoardChannel = {
   id: string;

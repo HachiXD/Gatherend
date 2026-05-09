@@ -1,4 +1,4 @@
-import { AssetContext, AssetVisibility } from "@prisma/client";
+import { AssetContext, AssetVisibility, ChannelType } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import {
@@ -51,12 +51,12 @@ export async function POST(req: Request) {
     }
 
     const {
-      boardId,
+      channelId,
       title,
       content,
       imageAssetId,
     }: {
-      boardId?: unknown;
+      channelId?: unknown;
       title?: unknown;
       content?: unknown;
       imageAssetId?: unknown;
@@ -65,9 +65,9 @@ export async function POST(req: Request) {
     const rawTitle = title !== undefined && typeof title === "string" ? title.trim() : null;
     const trimmedTitle = rawTitle && rawTitle.length > 0 ? rawTitle : null;
 
-    if (!boardId || typeof boardId !== "string" || !UUID_REGEX.test(boardId)) {
+    if (!channelId || typeof channelId !== "string" || !UUID_REGEX.test(channelId)) {
       return NextResponse.json(
-        { error: "Board ID is required and must be valid" },
+        { error: "Channel ID is required and must be valid" },
         { status: 400 },
       );
     }
@@ -162,10 +162,19 @@ export async function POST(req: Request) {
     }
 
     const post = await db.$transaction(async (tx) => {
+      const channel = await tx.channel.findUnique({
+        where: { id: channelId },
+        select: { id: true, boardId: true, type: true },
+      });
+
+      if (!channel || channel.type !== ChannelType.FORUM) {
+        throw new Error("FORUM_CHANNEL_NOT_FOUND");
+      }
+
       const member = await tx.member.findUnique({
         where: {
           boardId_profileId: {
-            boardId,
+            boardId: channel.boardId,
             profileId: profile.id,
           },
         },
@@ -215,7 +224,7 @@ export async function POST(req: Request) {
 
       const createdPost = await tx.communityPost.create({
         data: {
-          boardId,
+          channelId: channel.id,
           authorProfileId: profile.id,
           memberId: member.id,
           title: trimmedTitle ?? null,
@@ -224,7 +233,8 @@ export async function POST(req: Request) {
         },
         select: {
           id: true,
-          boardId: true,
+          channelId: true,
+          channel: { select: { boardId: true } },
           title: true,
           content: true,
           createdAt: true,
@@ -278,11 +288,12 @@ export async function POST(req: Request) {
       return createdPost;
     });
 
-    await expressMemberCache.invalidate(boardId, profile.id);
+    await expressMemberCache.invalidate(post.channel.boardId, profile.id);
 
     return NextResponse.json({
       id: post.id,
-      boardId: post.boardId,
+      boardId: post.channel.boardId,
+      channelId: post.channelId,
       title: post.title,
       content: post.content,
       imageAsset: serializeUploadedAsset(post.imageAsset),
@@ -298,6 +309,16 @@ export async function POST(req: Request) {
   } catch (error) {
     if (error instanceof Error && error.message === "NOT_A_MEMBER") {
       return NextResponse.json({ error: "Not a member" }, { status: 403 });
+    }
+
+    if (
+      error instanceof Error &&
+      error.message === "FORUM_CHANNEL_NOT_FOUND"
+    ) {
+      return NextResponse.json(
+        { error: "Forum channel not found" },
+        { status: 404 },
+      );
     }
 
     if (error instanceof Error) {

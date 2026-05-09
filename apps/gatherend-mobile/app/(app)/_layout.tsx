@@ -35,7 +35,13 @@ function ThemedAppStack() {
             },
           }}
         >
-          <Stack.Screen name="boards" options={{ animation: "fade" }} />
+          <Stack.Screen
+            name="boards"
+            options={{
+              animation: "fade",
+              contentStyle: { backgroundColor: "transparent" },
+            }}
+          />
           <Stack.Screen name="chats" options={{ animation: "fade" }} />
           <Stack.Screen name="discovery/index" options={{ animation: "fade" }} />
           <Stack.Screen name="me" options={{ animation: "fade" }} />

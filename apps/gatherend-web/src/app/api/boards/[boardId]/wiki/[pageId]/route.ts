@@ -1,4 +1,4 @@
-import { AssetContext, AssetVisibility } from "@prisma/client";
+import { AssetContext, AssetVisibility, ChannelType } from "@prisma/client";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { isAdmin } from "@/lib/domain";
@@ -51,7 +51,7 @@ export async function GET(
     }
 
     const page = await db.wikiPage.findFirst({
-      where: { id: pageId, boardId },
+      where: { id: pageId, channel: { boardId, type: ChannelType.WIKI } },
       select: {
         id: true,
         title: true,
@@ -211,7 +211,7 @@ export async function PATCH(
 
     const updatedPage = await db.$transaction(async (tx) => {
       const existingPage = await tx.wikiPage.findFirst({
-        where: { id: pageId, boardId },
+        where: { id: pageId, channel: { boardId, type: ChannelType.WIKI } },
         select: {
           id: true,
           authorProfileId: true,
@@ -252,7 +252,7 @@ export async function PATCH(
         },
         select: {
           id: true,
-          boardId: true,
+          channel: { select: { boardId: true } },
           title: true,
           content: true,
           createdAt: true,
@@ -282,7 +282,7 @@ export async function PATCH(
 
     return NextResponse.json({
       id: updatedPage.id,
-      boardId: updatedPage.boardId,
+      boardId: updatedPage.channel.boardId,
       title: updatedPage.title,
       content: updatedPage.content,
       imageAsset: serializeUploadedAsset(updatedPage.imageAsset),
@@ -339,7 +339,7 @@ export async function DELETE(
 
     await db.$transaction(async (tx) => {
       const page = await tx.wikiPage.findFirst({
-        where: { id: pageId, boardId },
+        where: { id: pageId, channel: { boardId, type: ChannelType.WIKI } },
         select: { id: true, authorProfileId: true },
       });
 

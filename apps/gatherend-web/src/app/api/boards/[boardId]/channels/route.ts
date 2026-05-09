@@ -267,6 +267,9 @@ export async function POST(
         select: { id: true },
       });
 
+      const shouldCreateChatReadState =
+        type === ChannelType.TEXT || type === ChannelType.VOICE;
+
       if (uniqueAutoJoinMembers.length > 0) {
         await tx.channelMember.createMany({
           data: uniqueAutoJoinMembers.map((boardMember) => ({
@@ -275,7 +278,9 @@ export async function POST(
           })),
           skipDuplicates: true,
         });
+      }
 
+      if (shouldCreateChatReadState && uniqueAutoJoinMembers.length > 0) {
         const welcomeStartSeq = await reserveChannelMessageSeqRange(
           tx,
           createdChannel.id,
@@ -294,16 +299,18 @@ export async function POST(
         });
       }
 
-      const finalChannelState = await tx.channel.findUniqueOrThrow({
-        where: { id: createdChannel.id },
-        select: { lastMessageSeq: true },
-      });
+      if (shouldCreateChatReadState) {
+        const finalChannelState = await tx.channel.findUniqueOrThrow({
+          where: { id: createdChannel.id },
+          select: { lastMessageSeq: true },
+        });
 
-      await upsertBoardReadStatesForChannel(tx, {
-        boardId,
-        channelId: createdChannel.id,
-        lastReadSeq: finalChannelState.lastMessageSeq,
-      });
+        await upsertBoardReadStatesForChannel(tx, {
+          boardId,
+          channelId: createdChannel.id,
+          lastReadSeq: finalChannelState.lastMessageSeq,
+        });
+      }
 
       const hydratedChannel = await tx.channel.findUniqueOrThrow({
         where: { id: createdChannel.id },

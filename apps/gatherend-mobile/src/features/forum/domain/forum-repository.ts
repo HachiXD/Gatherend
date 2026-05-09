@@ -9,14 +9,23 @@ import type {
 
 export type CreatePostInput = {
   boardId: string;
+  channelId: string;
   title?: string | null;
   content?: string | null;
   imageAssetId?: string | null;
 };
 
 export type ForumRepository = {
-  getBoardPosts: (boardId: string, cursor?: string | null) => Promise<ForumPostsPage>;
-  getBoardPostPreviews: (boardId: string, cursor?: string | null) => Promise<ForumPostPreviewsPage>;
+  getBoardPosts: (
+    boardId: string,
+    cursor?: string | null,
+    channelId?: string | null,
+  ) => Promise<ForumPostsPage>;
+  getBoardPostPreviews: (
+    boardId: string,
+    cursor?: string | null,
+    channelId?: string | null,
+  ) => Promise<ForumPostPreviewsPage>;
   getPost: (boardId: string, postId: string) => Promise<ForumPost>;
   getPostComments: (postId: string) => Promise<ForumPostCommentsResult>;
   createPost: (input: CreatePostInput) => Promise<ForumPost>;

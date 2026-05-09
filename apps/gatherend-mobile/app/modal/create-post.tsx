@@ -42,9 +42,12 @@ export default function CreatePostModalScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { boardId } = useLocalSearchParams<{ boardId?: string }>();
+  const { boardId, channelId } = useLocalSearchParams<{
+    boardId?: string;
+    channelId?: string;
+  }>();
 
-  const createPostMutation = useCreatePost(boardId ?? "");
+  const createPostMutation = useCreatePost(boardId ?? "", channelId);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [imagePreview, setImagePreview] = useState<UploadedFile | null>(null);
@@ -73,7 +76,7 @@ export default function CreatePostModalScreen() {
     };
   }, []);
 
-  if (!boardId) {
+  if (!boardId || !channelId) {
     return <Redirect href="/boards" />;
   }
 
@@ -87,6 +90,7 @@ export default function CreatePostModalScreen() {
     try {
       await createPostMutation.mutateAsync({
         boardId,
+        channelId,
         title: title.trim() || null,
         content: content.trim() || null,
         imageAssetId: imagePreview?.assetId ?? null,

@@ -13,6 +13,8 @@ import { useTheme } from "@/src/theme/theme-provider";
 const GEIST_BOLD = "Geist_700Bold";
 const GEIST_REGULAR = "Geist_400Regular";
 
+export const DISCOVERY_BOARD_CARD_HEIGHT = 246;
+
 type DiscoveryBoardCardProps = {
   board: DiscoveryBoard;
   onPress: (boardId: string) => void;
@@ -30,7 +32,6 @@ export const DiscoveryBoardCard = memo(function DiscoveryBoardCard({
   const styles = useMemo(() => createStyles(colors), [colors]);
   const bannerAsset = board.bannerAsset ?? board.imageAsset;
   const memberLabel = board.memberCount === 1 ? "miembro" : "miembros";
-  const postLabel = board.recentPostCount7d === 1 ? "post" : "posts";
 
   return (
     <Pressable
@@ -73,8 +74,7 @@ export const DiscoveryBoardCard = memo(function DiscoveryBoardCard({
           {board.name}
         </NativeText>
         <NativeText style={styles.meta}>
-          {board.memberCount} {memberLabel} · {board.recentPostCount7d}{" "}
-          {postLabel} esta semana
+          {board.memberCount} {memberLabel}
         </NativeText>
       </View>
     </Pressable>
@@ -88,6 +88,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       borderColor: colors.borderPrimary,
       borderRadius: 24,
       borderWidth: 1,
+      height: DISCOVERY_BOARD_CARD_HEIGHT,
     },
     cardPressed: {
       opacity: 0.94,
@@ -141,6 +142,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       fontFamily: GEIST_REGULAR,
       fontSize: 14,
       lineHeight: 20,
+      minHeight: 20,
     },
   });
 }

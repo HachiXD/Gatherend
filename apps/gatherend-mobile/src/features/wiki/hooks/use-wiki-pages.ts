@@ -6,15 +6,18 @@ import {
   WIKI_PAGES_STALE_TIME_MS,
 } from "../queries";
 
-export function useWikiPages(boardId: string | undefined) {
+export function useWikiPages(
+  boardId: string | undefined,
+  channelId?: string | null,
+) {
   return useInfiniteQuery({
-    queryKey: wikiPagesQueryKey(boardId ?? ""),
-    queryFn: ({ pageParam }) => getWikiPages(boardId!, pageParam),
+    queryKey: wikiPagesQueryKey(boardId ?? "", channelId),
+    queryFn: ({ pageParam }) => getWikiPages(boardId!, pageParam, channelId),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) =>
       lastPage.hasMore ? lastPage.nextCursor : undefined,
     staleTime: WIKI_PAGES_STALE_TIME_MS,
     gcTime: WIKI_PAGES_GC_TIME_MS,
-    enabled: !!boardId,
+    enabled: !!boardId && (channelId !== undefined ? !!channelId : true),
   });
 }

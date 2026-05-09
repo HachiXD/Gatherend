@@ -15,6 +15,16 @@ const DEFAULT_BOARD_CHANNELS = [
     type: ChannelType.VOICE,
     position: 2000,
   },
+  {
+    name: "Foro",
+    type: ChannelType.FORUM,
+    position: 3000,
+  },
+  {
+    name: "Wiki",
+    type: ChannelType.WIKI,
+    position: 4000,
+  },
 ] as const;
 
 export async function createDefaultBoardChannelsForOwner(
@@ -53,6 +63,14 @@ export async function createDefaultBoardChannelsForOwner(
         profileId: options.ownerProfileId,
       },
     });
+
+    if (
+      createdChannel.type !== ChannelType.TEXT &&
+      createdChannel.type !== ChannelType.VOICE
+    ) {
+      createdChannels.push(createdChannel);
+      continue;
+    }
 
     const seq = await reserveChannelMessageSeqRange(tx, createdChannel.id, 1);
 

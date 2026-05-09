@@ -111,7 +111,7 @@ export async function PATCH(
         where: { id: postId },
         select: {
           id: true,
-          boardId: true,
+          channel: { select: { boardId: true } },
           content: true,
           deleted: true,
           authorProfileId: true,
@@ -129,8 +129,8 @@ export async function PATCH(
 
       const member = await tx.member.findUnique({
         where: {
-          boardId_profileId: {
-            boardId: existingPost.boardId,
+            boardId_profileId: {
+            boardId: existingPost.channel.boardId,
             profileId: profile.id,
           },
         },
@@ -190,7 +190,7 @@ export async function PATCH(
         },
         select: {
           id: true,
-          boardId: true,
+          channel: { select: { boardId: true } },
           title: true,
           content: true,
           createdAt: true,
@@ -228,7 +228,7 @@ export async function PATCH(
 
     return NextResponse.json({
       id: updatedPost.id,
-      boardId: updatedPost.boardId,
+      boardId: updatedPost.channel.boardId,
       title: updatedPost.title,
       content: updatedPost.content,
       imageAsset: serializeUploadedAsset(updatedPost.imageAsset),
@@ -306,16 +306,20 @@ export async function DELETE(
           id: true,
           deleted: true,
           authorProfileId: true,
-          board: {
+          channel: {
             select: {
-              profileId: true,
-              members: {
-                where: {
-                  profileId: profile.id,
-                  role: { in: ["OWNER", "ADMIN", "MODERATOR"] },
+              board: {
+                select: {
+                  profileId: true,
+                  members: {
+                    where: {
+                      profileId: profile.id,
+                      role: { in: ["OWNER", "ADMIN", "MODERATOR"] },
+                    },
+                    select: { id: true },
+                    take: 1,
+                  },
                 },
-                select: { id: true },
-                take: 1,
               },
             },
           },
@@ -327,8 +331,8 @@ export async function DELETE(
       }
 
       const isAuthor = post.authorProfileId === profile.id;
-      const isBoardOwner = post.board.profileId === profile.id;
-      const isBoardModerator = post.board.members.length > 0;
+      const isBoardOwner = post.channel.board.profileId === profile.id;
+      const isBoardModerator = post.channel.board.members.length > 0;
 
       if (!isAuthor && !isBoardOwner && !isBoardModerator) {
         throw new Error("FORBIDDEN");

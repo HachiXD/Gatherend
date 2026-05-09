@@ -14,12 +14,12 @@ import type {
 
 export function createForumHttpDataSource(): ForumRepository {
   return {
-    async createPost({ boardId, title, content, imageAssetId }: CreatePostInput) {
+    async createPost({ boardId, channelId, title, content, imageAssetId }: CreatePostInput) {
       const response = await nextApiFetch(`/api/posts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          boardId,
+          channelId,
           title: title ?? null,
           content: content ?? null,
           imageAssetId: imageAssetId ?? null,
@@ -33,10 +33,12 @@ export function createForumHttpDataSource(): ForumRepository {
       return (await response.json()) as ForumPost;
     },
 
-    async getBoardPosts(boardId, cursor) {
-      const url = cursor
-        ? `/api/boards/${boardId}/posts?cursor=${encodeURIComponent(cursor)}`
-        : `/api/boards/${boardId}/posts`;
+    async getBoardPosts(boardId, cursor, channelId) {
+      const params = new URLSearchParams();
+      if (cursor) params.set("cursor", cursor);
+      if (channelId) params.set("channelId", channelId);
+      const query = params.toString();
+      const url = `/api/boards/${boardId}/posts${query ? `?${query}` : ""}`;
       const response = await nextApiFetch(url);
       if (!response.ok) {
         throw new Error(
@@ -46,9 +48,11 @@ export function createForumHttpDataSource(): ForumRepository {
       return (await response.json()) as ForumPostsPage;
     },
 
-    async getBoardPostPreviews(boardId, cursor) {
-      const base = `/api/boards/${boardId}/posts?preview=true`;
-      const url = cursor ? `${base}&cursor=${encodeURIComponent(cursor)}` : base;
+    async getBoardPostPreviews(boardId, cursor, channelId) {
+      const params = new URLSearchParams({ preview: "true" });
+      if (cursor) params.set("cursor", cursor);
+      if (channelId) params.set("channelId", channelId);
+      const url = `/api/boards/${boardId}/posts?${params.toString()}`;
       const response = await nextApiFetch(url);
       if (!response.ok) {
         throw new Error(

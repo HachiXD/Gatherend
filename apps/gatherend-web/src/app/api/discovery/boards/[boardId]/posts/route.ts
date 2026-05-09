@@ -25,7 +25,6 @@ interface BoardMetadata {
   name: string;
   imageAsset: ReturnType<typeof serializeUploadedAsset>;
   memberCount: number;
-  recentPostCount7d: number;
 }
 
 interface CommunityPostFeedItem {
@@ -217,7 +216,6 @@ export async function GET(
           id: true,
           name: true,
           memberCount: true,
-          recentPostCount7d: true,
           imageAsset: {
             select: uploadedAssetSummarySelect,
           },
@@ -236,7 +234,6 @@ export async function GET(
         name: board.name,
         imageAsset: serializeUploadedAsset(board.imageAsset),
         memberCount: board.memberCount,
-        recentPostCount7d: board.recentPostCount7d,
       };
     } else {
       const boardExists = await db.board.findUnique({
@@ -254,7 +251,7 @@ export async function GET(
 
     const posts = await db.communityPost.findMany({
       where: {
-        boardId,
+        channel: { boardId, type: "FORUM" },
         deleted: false,
         ...(cursorCreatedAt && cursorId
           ? {

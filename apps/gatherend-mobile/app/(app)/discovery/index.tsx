@@ -13,7 +13,10 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { useUserBoards } from "@/src/features/boards/hooks/use-user-boards";
-import { DiscoveryBoardCard } from "@/src/features/discovery/components/discovery-board-card";
+import {
+  DISCOVERY_BOARD_CARD_HEIGHT,
+  DiscoveryBoardCard,
+} from "@/src/features/discovery/components/discovery-board-card";
 import { useDiscoveryBoards } from "@/src/features/discovery/hooks/use-discovery-boards";
 import { useExploreBoard } from "@/src/features/discovery/hooks/use-explore-board";
 import type { DiscoveryBoard } from "@/src/features/discovery/types";
@@ -63,9 +66,9 @@ const BOARD_REPORT_CATEGORIES: ReportCategoryConfig[] = [
   },
 ];
 
-const DISCOVERY_CARD_HEIGHT = 272;
 const DISCOVERY_CARD_GAP = 16;
-const DISCOVERY_ITEM_HEIGHT = DISCOVERY_CARD_HEIGHT + DISCOVERY_CARD_GAP;
+const DISCOVERY_ITEM_HEIGHT =
+  DISCOVERY_BOARD_CARD_HEIGHT + DISCOVERY_CARD_GAP;
 
 type ReportConfig = {
   title: string;
@@ -168,6 +171,11 @@ export default function DiscoveryScreen() {
 
   const keyExtractor = useCallback((item: DiscoveryBoard) => item.id, []);
 
+  const itemSeparatorComponent = useCallback(
+    () => <View style={styles.itemSeparator} />,
+    [styles],
+  );
+
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
       void fetchNextPage();
@@ -256,6 +264,7 @@ export default function DiscoveryScreen() {
             data={boards}
             getItemLayout={getItemLayout}
             initialNumToRender={3}
+            ItemSeparatorComponent={itemSeparatorComponent}
             keyExtractor={keyExtractor}
             maxToRenderPerBatch={3}
             onEndReached={handleEndReached}
@@ -323,8 +332,10 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       lineHeight: 20,
     },
     listContent: {
-      gap: 16,
       paddingBottom: 20,
+    },
+    itemSeparator: {
+      height: DISCOVERY_CARD_GAP,
     },
     centerState: {
       alignItems: "center",

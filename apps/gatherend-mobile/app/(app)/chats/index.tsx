@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter, useFocusEffect } from "expo-router";
-import { useCallback, useMemo, useRef } from "react";
+import { useRouter } from "expo-router";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -25,10 +25,31 @@ import { Text } from "@/src/components/app-typography";
 export default function ChatsScreen() {
   const router = useRouter();
   const navigating = useRef(false);
+  const navigationResetTimer = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
-  useFocusEffect(useCallback(() => {
-    navigating.current = false;
-  }, []));
+  useEffect(
+    () => () => {
+      if (navigationResetTimer.current) {
+        clearTimeout(navigationResetTimer.current);
+      }
+    },
+    [],
+  );
+
+  const beginNavigation = useCallback(() => {
+    if (navigating.current) return false;
+    navigating.current = true;
+    if (navigationResetTimer.current) {
+      clearTimeout(navigationResetTimer.current);
+    }
+    navigationResetTimer.current = setTimeout(() => {
+      navigating.current = false;
+      navigationResetTimer.current = null;
+    }, 650);
+    return true;
+  }, []);
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const topInset = Math.max(
@@ -81,8 +102,7 @@ export default function ChatsScreen() {
           <Pressable
             accessibilityLabel="Agregar amigo"
             onPress={() => {
-              if (navigating.current) return;
-              navigating.current = true;
+              if (!beginNavigation()) return;
               router.push("/chats/add-friend");
             }}
             style={({ pressed }) => [
@@ -138,8 +158,7 @@ export default function ChatsScreen() {
               hidingConversationId={hideConversationMutation.variables ?? null}
               onHideConversation={handleHideConversation}
               onSelectConversation={(conversationId) => {
-                if (navigating.current) return;
-                navigating.current = true;
+                if (!beginNavigation()) return;
                 router.push({
                   pathname: "/chats/[conversationId]",
                   params: { conversationId },

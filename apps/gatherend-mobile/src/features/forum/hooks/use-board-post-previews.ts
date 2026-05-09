@@ -6,15 +6,19 @@ import {
   FORUM_POSTS_STALE_TIME_MS,
 } from "../queries";
 
-export function useBoardPostPreviews(boardId: string | undefined) {
+export function useBoardPostPreviews(
+  boardId: string | undefined,
+  channelId?: string | null,
+) {
   return useInfiniteQuery({
-    queryKey: boardPostPreviewsQueryKey(boardId ?? ""),
-    queryFn: ({ pageParam }) => getBoardPostPreviews(boardId!, pageParam),
+    queryKey: boardPostPreviewsQueryKey(boardId ?? "", channelId),
+    queryFn: ({ pageParam }) =>
+      getBoardPostPreviews(boardId!, pageParam, channelId),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) =>
       lastPage.hasMore ? lastPage.nextCursor : undefined,
     staleTime: FORUM_POSTS_STALE_TIME_MS,
     gcTime: FORUM_POSTS_GC_TIME_MS,
-    enabled: !!boardId,
+    enabled: !!boardId && (channelId !== undefined ? !!channelId : true),
   });
 }

@@ -131,58 +131,48 @@ export default function CreateChannelModalScreen() {
           <View style={styles.field}>
             <Text style={styles.label}>Tipo</Text>
             <View style={styles.typeSegment}>
-              <Pressable
-                disabled={isSubmitting}
-                onPress={() => setType("TEXT")}
-                style={({ pressed }) => [
-                  styles.typeOption,
-                  type === "TEXT" ? styles.typeOptionActive : null,
-                  pressed ? styles.buttonPressed : null,
-                ]}
-              >
-                <Ionicons
-                  color={type === "TEXT" ? colors.bgPrimary : colors.textMuted}
-                  name="chatbubble-outline"
-                  size={17}
-                />
-                <Text
-                  style={[
-                    styles.typeOptionText,
-                    type === "TEXT" ? styles.typeOptionTextActive : null,
+              {[
+                { key: "TEXT", label: "Texto", icon: "chatbubble-outline" },
+                { key: "VOICE", label: "Voz", icon: "mic-outline" },
+                { key: "FORUM", label: "Foro", icon: "chatbox-outline" },
+                { key: "WIKI", label: "Wiki", icon: "book-outline" },
+              ].map((option) => (
+                <Pressable
+                  key={option.key}
+                  disabled={isSubmitting}
+                  onPress={() => setType(option.key as BoardChannelType)}
+                  style={({ pressed }) => [
+                    styles.typeOption,
+                    type === option.key ? styles.typeOptionActive : null,
+                    pressed ? styles.buttonPressed : null,
                   ]}
                 >
-                  Texto
-                </Text>
-              </Pressable>
-
-              <Pressable
-                disabled={isSubmitting}
-                onPress={() => setType("VOICE")}
-                style={({ pressed }) => [
-                  styles.typeOption,
-                  type === "VOICE" ? styles.typeOptionActive : null,
-                  pressed ? styles.buttonPressed : null,
-                ]}
-              >
-                <Ionicons
-                  color={type === "VOICE" ? colors.bgPrimary : colors.textMuted}
-                  name="mic-outline"
-                  size={17}
-                />
-                <Text
-                  style={[
-                    styles.typeOptionText,
-                    type === "VOICE" ? styles.typeOptionTextActive : null,
-                  ]}
-                >
-                  Voz
-                </Text>
-              </Pressable>
+                  <Ionicons
+                    color={
+                      type === option.key ? colors.bgPrimary : colors.textMuted
+                    }
+                    name={option.icon as keyof typeof Ionicons.glyphMap}
+                    size={17}
+                  />
+                  <Text
+                    style={[
+                      styles.typeOptionText,
+                      type === option.key ? styles.typeOptionTextActive : null,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </Pressable>
+              ))}
             </View>
             <Text style={styles.helperText}>
               {type === "TEXT"
                 ? "Canal de mensajes de texto."
-                : "Canal de audio en tiempo real."}
+                : type === "VOICE"
+                  ? "Canal de audio en tiempo real."
+                  : type === "FORUM"
+                    ? "Canal para posts y discusiones."
+                    : "Canal para páginas de wiki."}
             </Text>
           </View>
 
@@ -294,18 +284,19 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       borderRadius: 16,
       borderWidth: 1,
       flexDirection: "row",
+      flexWrap: "wrap",
       gap: 6,
       padding: 4,
     },
     typeOption: {
       alignItems: "center",
       borderRadius: 12,
-      flex: 1,
       flexDirection: "row",
       gap: 8,
       justifyContent: "center",
       minHeight: 44,
       paddingHorizontal: 12,
+      width: "48%",
     },
     typeOptionActive: {
       backgroundColor: colors.textPrimary,

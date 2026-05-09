@@ -4,10 +4,10 @@ import { createForumHttpDataSource } from "./forum-http-datasource";
 const forumHttpDataSource = createForumHttpDataSource();
 
 export const forumRepository: ForumRepository = {
-  getBoardPosts: (boardId, cursor) =>
-    forumHttpDataSource.getBoardPosts(boardId, cursor),
-  getBoardPostPreviews: (boardId, cursor) =>
-    forumHttpDataSource.getBoardPostPreviews(boardId, cursor),
+  getBoardPosts: (boardId, cursor, channelId) =>
+    forumHttpDataSource.getBoardPosts(boardId, cursor, channelId),
+  getBoardPostPreviews: (boardId, cursor, channelId) =>
+    forumHttpDataSource.getBoardPostPreviews(boardId, cursor, channelId),
   getPost: (boardId, postId) =>
     forumHttpDataSource.getPost(boardId, postId),
   getPostComments: (postId) =>

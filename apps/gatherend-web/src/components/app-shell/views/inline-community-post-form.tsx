@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/file-upload";
 import { useUpload } from "@/hooks/use-upload";
 import { communityPostsKey } from "@/hooks/discovery/posts-feed/use-community-posts-feed";
-import type { BoardWithData } from "@/lib/boards/board-types";
 import { useTranslation } from "@/i18n";
 
 import { getStoredUploadAssetId } from "@/lib/upload-values";
@@ -118,11 +117,6 @@ export function InlineCommunityPostForm({
         title: trimmedTitle,
         content: trimmedContent,
         imageAssetId: imageAssetId ?? null,
-      });
-
-      queryClient.setQueryData<BoardWithData>(["board", communityId], (old) => {
-        if (!old) return old;
-        return { ...old, recentPostCount7d: old.recentPostCount7d + 1 };
       });
 
       await queryClient.invalidateQueries({

@@ -7,7 +7,7 @@ import { createWikiPage } from "../application/create-wiki-page";
 import { wikiPagesQueryKey } from "../queries";
 import type { WikiPagePreviewsPage } from "../domain/wiki";
 
-export function useCreateWikiPage(boardId: string) {
+export function useCreateWikiPage(boardId: string, channelId?: string | null) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -21,7 +21,7 @@ export function useCreateWikiPage(boardId: string) {
         author: newPage.author,
       };
       queryClient.setQueryData<InfiniteData<WikiPagePreviewsPage>>(
-        wikiPagesQueryKey(boardId),
+        wikiPagesQueryKey(boardId, channelId),
         (current) => {
           if (!current) return current;
           const [firstPage, ...rest] = current.pages;

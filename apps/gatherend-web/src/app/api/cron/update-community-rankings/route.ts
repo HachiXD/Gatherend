@@ -5,8 +5,7 @@
  *
  * This updates:
  * - memberCount: Total members of the board (from Member table)
- * - recentPostCount7d: Non-deleted posts created in the last 7 days
- * - rankingScore: LN(memberCount + 1) + recentPostCount7d * 0.2
+ * - rankingScore: LN(memberCount + 1)
  * - rankedAt: Timestamp of last update
  *
  * Only public boards (isPrivate = false) are ranked.
@@ -60,8 +59,6 @@ export async function POST(req: Request) {
 
     const startTime = Date.now();
 
-    const postsWindowStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-
     // Update all public board rankings in a single query
     const result = await db.$executeRaw`
       WITH board_stats AS (
@@ -72,23 +69,14 @@ export async function POST(req: Request) {
             SELECT COUNT(*)
             FROM "Member" m
             WHERE m."boardId" = b.id
-          ), 0)::INTEGER as member_count,
-          -- Count non-deleted posts in the last 7 days
-          COALESCE((
-            SELECT COUNT(*)
-            FROM "CommunityPost" p
-            WHERE p."boardId" = b.id
-              AND p.deleted = false
-              AND p."createdAt" >= ${postsWindowStart}
-          ), 0)::INTEGER as recent_post_count_7d
+          ), 0)::INTEGER as member_count
         FROM "Board" b
         WHERE b."isPrivate" = false
       )
       UPDATE "Board" b
       SET
         "memberCount" = bs.member_count,
-        "recentPostCount7d" = bs.recent_post_count_7d,
-        "rankingScore" = LN(bs.member_count + 1) + bs.recent_post_count_7d * 0.2,
+        "rankingScore" = LN(bs.member_count + 1),
         "rankedAt" = CURRENT_TIMESTAMP
       FROM board_stats bs
       WHERE b.id = bs.id

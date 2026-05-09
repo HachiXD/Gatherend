@@ -2,14 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { type Href, useRouter } from "expo-router";
 import { memo, useCallback, useEffect, useMemo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import Animated, {
-  interpolate,
-  interpolateColor,
-  useAnimatedProps,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "@/src/components/app-typography";
 import { useMentionStore } from "@/src/features/notifications/stores/use-mention-store";
@@ -19,8 +11,6 @@ import { useTheme } from "@/src/theme/theme-provider";
 
 export const APP_TAB_BAR_CONTENT_HEIGHT = 84;
 export const APP_TAB_BAR_BOTTOM_PADDING = 12;
-
-const AnimatedIonicons = Animated.createAnimatedComponent(Ionicons);
 
 type AppBottomTabKey = "boards" | "chats" | "discovery" | "me";
 type BoardSectionKey = "home" | "forum" | "wiki" | "chats" | "settings";
@@ -81,49 +71,16 @@ const TabIcon = memo(function TabIcon({
   name: keyof typeof Ionicons.glyphMap;
 }) {
   const { colors } = useTheme();
-  const progress = useSharedValue(focused ? 1 : 0);
-
-  useEffect(() => {
-    progress.value = withTiming(focused ? 1 : 0, {
-      duration: 140,
-    });
-  }, [focused, progress]);
-
-  const outlineStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0, 1], [1, 0]),
-  }));
-
-  const filledStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0, 1], [0, 1]),
-  }));
-
-  const iconProps = useAnimatedProps(() => ({
-    color: interpolateColor(
-      progress.value,
-      [0, 1],
-      [colors.textMutedAlt, colors.accentPrimary],
-    ),
-  }));
-
+  const iconColor = focused ? colors.accentPrimary : colors.textMutedAlt;
   const filledName = name.replace(
     "-outline",
     "",
   ) as keyof typeof Ionicons.glyphMap;
+  const iconName = focused ? filledName : name;
 
   return (
     <View style={styles.iconSlot}>
-      <Animated.View style={styles.iconWrapper}>
-        <Animated.View style={[styles.iconAbsolute, outlineStyle]}>
-          <AnimatedIonicons name={name} size={28} animatedProps={iconProps} />
-        </Animated.View>
-        <Animated.View style={[styles.iconAbsolute, filledStyle]}>
-          <AnimatedIonicons
-            name={filledName}
-            size={28}
-            animatedProps={iconProps}
-          />
-        </Animated.View>
-      </Animated.View>
+      <Ionicons color={iconColor} name={iconName} size={28} />
     </View>
   );
 });
@@ -307,17 +264,6 @@ const styles = StyleSheet.create({
     position: "relative",
     transform: [{ translateY: -4 }],
     width: 44,
-  },
-  iconWrapper: {
-    height: 28,
-    width: 28,
-  },
-  iconAbsolute: {
-    bottom: 0,
-    left: 0,
-    position: "absolute",
-    right: 0,
-    top: 0,
   },
   label: {
     fontSize: 13,

@@ -182,7 +182,7 @@ model AuthIdentity {
 
 model CommunityPost {
   id              String                 @id @default(uuid())
-  boardId         String
+  channelId       String
   memberId        String?
   authorProfileId String
   title           String?
@@ -195,7 +195,7 @@ model CommunityPost {
   lockedAt        DateTime?
   createdAt       DateTime               @default(now())
   updatedAt       DateTime               @updatedAt
-  board           Board                  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  channel         Channel                @relation(fields: [channelId], references: [id], onDelete: Cascade)
   member          Member?                @relation("MemberCommunityPosts", fields: [memberId], references: [id], onDelete: SetNull)
   author          Profile                @relation(fields: [authorProfileId], references: [id], onDelete: Cascade)
   imageAsset      UploadedAsset?         @relation("CommunityPostImageAsset", fields: [imageAssetId], references: [id], onDelete: SetNull)
@@ -205,8 +205,8 @@ model CommunityPost {
   @@index([memberId])
   @@index([authorProfileId])
   @@index([imageAssetId])
-  @@index([boardId, deleted, pinnedAt(sort: Desc), createdAt(sort: Desc), id(sort: Desc)])
-  @@index([boardId, deleted, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([channelId, deleted, pinnedAt(sort: Desc), createdAt(sort: Desc), id(sort: Desc)])
+  @@index([channelId, deleted, createdAt(sort: Desc), id(sort: Desc)])
 }
 
 model CommunityPostComment {
@@ -256,7 +256,6 @@ model Board {
   tabNames              Json?
   // Materialized fields for discovery feed ranking (updated by cron)
   memberCount           Int                      @default(0)
-  recentPostCount7d     Int                      @default(0)
   rankingScore          Float                    @default(0)
   rankedAt              DateTime                 @default(now())
   riskPoints            Int                      @default(0)
@@ -270,7 +269,6 @@ model Board {
   moderationActions     BoardModerationAction[]
   channels              Channel[]
   members               Member[]
-  posts                 CommunityPost[]
   reports               Report[]
   strikes               Strike[]
   investigations        BoardInvestigation[]
@@ -279,7 +277,6 @@ model Board {
   memberXpEvents        MemberXpEvent[]
   riskEvents            BoardRiskEvent[]
   rules                 BoardRules?
-  wikiPages             WikiPage[]
   scopedUploadedAssets  UploadedAsset[]          @relation("UploadedAssetBoardScope")
 
   @@index([profileId])
@@ -379,12 +376,15 @@ model Channel {
   profile        Profile?           @relation(fields: [profileId], references: [id])
   imageAsset     UploadedAsset?     @relation("ChannelImageAsset", fields: [imageAssetId], references: [id], onDelete: SetNull)
   channelMembers ChannelMember[]
+  forumPosts     CommunityPost[]
   readStates     ChannelReadState[]
   messages       Message[]
   reports        Report[]
+  wikiPages      WikiPage[]
 
   @@index([profileId])
   @@index([boardId])
+  @@index([boardId, type, position])
   @@index([imageAssetId])
 }
 
@@ -1037,6 +1037,8 @@ enum MemberPermission {
 enum ChannelType {
   TEXT
   VOICE
+  FORUM
+  WIKI
 }
 
 enum MessageType {
@@ -1160,18 +1162,18 @@ model BoardRules {
 
 model WikiPage {
   id              String         @id @default(uuid())
-  boardId         String
+  channelId       String
   authorProfileId String
   title           String
   content         String         @default("")
   imageAssetId    String?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
-  board           Board          @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  channel         Channel        @relation(fields: [channelId], references: [id], onDelete: Cascade)
   author          Profile        @relation(fields: [authorProfileId], references: [id], onDelete: Cascade)
   imageAsset      UploadedAsset? @relation("WikiPageImageAsset", fields: [imageAssetId], references: [id], onDelete: SetNull)
 
-  @@index([boardId, title])
+  @@index([channelId, title])
   @@index([authorProfileId])
   @@index([imageAssetId])
 }

@@ -4,8 +4,8 @@ import { createWikiHttpDataSource } from "./wiki-http-datasource";
 const wikiHttpDataSource = createWikiHttpDataSource();
 
 export const wikiRepository: WikiRepository = {
-  getWikiPages: (boardId, cursor) =>
-    wikiHttpDataSource.getWikiPages(boardId, cursor),
+  getWikiPages: (boardId, cursor, channelId) =>
+    wikiHttpDataSource.getWikiPages(boardId, cursor, channelId),
   getWikiPage: (boardId, pageId) =>
     wikiHttpDataSource.getWikiPage(boardId, pageId),
   createWikiPage: (input) => wikiHttpDataSource.createWikiPage(input),

@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
-import { AssetContext, AssetVisibility } from "@prisma/client";
+import { AssetContext, AssetVisibility, ChannelType } from "@prisma/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
 import {
@@ -51,6 +51,7 @@ export async function GET(
     }
 
     const { searchParams } = new URL(req.url);
+    const channelIdParam = searchParams.get("channelId");
     const cursorParam = searchParams.get("cursor");
     const limitParam = parseInt(
       searchParams.get("limit") || String(PAGE_SIZE),
@@ -63,6 +64,13 @@ export async function GET(
 
     let cursorCreatedAt: Date | null = null;
     let cursorId: string | null = null;
+
+    if (channelIdParam && !UUID_REGEX.test(channelIdParam)) {
+      return NextResponse.json(
+        { error: "Invalid channel ID" },
+        { status: 400 },
+      );
+    }
 
     if (cursorParam) {
       if (cursorParam.length > MAX_CURSOR_LENGTH) {
@@ -82,7 +90,12 @@ export async function GET(
 
     const pages = await db.wikiPage.findMany({
       where: {
-        boardId,
+        ...(channelIdParam
+          ? {
+              channelId: channelIdParam,
+              channel: { boardId, type: ChannelType.WIKI },
+            }
+          : { channel: { boardId, type: ChannelType.WIKI } }),
         ...(cursorCreatedAt && cursorId
           ? {
               OR: [
@@ -184,11 +197,19 @@ export async function POST(
       );
     }
 
-    const { title, content, imageAssetId } = body as {
+    const { title, content, imageAssetId, channelId } = body as {
       title?: unknown;
       content?: unknown;
       imageAssetId?: unknown;
+      channelId?: unknown;
     };
+
+    if (!channelId || typeof channelId !== "string" || !UUID_REGEX.test(channelId)) {
+      return NextResponse.json(
+        { error: "Wiki channel ID is required and must be valid" },
+        { status: 400 },
+      );
+    }
 
     if (!title || typeof title !== "string" || !title.trim()) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 });
@@ -249,9 +270,21 @@ export async function POST(
       resolvedImageAssetId = imageAsset.id;
     }
 
+    const wikiChannel = await db.channel.findFirst({
+      where: { id: channelId, boardId, type: ChannelType.WIKI },
+      select: { id: true },
+    });
+
+    if (!wikiChannel) {
+      return NextResponse.json(
+        { error: "Wiki channel not found" },
+        { status: 404 },
+      );
+    }
+
     const page = await db.wikiPage.create({
       data: {
-        boardId,
+        channelId: wikiChannel.id,
         authorProfileId: profile.id,
         title: trimmedTitle,
         content: trimmedContent,

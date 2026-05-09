@@ -1,5 +1,5 @@
-export const wikiPagesQueryKey = (boardId: string) =>
-  ["wiki", "pages", boardId] as const;
+export const wikiPagesQueryKey = (boardId: string, channelId?: string | null) =>
+  ["wiki", "pages", boardId, channelId ?? "all"] as const;
 
 export const wikiPageQueryKey = (boardId: string, pageId: string) =>
   ["wiki", "page", boardId, pageId] as const;

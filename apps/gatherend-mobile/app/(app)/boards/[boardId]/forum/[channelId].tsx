@@ -15,13 +15,16 @@ import { useTheme } from "@/src/theme/theme-provider";
 import type { ForumPostPreview } from "@/src/features/forum/domain/post";
 import { Text } from "@/src/components/app-typography";
 
-export default function BoardForumScreen() {
-  const { boardId } = useLocalSearchParams<{ boardId?: string }>();
+export default function BoardForumChannelScreen() {
+  const { boardId, channelId } = useLocalSearchParams<{
+    boardId?: string;
+    channelId?: string;
+  }>();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
-
   const { data: board } = useBoard(boardId);
+  const forumChannel = board?.channels.find((channel) => channel.id === channelId);
 
   const {
     data,
@@ -33,7 +36,7 @@ export default function BoardForumScreen() {
     fetchNextPage,
     refetch,
     isRefetching,
-  } = useBoardPostPreviews(boardId);
+  } = useBoardPostPreviews(boardId, channelId);
 
   const allPosts = useMemo(
     () => data?.pages.flatMap((page) => page.items) ?? [],
@@ -63,9 +66,7 @@ export default function BoardForumScreen() {
     return (
       <View style={styles.centerState}>
         <ActivityIndicator color={colors.accentPrimary} size="small" />
-        <Text style={[styles.stateText, { color: colors.textMuted }]}>
-          Cargando foro...
-        </Text>
+        <Text style={styles.stateText}>Cargando foro...</Text>
       </View>
     );
   }
@@ -73,24 +74,18 @@ export default function BoardForumScreen() {
   if (isError && allPosts.length === 0) {
     return (
       <View style={styles.centerState}>
-        <Text style={[styles.stateTitle, { color: colors.textPrimary }]}>
-          No se pudo cargar el foro
-        </Text>
-        <Text style={[styles.stateText, { color: colors.textMuted }]}>
+        <Text style={styles.stateTitle}>No se pudo cargar el foro</Text>
+        <Text style={styles.stateText}>
           {error instanceof Error ? error.message : "Intenta nuevamente."}
         </Text>
         <Pressable
           onPress={() => void refetch()}
           style={({ pressed }) => [
             styles.retryButton,
-            {
-              borderColor: colors.borderSecondary,
-              backgroundColor: colors.bgTertiary,
-            },
             pressed && styles.pressed,
           ]}
         >
-          <Text style={[styles.retryButtonText, { color: colors.textPrimary }]}>
+          <Text style={styles.retryButtonText}>
             {isRefetching ? "Reintentando..." : "Reintentar"}
           </Text>
         </Pressable>
@@ -119,12 +114,10 @@ export default function BoardForumScreen() {
       contentContainerStyle={styles.listContent}
       ListEmptyComponent={
         <View style={styles.centerState}>
-          <Text style={[styles.stateTitle, { color: colors.textPrimary }]}>
-            Todavía no hay posts
-          </Text>
-          <Text style={[styles.stateText, { color: colors.textMuted }]}>
+          <Text style={styles.stateTitle}>Todavía no hay posts</Text>
+          <Text style={styles.stateText}>
             Sé el primero en publicar en{" "}
-            {board?.name ? `el foro de ${board.name}` : "este foro"}.
+            {forumChannel?.name ? `/${forumChannel.name}` : "este foro"}.
           </Text>
         </View>
       }
@@ -139,7 +132,7 @@ export default function BoardForumScreen() {
   );
 }
 
-function createStyles(_colors: ReturnType<typeof useTheme>["colors"]) {
+function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
   return StyleSheet.create({
     listContent: {
       paddingVertical: 8,
@@ -153,17 +146,21 @@ function createStyles(_colors: ReturnType<typeof useTheme>["colors"]) {
       paddingVertical: 60,
     },
     stateTitle: {
+      color: colors.textPrimary,
       fontSize: 18,
       fontWeight: "700",
       textAlign: "center",
     },
     stateText: {
+      color: colors.textMuted,
       fontSize: 14,
       lineHeight: 21,
       textAlign: "center",
     },
     retryButton: {
       alignItems: "center",
+      backgroundColor: colors.bgTertiary,
+      borderColor: colors.borderSecondary,
       borderRadius: 16,
       borderWidth: 1,
       justifyContent: "center",
@@ -171,6 +168,7 @@ function createStyles(_colors: ReturnType<typeof useTheme>["colors"]) {
       paddingHorizontal: 18,
     },
     retryButtonText: {
+      color: colors.textPrimary,
       fontSize: 14,
       fontWeight: "700",
     },

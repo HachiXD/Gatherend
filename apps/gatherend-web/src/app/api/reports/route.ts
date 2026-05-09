@@ -197,7 +197,8 @@ export async function POST(req: Request) {
           id: true,
           authorProfileId: true,
           deleted: true,
-          boardId: true,
+          channelId: true,
+          channel: { select: { boardId: true } },
         },
       });
       if (!post || post.deleted) {
@@ -208,7 +209,8 @@ export async function POST(req: Request) {
       }
 
       resolvedTargetOwnerId = post.authorProfileId;
-      resolvedBoardId = post.boardId;
+      resolvedBoardId = post.channel.boardId;
+      resolvedChannelId = post.channelId;
 
       if (post.authorProfileId === profile.id) {
         return NextResponse.json(
@@ -226,7 +228,8 @@ export async function POST(req: Request) {
           post: {
             select: {
               deleted: true,
-              boardId: true,
+              channelId: true,
+              channel: { select: { boardId: true } },
             },
           },
         },
@@ -239,7 +242,8 @@ export async function POST(req: Request) {
       }
 
       resolvedTargetOwnerId = comment.authorProfileId;
-      resolvedBoardId = comment.post.boardId;
+      resolvedBoardId = comment.post.channel.boardId;
+      resolvedChannelId = comment.post.channelId;
 
       if (comment.authorProfileId === profile.id) {
         return NextResponse.json(
