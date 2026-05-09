@@ -9,12 +9,13 @@ import {
 export function useWikiPage(
   boardId: string | undefined,
   pageId: string | undefined,
+  channelId: string | undefined,
 ) {
   return useQuery({
-    queryKey: wikiPageQueryKey(boardId ?? "", pageId ?? ""),
-    queryFn: () => getWikiPage(boardId!, pageId!),
+    queryKey: wikiPageQueryKey(boardId ?? "", pageId ?? "", channelId),
+    queryFn: () => getWikiPage(boardId!, pageId!, channelId!),
     staleTime: WIKI_PAGE_STALE_TIME_MS,
     gcTime: WIKI_PAGE_GC_TIME_MS,
-    enabled: !!boardId && !!pageId,
+    enabled: !!boardId && !!pageId && !!channelId,
   });
 }

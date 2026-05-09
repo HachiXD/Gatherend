@@ -6,11 +6,11 @@ const wikiHttpDataSource = createWikiHttpDataSource();
 export const wikiRepository: WikiRepository = {
   getWikiPages: (boardId, cursor, channelId) =>
     wikiHttpDataSource.getWikiPages(boardId, cursor, channelId),
-  getWikiPage: (boardId, pageId) =>
-    wikiHttpDataSource.getWikiPage(boardId, pageId),
+  getWikiPage: (boardId, pageId, channelId) =>
+    wikiHttpDataSource.getWikiPage(boardId, pageId, channelId),
   createWikiPage: (input) => wikiHttpDataSource.createWikiPage(input),
-  editWikiPage: (boardId, pageId, input) =>
-    wikiHttpDataSource.editWikiPage(boardId, pageId, input),
-  deleteWikiPage: (boardId, pageId) =>
-    wikiHttpDataSource.deleteWikiPage(boardId, pageId),
+  editWikiPage: (boardId, pageId, channelId, input) =>
+    wikiHttpDataSource.editWikiPage(boardId, pageId, channelId, input),
+  deleteWikiPage: (boardId, pageId, channelId) =>
+    wikiHttpDataSource.deleteWikiPage(boardId, pageId, channelId),
 };

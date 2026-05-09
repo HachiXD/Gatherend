@@ -8,11 +8,13 @@ import type { WikiPage, WikiPagePreviewsPage } from "../domain/wiki";
 export function createWikiHttpDataSource(): WikiRepository {
   return {
     async getWikiPages(boardId, cursor, channelId) {
+      if (!channelId) {
+        throw new Error("Channel ID is required to load wiki pages");
+      }
       const params = new URLSearchParams();
       if (cursor) params.set("cursor", cursor);
-      if (channelId) params.set("channelId", channelId);
       const query = params.toString();
-      const url = `/api/boards/${boardId}/wiki${query ? `?${query}` : ""}`;
+      const url = `/api/channels/${channelId}/wiki${query ? `?${query}` : ""}`;
       const response = await nextApiFetch(url);
       if (!response.ok) {
         throw new Error(
@@ -25,9 +27,9 @@ export function createWikiHttpDataSource(): WikiRepository {
       return (await response.json()) as WikiPagePreviewsPage;
     },
 
-    async getWikiPage(boardId, pageId) {
+    async getWikiPage(boardId, pageId, channelId) {
       const response = await nextApiFetch(
-        `/api/boards/${boardId}/wiki/${pageId}`,
+        `/api/channels/${channelId}/wiki/${pageId}`,
       );
       if (!response.ok) {
         throw new Error(
@@ -38,12 +40,11 @@ export function createWikiHttpDataSource(): WikiRepository {
       return data.page;
     },
 
-    async createWikiPage({ boardId, channelId, title, content, imageAssetId }) {
-      const response = await nextApiFetch(`/api/boards/${boardId}/wiki`, {
+    async createWikiPage({ channelId, title, content, imageAssetId }) {
+      const response = await nextApiFetch(`/api/channels/${channelId}/wiki`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          channelId,
           title,
           content: content ?? null,
           imageAssetId: imageAssetId ?? null,
@@ -58,9 +59,9 @@ export function createWikiHttpDataSource(): WikiRepository {
       return data.page;
     },
 
-    async editWikiPage(boardId, pageId, input) {
+    async editWikiPage(boardId, pageId, channelId, input) {
       const response = await nextApiFetch(
-        `/api/boards/${boardId}/wiki/${pageId}`,
+        `/api/channels/${channelId}/wiki/${pageId}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -76,9 +77,9 @@ export function createWikiHttpDataSource(): WikiRepository {
       return data.page;
     },
 
-    async deleteWikiPage(boardId, pageId) {
+    async deleteWikiPage(boardId, pageId, channelId) {
       const response = await nextApiFetch(
-        `/api/boards/${boardId}/wiki/${pageId}`,
+        `/api/channels/${channelId}/wiki/${pageId}`,
         {
           method: "DELETE",
         },

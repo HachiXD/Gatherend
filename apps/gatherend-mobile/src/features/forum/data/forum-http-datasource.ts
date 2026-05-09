@@ -14,8 +14,8 @@ import type {
 
 export function createForumHttpDataSource(): ForumRepository {
   return {
-    async createPost({ boardId, channelId, title, content, imageAssetId }: CreatePostInput) {
-      const response = await nextApiFetch(`/api/posts`, {
+    async createPost({ channelId, title, content, imageAssetId }: CreatePostInput) {
+      const response = await nextApiFetch(`/api/channels/${channelId}/posts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -34,11 +34,13 @@ export function createForumHttpDataSource(): ForumRepository {
     },
 
     async getBoardPosts(boardId, cursor, channelId) {
+      if (!channelId) {
+        throw new Error("Channel ID is required to load forum posts");
+      }
       const params = new URLSearchParams();
       if (cursor) params.set("cursor", cursor);
-      if (channelId) params.set("channelId", channelId);
       const query = params.toString();
-      const url = `/api/boards/${boardId}/posts${query ? `?${query}` : ""}`;
+      const url = `/api/channels/${channelId}/posts${query ? `?${query}` : ""}`;
       const response = await nextApiFetch(url);
       if (!response.ok) {
         throw new Error(
@@ -49,10 +51,12 @@ export function createForumHttpDataSource(): ForumRepository {
     },
 
     async getBoardPostPreviews(boardId, cursor, channelId) {
+      if (!channelId) {
+        throw new Error("Channel ID is required to load forum posts");
+      }
       const params = new URLSearchParams({ preview: "true" });
       if (cursor) params.set("cursor", cursor);
-      if (channelId) params.set("channelId", channelId);
-      const url = `/api/boards/${boardId}/posts?${params.toString()}`;
+      const url = `/api/channels/${channelId}/posts?${params.toString()}`;
       const response = await nextApiFetch(url);
       if (!response.ok) {
         throw new Error(
@@ -62,8 +66,10 @@ export function createForumHttpDataSource(): ForumRepository {
       return (await response.json()) as ForumPostPreviewsPage;
     },
 
-    async getPost(boardId, postId) {
-      const response = await nextApiFetch(`/api/boards/${boardId}/posts/${postId}`);
+    async getPost(boardId, postId, channelId) {
+      const response = await nextApiFetch(
+        `/api/channels/${channelId}/posts/${postId}`,
+      );
       if (!response.ok) {
         throw new Error(
           await readNextApiError(response, "Error al cargar el post"),

@@ -18,6 +18,6 @@ export function useWikiPages(
       lastPage.hasMore ? lastPage.nextCursor : undefined,
     staleTime: WIKI_PAGES_STALE_TIME_MS,
     gcTime: WIKI_PAGES_GC_TIME_MS,
-    enabled: !!boardId && (channelId !== undefined ? !!channelId : true),
+    enabled: !!boardId && !!channelId,
   });
 }

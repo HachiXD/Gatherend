@@ -7,17 +7,17 @@ import { deleteWikiPage } from "../application/delete-wiki-page";
 import { wikiPagesQueryKey, wikiPageQueryKey } from "../queries";
 import type { WikiPagePreviewsPage } from "../domain/wiki";
 
-export function useDeleteWikiPage(boardId: string) {
+export function useDeleteWikiPage(boardId: string, channelId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (pageId: string) => deleteWikiPage(boardId, pageId),
+    mutationFn: (pageId: string) => deleteWikiPage(boardId, pageId, channelId),
     onSuccess: (_data, pageId) => {
       queryClient.removeQueries({
-        queryKey: wikiPageQueryKey(boardId, pageId),
+        queryKey: wikiPageQueryKey(boardId, pageId, channelId),
       });
       queryClient.setQueryData<InfiniteData<WikiPagePreviewsPage>>(
-        wikiPagesQueryKey(boardId),
+        wikiPagesQueryKey(boardId, channelId),
         (current) => {
           if (!current) return current;
           return {

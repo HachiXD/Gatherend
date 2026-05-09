@@ -2,6 +2,7 @@ import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import BoardFeaturedScreen from "./featured";
 import BoardForumScreen from "./forum";
+import BoardWikiScreen from "./wiki";
 import BoardRankingScreen from "./ranking";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -40,6 +41,7 @@ const HOME_TABS: Array<{ key: HomeTabKey; label: string }> = [
   { key: "rules", label: "Reglas" },
   { key: "chats", label: "Chats" },
   { key: "forum", label: "Foro" },
+  { key: "wiki", label: "Wiki" },
   { key: "featured", label: "Destacado" },
   { key: "ranking", label: "Ranking" },
 ];
@@ -48,8 +50,9 @@ const INITIAL_TAB_INDEX = 0; // Rules
 const RULES_TAB_INDEX = 0;
 const CHATS_TAB_INDEX = 1;
 const FORUM_TAB_INDEX = 2;
-const FEATURED_TAB_INDEX = 3;
-const RANKING_TAB_INDEX = 4;
+const WIKI_TAB_INDEX = 3;
+const FEATURED_TAB_INDEX = 4;
+const RANKING_TAB_INDEX = 5;
 
 function getHomeTabIndex(tab: HomeTabKey | undefined) {
   const index = HOME_TABS.findIndex((item) => item.key === tab);
@@ -403,6 +406,9 @@ export default function BoardHomeScreen() {
           </View>
           <View style={styles.page}>
             {displayTabIndex === FORUM_TAB_INDEX ? <BoardForumScreen /> : null}
+          </View>
+          <View style={styles.page}>
+            {displayTabIndex === WIKI_TAB_INDEX ? <BoardWikiScreen /> : null}
           </View>
           <View style={styles.page}>
             {displayTabIndex === FEATURED_TAB_INDEX ? (

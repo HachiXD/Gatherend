@@ -18,11 +18,11 @@ const MAX_CONTENT_LENGTH = 50_000;
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-// ─── GET /api/boards/[boardId]/wiki/[pageId] ───────────────────────────────
+// ─── GET /api/channels/[channelId]/wiki/[pageId] ───────────────────────────
 // Returns the full content of a single wiki page.
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ boardId: string; pageId: string }> },
+  { params }: { params: Promise<{ channelId: string; pageId: string }> },
 ) {
   try {
     const rateLimitResponse = await checkRateLimit(RATE_LIMITS.api);
@@ -32,28 +32,33 @@ export async function GET(
     if (!auth.success) return auth.response;
     const { profile } = auth;
 
-    const { boardId, pageId } = await params;
+    const { channelId, pageId } = await params;
 
-    if (!boardId || !UUID_REGEX.test(boardId)) {
-      return NextResponse.json({ error: "Invalid board ID" }, { status: 400 });
+    if (!channelId || !UUID_REGEX.test(channelId)) {
+      return NextResponse.json({ error: "Invalid channel ID" }, { status: 400 });
     }
     if (!pageId || !UUID_REGEX.test(pageId)) {
       return NextResponse.json({ error: "Invalid page ID" }, { status: 400 });
     }
 
-    const boardExists = await db.board.findFirst({
-      where: { id: boardId, members: { some: { profileId: profile.id } } },
+    const channelExists = await db.channel.findFirst({
+      where: {
+        id: channelId,
+        type: ChannelType.WIKI,
+        board: { members: { some: { profileId: profile.id } } },
+      },
       select: { id: true },
     });
 
-    if (!boardExists) {
-      return NextResponse.json({ error: "Board not found" }, { status: 404 });
+    if (!channelExists) {
+      return NextResponse.json({ error: "Wiki channel not found" }, { status: 404 });
     }
 
     const page = await db.wikiPage.findFirst({
-      where: { id: pageId, channel: { boardId, type: ChannelType.WIKI } },
+      where: { id: pageId, channelId, channel: { type: ChannelType.WIKI } },
       select: {
         id: true,
+        channelId: true,
         title: true,
         content: true,
         createdAt: true,
@@ -90,6 +95,7 @@ export async function GET(
     return NextResponse.json({
       page: {
         id: page.id,
+        channelId: page.channelId,
         title: page.title,
         content: page.content,
         imageAsset: serializeUploadedAsset(page.imageAsset),
@@ -104,11 +110,11 @@ export async function GET(
   }
 }
 
-// ─── PATCH /api/boards/[boardId]/wiki/[pageId] ────────────────────────────
+// ─── PATCH /api/channels/[channelId]/wiki/[pageId] ─────────────────────────
 // Author or admin can update title, content, or image.
 export async function PATCH(
   req: Request,
-  { params }: { params: Promise<{ boardId: string; pageId: string }> },
+  { params }: { params: Promise<{ channelId: string; pageId: string }> },
 ) {
   try {
     const rateLimitResponse = await checkRateLimit(RATE_LIMITS.api);
@@ -118,10 +124,10 @@ export async function PATCH(
     if (!auth.success) return auth.response;
     const { profile } = auth;
 
-    const { boardId, pageId } = await params;
+    const { channelId, pageId } = await params;
 
-    if (!boardId || !UUID_REGEX.test(boardId)) {
-      return NextResponse.json({ error: "Invalid board ID" }, { status: 400 });
+    if (!channelId || !UUID_REGEX.test(channelId)) {
+      return NextResponse.json({ error: "Invalid channel ID" }, { status: 400 });
     }
     if (!pageId || !UUID_REGEX.test(pageId)) {
       return NextResponse.json({ error: "Invalid page ID" }, { status: 400 });
@@ -211,10 +217,11 @@ export async function PATCH(
 
     const updatedPage = await db.$transaction(async (tx) => {
       const existingPage = await tx.wikiPage.findFirst({
-        where: { id: pageId, channel: { boardId, type: ChannelType.WIKI } },
+        where: { id: pageId, channelId, channel: { type: ChannelType.WIKI } },
         select: {
           id: true,
           authorProfileId: true,
+          channel: { select: { boardId: true } },
           title: true,
           content: true,
           imageAssetId: true,
@@ -226,7 +233,12 @@ export async function PATCH(
       }
 
       const member = await tx.member.findUnique({
-        where: { boardId_profileId: { boardId, profileId: profile.id } },
+        where: {
+          boardId_profileId: {
+            boardId: existingPage.channel.boardId,
+            profileId: profile.id,
+          },
+        },
         select: { role: true },
       });
 
@@ -252,6 +264,7 @@ export async function PATCH(
         },
         select: {
           id: true,
+          channelId: true,
           channel: { select: { boardId: true } },
           title: true,
           content: true,
@@ -281,14 +294,17 @@ export async function PATCH(
     });
 
     return NextResponse.json({
-      id: updatedPage.id,
-      boardId: updatedPage.channel.boardId,
-      title: updatedPage.title,
-      content: updatedPage.content,
-      imageAsset: serializeUploadedAsset(updatedPage.imageAsset),
-      createdAt: updatedPage.createdAt.toISOString(),
-      updatedAt: updatedPage.updatedAt.toISOString(),
-      author: serializeProfileSummary(updatedPage.author),
+      page: {
+        id: updatedPage.id,
+        boardId: updatedPage.channel.boardId,
+        channelId: updatedPage.channelId,
+        title: updatedPage.title,
+        content: updatedPage.content,
+        imageAsset: serializeUploadedAsset(updatedPage.imageAsset),
+        createdAt: updatedPage.createdAt.toISOString(),
+        updatedAt: updatedPage.updatedAt.toISOString(),
+        author: serializeProfileSummary(updatedPage.author),
+      },
     });
   } catch (error) {
     if (error instanceof Error) {
@@ -314,11 +330,11 @@ export async function PATCH(
   }
 }
 
-// ─── DELETE /api/boards/[boardId]/wiki/[pageId] ───────────────────────────
+// ─── DELETE /api/channels/[channelId]/wiki/[pageId] ────────────────────────
 // Author, moderator, or admin can delete a wiki page.
 export async function DELETE(
   _req: Request,
-  { params }: { params: Promise<{ boardId: string; pageId: string }> },
+  { params }: { params: Promise<{ channelId: string; pageId: string }> },
 ) {
   try {
     const rateLimitResponse = await checkRateLimit(RATE_LIMITS.api);
@@ -328,10 +344,10 @@ export async function DELETE(
     if (!auth.success) return auth.response;
     const { profile } = auth;
 
-    const { boardId, pageId } = await params;
+    const { channelId, pageId } = await params;
 
-    if (!boardId || !UUID_REGEX.test(boardId)) {
-      return NextResponse.json({ error: "Invalid board ID" }, { status: 400 });
+    if (!channelId || !UUID_REGEX.test(channelId)) {
+      return NextResponse.json({ error: "Invalid channel ID" }, { status: 400 });
     }
     if (!pageId || !UUID_REGEX.test(pageId)) {
       return NextResponse.json({ error: "Invalid page ID" }, { status: 400 });
@@ -339,8 +355,12 @@ export async function DELETE(
 
     await db.$transaction(async (tx) => {
       const page = await tx.wikiPage.findFirst({
-        where: { id: pageId, channel: { boardId, type: ChannelType.WIKI } },
-        select: { id: true, authorProfileId: true },
+        where: { id: pageId, channelId, channel: { type: ChannelType.WIKI } },
+        select: {
+          id: true,
+          authorProfileId: true,
+          channel: { select: { boardId: true } },
+        },
       });
 
       if (!page) {
@@ -348,7 +368,12 @@ export async function DELETE(
       }
 
       const member = await tx.member.findUnique({
-        where: { boardId_profileId: { boardId, profileId: profile.id } },
+        where: {
+          boardId_profileId: {
+            boardId: page.channel.boardId,
+            profileId: profile.id,
+          },
+        },
         select: { role: true },
       });
 

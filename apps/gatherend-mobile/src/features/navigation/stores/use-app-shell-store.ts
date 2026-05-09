@@ -1,7 +1,13 @@
 import { create } from "zustand";
 
 type BoardSection = "home" | "forum" | "wiki" | "chats" | "settings";
-export type BoardHomeTab = "rules" | "chats" | "forum" | "featured" | "ranking";
+export type BoardHomeTab =
+  | "rules"
+  | "chats"
+  | "forum"
+  | "wiki"
+  | "featured"
+  | "ranking";
 
 type AppShellState = {
   isBoardDrawerOpen: boolean;

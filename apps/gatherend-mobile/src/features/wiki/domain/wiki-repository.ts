@@ -11,12 +11,21 @@ export type WikiRepository = {
     cursor?: string | null,
     channelId?: string | null,
   ) => Promise<WikiPagePreviewsPage>;
-  getWikiPage: (boardId: string, pageId: string) => Promise<WikiPage>;
+  getWikiPage: (
+    boardId: string,
+    pageId: string,
+    channelId: string,
+  ) => Promise<WikiPage>;
   createWikiPage: (input: CreateWikiPageInput) => Promise<WikiPage>;
   editWikiPage: (
     boardId: string,
     pageId: string,
+    channelId: string,
     input: EditWikiPageInput,
   ) => Promise<WikiPage>;
-  deleteWikiPage: (boardId: string, pageId: string) => Promise<void>;
+  deleteWikiPage: (
+    boardId: string,
+    pageId: string,
+    channelId: string,
+  ) => Promise<void>;
 };

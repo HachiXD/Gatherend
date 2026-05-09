@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { ChannelType } from "@prisma/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
 import {
@@ -106,7 +107,7 @@ function serializeCommentPreview(comment: {
 
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ boardId: string; postId: string }> },
+  { params }: { params: Promise<{ channelId: string; postId: string }> },
 ) {
   try {
     const rateLimitResponse = await checkRateLimit(RATE_LIMITS.api);
@@ -116,28 +117,33 @@ export async function GET(
     if (!auth.success) return auth.response;
     const { profile } = auth;
 
-    const { boardId, postId } = await params;
+    const { channelId, postId } = await params;
 
-    if (!boardId || !UUID_REGEX.test(boardId)) {
-      return NextResponse.json({ error: "Invalid board ID" }, { status: 400 });
+    if (!channelId || !UUID_REGEX.test(channelId)) {
+      return NextResponse.json({ error: "Invalid channel ID" }, { status: 400 });
     }
     if (!postId || !UUID_REGEX.test(postId)) {
       return NextResponse.json({ error: "Invalid post ID" }, { status: 400 });
     }
 
-    const boardExists = await db.board.findFirst({
-      where: { id: boardId, members: { some: { profileId: profile.id } } },
+    const channelExists = await db.channel.findFirst({
+      where: {
+        id: channelId,
+        type: ChannelType.FORUM,
+        board: { members: { some: { profileId: profile.id } } },
+      },
       select: { id: true },
     });
 
-    if (!boardExists) {
-      return NextResponse.json({ error: "Board not found" }, { status: 404 });
+    if (!channelExists) {
+      return NextResponse.json({ error: "Forum channel not found" }, { status: 404 });
     }
 
     const post = await db.communityPost.findFirst({
-      where: { id: postId, channel: { boardId, type: "FORUM" }, deleted: false },
+      where: { id: postId, channelId, channel: { type: ChannelType.FORUM }, deleted: false },
       select: {
         id: true,
+        channelId: true,
         title: true,
         content: true,
         commentCount: true,
@@ -223,6 +229,7 @@ export async function GET(
     return NextResponse.json({
       post: {
         id: post.id,
+        channelId: post.channelId,
         title: post.title ?? null,
         content: post.content,
         imageAsset: serializeUploadedAsset(post.imageAsset),

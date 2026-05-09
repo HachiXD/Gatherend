@@ -455,9 +455,11 @@ export default function BoardFeaturedScreen() {
   const gridPosts: ForumPostPreview[] = data?.topPosts.slice(1, 5) ?? [];
   const channels: FeaturedChannel[] = data?.topChannels ?? [];
 
-  function openPost(postId: string) {
+  function openPost(post: ForumPostPreview) {
     if (!boardId) return;
-    router.push(`/boards/${boardId}/posts/${postId}` as Href);
+    router.push(
+      `/boards/${boardId}/posts/${post.id}?channelId=${post.channelId}` as Href,
+    );
   }
 
   function openChannel(channelId: string) {
@@ -550,7 +552,7 @@ export default function BoardFeaturedScreen() {
             <PostPreviewCard
               post={gridPosts[0]}
               boardId={boardId ?? ""}
-              onPress={() => openPost(gridPosts[0].id)}
+              onPress={() => openPost(gridPosts[0])}
               style={[styles.gridCardBase, styles.gridCardBottomFull]}
             />
           ) : null}
@@ -562,7 +564,7 @@ export default function BoardFeaturedScreen() {
                 <PostPreviewCard
                   post={gridPosts[0]}
                   boardId={boardId ?? ""}
-                  onPress={() => openPost(gridPosts[0].id)}
+                  onPress={() => openPost(gridPosts[0])}
                   style={[styles.gridCardBase, styles.gridCardBottomLeft]}
                 />
               </View>
@@ -570,7 +572,7 @@ export default function BoardFeaturedScreen() {
                 <PostPreviewCard
                   post={gridPosts[1]}
                   boardId={boardId ?? ""}
-                  onPress={() => openPost(gridPosts[1].id)}
+                  onPress={() => openPost(gridPosts[1])}
                   style={[styles.gridCardBase, styles.gridCardBottomRight]}
                 />
               </View>
@@ -585,7 +587,7 @@ export default function BoardFeaturedScreen() {
                   <PostPreviewCard
                     post={gridPosts[0]}
                     boardId={boardId ?? ""}
-                    onPress={() => openPost(gridPosts[0].id)}
+                    onPress={() => openPost(gridPosts[0])}
                     style={styles.gridCardBase}
                   />
                 </View>
@@ -593,7 +595,7 @@ export default function BoardFeaturedScreen() {
                   <PostPreviewCard
                     post={gridPosts[1]}
                     boardId={boardId ?? ""}
-                    onPress={() => openPost(gridPosts[1].id)}
+                    onPress={() => openPost(gridPosts[1])}
                     style={styles.gridCardBase}
                   />
                 </View>
@@ -601,7 +603,7 @@ export default function BoardFeaturedScreen() {
               <PostPreviewCard
                 post={gridPosts[2]}
                 boardId={boardId ?? ""}
-                onPress={() => openPost(gridPosts[2].id)}
+                onPress={() => openPost(gridPosts[2])}
                 style={[styles.gridCardBase, styles.gridCardBottomFull]}
               />
             </>
@@ -615,7 +617,7 @@ export default function BoardFeaturedScreen() {
                   <PostPreviewCard
                     post={gridPosts[0]}
                     boardId={boardId ?? ""}
-                    onPress={() => openPost(gridPosts[0].id)}
+                    onPress={() => openPost(gridPosts[0])}
                     style={styles.gridCardBase}
                   />
                 </View>
@@ -623,7 +625,7 @@ export default function BoardFeaturedScreen() {
                   <PostPreviewCard
                     post={gridPosts[1]}
                     boardId={boardId ?? ""}
-                    onPress={() => openPost(gridPosts[1].id)}
+                    onPress={() => openPost(gridPosts[1])}
                     style={styles.gridCardBase}
                   />
                 </View>
@@ -633,7 +635,7 @@ export default function BoardFeaturedScreen() {
                   <PostPreviewCard
                     post={gridPosts[2]}
                     boardId={boardId ?? ""}
-                    onPress={() => openPost(gridPosts[2].id)}
+                    onPress={() => openPost(gridPosts[2])}
                     style={[styles.gridCardBase, styles.gridCardBottomLeft]}
                   />
                 </View>
@@ -641,7 +643,7 @@ export default function BoardFeaturedScreen() {
                   <PostPreviewCard
                     post={gridPosts[3]}
                     boardId={boardId ?? ""}
-                    onPress={() => openPost(gridPosts[3].id)}
+                    onPress={() => openPost(gridPosts[3])}
                     style={[styles.gridCardBase, styles.gridCardBottomRight]}
                   />
                 </View>

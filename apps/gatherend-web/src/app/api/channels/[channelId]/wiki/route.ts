@@ -21,11 +21,11 @@ const MAX_CURSOR_LENGTH = 128;
 const MAX_TITLE_LENGTH = 200;
 const MAX_CONTENT_LENGTH = 50000;
 
-// ─── GET /api/boards/[boardId]/wiki ────────────────────────────────────────
-// Returns a paginated index of wiki pages (title-only preview) for the board.
+// ─── GET /api/channels/[channelId]/wiki ────────────────────────────────────
+// Returns a paginated index of wiki pages (title-only preview) for the channel.
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ boardId: string }> },
+  { params }: { params: Promise<{ channelId: string }> },
 ) {
   try {
     const rateLimitResponse = await checkRateLimit(RATE_LIMITS.api);
@@ -35,23 +35,26 @@ export async function GET(
     if (!auth.success) return auth.response;
     const { profile } = auth;
 
-    const { boardId } = await params;
+    const { channelId } = await params;
 
-    if (!boardId || !UUID_REGEX.test(boardId)) {
-      return NextResponse.json({ error: "Invalid board ID" }, { status: 400 });
+    if (!channelId || !UUID_REGEX.test(channelId)) {
+      return NextResponse.json({ error: "Invalid channel ID" }, { status: 400 });
     }
 
-    const boardExists = await db.board.findFirst({
-      where: { id: boardId, members: { some: { profileId: profile.id } } },
+    const channelExists = await db.channel.findFirst({
+      where: {
+        id: channelId,
+        type: ChannelType.WIKI,
+        board: { members: { some: { profileId: profile.id } } },
+      },
       select: { id: true },
     });
 
-    if (!boardExists) {
-      return NextResponse.json({ error: "Board not found" }, { status: 404 });
+    if (!channelExists) {
+      return NextResponse.json({ error: "Wiki channel not found" }, { status: 404 });
     }
 
     const { searchParams } = new URL(req.url);
-    const channelIdParam = searchParams.get("channelId");
     const cursorParam = searchParams.get("cursor");
     const limitParam = parseInt(
       searchParams.get("limit") || String(PAGE_SIZE),
@@ -64,13 +67,6 @@ export async function GET(
 
     let cursorCreatedAt: Date | null = null;
     let cursorId: string | null = null;
-
-    if (channelIdParam && !UUID_REGEX.test(channelIdParam)) {
-      return NextResponse.json(
-        { error: "Invalid channel ID" },
-        { status: 400 },
-      );
-    }
 
     if (cursorParam) {
       if (cursorParam.length > MAX_CURSOR_LENGTH) {
@@ -90,12 +86,8 @@ export async function GET(
 
     const pages = await db.wikiPage.findMany({
       where: {
-        ...(channelIdParam
-          ? {
-              channelId: channelIdParam,
-              channel: { boardId, type: ChannelType.WIKI },
-            }
-          : { channel: { boardId, type: ChannelType.WIKI } }),
+        channelId,
+        channel: { type: ChannelType.WIKI },
         ...(cursorCreatedAt && cursorId
           ? {
               OR: [
@@ -114,6 +106,7 @@ export async function GET(
       take: limit + 1,
       select: {
         id: true,
+        channelId: true,
         title: true,
         createdAt: true,
         updatedAt: true,
@@ -149,6 +142,7 @@ export async function GET(
     return NextResponse.json({
       items: items.map((page) => ({
         id: page.id,
+        channelId: page.channelId,
         title: page.title,
         createdAt: page.createdAt.toISOString(),
         updatedAt: page.updatedAt.toISOString(),
@@ -163,11 +157,11 @@ export async function GET(
   }
 }
 
-// ─── POST /api/boards/[boardId]/wiki ───────────────────────────────────────
+// ─── POST /api/channels/[channelId]/wiki ───────────────────────────────────
 // Creates a new wiki page. Requires canWriteWiki permission.
 export async function POST(
   req: Request,
-  { params }: { params: Promise<{ boardId: string }> },
+  { params }: { params: Promise<{ channelId: string }> },
 ) {
   try {
     const rateLimitResponse = await checkRateLimit(RATE_LIMITS.api);
@@ -177,10 +171,10 @@ export async function POST(
     if (!auth.success) return auth.response;
     const { profile } = auth;
 
-    const { boardId } = await params;
+    const { channelId } = await params;
 
-    if (!boardId || !UUID_REGEX.test(boardId)) {
-      return NextResponse.json({ error: "Invalid board ID" }, { status: 400 });
+    if (!channelId || !UUID_REGEX.test(channelId)) {
+      return NextResponse.json({ error: "Invalid channel ID" }, { status: 400 });
     }
 
     let body: unknown;
@@ -197,19 +191,11 @@ export async function POST(
       );
     }
 
-    const { title, content, imageAssetId, channelId } = body as {
+    const { title, content, imageAssetId } = body as {
       title?: unknown;
       content?: unknown;
       imageAssetId?: unknown;
-      channelId?: unknown;
     };
-
-    if (!channelId || typeof channelId !== "string" || !UUID_REGEX.test(channelId)) {
-      return NextResponse.json(
-        { error: "Wiki channel ID is required and must be valid" },
-        { status: 400 },
-      );
-    }
 
     if (!title || typeof title !== "string" || !title.trim()) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 });
@@ -230,8 +216,24 @@ export async function POST(
       );
     }
 
+    const wikiChannel = await db.channel.findFirst({
+      where: {
+        id: channelId,
+        type: ChannelType.WIKI,
+        board: { members: { some: { profileId: profile.id } } },
+      },
+      select: { id: true, boardId: true },
+    });
+
+    if (!wikiChannel) {
+      return NextResponse.json(
+        { error: "Wiki channel not found" },
+        { status: 404 },
+      );
+    }
+
     const member = await db.member.findFirst({
-      where: { boardId, profileId: profile.id },
+      where: { boardId: wikiChannel.boardId, profileId: profile.id },
       select: { role: true, permissions: true },
     });
 
@@ -270,18 +272,6 @@ export async function POST(
       resolvedImageAssetId = imageAsset.id;
     }
 
-    const wikiChannel = await db.channel.findFirst({
-      where: { id: channelId, boardId, type: ChannelType.WIKI },
-      select: { id: true },
-    });
-
-    if (!wikiChannel) {
-      return NextResponse.json(
-        { error: "Wiki channel not found" },
-        { status: 404 },
-      );
-    }
-
     const page = await db.wikiPage.create({
       data: {
         channelId: wikiChannel.id,
@@ -292,6 +282,7 @@ export async function POST(
       },
       select: {
         id: true,
+        channelId: true,
         title: true,
         content: true,
         createdAt: true,
@@ -322,6 +313,7 @@ export async function POST(
       {
         page: {
           id: page.id,
+          channelId: page.channelId,
           title: page.title,
           content: page.content,
           imageAsset: serializeUploadedAsset(page.imageAsset),

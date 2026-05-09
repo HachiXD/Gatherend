@@ -53,6 +53,7 @@ import {
 
 interface CommunityPostsSectionProps {
   communityId: string;
+  channelId?: string | null;
   isActive: boolean;
   onHeaderActionChange?: (action: ReactNode | null) => void;
   onPersistScrollReady?: ((persist: () => void) => void) | undefined;
@@ -854,6 +855,7 @@ function PostInlineCommentInput({
 
 function CommunityPostsSectionInner({
   communityId,
+  channelId,
   isActive,
   onHeaderActionChange,
   onPersistScrollReady,
@@ -895,6 +897,7 @@ function CommunityPostsSectionInner({
     bottomSentinelRef,
     getMeasuredPageRef,
   } = useCommunityPostsFeed(communityId, {
+    channelId,
     isActive,
     externalContainerRef: scrollContainerRef,
   });

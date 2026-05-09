@@ -14,6 +14,7 @@ import { getStoredUploadAssetId } from "@/lib/upload-values";
 
 interface InlineCommunityPostFormProps {
   communityId: string;
+  channelId: string;
   communityName?: string;
   onCancel: () => void;
   onSuccess?: () => void;
@@ -21,6 +22,7 @@ interface InlineCommunityPostFormProps {
 
 export function InlineCommunityPostForm({
   communityId,
+  channelId,
   onCancel,
   onSuccess,
 }: InlineCommunityPostFormProps) {
@@ -112,8 +114,8 @@ export function InlineCommunityPostForm({
     try {
       setIsSubmitting(true);
 
-      await axios.post("/api/posts", {
-        boardId: communityId,
+      await axios.post(`/api/channels/${channelId}/posts`, {
+        channelId,
         title: trimmedTitle,
         content: trimmedContent,
         imageAssetId: imageAssetId ?? null,

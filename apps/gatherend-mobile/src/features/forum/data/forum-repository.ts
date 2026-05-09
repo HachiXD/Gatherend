@@ -8,8 +8,8 @@ export const forumRepository: ForumRepository = {
     forumHttpDataSource.getBoardPosts(boardId, cursor, channelId),
   getBoardPostPreviews: (boardId, cursor, channelId) =>
     forumHttpDataSource.getBoardPostPreviews(boardId, cursor, channelId),
-  getPost: (boardId, postId) =>
-    forumHttpDataSource.getPost(boardId, postId),
+  getPost: (boardId, postId, channelId) =>
+    forumHttpDataSource.getPost(boardId, postId, channelId),
   getPostComments: (postId) =>
     forumHttpDataSource.getPostComments(postId),
   createPost: (input) =>

@@ -45,10 +45,12 @@ export default function BoardWikiChannelScreen() {
 
   const handleOpenPage = useCallback(
     (pageId: string) => {
-      if (!boardId) return;
-      router.push(`/boards/${boardId}/wiki-pages/${pageId}` as Href);
+      if (!boardId || !channelId) return;
+      router.push(
+        `/boards/${boardId}/wiki-pages/${pageId}?channelId=${channelId}` as Href,
+      );
     },
-    [boardId, router],
+    [boardId, channelId, router],
   );
 
   const renderItem = useCallback(

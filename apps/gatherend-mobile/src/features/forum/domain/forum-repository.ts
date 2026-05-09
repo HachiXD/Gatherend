@@ -26,7 +26,11 @@ export type ForumRepository = {
     cursor?: string | null,
     channelId?: string | null,
   ) => Promise<ForumPostPreviewsPage>;
-  getPost: (boardId: string, postId: string) => Promise<ForumPost>;
+  getPost: (
+    boardId: string,
+    postId: string,
+    channelId: string,
+  ) => Promise<ForumPost>;
   getPostComments: (postId: string) => Promise<ForumPostCommentsResult>;
   createPost: (input: CreatePostInput) => Promise<ForumPost>;
   createComment: (input: {

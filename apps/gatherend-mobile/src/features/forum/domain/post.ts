@@ -38,6 +38,7 @@ export type ForumPostComment = {
 
 export type ForumPost = {
   id: string;
+  channelId: string;
   title: string | null;
   content: string;
   imageAsset: ClientPublicAsset | null;
@@ -65,6 +66,7 @@ export type ForumPostCommentsResult = {
 
 export type ForumPostPreview = {
   id: string;
+  channelId: string;
   title: string | null;
   contentSnippet: string;
   imageAsset: ClientPublicAsset | null;

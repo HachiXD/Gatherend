@@ -19,6 +19,6 @@ export function useBoardPostPreviews(
       lastPage.hasMore ? lastPage.nextCursor : undefined,
     staleTime: FORUM_POSTS_STALE_TIME_MS,
     gcTime: FORUM_POSTS_GC_TIME_MS,
-    enabled: !!boardId && (channelId !== undefined ? !!channelId : true),
+    enabled: !!boardId && !!channelId,
   });
 }

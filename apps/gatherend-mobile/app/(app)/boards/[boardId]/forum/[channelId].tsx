@@ -45,10 +45,12 @@ export default function BoardForumChannelScreen() {
 
   const handleOpenPost = useCallback(
     (postId: string) => {
-      if (!boardId) return;
-      router.push(`/boards/${boardId}/posts/${postId}` as Href);
+      if (!boardId || !channelId) return;
+      router.push(
+        `/boards/${boardId}/posts/${postId}?channelId=${channelId}` as Href,
+      );
     },
-    [boardId, router],
+    [boardId, channelId, router],
   );
 
   const renderItem = useCallback(

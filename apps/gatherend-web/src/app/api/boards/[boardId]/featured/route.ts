@@ -71,6 +71,7 @@ export async function GET(
         take: TOP_POSTS_COUNT,
         select: {
           id: true,
+          channelId: true,
           title: true,
           content: true,
           likeCount: true,
@@ -125,6 +126,7 @@ export async function GET(
 
     const topPosts = rawPosts.map((post) => ({
       id: post.id,
+      channelId: post.channelId,
       title: post.title,
       contentSnippet: makeSnippet(post.content),
       imageAsset: serializeUploadedAsset(post.imageAsset),

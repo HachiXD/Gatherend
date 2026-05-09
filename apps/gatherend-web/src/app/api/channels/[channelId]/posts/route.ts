@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { ChannelType } from "@prisma/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
 import {
@@ -22,6 +23,7 @@ const SNIPPET_MAX_CHARS = 200;
 
 interface CommunityPostPreviewItem {
   id: string;
+  channelId: string;
   title: string | null;
   contentSnippet: string;
   imageAsset: ReturnType<typeof serializeUploadedAsset>;
@@ -44,6 +46,7 @@ interface BoardMetadata {
 
 interface CommunityPostFeedItem {
   id: string;
+  channelId: string;
   title: string | null;
   content: string;
   imageAsset: ReturnType<typeof serializeUploadedAsset>;
@@ -177,7 +180,7 @@ function toSnippet(content: string): string {
 
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ boardId: string }> },
+  { params }: { params: Promise<{ channelId: string }> },
 ) {
   try {
     const rateLimitResponse = await checkRateLimit(RATE_LIMITS.api);
@@ -187,18 +190,17 @@ export async function GET(
     if (!auth.success) return auth.response;
     const { profile } = auth;
 
-    const { boardId } = await params;
+    const { channelId } = await params;
     const { searchParams } = new URL(req.url);
 
-    if (!boardId || !UUID_REGEX.test(boardId)) {
+    if (!channelId || !UUID_REGEX.test(channelId)) {
       return NextResponse.json(
-        { error: "Invalid board ID" },
+        { error: "Invalid channel ID" },
         { status: 400 },
       );
     }
 
     const isPreview = searchParams.get("preview") === "true";
-    const channelIdParam = searchParams.get("channelId");
     const cursorParam = searchParams.get("cursor");
     const limitParam = parseInt(
       searchParams.get("limit") || String(PAGE_SIZE),
@@ -212,13 +214,6 @@ export async function GET(
 
     let cursorCreatedAt: Date | null = null;
     let cursorId: string | null = null;
-
-    if (channelIdParam && !UUID_REGEX.test(channelIdParam)) {
-      return NextResponse.json(
-        { error: "Invalid channel ID" },
-        { status: 400 },
-      );
-    }
 
     if (cursorParam) {
       if (cursorParam.length > MAX_CURSOR_LENGTH) {
@@ -243,46 +238,52 @@ export async function GET(
     let boardMetadata: BoardMetadata | null = null;
 
     if (isFirstPage) {
-      const board = await db.board.findFirst({
+      const channel = await db.channel.findFirst({
         where: {
-          id: boardId,
-          members: { some: { profileId: profile.id } },
+          id: channelId,
+          type: ChannelType.FORUM,
+          board: { members: { some: { profileId: profile.id } } },
         },
         select: {
-          id: true,
-          name: true,
-          memberCount: true,
-          imageAsset: {
-            select: uploadedAssetSummarySelect,
+          board: {
+            select: {
+              id: true,
+              name: true,
+              memberCount: true,
+              imageAsset: {
+                select: uploadedAssetSummarySelect,
+              },
+            },
           },
         },
       });
 
-      if (!board) {
+      if (!channel) {
         return NextResponse.json(
-          { error: "Board not found" },
+          { error: "Forum channel not found" },
           { status: 404 },
         );
       }
 
       boardMetadata = {
-        id: board.id,
-        name: board.name,
-        imageAsset: serializeUploadedAsset(board.imageAsset),
-        memberCount: board.memberCount,
+        id: channel.board.id,
+        name: channel.board.name,
+        imageAsset: serializeUploadedAsset(channel.board.imageAsset),
+        memberCount: channel.board.memberCount,
       };
     } else {
-      const boardExists = await db.board.findFirst({
+      const channelExists = await db.channel.findFirst({
         where: {
-          id: boardId,
-          members: { some: { profileId: profile.id } },
+          id: channelId,
+          type: ChannelType.FORUM,
+          board: { members: { some: { profileId: profile.id } } },
         },
         select: { id: true },
       });
 
-      if (!boardExists) {
+      if (!channelExists) {
         return NextResponse.json(
-          { error: "Board not found" },
+          { error: "Forum channel not found" },
           { status: 404 },
         );
       }
@@ -291,12 +292,8 @@ export async function GET(
     if (isPreview) {
       const previewPosts = await db.communityPost.findMany({
         where: {
-          ...(channelIdParam
-            ? {
-                channelId: channelIdParam,
-                channel: { boardId, type: "FORUM" },
-              }
-            : { channel: { boardId, type: "FORUM" } }),
+          channelId,
+          channel: { type: ChannelType.FORUM },
           deleted: false,
           ...(cursorCreatedAt && cursorId
             ? {
@@ -311,6 +308,7 @@ export async function GET(
         take: limit + 1,
         select: {
           id: true,
+          channelId: true,
           title: true,
           content: true,
           commentCount: true,
@@ -355,6 +353,7 @@ export async function GET(
 
       const previewResult: CommunityPostPreviewItem[] = previewItems.map((post) => ({
         id: post.id,
+        channelId: post.channelId,
         title: post.title ?? null,
         contentSnippet: toSnippet(post.content),
         imageAsset: serializeUploadedAsset(post.imageAsset),
@@ -378,12 +377,8 @@ export async function GET(
 
     const posts = await db.communityPost.findMany({
       where: {
-        ...(channelIdParam
-          ? {
-              channelId: channelIdParam,
-              channel: { boardId, type: "FORUM" },
-            }
-          : { channel: { boardId, type: "FORUM" } }),
+        channelId,
+        channel: { type: ChannelType.FORUM },
         deleted: false,
         ...(cursorCreatedAt && cursorId
           ? {
@@ -400,6 +395,7 @@ export async function GET(
       take: limit + 1,
       select: {
         id: true,
+        channelId: true,
         title: true,
         content: true,
         commentCount: true,
@@ -501,6 +497,7 @@ export async function GET(
 
     const result: CommunityPostFeedItem[] = items.map((post) => ({
       id: post.id,
+      channelId: post.channelId,
       title: post.title ?? null,
       content: post.content,
       imageAsset: serializeUploadedAsset(post.imageAsset),
@@ -534,3 +531,5 @@ export async function GET(
     return NextResponse.json({ error: "Internal Error" }, { status: 500 });
   }
 }
+
+export { POST } from "@/app/api/posts/route";

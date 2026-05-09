@@ -23,6 +23,7 @@ export interface CommunityPostAuthor
 
 export interface CommunityPostFeedItem {
   id: string;
+  channelId: string;
   title: string | null;
   content: string;
   imageAsset: ClientUploadedAsset | null;
@@ -61,7 +62,6 @@ export interface CommunityPostsInfo {
   name: string;
   imageAsset: ClientUploadedAsset | null;
   memberCount: number;
-  recentPostCount7d: number;
 }
 
 export interface CommunityPostsFeedPage {
@@ -88,10 +88,11 @@ export const communityPostsScrollKey = (communityId: string) =>
 
 async function fetchCommunityPostsFeed(
   communityId: string,
+  channelId: string,
   cursor?: string | null,
 ): Promise<CommunityPostsFeedPage> {
   const url = new URL(
-    `/api/boards/${communityId}/posts`,
+    `/api/channels/${channelId}/posts`,
     window.location.origin,
   );
   if (cursor) url.searchParams.set("cursor", cursor);
@@ -102,6 +103,7 @@ async function fetchCommunityPostsFeed(
 }
 
 interface UseCommunityPostsFeedOptions {
+  channelId?: string | null;
   maxRenderedPages?: number;
   expandThreshold?: number;
   enabled?: boolean;
@@ -114,6 +116,7 @@ export function useCommunityPostsFeed(
   {
     maxRenderedPages = 3,
     expandThreshold = 0.4,
+    channelId,
     enabled = true,
     isActive = true,
     externalContainerRef,
@@ -160,12 +163,13 @@ export function useCommunityPostsFeed(
     refetch,
   } = useInfiniteQuery({
     queryKey: communityPostsKey(communityId),
-    queryFn: ({ pageParam }) => fetchCommunityPostsFeed(communityId, pageParam),
+    queryFn: ({ pageParam }) =>
+      fetchCommunityPostsFeed(communityId, channelId!, pageParam),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) =>
       lastPage.hasMore ? lastPage.nextCursor : undefined,
     staleTime: 1000 * 30,
-    enabled: enabled && isActive && !!communityId,
+    enabled: enabled && isActive && !!communityId && !!channelId,
   });
 
   const pages = useMemo(() => data?.pages ?? [], [data?.pages]);

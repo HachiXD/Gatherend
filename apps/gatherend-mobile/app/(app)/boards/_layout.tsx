@@ -46,23 +46,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BoardsDrawerSidebar } from "@/src/features/boards/components/boards-drawer-sidebar";
 import { useBoard } from "@/src/features/boards/hooks/use-board";
 import { useUserBoards } from "@/src/features/boards/hooks/use-user-boards";
-import { getBoardPosts } from "@/src/features/forum/application/get-board-posts";
-import {
-  boardPostsQueryKey,
-  FORUM_POSTS_GC_TIME_MS,
-  FORUM_POSTS_STALE_TIME_MS,
-} from "@/src/features/forum/queries";
 import { getBoardRules } from "@/src/features/rules/api/get-board-rules";
 import { boardRulesQueryKey } from "@/src/features/rules/hooks/use-board-rules";
 import { useBoardVoiceParticipantsSocket } from "@/src/features/voice/hooks/use-board-voice-participants-socket";
 import { useVoiceStore } from "@/src/features/voice/store/use-voice-store";
 import { useProfile } from "@/src/features/profile/providers/current-profile-provider";
-import { getWikiPages } from "@/src/features/wiki/application/get-wiki-pages";
-import {
-  wikiPagesQueryKey,
-  WIKI_PAGES_GC_TIME_MS,
-  WIKI_PAGES_STALE_TIME_MS,
-} from "@/src/features/wiki/queries";
 import { getBoardImageUrl } from "@/src/lib/avatar-utils";
 import { useTheme } from "@/src/theme/theme-provider";
 import type { BoardChannel } from "@/src/features/boards/types/board";
@@ -102,6 +90,7 @@ const HOME_OPTIMISTIC_TABS = [
   { key: "rules", label: "Reglas" },
   { key: "chats", label: "Chats" },
   { key: "forum", label: "Foro" },
+  { key: "wiki", label: "Wiki" },
   { key: "featured", label: "Destacado" },
   { key: "ranking", label: "Ranking" },
 ] as const;
@@ -527,38 +516,6 @@ export default function BoardShellLayout() {
         staleTime: 1000 * 60 * 5,
         gcTime: 1000 * 60 * 10,
       });
-      void queryClient.prefetchInfiniteQuery({
-        queryKey: boardPostsQueryKey(activeBoardId),
-        queryFn: ({ pageParam }) =>
-          getBoardPosts(activeBoardId, pageParam as string | null),
-        initialPageParam: null as string | null,
-        staleTime: FORUM_POSTS_STALE_TIME_MS,
-        gcTime: FORUM_POSTS_GC_TIME_MS,
-      });
-      return;
-    }
-
-    if (drawerTargetSection === "forum") {
-      void queryClient.prefetchInfiniteQuery({
-        queryKey: boardPostsQueryKey(activeBoardId),
-        queryFn: ({ pageParam }) =>
-          getBoardPosts(activeBoardId, pageParam as string | null),
-        initialPageParam: null as string | null,
-        staleTime: FORUM_POSTS_STALE_TIME_MS,
-        gcTime: FORUM_POSTS_GC_TIME_MS,
-      });
-      return;
-    }
-
-    if (drawerTargetSection === "wiki") {
-      void queryClient.prefetchInfiniteQuery({
-        queryKey: wikiPagesQueryKey(activeBoardId),
-        queryFn: ({ pageParam }) =>
-          getWikiPages(activeBoardId, pageParam as string | null),
-        initialPageParam: null as string | null,
-        staleTime: WIKI_PAGES_STALE_TIME_MS,
-        gcTime: WIKI_PAGES_GC_TIME_MS,
-      });
     }
   }, [drawerTargetSection, activeBoardId, queryClient]);
 
@@ -921,8 +878,10 @@ export default function BoardShellLayout() {
                     {BOARD_SECTION_TABS.filter(
                       (tab) =>
                         tab.key !== "chats" &&
+                        tab.key !== "forum" &&
                         tab.key !== "featured" &&
                         tab.key !== "rules" &&
+                        tab.key !== "wiki" &&
                         tab.key !== "ranking" &&
                         tab.key !== "members",
                     ).map((tab) => {

@@ -10,6 +10,7 @@ export type WikiPageAuthor = {
 
 export type WikiPagePreview = {
   id: string;
+  channelId: string;
   title: string;
   createdAt: string;
   updatedAt: string;
@@ -24,6 +25,7 @@ export type WikiPagePreviewsPage = {
 
 export type WikiPage = {
   id: string;
+  channelId: string;
   title: string;
   content: string;
   imageAsset: ClientPublicAsset | null;

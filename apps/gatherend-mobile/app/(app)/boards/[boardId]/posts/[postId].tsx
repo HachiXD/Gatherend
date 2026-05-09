@@ -115,9 +115,10 @@ type ReportConfig = {
 };
 
 export default function PostDetailScreen() {
-  const { boardId, postId } = useLocalSearchParams<{
+  const { boardId, postId, channelId: channelIdParam } = useLocalSearchParams<{
     boardId: string;
     postId: string;
+    channelId?: string;
   }>();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -125,7 +126,11 @@ export default function PostDetailScreen() {
   const insets = useSafeAreaInsets();
   const profile = useProfile();
   const { data: board } = useBoard(boardId);
-  const { data: post, isLoading, isError } = usePost(boardId, postId);
+  const channelId =
+    typeof channelIdParam === "string"
+      ? channelIdParam
+      : undefined;
+  const { data: post, isLoading, isError } = usePost(boardId, postId, channelId);
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [composerVisible, setComposerVisible] = useState(false);

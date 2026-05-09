@@ -33,9 +33,10 @@ function formatDate(value: string): string {
 }
 
 export default function WikiPageDetailScreen() {
-  const { boardId, pageId } = useLocalSearchParams<{
+  const { boardId, pageId, channelId } = useLocalSearchParams<{
     boardId: string;
     pageId: string;
+    channelId?: string;
   }>();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -43,10 +44,18 @@ export default function WikiPageDetailScreen() {
 
   const profile = useProfile();
   const { data: board } = useBoard(boardId);
-  const { data: page, isLoading, isError } = useWikiPage(boardId, pageId);
+  const { data: page, isLoading, isError } = useWikiPage(
+    boardId,
+    pageId,
+    channelId,
+  );
 
-  const editMutation = useEditWikiPage(boardId ?? "", pageId ?? "");
-  const deleteMutation = useDeleteWikiPage(boardId ?? "");
+  const editMutation = useEditWikiPage(
+    boardId ?? "",
+    pageId ?? "",
+    channelId ?? "",
+  );
+  const deleteMutation = useDeleteWikiPage(boardId ?? "", channelId ?? "");
 
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");

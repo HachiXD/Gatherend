@@ -26,6 +26,8 @@ function ForumViewInner() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showPostForm, setShowPostForm] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const forumChannelId =
+    board?.channels.find((channel) => channel.type === "FORUM")?.id ?? null;
 
   const headerButtonStyles = useCommunityHeaderStyle();
 
@@ -126,6 +128,7 @@ function ForumViewInner() {
             >
               <InlineCommunityPostForm
                 communityId={boardId}
+                channelId={forumChannelId ?? ""}
                 communityName={board?.name}
                 onCancel={() => setShowPostForm(false)}
                 onSuccess={() => setShowPostForm(false)}
@@ -138,6 +141,7 @@ function ForumViewInner() {
         <div className="w-full">
           <CommunityPostsSection
             communityId={boardId}
+            channelId={forumChannelId}
             isActive={true}
             scrollContainerRef={scrollContainerRef}
           />
