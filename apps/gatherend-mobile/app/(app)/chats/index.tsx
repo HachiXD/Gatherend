@@ -83,7 +83,7 @@ export default function ChatsScreen() {
             onPress={() => {
               if (navigating.current) return;
               navigating.current = true;
-              router.push("/(app)/(tabs)/chats/add-friend");
+              router.push("/chats/add-friend");
             }}
             style={({ pressed }) => [
               styles.addButton,
@@ -141,7 +141,7 @@ export default function ChatsScreen() {
                 if (navigating.current) return;
                 navigating.current = true;
                 router.push({
-                  pathname: "/(app)/chats/[conversationId]",
+                  pathname: "/chats/[conversationId]",
                   params: { conversationId },
                 });
               }}

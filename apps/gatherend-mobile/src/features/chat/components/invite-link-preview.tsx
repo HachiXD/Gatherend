@@ -53,7 +53,7 @@ export function InviteLinkPreview({ inviteCode }: { inviteCode: string }) {
 
     if (state.kind !== "ready") {
       router.push({
-        pathname: "/(public)/index",
+        pathname: "/",
       });
       return;
     }
@@ -72,12 +72,12 @@ export function InviteLinkPreview({ inviteCode }: { inviteCode: string }) {
       if (result.success || result.alreadyMember) {
         if (result.success && !result.alreadyMember) {
           router.push({
-            pathname: "/(app)/(tabs)/boards/[boardId]/home",
+            pathname: "/boards/[boardId]/home",
             params: { boardId: data.id },
           });
         } else {
           router.push({
-            pathname: "/(app)/(tabs)/boards/[boardId]/chats",
+            pathname: "/boards/[boardId]/chats",
             params: { boardId: data.id },
           });
         }

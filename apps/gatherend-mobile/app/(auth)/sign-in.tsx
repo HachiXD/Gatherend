@@ -37,7 +37,7 @@ export default function SignInScreen() {
   const [oauthLoading, setOauthLoading] = useState<SocialProvider | null>(null);
 
   if (isAuthenticated) {
-    return <Redirect href="/(app)/(tabs)/boards/index" />;
+    return <Redirect href="/boards" />;
   }
 
   async function handleSubmit() {
@@ -53,7 +53,7 @@ export default function SignInScreen() {
     try {
       await signInWithEmail({ email, password });
       await prefetchCurrentProfile(queryClient);
-      router.replace("/(app)/(tabs)/boards/index");
+      router.replace("/boards");
     } catch (submitError) {
       setError(
         getAuthErrorMessage(

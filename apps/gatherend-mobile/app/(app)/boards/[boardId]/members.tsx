@@ -84,7 +84,6 @@ export default function BoardMembersScreen() {
       data={members}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
-      estimatedItemSize={74}
       onEndReached={() => {
         if (query.hasNextPage && !query.isFetchingNextPage) {
           void query.fetchNextPage();

@@ -503,7 +503,7 @@ export default function ConversationScreen() {
   }, [handleStartReached]);
 
   if (!resolvedConversationId) {
-    return <Redirect href="/(app)/(tabs)/chats" />;
+    return <Redirect href="/chats" />;
   }
 
   if (isConversationLoading && !conversation) {
@@ -547,7 +547,7 @@ export default function ConversationScreen() {
           accessibilityLabel="Volver"
           accessibilityRole="button"
           onPress={() => {
-            router.replace("/(app)/(tabs)/chats");
+            router.replace("/chats");
           }}
           style={({ pressed }) => [
             styles.headerButton,

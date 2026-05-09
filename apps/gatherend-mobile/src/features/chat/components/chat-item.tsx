@@ -136,7 +136,7 @@ function getUsernamePillColor(
 
   if (typeof usernameColor !== "object") return fallbackColor;
 
-  const value = usernameColor as UsernameColorValue;
+  const value = usernameColor as Exclude<UsernameColorValue, string>;
   if (value.type === "solid" && typeof value.color === "string") {
     return HEX_COLOR_RE.test(value.color) ? value.color : fallbackColor;
   }

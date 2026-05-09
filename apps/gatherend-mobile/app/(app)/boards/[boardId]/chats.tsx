@@ -41,7 +41,7 @@ export default function BoardChatsScreen() {
 
       if (isInThisVoiceChannel) {
         router.replace({
-          pathname: "/(app)/boards/[boardId]/chats/[channelId]",
+          pathname: "/boards/[boardId]/chats/[channelId]",
           params: { boardId, channelId },
         });
         return;
@@ -108,7 +108,7 @@ export default function BoardChatsScreen() {
         onSelectChannel={(channelId) => {
           if (!boardId) return;
           router.replace({
-            pathname: "/(app)/boards/[boardId]/chats/[channelId]",
+            pathname: "/boards/[boardId]/chats/[channelId]",
             params: { boardId, channelId },
           });
         }}

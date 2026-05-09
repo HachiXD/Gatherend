@@ -37,8 +37,8 @@ export default function BoardsEntryScreen() {
     return (
       <Redirect
         href={{
-          pathname: "/(app)/(tabs)/boards/[boardId]/home",
-          params: { boardId: firstBoard.id },
+          pathname: "/boards/[boardId]/home",
+          params: { boardId: firstBoard.id, drawerOpen: "1" },
         }}
       />
     );

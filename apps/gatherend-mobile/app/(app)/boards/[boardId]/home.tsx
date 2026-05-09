@@ -1,13 +1,14 @@
 import { Image } from "expo-image";
-import { FlashList } from "@shopify/flash-list";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import BoardFeaturedScreen from "./featured";
+import BoardForumScreen from "./forum";
+import BoardRankingScreen from "./ranking";
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
   PanResponder,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   View,
@@ -16,20 +17,7 @@ import {
 import { BoardChannelsList } from "@/src/features/boards/components/board-channels-list";
 import { useBoard } from "@/src/features/boards/hooks/use-board";
 import { useVoiceStore } from "@/src/features/voice/store/use-voice-store";
-import { useBoardPosts } from "@/src/features/forum/hooks/use-board-posts";
-import { useCreateComment } from "@/src/features/forum/hooks/use-create-comment";
-import { useDeleteComment } from "@/src/features/forum/hooks/use-delete-comment";
-import { useDeletePost } from "@/src/features/forum/hooks/use-delete-post";
-import { useEditComment } from "@/src/features/forum/hooks/use-edit-comment";
-import { useEditPost } from "@/src/features/forum/hooks/use-edit-post";
-import { PostCard } from "@/src/features/forum/components/post-card";
-import {
-  ReportScreen,
-  type ReportCategoryConfig,
-} from "@/src/features/report/components/report-screen";
-import type { ReportTargetType } from "@/src/features/report/api/submit-report";
 import { useBoardRules } from "@/src/features/rules/hooks/use-board-rules";
-import { useProfile } from "@/src/features/profile/providers/current-profile-provider";
 import { useTheme } from "@/src/theme/theme-provider";
 import type { ThemeColors } from "@/src/theme/types";
 import {
@@ -39,22 +27,25 @@ import {
   hexToHsl,
 } from "@/src/theme/utils";
 import { Text } from "@/src/components/app-typography";
-import type {
-  ForumPost,
-  ForumPostComment,
-} from "@/src/features/forum/domain/post";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-type HomeTabKey = "rules" | "chats" | "forum";
+type HomeTabKey = "rules" | "chats" | "forum" | "featured" | "ranking";
 
 const HOME_TABS: Array<{ key: HomeTabKey; label: string }> = [
   { key: "rules", label: "Reglas" },
   { key: "chats", label: "Chats" },
   { key: "forum", label: "Foro" },
+  { key: "featured", label: "Destacado" },
+  { key: "ranking", label: "Ranking" },
 ];
 
 const INITIAL_TAB_INDEX = 1; // Chats
+const RULES_TAB_INDEX = 0;
+const CHATS_TAB_INDEX = 1;
+const FORUM_TAB_INDEX = 2;
+const FEATURED_TAB_INDEX = 3;
+const RANKING_TAB_INDEX = 4;
 
 function normalizeDominantColor(raw: string | null | undefined) {
   if (!raw) return null;
@@ -85,94 +76,6 @@ function getBoardDerivedColors(
     ? generatePaletteFromBase(hex)
     : generateLightPaletteFromBase(hex);
 }
-
-// ─── Report categories ────────────────────────────────────────────────────────
-
-const POST_REPORT_CATEGORIES: ReportCategoryConfig[] = [
-  {
-    value: "CSAM",
-    label: "Seguridad infantil",
-    description: "El post involucra a menores de forma inapropiada",
-  },
-  {
-    value: "SEXUAL_CONTENT",
-    label: "Contenido sexual",
-    description: "El post contiene material explícito o no solicitado",
-  },
-  {
-    value: "HARASSMENT",
-    label: "Acoso",
-    description: "El post contiene amenazas o comportamiento intimidatorio",
-  },
-  {
-    value: "HATE_SPEECH",
-    label: "Discurso de odio",
-    description: "Promueve odio contra grupos o personas",
-  },
-  {
-    value: "SPAM",
-    label: "Spam",
-    description: "Contenido repetitivo, engañoso o no solicitado",
-  },
-  {
-    value: "IMPERSONATION",
-    label: "Suplantación de identidad",
-    description: "Se hace pasar por otra persona",
-  },
-  {
-    value: "OTHER",
-    label: "Otro",
-    description: "Razón no listada anteriormente",
-  },
-];
-
-const COMMENT_REPORT_CATEGORIES: ReportCategoryConfig[] = [
-  {
-    value: "CSAM",
-    label: "Seguridad infantil",
-    description: "El comentario involucra a menores de forma inapropiada",
-  },
-  {
-    value: "SEXUAL_CONTENT",
-    label: "Contenido sexual",
-    description: "El comentario contiene material explícito",
-  },
-  {
-    value: "HARASSMENT",
-    label: "Acoso",
-    description: "El comentario contiene amenazas o acoso",
-  },
-  {
-    value: "HATE_SPEECH",
-    label: "Discurso de odio",
-    description: "Promueve odio contra grupos o personas",
-  },
-  {
-    value: "SPAM",
-    label: "Spam",
-    description: "Contenido repetitivo, engañoso o no solicitado",
-  },
-  {
-    value: "IMPERSONATION",
-    label: "Suplantación de identidad",
-    description: "Se hace pasar por otra persona",
-  },
-  {
-    value: "OTHER",
-    label: "Otro",
-    description: "Razón no listada anteriormente",
-  },
-];
-
-type ReportConfig = {
-  title: string;
-  previewLabel: string;
-  categories: ReportCategoryConfig[];
-  targetType: ReportTargetType;
-  targetId: string;
-  targetOwnerId?: string;
-  snapshot?: Record<string, unknown>;
-};
 
 // ─── RulesContent ─────────────────────────────────────────────────────────────
 
@@ -315,264 +218,13 @@ function ChatsContent({
         onSelectChannel={(channelId) => {
           if (!boardId) return;
           router.replace({
-            pathname: "/(app)/boards/[boardId]/chats/[channelId]",
+            pathname: "/boards/[boardId]/chats/[channelId]",
             params: { boardId, channelId },
           });
         }}
         onJoinVoice={handleJoinVoice}
       />
     </View>
-  );
-}
-
-// ─── ForumContent ─────────────────────────────────────────────────────────────
-
-function ForumContent({
-  boardId,
-  colors,
-}: {
-  boardId: string | undefined;
-  colors: ThemeColors;
-}) {
-  const styles = useMemo(() => createStyles(colors), [colors]);
-
-  const profile = useProfile();
-  const { data: board } = useBoard(boardId);
-
-  const {
-    data,
-    isLoading,
-    isError,
-    error,
-    isFetchingNextPage,
-    hasNextPage,
-    fetchNextPage,
-    refetch,
-    isRefetching,
-  } = useBoardPosts(boardId);
-
-  const allPosts = useMemo(
-    () => data?.pages.flatMap((page) => page.items) ?? [],
-    [data],
-  );
-
-  const [expandedPostsById, setExpandedPostsById] = useState<
-    Record<string, true>
-  >({});
-  const [reportConfig, setReportConfig] = useState<ReportConfig | null>(null);
-
-  const createComment = useCreateComment(boardId ?? "");
-  const editPost = useEditPost(boardId ?? "");
-  const editComment = useEditComment(boardId ?? "");
-  const deletePost = useDeletePost(boardId ?? "");
-  const deleteComment = useDeleteComment(boardId ?? "");
-
-  const handleToggleExpand = useCallback((postId: string) => {
-    setExpandedPostsById((prev) => {
-      if (prev[postId]) {
-        const next = { ...prev };
-        delete next[postId];
-        return next;
-      }
-      return { ...prev, [postId]: true };
-    });
-  }, []);
-
-  const handleCreateComment = useCallback(
-    (postId: string, content: string) => {
-      createComment.mutate({ postId, content });
-    },
-    [createComment],
-  );
-
-  const handleEditPost = useCallback(
-    (postId: string, content: string) => {
-      editPost.mutate({ postId, content });
-    },
-    [editPost],
-  );
-
-  const handleEditComment = useCallback(
-    (postId: string, commentId: string, content: string) => {
-      editComment.mutate({ postId, commentId, content });
-    },
-    [editComment],
-  );
-
-  const handleDeletePost = useCallback(
-    (postId: string) => {
-      deletePost.mutate(postId);
-    },
-    [deletePost],
-  );
-
-  const handleDeleteComment = useCallback(
-    (postId: string, commentId: string) => {
-      deleteComment.mutate({ postId, commentId });
-    },
-    [deleteComment],
-  );
-
-  const currentMemberRole = board?.currentMember?.role ?? null;
-
-  const handleReportPost = useCallback((post: ForumPost) => {
-    const preview =
-      post.title ??
-      (post.content.length > 120
-        ? `${post.content.slice(0, 120)}…`
-        : post.content);
-    setReportConfig({
-      title: "Reportar post",
-      previewLabel: preview || "Post sin texto",
-      categories: POST_REPORT_CATEGORIES,
-      targetType: "COMMUNITY_POST",
-      targetId: post.id,
-      targetOwnerId: post.author.id,
-      snapshot: {
-        title: post.title,
-        content: post.content,
-        authorUsername: post.author.username,
-      },
-    });
-  }, []);
-
-  const handleReportComment = useCallback((comment: ForumPostComment) => {
-    const preview =
-      comment.content.length > 120
-        ? `${comment.content.slice(0, 120)}…`
-        : comment.content;
-    setReportConfig({
-      title: "Reportar comentario",
-      previewLabel: preview || "Comentario sin texto",
-      categories: COMMENT_REPORT_CATEGORIES,
-      targetType: "COMMUNITY_POST_COMMENT",
-      targetId: comment.id,
-      targetOwnerId: comment.author.id,
-      snapshot: {
-        content: comment.content,
-        authorUsername: comment.author.username,
-        postId: comment.postId,
-      },
-    });
-  }, []);
-
-  const renderItem = useCallback(
-    ({ item }: { item: ForumPost }) => (
-      <PostCard
-        post={item}
-        boardId={boardId ?? ""}
-        currentProfileId={profile.id}
-        currentMemberRole={currentMemberRole}
-        isExpanded={!!expandedPostsById[item.id]}
-        isSubmittingComment={createComment.isPending}
-        onToggleExpand={handleToggleExpand}
-        onCreateComment={handleCreateComment}
-        onEditPost={handleEditPost}
-        onEditComment={handleEditComment}
-        onDeletePost={handleDeletePost}
-        onDeleteComment={handleDeleteComment}
-        onReportPost={handleReportPost}
-        onReportComment={handleReportComment}
-      />
-    ),
-    [
-      profile.id,
-      currentMemberRole,
-      expandedPostsById,
-      createComment.isPending,
-      handleToggleExpand,
-      handleCreateComment,
-      handleEditPost,
-      handleEditComment,
-      handleDeletePost,
-      handleDeleteComment,
-      handleReportPost,
-      handleReportComment,
-    ],
-  );
-
-  if (isLoading && allPosts.length === 0) {
-    return (
-      <View style={styles.centerState}>
-        <ActivityIndicator color={colors.accentPrimary} size="small" />
-        <Text style={styles.stateText}>Cargando foro...</Text>
-      </View>
-    );
-  }
-
-  if (isError && allPosts.length === 0) {
-    return (
-      <View style={styles.centerState}>
-        <Text style={styles.stateTitle}>No se pudo cargar el foro</Text>
-        <Text style={styles.stateText}>
-          {error instanceof Error ? error.message : "Intenta nuevamente."}
-        </Text>
-        <Pressable
-          onPress={() => void refetch()}
-          style={({ pressed }) => [
-            styles.retryButton,
-            pressed ? styles.retryButtonPressed : null,
-          ]}
-        >
-          <Text style={styles.retryButtonText}>
-            {isRefetching ? "Reintentando..." : "Reintentar"}
-          </Text>
-        </Pressable>
-      </View>
-    );
-  }
-
-  return (
-    <>
-      <FlashList
-        data={allPosts}
-        estimatedItemSize={280}
-        extraData={expandedPostsById}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        onEndReached={() => {
-          if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
-        }}
-        onEndReachedThreshold={0.3}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefetching}
-            onRefresh={() => void refetch()}
-            tintColor={colors.accentPrimary}
-          />
-        }
-        contentContainerStyle={styles.forumListContent}
-        ListEmptyComponent={
-          <View style={styles.centerState}>
-            <Text style={styles.stateTitle}>Todavía no hay posts</Text>
-            <Text style={styles.stateText}>
-              Sé el primero en publicar en{" "}
-              {board?.name ? `el foro de ${board.name}` : "este foro"}.
-            </Text>
-          </View>
-        }
-        ListFooterComponent={
-          isFetchingNextPage ? (
-            <View style={styles.footerLoader}>
-              <ActivityIndicator color={colors.accentPrimary} size="small" />
-            </View>
-          ) : null
-        }
-      />
-      {reportConfig ? (
-        <ReportScreen
-          visible
-          onClose={() => setReportConfig(null)}
-          title={reportConfig.title}
-          previewLabel={reportConfig.previewLabel}
-          categories={reportConfig.categories}
-          targetType={reportConfig.targetType}
-          targetId={reportConfig.targetId}
-          targetOwnerId={reportConfig.targetOwnerId}
-          snapshot={reportConfig.snapshot}
-        />
-      ) : null}
-    </>
   );
 }
 
@@ -597,13 +249,13 @@ export default function BoardHomeScreen() {
     [effectiveColors],
   );
 
+  const TAB_WIDTH = 110;
+
   const tabIndexRef = useRef(INITIAL_TAB_INDEX);
   const [displayTabIndex, setDisplayTabIndex] = useState(INITIAL_TAB_INDEX);
   const animPageValue = useRef(
     new Animated.Value(-screenWidth * INITIAL_TAB_INDEX),
   ).current;
-
-  const tabWidth = screenWidth / HOME_TABS.length;
 
   const goToTab = useCallback(
     (index: number) => {
@@ -659,39 +311,46 @@ export default function BoardHomeScreen() {
   // Maps the pager translateX to the indicator position
   const indicatorTranslateX = animPageValue.interpolate({
     inputRange: [-(screenWidth * (HOME_TABS.length - 1)), 0],
-    outputRange: [tabWidth * (HOME_TABS.length - 1), 0],
+    outputRange: [TAB_WIDTH * (HOME_TABS.length - 1), 0],
     extrapolate: "clamp",
   });
 
   return (
     <View style={styles.container}>
-      {/* Horizontal tab bar */}
-      <View style={styles.tabBar}>
-        {HOME_TABS.map((tab, i) => (
-          <Pressable
-            key={tab.key}
-            onPress={() => goToTab(i)}
-            style={styles.tabBarItem}
-          >
-            <Text
-              style={[
-                styles.tabBarLabel,
-                displayTabIndex === i ? styles.tabBarLabelActive : null,
-              ]}
+      {/* Horizontal scrollable tab bar */}
+      <View style={styles.tabBarWrapper}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabBar}
+          bounces={false}
+        >
+          {HOME_TABS.map((tab, i) => (
+            <Pressable
+              key={tab.key}
+              onPress={() => goToTab(i)}
+              style={[styles.tabBarItem, { width: TAB_WIDTH }]}
             >
-              {tab.label}
-            </Text>
-          </Pressable>
-        ))}
-        <Animated.View
-          style={[
-            styles.tabBarIndicator,
-            {
-              width: tabWidth,
-              transform: [{ translateX: indicatorTranslateX }],
-            },
-          ]}
-        />
+              <Text
+                style={[
+                  styles.tabBarLabel,
+                  displayTabIndex === i ? styles.tabBarLabelActive : null,
+                ]}
+              >
+                {tab.label}
+              </Text>
+            </Pressable>
+          ))}
+          <Animated.View
+            style={[
+              styles.tabBarIndicator,
+              {
+                width: TAB_WIDTH,
+                transform: [{ translateX: indicatorTranslateX }],
+              },
+            ]}
+          />
+        </ScrollView>
       </View>
 
       {/* Pager */}
@@ -706,13 +365,27 @@ export default function BoardHomeScreen() {
           ]}
         >
           <View style={styles.page}>
-            <RulesContent boardId={boardId} colors={effectiveColors} />
+            {displayTabIndex === RULES_TAB_INDEX ? (
+              <RulesContent boardId={boardId} colors={effectiveColors} />
+            ) : null}
           </View>
           <View style={styles.page}>
-            <ChatsContent boardId={boardId} colors={effectiveColors} />
+            {displayTabIndex === CHATS_TAB_INDEX ? (
+              <ChatsContent boardId={boardId} colors={effectiveColors} />
+            ) : null}
           </View>
           <View style={styles.page}>
-            <ForumContent boardId={boardId} colors={effectiveColors} />
+            {displayTabIndex === FORUM_TAB_INDEX ? <BoardForumScreen /> : null}
+          </View>
+          <View style={styles.page}>
+            {displayTabIndex === FEATURED_TAB_INDEX ? (
+              <BoardFeaturedScreen />
+            ) : null}
+          </View>
+          <View style={styles.page}>
+            {displayTabIndex === RANKING_TAB_INDEX ? (
+              <BoardRankingScreen />
+            ) : null}
           </View>
         </Animated.View>
       </View>
@@ -728,16 +401,17 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       flex: 1,
     },
     // Tab bar
-    tabBar: {
+    tabBarWrapper: {
       backgroundColor: colors.tabButtonBg,
       borderBottomColor: colors.borderPrimary,
       borderBottomWidth: 1,
+    },
+    tabBar: {
       flexDirection: "row",
       position: "relative",
     },
     tabBarItem: {
       alignItems: "center",
-      flex: 1,
       paddingVertical: 11,
     },
     tabBarLabel: {
@@ -861,14 +535,6 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       paddingBottom: 18,
       paddingHorizontal: 16,
       paddingTop: 18,
-    },
-    // Forum
-    forumListContent: {
-      paddingVertical: 8,
-    },
-    footerLoader: {
-      alignItems: "center",
-      paddingVertical: 16,
     },
   });
 }

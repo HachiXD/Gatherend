@@ -49,7 +49,7 @@ export function UserProfileSheet({
 
   const handleCustomize = () => {
     onClose();
-    router.push("/(app)/(tabs)/me");
+    router.push("/me");
   };
 
   const fallbackProfile = author

@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { FlashList, FlashListRef } from "@shopify/flash-list";
-import { Redirect, useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";import {
+import { Redirect, useLocalSearchParams, useFocusEffect } from "expo-router";
+import {
   memo,
   useCallback,
   useEffect,
@@ -18,7 +19,6 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBoard } from "@/src/features/boards/hooks/use-board";
 import {
   ChatInput,
@@ -216,6 +216,7 @@ const ChannelComposerAccessory = memo(function ChannelComposerAccessory({
       <View pointerEvents="none" style={styles.composerTopSpacer} />
       <ChatInput
         ref={chatInputRef}
+        bottomInset={0}
         context={{ type: "channel", boardId, channelId }}
         isComposerCompact={isComposerCompact}
         windowKey={windowKey}
@@ -262,9 +263,7 @@ const ChannelComposerAccessory = memo(function ChannelComposerAccessory({
 });
 
 export default function BoardChannelScreen() {
-  const router = useRouter();
   const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const profile = useProfile();
   const { markAsRead, clearViewingRoom } = useChannelReadState(profile.id);
@@ -538,7 +537,7 @@ export default function BoardChannelScreen() {
   }, [handleStartReached]);
 
   if (!resolvedBoardId || !resolvedChannelId) {
-    return <Redirect href="/(app)/(tabs)/boards" />;
+    return <Redirect href="/boards" />;
   }
 
   if (isBoardLoading && !board) {
@@ -574,7 +573,7 @@ export default function BoardChannelScreen() {
     return (
       <Redirect
         href={{
-          pathname: "/(app)/(tabs)/boards/[boardId]/chats",
+          pathname: "/boards/[boardId]/chats",
           params: { boardId: resolvedBoardId },
         }}
       />
@@ -584,17 +583,6 @@ export default function BoardChannelScreen() {
   if (!board || !channel) return null;
 
   const channelImageUrl = channel.imageAsset?.url ?? null;
-  const hasChannelImage = Boolean(channelImageUrl);
-  const channelMembersLabel =
-    channel.type === "VOICE"
-      ? isInThisVoiceChannel
-        ? isVoiceConnected
-          ? "En llamada"
-          : "Conectando llamada"
-        : "Canal de voz"
-      : channel.channelMemberCount === 1
-        ? "1 miembro"
-        : `${channel.channelMemberCount} miembros`;
 
   return (
     <View style={styles.container}>
@@ -615,43 +603,6 @@ export default function BoardChannelScreen() {
           />
         </>
       ) : null}
-
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <View
-          pointerEvents="none"
-          style={[
-            styles.headerBackground,
-            hasChannelImage ? styles.headerBackgroundWithImage : null,
-          ]}
-        />
-
-        <Pressable
-          accessibilityHint="Regresa a la lista de chats del board"
-          accessibilityLabel="Volver"
-          accessibilityRole="button"
-          onPress={() => {
-            router.replace({
-              pathname: "/(app)/(tabs)/boards/[boardId]/chats",
-              params: { boardId: resolvedBoardId },
-            });
-          }}
-          style={({ pressed }) => [
-            styles.headerButton,
-            pressed ? styles.buttonPressed : null,
-          ]}
-        >
-          <Ionicons color={colors.textPrimary} name="arrow-back" size={21} />
-        </Pressable>
-
-        <View style={styles.headerCopy}>
-          <Text numberOfLines={1} style={styles.headerTitle}>
-            {channel.name}
-          </Text>
-          <Text numberOfLines={1} style={styles.headerSubtitle}>
-            {channelMembersLabel}
-          </Text>
-        </View>
-      </View>
 
       <View style={styles.body}>
         {channel.type !== "TEXT" ? (
@@ -771,9 +722,7 @@ export default function BoardChannelScreen() {
                 onClearReply={() => setReplyTo(null)}
               />
             ) : (
-              <View
-                style={[styles.joinBar, { paddingBottom: insets.bottom + 12 }]}
-              >
+              <View style={styles.joinBar}>
                 <Pressable
                   disabled={isJoining}
                   onPress={() => void handleJoinChannel()}
@@ -933,48 +882,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       borderTopWidth: 1,
     },
     composerTopSpacer: {
-      height: 20,
-    },
-    header: {
-      alignItems: "center",
-      flexDirection: "row",
-      gap: 12,
-      paddingBottom: 14,
-      paddingHorizontal: 16,
-    },
-    headerBackground: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: colors.bgSecondary,
-      borderBottomColor: colors.borderPrimary,
-      borderBottomWidth: 1,
-    },
-    headerBackgroundWithImage: {
-      opacity: 0.5,
-    },
-    headerButton: {
-      alignItems: "center",
-      backgroundColor: colors.bgQuaternary,
-      borderColor: colors.borderPrimary,
-      borderRadius: 16,
-      borderWidth: 1,
-      height: 44,
-      justifyContent: "center",
-      width: 44,
-    },
-    headerCopy: {
-      flex: 1,
-      gap: 2,
-      minWidth: 0,
-    },
-    headerTitle: {
-      color: colors.textPrimary,
-      fontSize: 18,
-      fontWeight: "700",
-    },
-    headerSubtitle: {
-      color: colors.textMuted,
-      fontSize: 12,
-      fontWeight: "600",
+      height: 8,
     },
     centerState: {
       alignItems: "center",

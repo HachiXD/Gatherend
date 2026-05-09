@@ -74,7 +74,7 @@ export default function CreatePostModalScreen() {
   }, []);
 
   if (!boardId) {
-    return <Redirect href="/(app)/(tabs)/boards" />;
+    return <Redirect href="/boards" />;
   }
 
   const isSubmitting = createPostMutation.isPending;

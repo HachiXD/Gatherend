@@ -13,7 +13,7 @@ export default function PublicIndexScreen() {
   const { isAuthenticated } = useSession();
 
   if (isAuthenticated) {
-    return <Redirect href="/(app)/(tabs)/boards/index" />;
+    return <Redirect href="/boards" />;
   }
 
   return (

@@ -1,14 +1,17 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import {
   Pressable,
   StyleSheet,
+  Text as NativeText,
   View,
 } from "react-native";
 import type { DiscoveryBoard } from "@/src/features/discovery/types";
 import { useTheme } from "@/src/theme/theme-provider";
-import { Text } from "@/src/components/app-typography";
+
+const GEIST_BOLD = "Geist_700Bold";
+const GEIST_REGULAR = "Geist_400Regular";
 
 type DiscoveryBoardCardProps = {
   board: DiscoveryBoard;
@@ -17,7 +20,7 @@ type DiscoveryBoardCardProps = {
   onReport?: () => void;
 };
 
-export function DiscoveryBoardCard({
+export const DiscoveryBoardCard = memo(function DiscoveryBoardCard({
   board,
   onPress,
   disabled = false,
@@ -26,6 +29,8 @@ export function DiscoveryBoardCard({
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const bannerAsset = board.bannerAsset ?? board.imageAsset;
+  const memberLabel = board.memberCount === 1 ? "miembro" : "miembros";
+  const postLabel = board.recentPostCount7d === 1 ? "post" : "posts";
 
   return (
     <Pressable
@@ -46,9 +51,9 @@ export function DiscoveryBoardCard({
           />
         ) : (
           <View style={styles.imageFallback}>
-            <Text style={styles.imageFallbackText}>
+            <NativeText style={styles.imageFallbackText}>
               {board.name.charAt(0).toUpperCase()}
-            </Text>
+            </NativeText>
           </View>
         )}
 
@@ -56,10 +61,7 @@ export function DiscoveryBoardCard({
           <Pressable
             hitSlop={10}
             onPress={onReport}
-            style={({ pressed }) => [
-              styles.reportButton,
-              pressed && styles.reportButtonPressed,
-            ]}
+            style={styles.reportButton}
           >
             <Ionicons color="rgba(255,255,255,0.9)" name="flag-outline" size={18} />
           </Pressable>
@@ -67,20 +69,17 @@ export function DiscoveryBoardCard({
       </View>
 
       <View style={styles.copy}>
-        <Text numberOfLines={1} style={styles.title}>
+        <NativeText numberOfLines={1} style={styles.title}>
           {board.name}
-        </Text>
-        <Text style={styles.meta}>
-          {board.memberCount} miembro{board.memberCount === 1 ? "" : "s"}
-        </Text>
-        <Text style={styles.meta}>
-          {board.recentPostCount7d} post
-          {board.recentPostCount7d === 1 ? "" : "s"} esta semana
-        </Text>
+        </NativeText>
+        <NativeText style={styles.meta}>
+          {board.memberCount} {memberLabel} · {board.recentPostCount7d}{" "}
+          {postLabel} esta semana
+        </NativeText>
       </View>
     </Pressable>
   );
-}
+});
 
 function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
   return StyleSheet.create({
@@ -112,9 +111,6 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       right: 10,
       top: 10,
     },
-    reportButtonPressed: {
-      backgroundColor: "rgba(239,68,68,0.5)",
-    },
     image: {
       height: "100%",
       width: "100%",
@@ -126,8 +122,8 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     imageFallbackText: {
       color: colors.textPrimary,
+      fontFamily: GEIST_BOLD,
       fontSize: 34,
-      fontWeight: "800",
     },
     copy: {
       gap: 6,
@@ -136,11 +132,13 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     title: {
       color: colors.textPrimary,
+      fontFamily: GEIST_BOLD,
       fontSize: 20,
-      fontWeight: "700",
+      lineHeight: 24,
     },
     meta: {
       color: colors.textMuted,
+      fontFamily: GEIST_REGULAR,
       fontSize: 14,
       lineHeight: 20,
     },

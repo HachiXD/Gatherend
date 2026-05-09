@@ -725,10 +725,10 @@ export default function EditProfileScreen() {
           >
             {profileTags.state.tags.length > 0 && (
               <View style={styles.tagsWrap}>
-                {profileTags.state.tags.map((tag) => (
+                {profileTags.state.tags.map((tag, index) => (
                   <Pressable
                     key={tag}
-                    onPress={() => profileTags.actions.removeTag(tag)}
+                    onPress={() => profileTags.actions.removeTag(index)}
                     style={[
                       styles.tagChip,
                       {

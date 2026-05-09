@@ -35,7 +35,7 @@ export default function CreateChannelModalScreen() {
   const [localError, setLocalError] = useState<string | null>(null);
 
   if (!boardId) {
-    return <Redirect href="/(app)/(tabs)/boards" />;
+    return <Redirect href="/boards" />;
   }
 
   const isSubmitting = createChannelMutation.isPending;

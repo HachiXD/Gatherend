@@ -43,7 +43,7 @@ export default function BoardWikiScreen() {
   const handleOpenPage = useCallback(
     (pageId: string) => {
       if (!boardId) return;
-      router.push(`/(app)/boards/${boardId}/wiki-pages/${pageId}` as Href);
+      router.push(`/boards/${boardId}/wiki-pages/${pageId}` as Href);
     },
     [boardId, router],
   );
@@ -100,7 +100,6 @@ export default function BoardWikiScreen() {
   return (
     <FlashList
       data={allPages}
-      estimatedItemSize={70}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
       onEndReached={() => {

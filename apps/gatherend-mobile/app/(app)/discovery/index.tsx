@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "expo-router";
 import {
   ActivityIndicator,
@@ -63,6 +63,10 @@ const BOARD_REPORT_CATEGORIES: ReportCategoryConfig[] = [
   },
 ];
 
+const DISCOVERY_CARD_HEIGHT = 272;
+const DISCOVERY_CARD_GAP = 16;
+const DISCOVERY_ITEM_HEIGHT = DISCOVERY_CARD_HEIGHT + DISCOVERY_CARD_GAP;
+
 type ReportConfig = {
   title: string;
   previewLabel: string;
@@ -105,44 +109,98 @@ export default function DiscoveryScreen() {
     [data?.pages],
   );
 
-  const handleExploreBoard = async (boardId: string) => {
-    try {
-      await exploreBoardMutation.mutateAsync({
-        boardId,
-        isMember: userBoardIds.has(boardId),
-      });
+  const handleExploreBoard = useCallback(
+    async (boardId: string) => {
+      try {
+        await exploreBoardMutation.mutateAsync({
+          boardId,
+          isMember: userBoardIds.has(boardId),
+        });
 
-      router.push({
-        pathname: "/(app)/(tabs)/boards/[boardId]",
-        params: { boardId },
-      });
-    } catch {
-      // Surface through mutation.error below.
-    }
-  };
-
-  const renderBoard = ({ item }: { item: DiscoveryBoard }) => (
-    <DiscoveryBoardCard
-      board={item}
-      disabled={exploreBoardMutation.isPending}
-      onPress={(boardId) => {
-        void handleExploreBoard(boardId);
-      }}
-      onReport={() =>
-        setReportConfig({
-          title: "Reportar board",
-          previewLabel: item.name,
-          categories: BOARD_REPORT_CATEGORIES,
-          targetType: "BOARD",
-          targetId: item.id,
-          snapshot: {
-            name: item.name,
-            imageUrl: (item.bannerAsset ?? item.imageAsset)?.url,
-          },
-        })
+        router.push({
+          pathname: "/boards/[boardId]",
+          params: { boardId },
+        });
+      } catch {
+        // Surface through mutation.error below.
       }
-    />
+    },
+    [exploreBoardMutation, router, userBoardIds],
   );
+
+  const handleReportBoard = useCallback(
+    (item: DiscoveryBoard) => {
+      setReportConfig({
+        title: "Reportar board",
+        previewLabel: item.name,
+        categories: BOARD_REPORT_CATEGORIES,
+        targetType: "BOARD",
+        targetId: item.id,
+        snapshot: {
+          name: item.name,
+          imageUrl: (item.bannerAsset ?? item.imageAsset)?.url,
+        },
+      });
+    },
+    [],
+  );
+
+  const renderBoard = useCallback(
+    ({ item }: { item: DiscoveryBoard }) => (
+      <DiscoveryBoardCard
+        board={item}
+        disabled={exploreBoardMutation.isPending}
+        onPress={handleExploreBoard}
+        onReport={() => handleReportBoard(item)}
+      />
+    ),
+    [exploreBoardMutation.isPending, handleExploreBoard, handleReportBoard],
+  );
+
+  const getItemLayout = useCallback(
+    (_data: ArrayLike<DiscoveryBoard> | null | undefined, index: number) => ({
+      length: DISCOVERY_ITEM_HEIGHT,
+      offset: DISCOVERY_ITEM_HEIGHT * index,
+      index,
+    }),
+    [],
+  );
+
+  const keyExtractor = useCallback((item: DiscoveryBoard) => item.id, []);
+
+  const handleEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      void fetchNextPage();
+    }
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+
+  const emptyComponent = useMemo(
+    () => (
+      <View style={styles.centerState}>
+        <Text style={styles.stateTitle}>No hay boards públicos</Text>
+        <Text style={styles.stateText}>
+          Cuando existan boards discoverables aparecerán aquí en una lista
+          simple.
+        </Text>
+      </View>
+    ),
+    [styles],
+  );
+
+  const footerComponent = useMemo(
+    () =>
+      isFetchingNextPage ? (
+        <View style={styles.footerLoader}>
+          <ActivityIndicator color={colors.accentPrimary} size="small" />
+          <Text style={styles.footerLoaderText}>Cargando más boards...</Text>
+        </View>
+      ) : null,
+    [colors.accentPrimary, isFetchingNextPage, styles],
+  );
+
+  const handleCloseReport = useCallback(() => {
+    setReportConfig(null);
+  }, []);
 
   return (
     <View style={[styles.safeArea, { paddingTop: topInset }]}>
@@ -196,37 +254,18 @@ export default function DiscoveryScreen() {
           <FlatList
             contentContainerStyle={styles.listContent}
             data={boards}
-            keyExtractor={(item) => item.id}
-            onEndReached={() => {
-              if (hasNextPage && !isFetchingNextPage) {
-                void fetchNextPage();
-              }
-            }}
+            getItemLayout={getItemLayout}
+            initialNumToRender={3}
+            keyExtractor={keyExtractor}
+            maxToRenderPerBatch={3}
+            onEndReached={handleEndReached}
             onEndReachedThreshold={0.35}
             renderItem={renderBoard}
             showsVerticalScrollIndicator={false}
-            ListEmptyComponent={
-              <View style={styles.centerState}>
-                <Text style={styles.stateTitle}>No hay boards públicos</Text>
-                <Text style={styles.stateText}>
-                  Cuando existan boards discoverables aparecerán aquí en una
-                  lista simple.
-                </Text>
-              </View>
-            }
-            ListFooterComponent={
-              isFetchingNextPage ? (
-                <View style={styles.footerLoader}>
-                  <ActivityIndicator
-                    color={colors.accentPrimary}
-                    size="small"
-                  />
-                  <Text style={styles.footerLoaderText}>
-                    Cargando más boards...
-                  </Text>
-                </View>
-              ) : null
-            }
+            updateCellsBatchingPeriod={40}
+            windowSize={5}
+            ListEmptyComponent={emptyComponent}
+            ListFooterComponent={footerComponent}
           />
         ) : null}
       </View>
@@ -234,7 +273,7 @@ export default function DiscoveryScreen() {
       {reportConfig ? (
         <ReportScreen
           visible
-          onClose={() => setReportConfig(null)}
+          onClose={handleCloseReport}
           title={reportConfig.title}
           previewLabel={reportConfig.previewLabel}
           categories={reportConfig.categories}

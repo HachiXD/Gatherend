@@ -47,7 +47,7 @@ export default function SignUpScreen() {
   const [isTurnstileVisible, setIsTurnstileVisible] = useState(false);
 
   if (isAuthenticated) {
-    return <Redirect href="/(app)/(tabs)/boards/index" />;
+    return <Redirect href="/boards" />;
   }
 
   function resetErrors() {
@@ -101,7 +101,7 @@ export default function SignUpScreen() {
 
       if (token) {
         await prefetchCurrentProfile(queryClient);
-        router.replace("/(app)/(tabs)/boards/index");
+        router.replace("/boards");
         return;
       }
 

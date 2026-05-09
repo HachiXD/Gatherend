@@ -8,6 +8,8 @@ Notifications.setNotificationHandler({
     // Suppress OS banners while the app is in foreground — the in-app system
     // already shows badge counts and updates the UI in real time.
     shouldShowAlert: false,
+    shouldShowBanner: false,
+    shouldShowList: false,
     shouldPlaySound: false,
     shouldSetBadge: false,
   }),
@@ -37,7 +39,7 @@ function navigateFromNotification(
     const { channelId, boardId } = data as MentionData;
     if (channelId && boardId) {
       router.push({
-        pathname: "/(app)/boards/[boardId]/chats/[channelId]",
+        pathname: "/boards/[boardId]/chats/[channelId]",
         params: { boardId, channelId },
       });
     }
@@ -45,7 +47,7 @@ function navigateFromNotification(
     const { conversationId } = data as DirectMessageData;
     if (conversationId) {
       router.push({
-        pathname: "/(app)/chats/[conversationId]",
+        pathname: "/chats/[conversationId]",
         params: { conversationId },
       });
     }

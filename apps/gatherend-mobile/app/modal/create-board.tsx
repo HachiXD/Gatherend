@@ -65,7 +65,7 @@ export default function CreateBoardModalScreen() {
       });
 
       router.replace({
-        pathname: "/(app)/(tabs)/boards/[boardId]",
+        pathname: "/boards/[boardId]",
         params: { boardId: board.id },
       });
     } catch {

@@ -88,11 +88,9 @@ export function useCreateComment(boardId: string) {
           ? {
               id: imageAssetId,
               url: "",
-              mimeType: "image/jpeg",
               width: null,
               height: null,
-              size: null,
-              blurDataUrl: null,
+              dominantColor: null,
             }
           : null,
         createdAt: nowIso,
@@ -108,7 +106,6 @@ export function useCreateComment(boardId: string) {
           badgeSticker: profile.badgeSticker
             ? {
                 id: profile.badgeSticker.id,
-                name: profile.badgeSticker.name,
                 asset: profile.badgeSticker.asset,
               }
             : null,

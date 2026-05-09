@@ -189,7 +189,6 @@ export default function BoardRankingScreen() {
       data={rest}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
-      estimatedItemSize={68}
       onEndReached={() => {
         if (query.hasNextPage && !query.isFetchingNextPage) {
           void query.fetchNextPage();

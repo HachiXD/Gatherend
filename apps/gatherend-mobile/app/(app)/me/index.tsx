@@ -92,7 +92,7 @@ export default function MeScreen() {
               onPress={() => {
                 if (navigating.current) return;
                 navigating.current = true;
-                router.push("/(app)/(tabs)/me/settings");
+                router.push("/me/settings");
               }}
             >
               <Ionicons color="#ffffff" name="settings-outline" size={26} />
@@ -191,7 +191,7 @@ export default function MeScreen() {
             onPress={() => {
                 if (navigating.current) return;
                 navigating.current = true;
-                router.push("/(app)/(tabs)/me/edit-profile");
+                router.push("/me/edit-profile");
               }}
           >
             <Ionicons color={boxFg.fg} name="create-outline" size={16} />
@@ -211,7 +211,7 @@ export default function MeScreen() {
             onPress={() => {
                 if (navigating.current) return;
                 navigating.current = true;
-                router.push("/(app)/(tabs)/me/edit-wall");
+                router.push("/me/edit-wall");
               }}
           >
             <Ionicons color={boxFg.fg} name="albums-outline" size={16} />

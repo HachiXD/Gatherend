@@ -10,9 +10,9 @@ export function useCreatePost(boardId: string) {
     mutationFn: createPost,
     onSuccess: (newPost) => {
       const normalizedPost = {
-        latestComments: [],
-        commentCount: 0,
         ...newPost,
+        latestComments: newPost.latestComments ?? [],
+        commentCount: newPost.commentCount ?? 0,
       };
       queryClient.setQueryData<InfiniteData<ForumPostsPage>>(
         boardPostsQueryKey(boardId),

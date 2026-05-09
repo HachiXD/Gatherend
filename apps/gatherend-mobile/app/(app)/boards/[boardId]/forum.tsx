@@ -43,7 +43,7 @@ export default function BoardForumScreen() {
   const handleOpenPost = useCallback(
     (postId: string) => {
       if (!boardId) return;
-      router.push(`/(app)/boards/${boardId}/posts/${postId}` as Href);
+      router.push(`/boards/${boardId}/posts/${postId}` as Href);
     },
     [boardId, router],
   );
@@ -101,7 +101,6 @@ export default function BoardForumScreen() {
   return (
     <FlashList
       data={allPosts}
-      estimatedItemSize={200}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
       onEndReached={() => {

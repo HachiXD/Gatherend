@@ -9,7 +9,7 @@ export function useOpenConversation() {
     mutationFn: createConversation,
     onSuccess: ({ id }) => {
       router.push({
-        pathname: "/(app)/chats/[conversationId]",
+        pathname: "/chats/[conversationId]",
         params: { conversationId: id },
       });
     },

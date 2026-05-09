@@ -56,7 +56,7 @@ export function BoardCard({ board }: BoardCardProps) {
   const imageUrl = getBoardImageUrl(displayAsset?.url, board.id, board.name, 256);
 
   function handlePress() {
-    router.push(`/(app)/(tabs)/boards/${board.id}`);
+    router.push(`/boards/${board.id}`);
   }
 
   return (

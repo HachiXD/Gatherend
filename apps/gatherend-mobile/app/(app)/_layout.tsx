@@ -8,6 +8,7 @@ import {
 import { useSession } from "@/src/features/auth/hooks/use-session";
 import { VoiceLiveKitProvider } from "@/src/features/voice/providers/voice-livekit-provider";
 import { CurrentProfileProvider } from "@/src/features/profile/providers/current-profile-provider";
+import { AppShell } from "@/src/features/navigation/components/app-shell";
 import { SocketProvider } from "@/src/providers/socket-provider";
 import { ThemeProvider, useTheme } from "@/src/theme/theme-provider";
 import { Text } from "@/src/components/app-typography";
@@ -25,14 +26,21 @@ function ThemedAppStack() {
       }}
       style={{ backgroundColor: colors.bgPrimary, flex: 1 }}
     >
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: {
-            backgroundColor: colors.bgPrimary,
-          },
-        }}
-      />
+      <AppShell>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: {
+              backgroundColor: colors.bgPrimary,
+            },
+          }}
+        >
+          <Stack.Screen name="boards" options={{ animation: "fade" }} />
+          <Stack.Screen name="chats" options={{ animation: "fade" }} />
+          <Stack.Screen name="discovery/index" options={{ animation: "fade" }} />
+          <Stack.Screen name="me" options={{ animation: "fade" }} />
+        </Stack>
+      </AppShell>
     </View>
   );
 }

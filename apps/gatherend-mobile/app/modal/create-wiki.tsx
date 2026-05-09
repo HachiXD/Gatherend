@@ -32,7 +32,7 @@ export default function CreateWikiModalScreen() {
   const [imageUpload, setImageUpload] = useState("");
 
   if (!boardId) {
-    return <Redirect href="/(app)/(tabs)/boards" />;
+    return <Redirect href="/boards" />;
   }
 
   const isSubmitting = createMutation.isPending;

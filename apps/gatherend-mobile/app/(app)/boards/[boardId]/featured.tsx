@@ -457,12 +457,12 @@ export default function BoardFeaturedScreen() {
 
   function openPost(postId: string) {
     if (!boardId) return;
-    router.push(`/(app)/boards/${boardId}/posts/${postId}` as Href);
+    router.push(`/boards/${boardId}/posts/${postId}` as Href);
   }
 
   function openChannel(channelId: string) {
     if (!boardId) return;
-    router.push(`/(app)/(tabs)/boards/${boardId}/chats/${channelId}` as Href);
+    router.push(`/boards/${boardId}/chats/${channelId}` as Href);
   }
 
   if (isLoading) {
