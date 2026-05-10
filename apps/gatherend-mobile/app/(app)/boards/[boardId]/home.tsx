@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import BoardFeaturedScreen from "./featured";
@@ -7,7 +8,9 @@ import BoardRankingScreen from "./ranking";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Animated,
+  Easing,
   PanResponder,
   Pressable,
   ScrollView,
@@ -15,14 +18,17 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import { BottomSheet } from "@/src/components/bottom-sheet";
 import { BoardChannelsList } from "@/src/features/boards/components/board-channels-list";
 import { useBoard } from "@/src/features/boards/hooks/use-board";
+import { isAdmin } from "@/src/features/boards/member-role";
 import {
   type BoardHomeTab,
   useAppShellStore,
 } from "@/src/features/navigation/stores/use-app-shell-store";
 import { useVoiceStore } from "@/src/features/voice/store/use-voice-store";
 import { useBoardRules } from "@/src/features/rules/hooks/use-board-rules";
+import { useDeleteBoardRules } from "@/src/features/rules/hooks/use-delete-board-rules";
 import { useTheme } from "@/src/theme/theme-provider";
 import type { ThemeColors } from "@/src/theme/types";
 import {
@@ -94,12 +100,43 @@ function getBoardDerivedColors(
 function RulesContent({
   boardId,
   colors,
+  canManageRules,
 }: {
   boardId: string | undefined;
   colors: ThemeColors;
+  canManageRules: boolean;
 }) {
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const router = useRouter();
   const { data: rules, isLoading } = useBoardRules(boardId);
+  const deleteMutation = useDeleteBoardRules();
+  const [sheetVisible, setSheetVisible] = useState(false);
+
+  const handleCreateOrEdit = useCallback(() => {
+    if (!boardId) return;
+    setSheetVisible(false);
+    router.push({
+      pathname: "/boards/[boardId]/rules",
+      params: { boardId },
+    });
+  }, [boardId, router]);
+
+  const handleDeletePress = useCallback(() => {
+    if (!boardId) return;
+    setSheetVisible(false);
+    Alert.alert(
+      "Borrar reglas",
+      "Esta acción no se puede deshacer. Las reglas del board serán eliminadas permanentemente.",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Borrar",
+          style: "destructive",
+          onPress: () => deleteMutation.mutate(boardId),
+        },
+      ],
+    );
+  }, [boardId, deleteMutation]);
 
   if (isLoading) {
     return (
@@ -112,41 +149,87 @@ function RulesContent({
 
   if (!rules?.items.length) {
     return (
-      <View style={styles.centerState}>
-        <Text style={styles.stateTitle}>Todavía no hay reglas</Text>
-        <Text style={styles.stateText}>
-          Los administradores aún no han definido reglas para este board.
-        </Text>
+      <View style={styles.rulesContainer}>
+        <View style={styles.centerState}>
+          <Text style={styles.stateTitle}>Todavía no hay reglas</Text>
+          <Text style={styles.stateText}>
+            Los administradores aún no han definido reglas para este board.
+          </Text>
+        </View>
+        {canManageRules ? (
+          <Pressable
+            onPress={handleCreateOrEdit}
+            style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
+          >
+            <Ionicons name="add" size={30} color={colors.textPrimary} />
+          </Pressable>
+        ) : null}
       </View>
     );
   }
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.rulesScroll}
-      showsVerticalScrollIndicator={false}
-    >
-      {rules.imageAsset?.url ? (
-        <Image
-          contentFit="cover"
-          source={{ uri: rules.imageAsset.url }}
-          style={styles.rulesImage}
-        />
-      ) : null}
-      {rules.items.map((rule, i) => (
-        <View key={rule.order} style={styles.ruleItem}>
-          <View style={styles.ruleBadge}>
-            <Text style={styles.ruleBadgeText}>{i + 1}</Text>
-          </View>
-          <View style={styles.ruleBody}>
-            <Text style={styles.ruleTitle}>{rule.title}</Text>
-            {rule.description ? (
-              <Text style={styles.ruleDescription}>{rule.description}</Text>
-            ) : null}
-          </View>
-        </View>
-      ))}
-    </ScrollView>
+    <View style={styles.rulesContainer}>
+      <Pressable
+        delayLongPress={400}
+        onLongPress={canManageRules ? () => setSheetVisible(true) : undefined}
+        style={styles.rulesLongPressArea}
+      >
+        <ScrollView
+          contentContainerStyle={styles.rulesScroll}
+          showsVerticalScrollIndicator={false}
+        >
+          {rules.imageAsset?.url ? (
+            <Image
+              contentFit="cover"
+              source={{ uri: rules.imageAsset.url }}
+              style={styles.rulesImage}
+            />
+          ) : null}
+          {rules.items.map((rule, i) => (
+            <View key={rule.order} style={styles.ruleItem}>
+              <View style={styles.ruleBadge}>
+                <Text style={styles.ruleBadgeText}>{i + 1}</Text>
+              </View>
+              <View style={styles.ruleBody}>
+                <Text style={styles.ruleTitle}>{rule.title}</Text>
+                {rule.description ? (
+                  <Text style={styles.ruleDescription}>{rule.description}</Text>
+                ) : null}
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+      </Pressable>
+
+      <BottomSheet
+        visible={sheetVisible}
+        onClose={() => setSheetVisible(false)}
+        maxHeight={180}
+      >
+        <Pressable
+          onPress={handleCreateOrEdit}
+          style={({ pressed }) => [
+            styles.sheetOption,
+            pressed && styles.sheetOptionPressed,
+          ]}
+        >
+          <Ionicons name="create-outline" size={20} color={colors.textPrimary} />
+          <Text style={styles.sheetOptionText}>Editar reglas</Text>
+        </Pressable>
+        <View style={styles.sheetDivider} />
+        <Pressable
+          onPress={handleDeletePress}
+          style={({ pressed }) => [
+            styles.sheetOption,
+            pressed && styles.sheetOptionPressed,
+          ]}
+        >
+          <Ionicons name="trash-outline" size={20} color="#f87171" />
+          <Text style={styles.sheetOptionTextDestructive}>Eliminar reglas</Text>
+        </Pressable>
+      </BottomSheet>
+    </View>
   );
 }
 
@@ -251,6 +334,7 @@ export default function BoardHomeScreen() {
   const { colors, mode } = useTheme();
   const { width: screenWidth } = useWindowDimensions();
   const { data: board } = useBoard(boardId);
+  const canManageRules = isAdmin(board?.currentMember?.role);
   const savedHomeTab = useAppShellStore((state) =>
     boardId ? state.lastHomeTabByBoardId[boardId] : undefined,
   );
@@ -282,7 +366,8 @@ export default function BoardHomeScreen() {
     tabIndexRef.current = initialTabIndex;
     setDisplayTabIndex(initialTabIndex);
     animPageValue.setValue(-screenWidth * initialTabIndex);
-  }, [animPageValue, boardId, initialTabIndex, screenWidth]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [animPageValue, boardId, screenWidth]);
 
   const goToTab = useCallback(
     (index: number) => {
@@ -291,11 +376,10 @@ export default function BoardHomeScreen() {
       if (boardId) {
         setLastHomeTab(boardId, HOME_TABS[index]?.key ?? "rules");
       }
-      Animated.spring(animPageValue, {
+      Animated.timing(animPageValue, {
         toValue: -screenWidth * index,
-        damping: 22,
-        stiffness: 230,
-        mass: 0.8,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }).start();
     },
@@ -396,7 +480,11 @@ export default function BoardHomeScreen() {
         >
           <View style={styles.page}>
             {displayTabIndex === RULES_TAB_INDEX ? (
-              <RulesContent boardId={boardId} colors={effectiveColors} />
+              <RulesContent
+                boardId={boardId}
+                colors={effectiveColors}
+                canManageRules={canManageRules}
+              />
             ) : null}
           </View>
           <View style={styles.page}>
@@ -516,6 +604,57 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       fontWeight: "700",
     },
     // Rules
+    rulesContainer: {
+      flex: 1,
+    },
+    rulesLongPressArea: {
+      flex: 1,
+    },
+    fab: {
+      alignItems: "center",
+      backgroundColor: colors.accentPrimary,
+      borderRadius: 28,
+      bottom: 24,
+      elevation: 4,
+      height: 56,
+      justifyContent: "center",
+      opacity: 0.5,
+      position: "absolute",
+      right: 20,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 4,
+      width: 56,
+    },
+    fabPressed: {
+      opacity: 0.35,
+    },
+    sheetOption: {
+      alignItems: "center",
+      flexDirection: "row",
+      gap: 14,
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+    },
+    sheetOptionPressed: {
+      opacity: 0.6,
+    },
+    sheetOptionText: {
+      color: colors.textPrimary,
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    sheetOptionTextDestructive: {
+      color: "#f87171",
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    sheetDivider: {
+      backgroundColor: colors.borderPrimary,
+      height: 1,
+      marginHorizontal: 20,
+    },
     rulesScroll: {
       gap: 14,
       paddingHorizontal: 16,

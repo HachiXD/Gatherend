@@ -6,10 +6,9 @@ import { AppBottomTabBar } from "@/src/features/navigation/components/app-bottom
 import { useAppShellStore } from "@/src/features/navigation/stores/use-app-shell-store";
 import { useTheme } from "@/src/theme/theme-provider";
 
-type AppShellTab = "boards" | "chats" | "discovery" | "me";
+type AppShellTab = "boards" | "discovery" | "me";
 
 function getActiveTab(pathname: string): AppShellTab {
-  if (pathname.startsWith("/chats")) return "chats";
   if (pathname.startsWith("/discovery")) return "discovery";
   if (pathname.startsWith("/me")) return "me";
   return "boards";

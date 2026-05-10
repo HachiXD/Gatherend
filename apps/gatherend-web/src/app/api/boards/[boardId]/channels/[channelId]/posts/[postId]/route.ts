@@ -107,7 +107,7 @@ function serializeCommentPreview(comment: {
 
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ channelId: string; postId: string }> },
+  { params }: { params: Promise<{ boardId: string; channelId: string; postId: string }> },
 ) {
   try {
     const rateLimitResponse = await checkRateLimit(RATE_LIMITS.api);
@@ -117,8 +117,11 @@ export async function GET(
     if (!auth.success) return auth.response;
     const { profile } = auth;
 
-    const { channelId, postId } = await params;
+    const { boardId, channelId, postId } = await params;
 
+    if (!boardId || !UUID_REGEX.test(boardId)) {
+      return NextResponse.json({ error: "Invalid board ID" }, { status: 400 });
+    }
     if (!channelId || !UUID_REGEX.test(channelId)) {
       return NextResponse.json({ error: "Invalid channel ID" }, { status: 400 });
     }
@@ -129,6 +132,7 @@ export async function GET(
     const channelExists = await db.channel.findFirst({
       where: {
         id: channelId,
+        boardId,
         type: ChannelType.FORUM,
         board: { members: { some: { profileId: profile.id } } },
       },

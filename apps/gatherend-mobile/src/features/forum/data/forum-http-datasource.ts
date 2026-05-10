@@ -14,8 +14,8 @@ import type {
 
 export function createForumHttpDataSource(): ForumRepository {
   return {
-    async createPost({ channelId, title, content, imageAssetId }: CreatePostInput) {
-      const response = await nextApiFetch(`/api/channels/${channelId}/posts`, {
+    async createPost({ boardId, channelId, title, content, imageAssetId }: CreatePostInput) {
+      const response = await nextApiFetch(`/api/boards/${boardId}/channels/${channelId}/posts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -40,7 +40,7 @@ export function createForumHttpDataSource(): ForumRepository {
       const params = new URLSearchParams();
       if (cursor) params.set("cursor", cursor);
       const query = params.toString();
-      const url = `/api/channels/${channelId}/posts${query ? `?${query}` : ""}`;
+      const url = `/api/boards/${boardId}/channels/${channelId}/posts${query ? `?${query}` : ""}`;
       const response = await nextApiFetch(url);
       if (!response.ok) {
         throw new Error(
@@ -56,7 +56,7 @@ export function createForumHttpDataSource(): ForumRepository {
       }
       const params = new URLSearchParams({ preview: "true" });
       if (cursor) params.set("cursor", cursor);
-      const url = `/api/channels/${channelId}/posts?${params.toString()}`;
+      const url = `/api/boards/${boardId}/channels/${channelId}/posts?${params.toString()}`;
       const response = await nextApiFetch(url);
       if (!response.ok) {
         throw new Error(
@@ -68,7 +68,7 @@ export function createForumHttpDataSource(): ForumRepository {
 
     async getPost(boardId, postId, channelId) {
       const response = await nextApiFetch(
-        `/api/channels/${channelId}/posts/${postId}`,
+        `/api/boards/${boardId}/channels/${channelId}/posts/${postId}`,
       );
       if (!response.ok) {
         throw new Error(

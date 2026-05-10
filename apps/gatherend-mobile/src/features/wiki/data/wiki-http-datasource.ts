@@ -14,7 +14,7 @@ export function createWikiHttpDataSource(): WikiRepository {
       const params = new URLSearchParams();
       if (cursor) params.set("cursor", cursor);
       const query = params.toString();
-      const url = `/api/channels/${channelId}/wiki${query ? `?${query}` : ""}`;
+      const url = `/api/boards/${boardId}/channels/${channelId}/wiki${query ? `?${query}` : ""}`;
       const response = await nextApiFetch(url);
       if (!response.ok) {
         throw new Error(
@@ -29,7 +29,7 @@ export function createWikiHttpDataSource(): WikiRepository {
 
     async getWikiPage(boardId, pageId, channelId) {
       const response = await nextApiFetch(
-        `/api/channels/${channelId}/wiki/${pageId}`,
+        `/api/boards/${boardId}/channels/${channelId}/wiki/${pageId}`,
       );
       if (!response.ok) {
         throw new Error(
@@ -40,8 +40,8 @@ export function createWikiHttpDataSource(): WikiRepository {
       return data.page;
     },
 
-    async createWikiPage({ channelId, title, content, imageAssetId }) {
-      const response = await nextApiFetch(`/api/channels/${channelId}/wiki`, {
+    async createWikiPage({ boardId, channelId, title, content, imageAssetId }) {
+      const response = await nextApiFetch(`/api/boards/${boardId}/channels/${channelId}/wiki`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -61,7 +61,7 @@ export function createWikiHttpDataSource(): WikiRepository {
 
     async editWikiPage(boardId, pageId, channelId, input) {
       const response = await nextApiFetch(
-        `/api/channels/${channelId}/wiki/${pageId}`,
+        `/api/boards/${boardId}/channels/${channelId}/wiki/${pageId}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -79,7 +79,7 @@ export function createWikiHttpDataSource(): WikiRepository {
 
     async deleteWikiPage(boardId, pageId, channelId) {
       const response = await nextApiFetch(
-        `/api/channels/${channelId}/wiki/${pageId}`,
+        `/api/boards/${boardId}/channels/${channelId}/wiki/${pageId}`,
         {
           method: "DELETE",
         },

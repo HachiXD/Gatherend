@@ -1,14 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
+import { FlashList } from "@shopify/flash-list";
 import { Image } from "expo-image";
 import { type Href, useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   ActivityIndicator,
   Animated,
   Easing,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   View,
 } from "react-native";
@@ -17,38 +17,8 @@ import { UserAvatar } from "@/src/components/user-avatar";
 import { PostPreviewCard } from "@/src/features/forum/components/post-preview-card";
 import type { ForumPostPreview } from "@/src/features/forum/domain/post";
 import { useBoardFeatured } from "@/src/features/featured/hooks/use-board-featured";
-import type { FeaturedChannel } from "@/src/features/featured/domain/featured";
 import { useTheme } from "@/src/theme/theme-provider";
-import { generatePaletteFromBase } from "@/src/theme/utils";
 import { useTogglePostLike } from "@/src/features/forum/hooks/use-toggle-post-like";
-
-function normalizeColorToHex(color: string | null): string | null {
-  if (!color) return null;
-  if (color.startsWith("#")) return color;
-  const rgbMatch = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
-  if (rgbMatch) {
-    const r = parseInt(rgbMatch[1], 10).toString(16).padStart(2, "0");
-    const g = parseInt(rgbMatch[2], 10).toString(16).padStart(2, "0");
-    const b = parseInt(rgbMatch[3], 10).toString(16).padStart(2, "0");
-    return `#${r}${g}${b}`.toUpperCase();
-  }
-  return null;
-}
-
-function timeAgo(iso: string): string {
-  const secs = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (secs < 60) return "hace un momento";
-  const mins = Math.floor(secs / 60);
-  if (mins < 60) return `hace ${mins} min`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `hace ${hours} h`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `hace ${days} día${days !== 1 ? "s" : ""}`;
-  const weeks = Math.floor(days / 7);
-  if (weeks < 5) return `hace ${weeks} semana${weeks !== 1 ? "s" : ""}`;
-  const months = Math.floor(days / 30);
-  return `hace ${months} mes${months !== 1 ? "es" : ""}`;
-}
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat("es", {
@@ -138,7 +108,6 @@ function HeroPost({
       ) : null}
 
       <View style={styles.heroContent}>
-        {/* Author row */}
         <View style={styles.authorRow}>
           <UserAvatar
             avatarUrl={post.author.avatarAsset?.url}
@@ -196,10 +165,8 @@ function HeroPost({
           </View>
         </View>
 
-        {/* Spacer: pushes post body to the bottom */}
         <View style={styles.heroPushSpacer} />
 
-        {/* Post body */}
         <View style={styles.postBody}>
           {post.title ? (
             <Text
@@ -219,7 +186,6 @@ function HeroPost({
           ) : null}
         </View>
 
-        {/* Footer */}
         <View style={[styles.footer, { borderTopColor: colors.borderPrimary }]}>
           <View style={styles.footerLeft}>
             <View
@@ -300,174 +266,203 @@ function HeroPost({
   );
 }
 
-type FeaturedChannelCardProps = {
-  channel: FeaturedChannel;
-  styles: ReturnType<typeof createStyles>;
-  colors: ReturnType<typeof useTheme>["colors"];
-  mode: "dark" | "light";
-  onPress: () => void;
-  position: "first" | "middle" | "last" | "only";
-};
-
-function FeaturedChannelCard({
-  channel,
-  styles,
-  colors,
-  mode,
-  onPress,
-  position,
-}: FeaturedChannelCardProps) {
-  const imageUrl = channel.imageAsset?.url ?? null;
-  const rawDominantColor = channel.imageAsset?.dominantColor ?? null;
-  const normalizedDominantColor = useMemo(
-    () => normalizeColorToHex(rawDominantColor),
-    [rawDominantColor],
-  );
-  const derivedColors = useMemo(() => {
-    if (!normalizedDominantColor) return null;
-    return generatePaletteFromBase(normalizedDominantColor);
-  }, [normalizedDominantColor]);
-
-  const topRadius = position === "first" || position === "only" ? 12 : 0;
-  const bottomRadius = position === "last" || position === "only" ? 12 : 0;
-  const memberLabel = channel.memberCount === 1 ? "miembro" : "miembros";
-
-  const body = (
-    <>
-      <View style={styles.channelIconWrap}>
-        <View
-          style={[
-            StyleSheet.absoluteFill,
-            styles.channelIconWrapBg,
-            imageUrl && derivedColors
-              ? { backgroundColor: derivedColors.bgQuaternary }
-              : null,
-            imageUrl ? styles.channelIconWrapBgDimmed : null,
-          ]}
-        />
-        <Ionicons
-          color={colors.textPrimary}
-          name={
-            channel.type === "VOICE" ? "volume-high" : "chatbubble-ellipses"
-          }
-          size={22}
-        />
-      </View>
-
-      <View style={styles.channelCopy}>
-        <Text numberOfLines={1} style={styles.channelTitle}>
-          /{channel.name}
-        </Text>
-        {!imageUrl && (
-          <View style={styles.channelMembersPill}>
-            <Text numberOfLines={1} style={styles.channelMembersPillText}>
-              {channel.memberCount} {memberLabel}
-            </Text>
-          </View>
-        )}
-        {channel.type === "TEXT" && channel.lastMessageAt ? (
-          <Text numberOfLines={1} style={styles.channelActivity}>
-            Activo {timeAgo(channel.lastMessageAt)}
-          </Text>
-        ) : null}
-      </View>
-    </>
-  );
-
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.channelCard,
-        {
-          backgroundColor: colors.bgTertiary,
-          borderColor:
-            imageUrl && derivedColors
-              ? derivedColors.borderPrimary
-              : colors.borderPrimary,
-          borderTopLeftRadius: topRadius,
-          borderTopRightRadius: topRadius,
-          borderBottomLeftRadius: bottomRadius,
-          borderBottomRightRadius: bottomRadius,
-          borderBottomWidth: position === "last" || position === "only" ? 1 : 0,
-        },
-        imageUrl ? styles.channelCardWithImage : null,
-        pressed && styles.channelCardPressed,
-      ]}
-    >
-      {imageUrl ? (
-        <>
-          <View style={styles.channelImageSection}>
-            <Image
-              contentFit="cover"
-              source={{ uri: imageUrl }}
-              style={StyleSheet.absoluteFill}
-            />
-            <View
-              pointerEvents="none"
-              style={[StyleSheet.absoluteFill, styles.channelImageOverlay]}
-            />
-            <View
-              style={[
-                styles.channelImageMembersPill,
-                derivedColors
-                  ? {
-                      backgroundColor: derivedColors.bgQuaternary,
-                      borderColor: derivedColors.borderPrimary,
-                    }
-                  : null,
-              ]}
-            >
-              <Text numberOfLines={1} style={styles.channelMembersPillText}>
-                {channel.memberCount} {memberLabel}
-              </Text>
-            </View>
-          </View>
-          <View
-            style={[
-              styles.channelFooterSection,
-              {
-                backgroundColor: derivedColors?.bgTertiary ?? colors.bgTertiary,
-              },
-            ]}
-          >
-            <View style={styles.channelFooterBodyRow}>{body}</View>
-          </View>
-        </>
-      ) : (
-        body
-      )}
-    </Pressable>
-  );
-}
-
 export default function BoardFeaturedScreen() {
   const { boardId } = useLocalSearchParams<{ boardId?: string }>();
   const { colors, mode } = useTheme();
   const styles = useMemo(() => createStyles(colors, mode), [colors, mode]);
   const router = useRouter();
 
-  const { data, isLoading, isError, error, refetch, isRefetching } =
-    useBoardFeatured(boardId);
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isRefetching,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useBoardFeatured(boardId);
 
-  const totalPosts = data?.topPosts.length ?? 0;
-  const heroPost: ForumPostPreview | undefined = data?.topPosts[0];
-  const gridPosts: ForumPostPreview[] = data?.topPosts.slice(1, 5) ?? [];
-  const channels: FeaturedChannel[] = data?.topChannels ?? [];
+  const allPosts = useMemo(
+    () => data?.pages.flatMap((p) => p.items) ?? [],
+    [data],
+  );
 
-  function openPost(post: ForumPostPreview) {
-    if (!boardId) return;
-    router.push(
-      `/boards/${boardId}/posts/${post.id}?channelId=${post.channelId}` as Href,
+  const heroPost = allPosts[0];
+  const gridPosts = allPosts.slice(1, 5);
+  const extraPosts = allPosts.slice(5);
+  const totalHeroGrid = Math.min(allPosts.length, 5);
+
+  const openPost = useCallback(
+    (post: ForumPostPreview) => {
+      if (!boardId) return;
+      router.push(
+        `/boards/${boardId}/posts/${post.id}?channelId=${post.channelId}` as Href,
+      );
+    },
+    [boardId, router],
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: ForumPostPreview }) => (
+      <PostPreviewCard
+        post={item}
+        boardId={boardId ?? ""}
+        onPress={() => openPost(item)}
+      />
+    ),
+    [boardId, openPost],
+  );
+
+  const listHeader = useMemo(() => {
+    if (!heroPost) return null;
+    return (
+      <>
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+          Posts destacados
+        </Text>
+
+        <HeroPost
+          post={heroPost}
+          boardId={boardId ?? ""}
+          styles={styles}
+          colors={colors}
+          mode={mode}
+          onPress={() => openPost(heroPost)}
+          bottomRadius={totalHeroGrid === 1 ? 12 : 0}
+        />
+
+        {gridPosts.length > 0 ? (
+          <>
+            {totalHeroGrid === 2 ? (
+              <PostPreviewCard
+                post={gridPosts[0]}
+                boardId={boardId ?? ""}
+                onPress={() => openPost(gridPosts[0])}
+                style={[styles.gridCardBase, styles.gridCardBottomFull]}
+              />
+            ) : null}
+
+            {totalHeroGrid === 3 ? (
+              <View style={styles.gridRow}>
+                <View style={styles.gridCellLeft}>
+                  <PostPreviewCard
+                    post={gridPosts[0]}
+                    boardId={boardId ?? ""}
+                    onPress={() => openPost(gridPosts[0])}
+                    style={[styles.gridCardBase, styles.gridCardBottomLeft]}
+                  />
+                </View>
+                <View style={styles.gridCellRight}>
+                  <PostPreviewCard
+                    post={gridPosts[1]}
+                    boardId={boardId ?? ""}
+                    onPress={() => openPost(gridPosts[1])}
+                    style={[styles.gridCardBase, styles.gridCardBottomRight]}
+                  />
+                </View>
+              </View>
+            ) : null}
+
+            {totalHeroGrid === 4 ? (
+              <>
+                <View style={styles.gridRow}>
+                  <View style={styles.gridCellLeft}>
+                    <PostPreviewCard
+                      post={gridPosts[0]}
+                      boardId={boardId ?? ""}
+                      onPress={() => openPost(gridPosts[0])}
+                      style={styles.gridCardBase}
+                    />
+                  </View>
+                  <View style={styles.gridCellRight}>
+                    <PostPreviewCard
+                      post={gridPosts[1]}
+                      boardId={boardId ?? ""}
+                      onPress={() => openPost(gridPosts[1])}
+                      style={styles.gridCardBase}
+                    />
+                  </View>
+                </View>
+                <PostPreviewCard
+                  post={gridPosts[2]}
+                  boardId={boardId ?? ""}
+                  onPress={() => openPost(gridPosts[2])}
+                  style={[styles.gridCardBase, styles.gridCardBottomFull]}
+                />
+              </>
+            ) : null}
+
+            {totalHeroGrid >= 5 ? (
+              <>
+                <View style={styles.gridRow}>
+                  <View style={styles.gridCellLeft}>
+                    <PostPreviewCard
+                      post={gridPosts[0]}
+                      boardId={boardId ?? ""}
+                      onPress={() => openPost(gridPosts[0])}
+                      style={styles.gridCardBase}
+                    />
+                  </View>
+                  <View style={styles.gridCellRight}>
+                    <PostPreviewCard
+                      post={gridPosts[1]}
+                      boardId={boardId ?? ""}
+                      onPress={() => openPost(gridPosts[1])}
+                      style={styles.gridCardBase}
+                    />
+                  </View>
+                </View>
+                <View style={styles.gridRow}>
+                  <View style={styles.gridCellLeft}>
+                    <PostPreviewCard
+                      post={gridPosts[2]}
+                      boardId={boardId ?? ""}
+                      onPress={() => openPost(gridPosts[2])}
+                      style={[styles.gridCardBase, styles.gridCardBottomLeft]}
+                    />
+                  </View>
+                  <View style={styles.gridCellRight}>
+                    <PostPreviewCard
+                      post={gridPosts[3]}
+                      boardId={boardId ?? ""}
+                      onPress={() => openPost(gridPosts[3])}
+                      style={[styles.gridCardBase, styles.gridCardBottomRight]}
+                    />
+                  </View>
+                </View>
+              </>
+            ) : null}
+          </>
+        ) : null}
+
+        {extraPosts.length > 0 ? (
+          <Text
+            style={[
+              styles.sectionTitle,
+              styles.moreSectionTitle,
+              { color: colors.textSecondary },
+            ]}
+          >
+            Más posts
+          </Text>
+        ) : null}
+      </>
     );
-  }
+  }, [
+    heroPost,
+    gridPosts,
+    extraPosts.length,
+    totalHeroGrid,
+    boardId,
+    styles,
+    colors,
+    mode,
+    openPost,
+  ]);
 
-  function openChannel(channelId: string) {
-    if (!boardId) return;
-    router.push(`/boards/${boardId}/chats/${channelId}` as Href);
-  }
-
-  if (isLoading) {
+  if (isLoading && allPosts.length === 0) {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={colors.accentPrimary} size="small" />
@@ -478,7 +473,7 @@ export default function BoardFeaturedScreen() {
     );
   }
 
-  if (isError) {
+  if (isError && allPosts.length === 0) {
     return (
       <View style={styles.center}>
         <Text style={[styles.stateTitle, { color: colors.textPrimary }]}>
@@ -506,22 +501,29 @@ export default function BoardFeaturedScreen() {
     );
   }
 
-  if (!heroPost) {
-    return (
-      <View style={styles.center}>
-        <Text style={[styles.stateTitle, { color: colors.textPrimary }]}>
-          Sin contenido destacado
-        </Text>
-        <Text style={[styles.stateText, { color: colors.textMuted }]}>
-          Vuelve más tarde o sé el primero en publicar y recibir likes.
-        </Text>
-      </View>
-    );
-  }
-
   return (
-    <ScrollView
-      contentContainerStyle={styles.scrollContent}
+    <FlashList
+      data={extraPosts}
+      keyExtractor={(item) => item.id}
+      renderItem={renderItem}
+      estimatedItemSize={120}
+      ListHeaderComponent={listHeader}
+      ListEmptyComponent={
+        allPosts.length === 0 ? (
+          <View style={styles.center}>
+            <Text style={[styles.stateTitle, { color: colors.textPrimary }]}>
+              Sin contenido destacado
+            </Text>
+            <Text style={[styles.stateText, { color: colors.textMuted }]}>
+              Vuelve más tarde o sé el primero en publicar y recibir likes.
+            </Text>
+          </View>
+        ) : null
+      }
+      onEndReached={() => {
+        if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+      }}
+      onEndReachedThreshold={0.3}
       refreshControl={
         <RefreshControl
           refreshing={isRefetching}
@@ -529,160 +531,15 @@ export default function BoardFeaturedScreen() {
           tintColor={colors.accentPrimary}
         />
       }
-    >
-      {/* Hero post */}
-      <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-        Posts destacados
-      </Text>
-      <HeroPost
-        post={heroPost}
-        boardId={boardId ?? ""}
-        styles={styles}
-        colors={colors}
-        mode={mode}
-        onPress={() => openPost(heroPost.id)}
-        bottomRadius={totalPosts === 1 ? 12 : 0}
-      />
-
-      {/* Grid: layout depends on total post count */}
-      {gridPosts.length > 0 ? (
-        <>
-          {/* 2 posts: hero + 1 full-width */}
-          {totalPosts === 2 ? (
-            <PostPreviewCard
-              post={gridPosts[0]}
-              boardId={boardId ?? ""}
-              onPress={() => openPost(gridPosts[0])}
-              style={[styles.gridCardBase, styles.gridCardBottomFull]}
-            />
-          ) : null}
-
-          {/* 3 posts: hero + 2 columns */}
-          {totalPosts === 3 ? (
-            <View style={styles.gridRow}>
-              <View style={styles.gridCellLeft}>
-                <PostPreviewCard
-                  post={gridPosts[0]}
-                  boardId={boardId ?? ""}
-                  onPress={() => openPost(gridPosts[0])}
-                  style={[styles.gridCardBase, styles.gridCardBottomLeft]}
-                />
-              </View>
-              <View style={styles.gridCellRight}>
-                <PostPreviewCard
-                  post={gridPosts[1]}
-                  boardId={boardId ?? ""}
-                  onPress={() => openPost(gridPosts[1])}
-                  style={[styles.gridCardBase, styles.gridCardBottomRight]}
-                />
-              </View>
-            </View>
-          ) : null}
-
-          {/* 4 posts: hero + 2 columns + 1 full-width */}
-          {totalPosts === 4 ? (
-            <>
-              <View style={styles.gridRow}>
-                <View style={styles.gridCellLeft}>
-                  <PostPreviewCard
-                    post={gridPosts[0]}
-                    boardId={boardId ?? ""}
-                    onPress={() => openPost(gridPosts[0])}
-                    style={styles.gridCardBase}
-                  />
-                </View>
-                <View style={styles.gridCellRight}>
-                  <PostPreviewCard
-                    post={gridPosts[1]}
-                    boardId={boardId ?? ""}
-                    onPress={() => openPost(gridPosts[1])}
-                    style={styles.gridCardBase}
-                  />
-                </View>
-              </View>
-              <PostPreviewCard
-                post={gridPosts[2]}
-                boardId={boardId ?? ""}
-                onPress={() => openPost(gridPosts[2])}
-                style={[styles.gridCardBase, styles.gridCardBottomFull]}
-              />
-            </>
-          ) : null}
-
-          {/* 5+ posts: hero + 2×2 grid */}
-          {totalPosts >= 5 ? (
-            <>
-              <View style={styles.gridRow}>
-                <View style={styles.gridCellLeft}>
-                  <PostPreviewCard
-                    post={gridPosts[0]}
-                    boardId={boardId ?? ""}
-                    onPress={() => openPost(gridPosts[0])}
-                    style={styles.gridCardBase}
-                  />
-                </View>
-                <View style={styles.gridCellRight}>
-                  <PostPreviewCard
-                    post={gridPosts[1]}
-                    boardId={boardId ?? ""}
-                    onPress={() => openPost(gridPosts[1])}
-                    style={styles.gridCardBase}
-                  />
-                </View>
-              </View>
-              <View style={styles.gridRow}>
-                <View style={styles.gridCellLeft}>
-                  <PostPreviewCard
-                    post={gridPosts[2]}
-                    boardId={boardId ?? ""}
-                    onPress={() => openPost(gridPosts[2])}
-                    style={[styles.gridCardBase, styles.gridCardBottomLeft]}
-                  />
-                </View>
-                <View style={styles.gridCellRight}>
-                  <PostPreviewCard
-                    post={gridPosts[3]}
-                    boardId={boardId ?? ""}
-                    onPress={() => openPost(gridPosts[3])}
-                    style={[styles.gridCardBase, styles.gridCardBottomRight]}
-                  />
-                </View>
-              </View>
-            </>
-          ) : null}
-        </>
-      ) : null}
-
-      {/* Top channels */}
-      {channels.length > 0 ? (
-        <View style={styles.channelList}>
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-            Chats destacados
-          </Text>
-          {channels.map((channel, i) => {
-            const pos =
-              channels.length === 1
-                ? "only"
-                : i === 0
-                  ? "first"
-                  : i === channels.length - 1
-                    ? "last"
-                    : "middle";
-            return (
-              <FeaturedChannelCard
-                key={channel.id}
-                channel={channel}
-                styles={styles}
-                colors={colors}
-                mode={mode}
-                position={pos}
-                onPress={() => openChannel(channel.id)}
-              />
-            );
-          })}
-        </View>
-      ) : null}
-    </ScrollView>
+      contentContainerStyle={styles.listContent}
+      ListFooterComponent={
+        isFetchingNextPage ? (
+          <View style={styles.footerLoader}>
+            <ActivityIndicator color={colors.accentPrimary} size="small" />
+          </View>
+        ) : null
+      }
+    />
   );
 }
 
@@ -691,7 +548,7 @@ function createStyles(
   mode: "dark" | "light",
 ) {
   return StyleSheet.create({
-    scrollContent: {
+    listContent: {
       paddingBottom: 32,
     },
     center: {
@@ -730,7 +587,7 @@ function createStyles(
       lineHeight: 22,
     },
 
-    // Shared card styles (author row, body, footer)
+    // Shared card styles
     authorRow: {
       alignItems: "flex-start",
       flexDirection: "row",
@@ -832,9 +689,6 @@ function createStyles(
     },
 
     // Grid
-    grid: {
-      flexDirection: "row",
-    },
     gridRow: {
       flexDirection: "row",
     },
@@ -865,107 +719,6 @@ function createStyles(
       borderBottomRightRadius: 12,
     },
 
-    // Channel cards — matches chats tab style
-    channelList: {
-      paddingTop: 6,
-    },
-    channelCard: {
-      alignItems: "center",
-      borderRadius: 0,
-      borderWidth: 1,
-      flexDirection: "row",
-      gap: 12,
-      overflow: "hidden",
-      paddingHorizontal: 14,
-      paddingVertical: 14,
-    },
-    channelCardWithImage: {
-      alignItems: "stretch",
-      flexDirection: "column",
-      gap: 0,
-      paddingHorizontal: 0,
-      paddingVertical: 0,
-    },
-    channelCardPressed: {
-      opacity: 0.92,
-    },
-    channelImageSection: {
-      aspectRatio: 16 / 7,
-      backgroundColor: colors.bgQuaternary,
-      minHeight: 132,
-      overflow: "hidden",
-      position: "relative",
-      width: "100%",
-    },
-    channelImageOverlay: {
-      backgroundColor:
-        mode === "light" ? "rgba(240,240,245,0.42)" : "rgba(2, 6, 23, 0.52)",
-    },
-    channelImageMembersPill: {
-      position: "absolute",
-      bottom: 10,
-      left: 10,
-      backgroundColor: colors.bgQuaternary,
-      borderColor: colors.borderPrimary,
-      borderRadius: 8,
-      borderWidth: 1,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-    },
-    channelFooterSection: {
-      alignItems: "stretch",
-      flexDirection: "column",
-      gap: 10,
-      paddingHorizontal: 14,
-      paddingVertical: 14,
-    },
-    channelFooterBodyRow: {
-      alignItems: "center",
-      flexDirection: "row",
-      gap: 12,
-    },
-    channelIconWrap: {
-      alignItems: "center",
-      borderRadius: 14,
-      height: 42,
-      justifyContent: "center",
-      overflow: "hidden",
-      width: 42,
-    },
-    channelIconWrapBg: {
-      backgroundColor: colors.bgQuaternary,
-    },
-    channelIconWrapBgDimmed: {
-      opacity: 0.6,
-    },
-    channelCopy: {
-      flex: 1,
-      gap: 4,
-      minWidth: 0,
-    },
-    channelTitle: {
-      color: colors.textPrimary,
-      fontSize: 18,
-      fontWeight: "700",
-    },
-    channelMembersPill: {
-      alignSelf: "flex-start",
-      backgroundColor: colors.bgQuaternary,
-      borderColor: colors.borderPrimary,
-      borderRadius: 8,
-      borderWidth: 1,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-    },
-    channelMembersPillText: {
-      color: colors.textMuted,
-      fontSize: 15,
-    },
-    channelActivity: {
-      color: colors.textMuted,
-      fontSize: 15,
-    },
-
     sectionTitle: {
       fontSize: 18,
       fontWeight: "700",
@@ -974,6 +727,14 @@ function createStyles(
       marginTop: 6,
       lineHeight: 24,
       marginLeft: 8,
+    },
+    moreSectionTitle: {
+      marginTop: 20,
+    },
+
+    footerLoader: {
+      alignItems: "center",
+      paddingVertical: 16,
     },
 
     // States

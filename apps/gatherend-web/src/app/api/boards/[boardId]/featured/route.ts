@@ -14,8 +14,7 @@ export const revalidate = 0;
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const TOP_POSTS_COUNT = 5;
-const TOP_CHANNELS_COUNT = 3;
+const FEATURED_PAGE_SIZE = 20;
 const SNIPPET_MAX_CHARS = 150;
 
 function makeSnippet(content: string): string {
@@ -28,7 +27,7 @@ function makeSnippet(content: string): string {
 }
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ boardId: string }> },
 ) {
   try {
@@ -45,6 +44,10 @@ export async function GET(
       return NextResponse.json({ error: "Invalid board ID" }, { status: 400 });
     }
 
+    const { searchParams } = new URL(req.url);
+    const cursorParam = searchParams.get("cursor");
+    const skip = cursorParam ? Math.max(0, parseInt(cursorParam, 10) || 0) : 0;
+
     const board = await db.board.findFirst({
       where: {
         id: boardId,
@@ -57,74 +60,59 @@ export async function GET(
       return NextResponse.json({ error: "Board not found" }, { status: 404 });
     }
 
-    const since = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
-
-    const [rawPosts, rawChannels] = await Promise.all([
-      db.communityPost.findMany({
-        where: {
-          channel: { boardId, type: "FORUM" },
-          deleted: false,
-          createdAt: { gte: since },
-          imageAssetId: { not: null },
-        },
-        orderBy: [{ likeCount: "desc" }, { createdAt: "desc" }],
-        take: TOP_POSTS_COUNT,
-        select: {
-          id: true,
-          channelId: true,
-          title: true,
-          content: true,
-          likeCount: true,
-          commentCount: true,
-          createdAt: true,
-          updatedAt: true,
-          pinnedAt: true,
-          lockedAt: true,
-          imageAsset: { select: uploadedAssetSummarySelect },
-          author: {
-            select: {
-              id: true,
-              username: true,
-              discriminator: true,
-              badge: true,
-              usernameColor: true,
-              usernameFormat: true,
-              profileTags: true,
-              avatarAsset: { select: uploadedAssetSummarySelect },
-              badgeSticker: {
-                select: {
-                  id: true,
-                  asset: { select: uploadedAssetSummarySelect },
-                },
+    const rawPosts = await db.communityPost.findMany({
+      where: {
+        channel: { boardId, type: "FORUM" },
+        deleted: false,
+      },
+      orderBy: [{ likeCount: "desc" }, { createdAt: "desc" }],
+      skip,
+      take: FEATURED_PAGE_SIZE + 1,
+      select: {
+        id: true,
+        channelId: true,
+        title: true,
+        content: true,
+        likeCount: true,
+        commentCount: true,
+        createdAt: true,
+        updatedAt: true,
+        pinnedAt: true,
+        lockedAt: true,
+        imageAsset: { select: uploadedAssetSummarySelect },
+        author: {
+          select: {
+            id: true,
+            username: true,
+            discriminator: true,
+            badge: true,
+            usernameColor: true,
+            usernameFormat: true,
+            profileTags: true,
+            avatarAsset: { select: uploadedAssetSummarySelect },
+            badgeSticker: {
+              select: {
+                id: true,
+                asset: { select: uploadedAssetSummarySelect },
               },
             },
           },
         },
-      }),
+      },
+    });
 
-      db.channel.findMany({
-        where: { boardId },
-        orderBy: { channelMembers: { _count: "desc" } },
-        take: TOP_CHANNELS_COUNT,
-        select: {
-          id: true,
-          name: true,
-          type: true,
-          lastMessageAt: true,
-          _count: { select: { channelMembers: true } },
-          imageAsset: { select: uploadedAssetSummarySelect },
-        },
-      }),
-    ]);
+    const hasMore = rawPosts.length > FEATURED_PAGE_SIZE;
+    const page = hasMore ? rawPosts.slice(0, FEATURED_PAGE_SIZE) : rawPosts;
+    const nextCursor = hasMore ? String(skip + FEATURED_PAGE_SIZE) : null;
 
-    const postIds = rawPosts.map((p) => p.id);
+    const postIds = page.map((p) => p.id);
     const likedPosts = await db.communityPostLike.findMany({
       where: { profileId: profile.id, postId: { in: postIds } },
       select: { postId: true },
     });
     const likedPostSet = new Set(likedPosts.map((l) => l.postId));
 
-    const topPosts = rawPosts.map((post) => ({
+    const items = page.map((post) => ({
       id: post.id,
       channelId: post.channelId,
       title: post.title,
@@ -140,16 +128,7 @@ export async function GET(
       author: serializeProfileSummary(post.author),
     }));
 
-    const topChannels = rawChannels.map((ch) => ({
-      id: ch.id,
-      name: ch.name,
-      type: ch.type,
-      memberCount: ch._count.channelMembers,
-      lastMessageAt: ch.lastMessageAt?.toISOString() ?? null,
-      imageAsset: serializeUploadedAsset(ch.imageAsset),
-    }));
-
-    return NextResponse.json({ topPosts, topChannels });
+    return NextResponse.json({ items, nextCursor, hasMore });
   } catch (error) {
     console.error("[BOARD_FEATURED_GET]", error);
     return NextResponse.json({ error: "Internal Error" }, { status: 500 });

@@ -154,6 +154,7 @@ export async function getSidebarChannelStates(profileId: string) {
       LEFT JOIN "ChannelReadState" rs
         ON rs."channelId" = c.id
        AND rs."profileId" = ${profileId}
+      WHERE c.type IN ('TEXT', 'VOICE')
       ORDER BY c."boardId" ASC, c."position" ASC
     `;
 

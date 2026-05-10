@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { FlashList } from "@shopify/flash-list";
 import { type Href, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useMemo } from "react";
@@ -53,6 +54,14 @@ export default function BoardForumChannelScreen() {
     [boardId, channelId, router],
   );
 
+  const handleCreatePost = useCallback(() => {
+    if (!boardId || !channelId) return;
+    router.push({
+      pathname: "/modal/create-post",
+      params: { boardId, channelId },
+    });
+  }, [boardId, channelId, router]);
+
   const renderItem = useCallback(
     ({ item }: { item: ForumPostPreview }) => (
       <PostPreviewCard
@@ -96,46 +105,57 @@ export default function BoardForumChannelScreen() {
   }
 
   return (
-    <FlashList
-      data={allPosts}
-      keyExtractor={(item) => item.id}
-      renderItem={renderItem}
-      onEndReached={() => {
-        if (hasNextPage && !isFetchingNextPage) {
-          void fetchNextPage();
+    <View style={styles.container}>
+      <FlashList
+        data={allPosts}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        onEndReached={() => {
+          if (hasNextPage && !isFetchingNextPage) {
+            void fetchNextPage();
+          }
+        }}
+        onEndReachedThreshold={0.3}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={() => void refetch()}
+            tintColor={colors.accentPrimary}
+          />
         }
-      }}
-      onEndReachedThreshold={0.3}
-      refreshControl={
-        <RefreshControl
-          refreshing={isRefetching}
-          onRefresh={() => void refetch()}
-          tintColor={colors.accentPrimary}
-        />
-      }
-      contentContainerStyle={styles.listContent}
-      ListEmptyComponent={
-        <View style={styles.centerState}>
-          <Text style={styles.stateTitle}>Todavía no hay posts</Text>
-          <Text style={styles.stateText}>
-            Sé el primero en publicar en{" "}
-            {forumChannel?.name ? `/${forumChannel.name}` : "este foro"}.
-          </Text>
-        </View>
-      }
-      ListFooterComponent={
-        isFetchingNextPage ? (
-          <View style={styles.footerLoader}>
-            <ActivityIndicator color={colors.accentPrimary} size="small" />
+        contentContainerStyle={styles.listContent}
+        ListEmptyComponent={
+          <View style={styles.centerState}>
+            <Text style={styles.stateTitle}>Todavía no hay posts</Text>
+            <Text style={styles.stateText}>
+              Sé el primero en publicar en{" "}
+              {forumChannel?.name ? `/${forumChannel.name}` : "este foro"}.
+            </Text>
           </View>
-        ) : null
-      }
-    />
+        }
+        ListFooterComponent={
+          isFetchingNextPage ? (
+            <View style={styles.footerLoader}>
+              <ActivityIndicator color={colors.accentPrimary} size="small" />
+            </View>
+          ) : null
+        }
+      />
+      <Pressable
+        onPress={handleCreatePost}
+        style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
+      >
+        <Ionicons name="add" size={30} color={colors.textPrimary} />
+      </Pressable>
+    </View>
   );
 }
 
 function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
   return StyleSheet.create({
+    container: {
+      flex: 1,
+    },
     listContent: {
       paddingVertical: 8,
     },
@@ -180,6 +200,26 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     pressed: {
       opacity: 0.8,
+    },
+    fab: {
+      alignItems: "center",
+      backgroundColor: colors.accentPrimary,
+      borderRadius: 28,
+      bottom: 24,
+      elevation: 4,
+      height: 56,
+      justifyContent: "center",
+      opacity: 0.5,
+      position: "absolute",
+      right: 20,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 4,
+      width: 56,
+    },
+    fabPressed: {
+      opacity: 0.35,
     },
   });
 }

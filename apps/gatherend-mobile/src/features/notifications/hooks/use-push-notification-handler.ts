@@ -47,7 +47,7 @@ function navigateFromNotification(
     const { conversationId } = data as DirectMessageData;
     if (conversationId) {
       router.push({
-        pathname: "/chats/[conversationId]",
+        pathname: "/boards/dm/[conversationId]",
         params: { conversationId },
       });
     }

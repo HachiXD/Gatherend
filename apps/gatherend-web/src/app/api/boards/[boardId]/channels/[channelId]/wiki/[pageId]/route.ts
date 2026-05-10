@@ -18,11 +18,9 @@ const MAX_CONTENT_LENGTH = 50_000;
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-// ─── GET /api/channels/[channelId]/wiki/[pageId] ───────────────────────────
-// Returns the full content of a single wiki page.
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ channelId: string; pageId: string }> },
+  { params }: { params: Promise<{ boardId: string; channelId: string; pageId: string }> },
 ) {
   try {
     const rateLimitResponse = await checkRateLimit(RATE_LIMITS.api);
@@ -32,8 +30,11 @@ export async function GET(
     if (!auth.success) return auth.response;
     const { profile } = auth;
 
-    const { channelId, pageId } = await params;
+    const { boardId, channelId, pageId } = await params;
 
+    if (!boardId || !UUID_REGEX.test(boardId)) {
+      return NextResponse.json({ error: "Invalid board ID" }, { status: 400 });
+    }
     if (!channelId || !UUID_REGEX.test(channelId)) {
       return NextResponse.json({ error: "Invalid channel ID" }, { status: 400 });
     }
@@ -44,6 +45,7 @@ export async function GET(
     const channelExists = await db.channel.findFirst({
       where: {
         id: channelId,
+        boardId,
         type: ChannelType.WIKI,
         board: { members: { some: { profileId: profile.id } } },
       },
@@ -110,11 +112,9 @@ export async function GET(
   }
 }
 
-// ─── PATCH /api/channels/[channelId]/wiki/[pageId] ─────────────────────────
-// Author or admin can update title, content, or image.
 export async function PATCH(
   req: Request,
-  { params }: { params: Promise<{ channelId: string; pageId: string }> },
+  { params }: { params: Promise<{ boardId: string; channelId: string; pageId: string }> },
 ) {
   try {
     const rateLimitResponse = await checkRateLimit(RATE_LIMITS.api);
@@ -124,8 +124,11 @@ export async function PATCH(
     if (!auth.success) return auth.response;
     const { profile } = auth;
 
-    const { channelId, pageId } = await params;
+    const { boardId, channelId, pageId } = await params;
 
+    if (!boardId || !UUID_REGEX.test(boardId)) {
+      return NextResponse.json({ error: "Invalid board ID" }, { status: 400 });
+    }
     if (!channelId || !UUID_REGEX.test(channelId)) {
       return NextResponse.json({ error: "Invalid channel ID" }, { status: 400 });
     }
@@ -217,7 +220,7 @@ export async function PATCH(
 
     const updatedPage = await db.$transaction(async (tx) => {
       const existingPage = await tx.wikiPage.findFirst({
-        where: { id: pageId, channelId, channel: { type: ChannelType.WIKI } },
+        where: { id: pageId, channelId, channel: { type: ChannelType.WIKI, boardId } },
         select: {
           id: true,
           authorProfileId: true,
@@ -330,11 +333,9 @@ export async function PATCH(
   }
 }
 
-// ─── DELETE /api/channels/[channelId]/wiki/[pageId] ────────────────────────
-// Author, moderator, or admin can delete a wiki page.
 export async function DELETE(
   _req: Request,
-  { params }: { params: Promise<{ channelId: string; pageId: string }> },
+  { params }: { params: Promise<{ boardId: string; channelId: string; pageId: string }> },
 ) {
   try {
     const rateLimitResponse = await checkRateLimit(RATE_LIMITS.api);
@@ -344,8 +345,11 @@ export async function DELETE(
     if (!auth.success) return auth.response;
     const { profile } = auth;
 
-    const { channelId, pageId } = await params;
+    const { boardId, channelId, pageId } = await params;
 
+    if (!boardId || !UUID_REGEX.test(boardId)) {
+      return NextResponse.json({ error: "Invalid board ID" }, { status: 400 });
+    }
     if (!channelId || !UUID_REGEX.test(channelId)) {
       return NextResponse.json({ error: "Invalid channel ID" }, { status: 400 });
     }
@@ -355,7 +359,7 @@ export async function DELETE(
 
     await db.$transaction(async (tx) => {
       const page = await tx.wikiPage.findFirst({
-        where: { id: pageId, channelId, channel: { type: ChannelType.WIKI } },
+        where: { id: pageId, channelId, channel: { type: ChannelType.WIKI, boardId } },
         select: {
           id: true,
           authorProfileId: true,

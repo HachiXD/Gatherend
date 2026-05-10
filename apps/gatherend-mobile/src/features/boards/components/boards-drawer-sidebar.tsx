@@ -18,6 +18,8 @@ import type { UserBoard } from "../types/board";
 
 type BoardsDrawerSidebarProps = {
   currentBoardId?: string;
+  isDmActive: boolean;
+  onDmPress: () => void;
   onCreateBoard: () => void;
   onSelectBoard: (boardId: string) => void;
 };
@@ -119,6 +121,8 @@ function BoardDrawerItem({
 
 export function BoardsDrawerSidebar({
   currentBoardId,
+  isDmActive,
+  onDmPress,
   onCreateBoard,
   onSelectBoard,
 }: BoardsDrawerSidebarProps) {
@@ -134,6 +138,24 @@ export function BoardsDrawerSidebar({
 
   return (
     <View style={styles.sidebar}>
+      <Pressable
+        accessibilityLabel="Mensajes directos"
+        onPress={onDmPress}
+        style={({ pressed }) => [
+          styles.dmButton,
+          isDmActive ? styles.dmButtonActive : null,
+          pressed ? styles.itemPressed : null,
+        ]}
+      >
+        <Ionicons
+          color={isDmActive ? colors.accentPrimary : colors.textSecondary}
+          name="chatbubbles-outline"
+          size={22}
+        />
+      </Pressable>
+
+      <View style={styles.separator} />
+
       <Pressable
         accessibilityLabel="Crear board"
         onPress={onCreateBoard}
@@ -207,6 +229,19 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       paddingTop: 16,
       paddingBottom: 14,
       width: 88,
+    },
+    dmButton: {
+      alignItems: "center",
+      backgroundColor: colors.bgQuaternary,
+      borderColor: colors.borderPrimary,
+      borderRadius: 18,
+      borderWidth: 1,
+      height: 54,
+      justifyContent: "center",
+      width: 54,
+    },
+    dmButtonActive: {
+      borderColor: colors.accentPrimary,
     },
     backButton: {
       alignItems: "center",

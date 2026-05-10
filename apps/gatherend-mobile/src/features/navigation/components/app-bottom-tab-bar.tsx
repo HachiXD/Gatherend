@@ -5,14 +5,13 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "@/src/components/app-typography";
 import { useMentionStore } from "@/src/features/notifications/stores/use-mention-store";
-import { useUnreadStore } from "@/src/features/notifications/stores/use-unread-store";
 import { useAppShellStore } from "@/src/features/navigation/stores/use-app-shell-store";
 import { useTheme } from "@/src/theme/theme-provider";
 
 export const APP_TAB_BAR_CONTENT_HEIGHT = 84;
 export const APP_TAB_BAR_BOTTOM_PADDING = 12;
 
-type AppBottomTabKey = "boards" | "chats" | "discovery" | "me";
+type AppBottomTabKey = "boards" | "discovery" | "me";
 type BoardSectionKey = "home" | "forum" | "wiki" | "chats" | "settings";
 
 function getBoardSectionPathname(section: BoardSectionKey) {
@@ -42,12 +41,6 @@ const APP_BOTTOM_TABS: {
     label: "Boards",
     icon: "grid-outline",
     pathname: "/boards",
-  },
-  {
-    key: "chats",
-    label: "Chats",
-    icon: "chatbubble-outline",
-    pathname: "/chats",
   },
   {
     key: "discovery",
@@ -111,15 +104,8 @@ const TabBadge = memo(function TabBadge({ tabKey }: { tabKey: AppBottomTabKey })
         ? Object.values(state.mentions).filter(Boolean).length
         : 0,
   );
-  const dmCount = useUnreadStore((state) =>
-    tabKey === "chats"
-      ? Object.keys(state.dmUnreads).filter(
-          (id) => (state.dmUnreads[id] ?? 0) > 0,
-        ).length
-      : 0,
-  );
 
-  return <BadgeCount count={tabKey === "boards" ? mentionCount : dmCount} />;
+  return <BadgeCount count={mentionCount} />;
 });
 
 type BottomTabItemProps = {

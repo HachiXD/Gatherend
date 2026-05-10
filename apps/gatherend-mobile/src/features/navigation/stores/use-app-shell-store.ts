@@ -14,10 +14,12 @@ type AppShellState = {
   lastBoardId: string | null;
   lastBoardSection: BoardSection;
   lastHomeTabByBoardId: Record<string, BoardHomeTab>;
+  lastConversationId: string | null;
   setIsBoardDrawerOpen: (isOpen: boolean) => void;
   setLastHomeTab: (boardId: string, tab: BoardHomeTab) => void;
   setLastBoardId: (boardId: string | null) => void;
   setLastBoardSection: (section: BoardSection) => void;
+  setLastConversationId: (id: string | null) => void;
 };
 
 export const useAppShellStore = create<AppShellState>((set) => ({
@@ -25,6 +27,7 @@ export const useAppShellStore = create<AppShellState>((set) => ({
   lastBoardId: null,
   lastBoardSection: "home",
   lastHomeTabByBoardId: {},
+  lastConversationId: null,
   setIsBoardDrawerOpen: (isOpen) =>
     set((state) =>
       state.isBoardDrawerOpen === isOpen
@@ -49,5 +52,9 @@ export const useAppShellStore = create<AppShellState>((set) => ({
   setLastBoardSection: (section) =>
     set((state) =>
       state.lastBoardSection === section ? state : { lastBoardSection: section },
+    ),
+  setLastConversationId: (id) =>
+    set((state) =>
+      state.lastConversationId === id ? state : { lastConversationId: id },
     ),
 }));

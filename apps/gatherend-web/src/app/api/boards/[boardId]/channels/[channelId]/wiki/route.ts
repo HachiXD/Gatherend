@@ -21,11 +21,9 @@ const MAX_CURSOR_LENGTH = 128;
 const MAX_TITLE_LENGTH = 200;
 const MAX_CONTENT_LENGTH = 50000;
 
-// ─── GET /api/channels/[channelId]/wiki ────────────────────────────────────
-// Returns a paginated index of wiki pages (title-only preview) for the channel.
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ channelId: string }> },
+  { params }: { params: Promise<{ boardId: string; channelId: string }> },
 ) {
   try {
     const rateLimitResponse = await checkRateLimit(RATE_LIMITS.api);
@@ -35,7 +33,11 @@ export async function GET(
     if (!auth.success) return auth.response;
     const { profile } = auth;
 
-    const { channelId } = await params;
+    const { boardId, channelId } = await params;
+
+    if (!boardId || !UUID_REGEX.test(boardId)) {
+      return NextResponse.json({ error: "Invalid board ID" }, { status: 400 });
+    }
 
     if (!channelId || !UUID_REGEX.test(channelId)) {
       return NextResponse.json({ error: "Invalid channel ID" }, { status: 400 });
@@ -44,6 +46,7 @@ export async function GET(
     const channelExists = await db.channel.findFirst({
       where: {
         id: channelId,
+        boardId,
         type: ChannelType.WIKI,
         board: { members: { some: { profileId: profile.id } } },
       },
@@ -157,11 +160,9 @@ export async function GET(
   }
 }
 
-// ─── POST /api/channels/[channelId]/wiki ───────────────────────────────────
-// Creates a new wiki page. Requires canWriteWiki permission.
 export async function POST(
   req: Request,
-  { params }: { params: Promise<{ channelId: string }> },
+  { params }: { params: Promise<{ boardId: string; channelId: string }> },
 ) {
   try {
     const rateLimitResponse = await checkRateLimit(RATE_LIMITS.api);
@@ -171,7 +172,11 @@ export async function POST(
     if (!auth.success) return auth.response;
     const { profile } = auth;
 
-    const { channelId } = await params;
+    const { boardId, channelId } = await params;
+
+    if (!boardId || !UUID_REGEX.test(boardId)) {
+      return NextResponse.json({ error: "Invalid board ID" }, { status: 400 });
+    }
 
     if (!channelId || !UUID_REGEX.test(channelId)) {
       return NextResponse.json({ error: "Invalid channel ID" }, { status: 400 });
@@ -219,6 +224,7 @@ export async function POST(
     const wikiChannel = await db.channel.findFirst({
       where: {
         id: channelId,
+        boardId,
         type: ChannelType.WIKI,
         board: { members: { some: { profileId: profile.id } } },
       },
