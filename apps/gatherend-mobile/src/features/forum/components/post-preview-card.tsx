@@ -155,6 +155,8 @@ function PostPreviewCardInner({
         ) : null}
       </View>
 
+      <View style={styles.pushSpacer} />
+
       {/* Footer */}
       <View style={[styles.footer, { borderTopColor: colors.borderPrimary }]}>
         <View style={styles.footerLeft}>
@@ -285,6 +287,9 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     postBody: {
       gap: 6,
+    },
+    pushSpacer: {
+      flex: 1,
     },
     thumbnail: {
       borderRadius: 8,

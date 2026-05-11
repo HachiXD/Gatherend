@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { useCallback, useRef } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useBottomTabBarHeight } from "@/src/features/navigation/components/app-bottom-tab-bar";
 import { useProfile } from "@/src/features/profile/providers/current-profile-provider";
 import {
   getFgFromBg,
@@ -53,6 +54,7 @@ export default function MeScreen() {
   }, []));
 
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight();
 
   const cardStyle = getCardStyle(profile.profileCardConfig);
   const bgFg = getFgFromBg(cardStyle.bg);
@@ -66,7 +68,7 @@ export default function MeScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: insets.bottom + 24 },
+          { paddingBottom: tabBarHeight + 24 },
         ]}
         showsVerticalScrollIndicator={false}
       >

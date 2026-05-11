@@ -11,6 +11,11 @@ import { useTheme } from "@/src/theme/theme-provider";
 export const APP_TAB_BAR_CONTENT_HEIGHT = 84;
 export const APP_TAB_BAR_BOTTOM_PADDING = 12;
 
+export function useBottomTabBarHeight() {
+  const insets = useSafeAreaInsets();
+  return APP_TAB_BAR_CONTENT_HEIGHT + Math.max(insets.bottom, APP_TAB_BAR_BOTTOM_PADDING);
+}
+
 type AppBottomTabKey = "boards" | "discovery" | "me";
 type BoardSectionKey = "home" | "forum" | "wiki" | "chats" | "settings";
 
@@ -97,12 +102,15 @@ function BadgeCount({ count }: { count: number }) {
   );
 }
 
-const TabBadge = memo(function TabBadge({ tabKey }: { tabKey: AppBottomTabKey }) {
-  const mentionCount = useMentionStore(
-    (state) =>
-      tabKey === "boards"
-        ? Object.values(state.mentions).filter(Boolean).length
-        : 0,
+const TabBadge = memo(function TabBadge({
+  tabKey,
+}: {
+  tabKey: AppBottomTabKey;
+}) {
+  const mentionCount = useMentionStore((state) =>
+    tabKey === "boards"
+      ? Object.values(state.mentions).filter(Boolean).length
+      : 0,
   );
 
   return <BadgeCount count={mentionCount} />;
@@ -126,10 +134,7 @@ const BottomTabItem = memo(function BottomTabItem({
   const router = useRouter();
   const lastBoardId = useAppShellStore((state) => state.lastBoardId);
   const lastBoardSection = useAppShellStore((state) => state.lastBoardSection);
-  const accessibilityState = useMemo(
-    () => ({ selected: focused }),
-    [focused],
-  );
+  const accessibilityState = useMemo(() => ({ selected: focused }), [focused]);
 
   const handlePress = useCallback(() => {
     if (focused) {
@@ -169,10 +174,7 @@ const BottomTabItem = memo(function BottomTabItem({
       </View>
       <Text
         numberOfLines={1}
-        style={[
-          styles.label,
-          focused ? labelActiveStyle : labelInactiveStyle,
-        ]}
+        style={[styles.label, focused ? labelActiveStyle : labelInactiveStyle]}
       >
         {tab.label}
       </Text>

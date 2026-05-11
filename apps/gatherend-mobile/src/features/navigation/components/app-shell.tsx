@@ -1,4 +1,7 @@
-import { DarkTheme, ThemeProvider as NavigationThemeProvider } from "@react-navigation/native";
+import {
+  DarkTheme,
+  ThemeProvider as NavigationThemeProvider,
+} from "@react-navigation/native";
 import { usePathname } from "expo-router";
 import { useMemo, type ReactNode } from "react";
 import { StyleSheet, View } from "react-native";

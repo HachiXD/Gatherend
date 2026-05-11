@@ -11,8 +11,14 @@ import { CommunityPostsSection } from "./community-posts-section";
 import { InlineCommunityPostForm } from "./inline-community-post-form";
 import { isModerator } from "@/lib/domain-client";
 
-function ForumViewInner() {
-  const boardId = useCurrentBoardId();
+interface ForumViewProps {
+  channelId?: string;
+  boardId?: string;
+}
+
+function ForumViewInner({ channelId: channelIdProp, boardId: boardIdProp }: ForumViewProps) {
+  const contextBoardId = useCurrentBoardId();
+  const boardId = boardIdProp ?? contextBoardId;
   const {
     data: board,
     isLoading,
@@ -27,7 +33,9 @@ function ForumViewInner() {
   const [showPostForm, setShowPostForm] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const forumChannelId =
-    board?.channels.find((channel) => channel.type === "FORUM")?.id ?? null;
+    channelIdProp ??
+    board?.channels.find((channel) => channel.type === "FORUM")?.id ??
+    null;
 
   const headerButtonStyles = useCommunityHeaderStyle();
 
@@ -151,4 +159,6 @@ function ForumViewInner() {
   );
 }
 
-export const ForumView = memo(ForumViewInner);
+export const ForumView = memo(function ForumView(props: ForumViewProps) {
+  return <ForumViewInner {...props} />;
+});

@@ -214,7 +214,11 @@ function RulesContent({
             pressed && styles.sheetOptionPressed,
           ]}
         >
-          <Ionicons name="create-outline" size={20} color={colors.textPrimary} />
+          <Ionicons
+            name="create-outline"
+            size={20}
+            color={colors.textPrimary}
+          />
           <Text style={styles.sheetOptionText}>Editar reglas</Text>
         </Pressable>
         <View style={styles.sheetDivider} />
@@ -683,7 +687,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     ruleBadgeText: {
       color: colors.bgPrimary,
-      fontSize: 12,
+      fontSize: 17,
       fontWeight: "800",
     },
     ruleBody: {
@@ -692,14 +696,14 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     ruleTitle: {
       color: colors.textPrimary,
-      fontSize: 15,
+      fontSize: 17,
       fontWeight: "700",
-      lineHeight: 20,
+      lineHeight: 24,
     },
     ruleDescription: {
       color: colors.textMuted,
-      fontSize: 13,
-      lineHeight: 19,
+      fontSize: 17,
+      lineHeight: 24,
     },
     // Chats
     chatsContainer: {

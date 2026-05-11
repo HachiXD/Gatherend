@@ -21,7 +21,6 @@ export function useChannelRedirection(): UseChannelRedirectionResult {
     currentConversationId,
     isDiscovery,
     isChannels,
-    isForum,
     isRules,
   } = useBoardSwitchRouting();
   const { switchBoard, isClientNavigationEnabled } =
@@ -35,7 +34,6 @@ export function useChannelRedirection(): UseChannelRedirectionResult {
       currentConversationId ||
       isDiscovery ||
       isChannels ||
-      isForum ||
       isRules
     ) {
       return;
@@ -50,7 +48,6 @@ export function useChannelRedirection(): UseChannelRedirectionResult {
     currentConversationId,
     isDiscovery,
     isChannels,
-    isForum,
     isRules,
     isClientNavigationEnabled,
     switchBoard,
@@ -62,7 +59,6 @@ export function useChannelRedirection(): UseChannelRedirectionResult {
       !currentConversationId &&
       !isDiscovery &&
       !isChannels &&
-      !isForum &&
       !isRules,
   };
 }

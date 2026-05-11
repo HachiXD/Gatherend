@@ -119,7 +119,7 @@ export const DiscoveryCommunityView = memo(function DiscoveryCommunityView() {
     bottomSentinelRef,
   } = useCommunitiesFeed();
 
-  const { switchBoard, switchToRules } = useBoardSwitchNavigation();
+  const { switchBoard, switchToChannels } = useBoardSwitchNavigation();
   const { data: userBoards } = useUserBoards();
 
   // Hook para búsqueda server-side con debounce
@@ -158,13 +158,13 @@ export const DiscoveryCommunityView = memo(function DiscoveryCommunityView() {
         } catch {
           // If join fails, still navigate — board GET will show 404 naturally
         }
-        switchToRules(boardId);
+        switchToChannels(boardId);
         return;
       }
 
       switchBoard(boardId);
     },
-    [switchBoard, switchToRules, userBoards],
+    [switchBoard, switchToChannels, userBoards],
   );
 
   return (

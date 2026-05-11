@@ -14,6 +14,8 @@ import {
 } from "@/hooks/use-board-data";
 import { useQueryClient } from "@tanstack/react-query";
 import { useBoardSwitchNavigation } from "@/contexts/board-switch-context";
+import { ForumView } from "./forum-view";
+import { WikiView } from "./wiki-view";
 
 interface ChannelViewProps {
   /** ID del canal (desde CenterContentRouter via BoardSwitchContext) */
@@ -92,6 +94,14 @@ export function ChannelView({ channelId, boardId }: ChannelViewProps) {
 
   if (boardLoading || !channel || !board || isStaleBoard) {
     return null;
+  }
+
+  // Route to channel-type-specific views
+  if (channel.type === ChannelType.FORUM) {
+    return <ForumView channelId={channel.id} boardId={board.id} />;
+  }
+  if (channel.type === ChannelType.WIKI) {
+    return <WikiView channelId={channel.id} boardId={board.id} />;
   }
 
   const channelBackgroundImageUrl = channel.imageAsset?.url ?? null;

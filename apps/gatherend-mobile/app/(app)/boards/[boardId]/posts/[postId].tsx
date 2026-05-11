@@ -1,10 +1,6 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
 import { useProfile } from "@/src/features/profile/providers/current-profile-provider";
 import { useBoard } from "@/src/features/boards/hooks/use-board";
 import { usePost } from "@/src/features/forum/hooks/use-post";
@@ -123,7 +119,6 @@ export default function PostDetailScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const profile = useProfile();
   const { data: board } = useBoard(boardId);
   const channelId =
@@ -244,7 +239,7 @@ export default function PostDetailScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+    <View style={styles.safeArea}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         style={[styles.scrollView, { backgroundColor: colors.bgPrimary }]}
@@ -274,7 +269,7 @@ export default function PostDetailScreen() {
           {
             backgroundColor: colors.bgPrimary,
             borderTopColor: colors.borderPrimary,
-            paddingBottom: 8 + insets.bottom,
+            paddingBottom: 8,
           },
         ]}
       >
@@ -318,7 +313,7 @@ export default function PostDetailScreen() {
           snapshot={reportConfig.snapshot}
         />
       ) : null}
-    </SafeAreaView>
+    </View>
   );
 }
 

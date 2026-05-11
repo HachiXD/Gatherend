@@ -81,6 +81,7 @@ function HeroPost({
           backgroundColor: colors.bgEditForm,
           borderBottomLeftRadius: bottomRadius,
           borderBottomRightRadius: bottomRadius,
+          minHeight: hasImage ? 340 : undefined,
         },
         pressed && styles.pressed,
       ]}
@@ -165,7 +166,7 @@ function HeroPost({
           </View>
         </View>
 
-        <View style={styles.heroPushSpacer} />
+        {hasImage ? <View style={styles.heroPushSpacer} /> : null}
 
         <View style={styles.postBody}>
           {post.title ? (
@@ -567,7 +568,6 @@ function createStyles(
       borderBottomLeftRadius: 0,
       borderBottomRightRadius: 0,
       borderWidth: 1,
-      minHeight: 340,
       marginHorizontal: 0,
       marginTop: 0,
       marginBottom: 0,
@@ -703,6 +703,7 @@ function createStyles(
       borderRadius: 0,
       borderRightWidth: 0,
       borderTopWidth: 0,
+      flex: 1,
       marginHorizontal: 0,
       marginVertical: 0,
     },

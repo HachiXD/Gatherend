@@ -17,7 +17,10 @@ import { useTheme } from "@/src/theme/theme-provider";
 type DmDrawerMainProps = {
   activeConversationId?: string;
   onConversationPressIn?: () => void;
-  onSelectConversation: (conversationId: string, participantName: string) => void;
+  onSelectConversation: (
+    conversationId: string,
+    participantName: string,
+  ) => void;
 };
 
 export function DmDrawerMain({
@@ -28,8 +31,13 @@ export function DmDrawerMain({
   const router = useRouter();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { data: conversations = [], isLoading, isError, refetch, isFetching } =
-    useConversations();
+  const {
+    data: conversations = [],
+    isLoading,
+    isError,
+    refetch,
+    isFetching,
+  } = useConversations();
 
   const renderItem = useCallback(
     ({ item }: { item: Conversation }) => {
@@ -62,7 +70,10 @@ export function DmDrawerMain({
             username={item.otherProfile.username}
           />
           <View style={styles.rowCopy}>
-            <Text numberOfLines={1} style={[styles.rowName, isActive ? styles.rowNameActive : null]}>
+            <Text
+              numberOfLines={1}
+              style={[styles.rowName, isActive ? styles.rowNameActive : null]}
+            >
               {item.otherProfile.username}
             </Text>
             {lastMessageText ? (
@@ -91,7 +102,11 @@ export function DmDrawerMain({
             pressed ? styles.pressed : null,
           ]}
         >
-          <Ionicons color={colors.textSecondary} name="person-add-outline" size={18} />
+          <Ionicons
+            color={colors.textSecondary}
+            name="person-add-outline"
+            size={18}
+          />
         </Pressable>
       </View>
 
@@ -149,14 +164,15 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     headerTitle: {
       color: colors.textPrimary,
       flex: 1,
-      fontSize: 15,
-      fontWeight: "700",
+      fontSize: 20,
+      fontWeight: "800",
+      lineHeight: 24,
     },
     addButton: {
       alignItems: "center",
       backgroundColor: colors.bgQuaternary,
       borderColor: colors.borderPrimary,
-      borderRadius: 12,
+      borderRadius: 8,
       borderWidth: 1,
       height: 32,
       justifyContent: "center",
@@ -198,7 +214,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     rowName: {
       color: colors.textPrimary,
-      fontSize: 13,
+      fontSize: 15,
       fontWeight: "700",
     },
     rowNameActive: {
@@ -206,8 +222,8 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     rowLastMessage: {
       color: colors.textMuted,
-      fontSize: 11,
-      lineHeight: 15,
+      fontSize: 15,
+      lineHeight: 18,
     },
     centerState: {
       alignItems: "center",

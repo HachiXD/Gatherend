@@ -249,6 +249,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       borderColor: colors.borderPrimary,
       borderRadius: 18,
       borderWidth: 1,
+      marginTop: 4,
       height: 54,
       justifyContent: "center",
       width: 54,

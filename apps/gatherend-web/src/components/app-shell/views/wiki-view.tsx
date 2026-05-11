@@ -4,8 +4,14 @@ import { useBoardData } from "@/hooks/use-board-data";
 import { useCurrentBoardId } from "@/contexts/board-switch-context";
 import { BookOpenText } from "lucide-react";
 
-function WikiViewInner() {
-  const boardId = useCurrentBoardId();
+interface WikiViewProps {
+  channelId?: string;
+  boardId?: string;
+}
+
+function WikiViewInner({ boardId: boardIdProp }: WikiViewProps) {
+  const contextBoardId = useCurrentBoardId();
+  const boardId = boardIdProp ?? contextBoardId;
   const { data: board, isLoading } = useBoardData(boardId, {
     enableFetch: true,
   });
@@ -48,6 +54,6 @@ function WikiViewInner() {
   );
 }
 
-export function WikiView() {
-  return <WikiViewInner />;
+export function WikiView(props: WikiViewProps) {
+  return <WikiViewInner {...props} />;
 }

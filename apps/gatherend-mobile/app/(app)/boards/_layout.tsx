@@ -193,7 +193,7 @@ function DrawerChannelsPreview({
                             ? "book-outline"
                             : "chatbubble-ellipses-outline"
                     }
-                    size={16}
+                    size={19}
                   />
                 </View>
                 <View style={styles.drawerChannelCopy}>
@@ -261,7 +261,8 @@ export default function BoardShellLayout() {
   const setLastConversationId = useAppShellStore(
     (state) => state.setLastConversationId,
   );
-  const { data: conversations = [], isLoading: isConversationsLoading } = useConversations();
+  const { data: conversations = [], isLoading: isConversationsLoading } =
+    useConversations();
   const setIsBoardDrawerOpen = useAppShellStore(
     (state) => state.setIsBoardDrawerOpen,
   );
@@ -358,7 +359,7 @@ export default function BoardShellLayout() {
     mode,
   ]);
 
-  const isBoardPathname = pathname.startsWith("/boards/");
+  const isBoardPathname = pathname.startsWith("/boards");
   const isModalPathname = pathname.startsWith("/modal/");
 
   useEffect(() => {
@@ -502,19 +503,22 @@ export default function BoardShellLayout() {
     [foregroundX, isDrawerOpen, pathname, setIsBoardDrawerOpen],
   );
 
-  const showDrawer = useCallback((onFinish?: () => void) => {
-    Animated.timing(foregroundX, {
-      toValue: screenWidth,
-      duration: 180,
-      useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (finished) {
-        setIsDrawerOpen(true);
-        setIsBoardDrawerOpen(true);
-        onFinish?.();
-      }
-    });
-  }, [foregroundX, isDrawerOpen, pathname, screenWidth, setIsBoardDrawerOpen]);
+  const showDrawer = useCallback(
+    (onFinish?: () => void) => {
+      Animated.timing(foregroundX, {
+        toValue: screenWidth,
+        duration: 180,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished) {
+          setIsDrawerOpen(true);
+          setIsBoardDrawerOpen(true);
+          onFinish?.();
+        }
+      });
+    },
+    [foregroundX, isDrawerOpen, pathname, screenWidth, setIsBoardDrawerOpen],
+  );
 
   const startPendingOptimisticNavigation = useCallback(() => {
     const pending = pendingOptimisticNavigationRef.current;
@@ -630,7 +634,9 @@ export default function BoardShellLayout() {
             showDrawer();
           }
         },
-        onPanResponderTerminate: showDrawer,
+        onPanResponderTerminate: () => {
+          showDrawer();
+        },
       }),
     [
       foregroundX,
@@ -889,6 +895,7 @@ export default function BoardShellLayout() {
                             {resolvedTabLabel("home")}
                           </Text>
                         </Pressable>
+
                         <ScrollView
                           contentContainerStyle={
                             styles.drawerChannelsScrollContent
@@ -909,14 +916,6 @@ export default function BoardShellLayout() {
                             styles={styles}
                           />
                         </ScrollView>
-                        <View
-                          style={[
-                            styles.tabSeparator,
-                            boardColors
-                              ? { borderTopColor: boardColors.borderPrimary }
-                              : null,
-                          ]}
-                        />
                       </View>
                     </View>
                     <BottomSheet
@@ -1482,13 +1481,14 @@ function createStyles(
       lineHeight: 24,
     },
     drawerGroup: {
+      flex: 1,
       marginTop: 7,
       paddingBottom: 16,
       paddingHorizontal: 12,
     },
     drawerChannelsScroll: {
-      maxHeight: 270,
-      marginBottom: 4,
+      flex: 1,
+      marginBottom: 0,
       marginTop: 2,
     },
     drawerChannelsScrollContent: {
@@ -1587,6 +1587,7 @@ function createStyles(
       width: "46%",
     },
     tabsColumn: {
+      flex: 1,
       gap: 6,
     },
     tabSeparator: {

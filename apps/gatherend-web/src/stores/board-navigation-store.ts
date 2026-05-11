@@ -21,7 +21,7 @@ type ChatsViewTarget =
 // Entrada persistida por board: sección activa + última sub-vista de chats (independiente)
 interface PersistedBoardEntry {
   updatedAt: number;
-  activeSection: "forum" | "rules" | "wiki" | "ranking" | "channels";
+  activeSection: "rules" | "ranking" | "channels";
   // Solo presente cuando el usuario ha visitado chats al menos una vez
   chatsView?: ChatsViewTarget;
 }
@@ -42,9 +42,7 @@ function isPersistedBoardEntry(value: unknown): value is PersistedBoardEntry {
   const candidate = value as Partial<PersistedBoardEntry>;
   if (typeof candidate.updatedAt !== "number") return false;
   if (
-    candidate.activeSection !== "forum" &&
     candidate.activeSection !== "rules" &&
-    candidate.activeSection !== "wiki" &&
     candidate.activeSection !== "ranking" &&
     candidate.activeSection !== "channels"
   )
@@ -85,15 +83,11 @@ export function saveLastBoardViewForBoard(
     const data = readLastBoardEntries();
     const existing = data[boardId];
 
-    let activeSection: "forum" | "rules" | "wiki" | "ranking" | "channels";
+    let activeSection: "rules" | "ranking" | "channels";
     let chatsView: ChatsViewTarget | undefined = existing?.chatsView;
 
-    if (view.kind === "forum") {
-      activeSection = "forum";
-    } else if (view.kind === "rules") {
+    if (view.kind === "rules") {
       activeSection = "rules";
-    } else if (view.kind === "wiki") {
-      activeSection = "wiki";
     } else if (view.kind === "ranking") {
       activeSection = "ranking";
     } else if (view.kind === "channels:list") {
@@ -126,9 +120,7 @@ export function getLastBoardViewForBoard(
   try {
     const entry = readLastBoardEntries()[boardId];
     if (!entry) return null;
-    if (entry.activeSection === "forum") return { kind: "forum" };
     if (entry.activeSection === "rules") return { kind: "rules" };
-    if (entry.activeSection === "wiki") return { kind: "wiki" };
     if (entry.activeSection === "ranking") return { kind: "ranking" };
     // channels: devuelve la última sub-vista de chats, o la lista como fallback
     return entry.chatsView ?? { kind: "channels:list" };
@@ -164,9 +156,7 @@ interface NavigationState {
   currentConversationId: string | null;
   isDiscovery: boolean;
   isChannels: boolean;
-  isForum: boolean;
   isRules: boolean;
-  isWiki: boolean;
   isRanking: boolean;
 }
 
@@ -193,9 +183,7 @@ interface BoardNavigationStore extends NavigationState {
   switchToDiscovery: () => void;
   switchToChannels: (boardId?: string) => void;
   switchToChannelList: (boardId?: string) => void;
-  switchToForum: (boardId?: string) => void;
   switchToRules: (boardId?: string) => void;
-  switchToWiki: (boardId?: string) => void;
   switchToRanking: (boardId?: string) => void;
   registerActiveDiscoveryScrollPersistence: (
     persist: (() => void) | null,
@@ -215,9 +203,7 @@ function parseUrlToState(): NavigationState {
       currentConversationId: null,
       isDiscovery: false,
       isChannels: false,
-      isForum: false,
       isRules: false,
-      isWiki: false,
       isRanking: false,
     };
   }
@@ -232,9 +218,7 @@ function parseUrlToState(): NavigationState {
       currentConversationId: null,
       isDiscovery: false,
       isChannels: false,
-      isForum: false,
       isRules: false,
-      isWiki: false,
       isRanking: false,
     };
   }
@@ -246,9 +230,7 @@ function parseUrlToState(): NavigationState {
     currentConversationId: null,
     isDiscovery: false,
     isChannels: false,
-    isForum: false,
     isRules: false,
-    isWiki: false,
     isRanking: false,
   };
 
@@ -258,12 +240,8 @@ function parseUrlToState(): NavigationState {
     state.isChannels = true;
   } else if (pathParts.indexOf("rules") !== -1) {
     state.isRules = true;
-  } else if (pathParts.indexOf("wiki") !== -1) {
-    state.isWiki = true;
   } else if (pathParts.indexOf("ranking") !== -1) {
     state.isRanking = true;
-  } else if (pathParts.indexOf("forum") !== -1) {
-    state.isForum = true;
   } else {
     const roomsIndex = pathParts.indexOf("rooms");
     if (roomsIndex !== -1 && pathParts[roomsIndex + 1]) {
@@ -291,9 +269,7 @@ const initialState: NavigationState =
         currentConversationId: null,
         isDiscovery: false,
         isChannels: false,
-        isForum: false,
         isRules: false,
-        isWiki: false,
         isRanking: false,
       };
 
@@ -305,9 +281,7 @@ function getBoardViewFromNavigationState(
   }
   if (state.isChannels) return { kind: "channels:list" };
   if (state.isRules) return { kind: "rules" };
-  if (state.isWiki) return { kind: "wiki" };
   if (state.isRanking) return { kind: "ranking" };
-  if (state.isForum) return { kind: "forum" };
   return null;
 }
 
@@ -322,21 +296,15 @@ function getNavigationStateForBoardView(
     currentConversationId: null,
     isDiscovery: false,
     isChannels: view.kind === "channels:list",
-    isForum: view.kind === "forum",
     isRules: view.kind === "rules",
-    isWiki: view.kind === "wiki",
     isRanking: view.kind === "ranking",
   };
 }
 
 function getUrlForBoardView(boardId: string, view: BoardViewTarget): string {
   switch (view.kind) {
-    case "forum":
-      return `/boards/${boardId}/forum`;
     case "rules":
       return `/boards/${boardId}/rules`;
-    case "wiki":
-      return `/boards/${boardId}/wiki`;
     case "ranking":
       return `/boards/${boardId}/ranking`;
     case "channels:list":
@@ -351,12 +319,8 @@ function getHistoryStateForBoardView(
   view: BoardViewTarget,
 ): Record<string, unknown> {
   switch (view.kind) {
-    case "forum":
-      return { boardId, isForum: true };
     case "rules":
       return { boardId, isRules: true };
-    case "wiki":
-      return { boardId, isWiki: true };
     case "ranking":
       return { boardId, isRanking: true };
     case "channels:list":
@@ -385,9 +349,7 @@ export const useBoardNavigationStore = create<BoardNavigationStore>()(
         state.currentConversationId !== urlState.currentConversationId ||
         state.isDiscovery !== urlState.isDiscovery ||
         state.isChannels !== urlState.isChannels ||
-        state.isForum !== urlState.isForum ||
         state.isRules !== urlState.isRules ||
-        state.isWiki !== urlState.isWiki ||
         state.isRanking !== urlState.isRanking;
 
       if (needsSync) {
@@ -418,9 +380,7 @@ export const useBoardNavigationStore = create<BoardNavigationStore>()(
             currentConversationId: event.state.conversationId || null,
             isDiscovery: event.state.isDiscovery || false,
             isChannels: event.state.isChannels || false,
-            isForum: event.state.isForum || false,
             isRules: event.state.isRules || false,
-            isWiki: event.state.isWiki || false,
             isRanking: event.state.isRanking || false,
           });
         } else {
@@ -453,9 +413,7 @@ export const useBoardNavigationStore = create<BoardNavigationStore>()(
         state.currentConversationId === nextState.currentConversationId &&
         state.isDiscovery === nextState.isDiscovery &&
         state.isChannels === nextState.isChannels &&
-        state.isForum === nextState.isForum &&
         state.isRules === nextState.isRules &&
-        state.isWiki === nextState.isWiki &&
         state.isRanking === nextState.isRanking;
 
       if (isSameRoutingState && options?.history !== "replace") return;
@@ -526,9 +484,7 @@ export const useBoardNavigationStore = create<BoardNavigationStore>()(
         currentChannelId: null,
         isDiscovery: false,
         isChannels: false,
-        isForum: false,
         isRules: false,
-        isWiki: false,
         isRanking: false,
       });
 
@@ -548,9 +504,7 @@ export const useBoardNavigationStore = create<BoardNavigationStore>()(
         currentConversationId: null,
         isDiscovery: true,
         isChannels: false,
-        isForum: false,
         isRules: false,
-        isWiki: false,
         isRanking: false,
       });
 
@@ -559,12 +513,6 @@ export const useBoardNavigationStore = create<BoardNavigationStore>()(
         "",
         `/boards/${state.currentBoardId}/discovery`,
       );
-    },
-
-    switchToForum: (boardId?: string) => {
-      const state = get();
-      const targetBoardId = boardId ?? state.currentBoardId;
-      get().switchBoardView(targetBoardId, { kind: "forum" });
     },
 
     switchToChannels: (boardId?: string) => {
@@ -586,12 +534,6 @@ export const useBoardNavigationStore = create<BoardNavigationStore>()(
       const state = get();
       const targetBoardId = boardId ?? state.currentBoardId;
       get().switchBoardView(targetBoardId, { kind: "rules" });
-    },
-
-    switchToWiki: (boardId?: string) => {
-      const state = get();
-      const targetBoardId = boardId ?? state.currentBoardId;
-      get().switchBoardView(targetBoardId, { kind: "wiki" });
     },
 
     switchToRanking: (boardId?: string) => {
@@ -622,9 +564,7 @@ export const selectRouting = (state: BoardNavigationStore) => ({
   currentConversationId: state.currentConversationId,
   isDiscovery: state.isDiscovery,
   isChannels: state.isChannels,
-  isForum: state.isForum,
   isRules: state.isRules,
-  isWiki: state.isWiki,
   isRanking: state.isRanking,
 });
 
@@ -640,9 +580,7 @@ export const selectActions = (state: BoardNavigationStore) => ({
   switchToDiscovery: state.switchToDiscovery,
   switchToChannels: state.switchToChannels,
   switchToChannelList: state.switchToChannelList,
-  switchToForum: state.switchToForum,
   switchToRules: state.switchToRules,
-  switchToWiki: state.switchToWiki,
   switchToRanking: state.switchToRanking,
   isClientNavigationEnabled: state.isClientNavigationEnabled,
 });
@@ -660,7 +598,5 @@ export const selectIsDiscovery = (state: BoardNavigationStore) =>
   state.isDiscovery;
 export const selectIsChannels = (state: BoardNavigationStore) =>
   state.isChannels;
-export const selectIsForum = (state: BoardNavigationStore) =>
-  state.isForum;
 export const selectIsInitialized = (state: BoardNavigationStore) =>
   state.isInitialized;

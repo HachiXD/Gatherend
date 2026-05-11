@@ -12,6 +12,7 @@ import {
   initialWindowMetrics,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
+import { useBottomTabBarHeight } from "@/src/features/navigation/components/app-bottom-tab-bar";
 import { useUserBoards } from "@/src/features/boards/hooks/use-user-boards";
 import {
   DISCOVERY_BOARD_CARD_HEIGHT,
@@ -83,6 +84,7 @@ export default function DiscoveryScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight();
   const topInset = Math.max(
     insets.top,
     initialWindowMetrics?.insets.top ?? StatusBar.currentHeight ?? 0,
@@ -260,7 +262,7 @@ export default function DiscoveryScreen() {
 
         {!isLoading && !isError ? (
           <FlatList
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[styles.listContent, { paddingBottom: tabBarHeight + 16 }]}
             data={boards}
             getItemLayout={getItemLayout}
             initialNumToRender={3}

@@ -6,9 +6,7 @@ import { ChannelView } from "./views/channel-view";
 import { ConversationView } from "./views/conversation-view";
 import { BoardView } from "./views/board-view";
 import { DiscoveryCommunityView } from "./views/discovery-community-view";
-import { ForumView } from "./views/forum-view";
 import { RulesView } from "./views/rules-view";
-import { WikiView } from "./views/wiki-view";
 import { RankingView } from "./views/ranking-view";
 import { ChannelsView } from "./views/channels-view";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -34,9 +32,8 @@ const ERROR_FALLBACK_RENDER = ({ reset }: { reset: () => void }) => (
  * Vistas posibles:
  * - DiscoveryCommunityView: cuando isDiscovery es true (lista de boards públicos)
  * - ConversationView: cuando hay un currentConversationId
- * - ChannelView: cuando hay un currentChannelId
- * - ForumView: cuando isForum es true
- * - BoardView: fallback (redirige al foro)
+ * - ChannelView: cuando hay un currentChannelId (incluye FORUM y WIKI via channel type)
+ * - BoardView: fallback
  */
 function CenterContentRouterInner() {
   // Hook selectivo - solo se suscribe a valores de routing
@@ -46,9 +43,7 @@ function CenterContentRouterInner() {
     currentConversationId,
     isDiscovery,
     isChannels,
-    isForum,
     isRules,
-    isWiki,
     isRanking,
   } = useBoardSwitchRouting();
 
@@ -92,22 +87,12 @@ function CenterContentRouterInner() {
       return <RulesView key={`rules-${currentBoardId}`} />;
     }
 
-    // 6. Wiki del board
-    if (isWiki) {
-      return <WikiView key={`wiki-${currentBoardId}`} />;
-    }
-
-    // 7. Ranking del board
+    // 6. Ranking del board
     if (isRanking) {
       return <RankingView key={`ranking-${currentBoardId}`} />;
     }
 
-    // 8. Foro del board
-    if (isForum) {
-      return <ForumView key={`forum-${currentBoardId}`} />;
-    }
-
-    // 9. BoardView (fallback - redirige al foro)
+    // 7. BoardView (fallback)
     return <BoardView key={`board-${currentBoardId}`} />;
   }, [
     currentBoardId,
@@ -115,9 +100,7 @@ function CenterContentRouterInner() {
     currentConversationId,
     isDiscovery,
     isChannels,
-    isForum,
     isRules,
-    isWiki,
     isRanking,
   ]);
 
@@ -125,7 +108,7 @@ function CenterContentRouterInner() {
     () => {
       return `${currentBoardId}:${currentChannelId ?? "none"}:${
         currentConversationId ?? "none"
-      }:${isDiscovery ? "discovery" : isChannels ? "channels" : isRules ? "rules" : isWiki ? "wiki" : isRanking ? "ranking" : isForum ? "forum" : "other"}`;
+      }:${isDiscovery ? "discovery" : isChannels ? "channels" : isRules ? "rules" : isRanking ? "ranking" : "other"}`;
     },
     [
       currentBoardId,
@@ -133,9 +116,7 @@ function CenterContentRouterInner() {
       currentConversationId,
       isDiscovery,
       isChannels,
-      isForum,
       isRules,
-      isWiki,
       isRanking,
     ],
   );

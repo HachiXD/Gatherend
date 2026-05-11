@@ -119,13 +119,13 @@ export const InviteLinkPreview = ({
       startTransition(() => {
         if (boardSwitch?.isClientNavigationEnabled) {
           if (success && !alreadyMember) {
-            boardSwitch.switchToRules(boardData.id);
+            boardSwitch.switchToChannels(boardData.id);
           } else {
             boardSwitch.switchBoard(boardData.id);
           }
         } else {
           router.push(
-            redirectUrl ?? `/boards/${boardData.id}/rules`,
+            redirectUrl ?? `/boards/${boardData.id}/channels`,
           );
         }
       });

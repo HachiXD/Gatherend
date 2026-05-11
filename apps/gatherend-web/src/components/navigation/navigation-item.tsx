@@ -195,29 +195,21 @@ const NavigationItemComponent = ({
   const pushOptimisticBoardUrl = useCallback(
     (boardId: string, view: BoardViewTarget) => {
       const targetUrl =
-        view.kind === "forum"
-          ? `/boards/${boardId}/forum`
-          : view.kind === "rules"
-            ? `/boards/${boardId}/rules`
-            : view.kind === "wiki"
-              ? `/boards/${boardId}/wiki`
-              : view.kind === "ranking"
-                ? `/boards/${boardId}/ranking`
-                : view.kind === "channels:list"
-                  ? `/boards/${boardId}/channels`
-                  : `/boards/${boardId}/rooms/${view.channelId}`;
+        view.kind === "rules"
+          ? `/boards/${boardId}/rules`
+          : view.kind === "ranking"
+            ? `/boards/${boardId}/ranking`
+            : view.kind === "channels:list"
+              ? `/boards/${boardId}/channels`
+              : `/boards/${boardId}/rooms/${view.channelId}`;
       const targetState =
-        view.kind === "forum"
-          ? { boardId, isForum: true }
-          : view.kind === "rules"
-            ? { boardId, isRules: true }
-            : view.kind === "wiki"
-              ? { boardId, isWiki: true }
-              : view.kind === "ranking"
-                ? { boardId, isRanking: true }
-                : view.kind === "channels:list"
-                  ? { boardId, isChannels: true }
-                  : { boardId, channelId: view.channelId };
+        view.kind === "rules"
+          ? { boardId, isRules: true }
+          : view.kind === "ranking"
+            ? { boardId, isRanking: true }
+            : view.kind === "channels:list"
+              ? { boardId, isChannels: true }
+              : { boardId, channelId: view.channelId };
       window.history.pushState(targetState, "", targetUrl);
     },
     [],

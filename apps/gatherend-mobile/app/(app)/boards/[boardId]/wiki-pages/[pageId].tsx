@@ -1,4 +1,3 @@
-import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
@@ -44,11 +43,11 @@ export default function WikiPageDetailScreen() {
 
   const profile = useProfile();
   const { data: board } = useBoard(boardId);
-  const { data: page, isLoading, isError } = useWikiPage(
-    boardId,
-    pageId,
-    channelId,
-  );
+  const {
+    data: page,
+    isLoading,
+    isError,
+  } = useWikiPage(boardId, pageId, channelId);
 
   const editMutation = useEditWikiPage(
     boardId ?? "",
@@ -191,10 +190,10 @@ export default function WikiPageDetailScreen() {
               style={[styles.authorName, { color: colors.textPrimary }]}
               numberOfLines={1}
             >
-              {page.author.username}
+              Editado por: {page.author.username}
             </Text>
             <Text style={[styles.dateText, { color: colors.textTertiary }]}>
-              Actualizado {formatDate(page.updatedAt)}
+              {formatDate(page.updatedAt)}
             </Text>
           </View>
         </View>
@@ -252,52 +251,55 @@ export default function WikiPageDetailScreen() {
 
         {/* Actions */}
         {!isEditing && (canEdit || canDelete) ? (
-          <View style={styles.actionRow}>
+          <View
+            style={[
+              styles.actionPillGroup,
+              {
+                borderColor: colors.borderPrimary,
+                backgroundColor: colors.bgTertiary,
+              },
+            ]}
+          >
             {canEdit ? (
               <Pressable
                 onPress={handleStartEdit}
                 style={({ pressed }) => [
-                  styles.actionButton,
-                  {
-                    borderColor: colors.borderPrimary,
-                    backgroundColor: colors.bgSecondary,
-                  },
+                  styles.actionPillItem,
                   pressed && styles.pressed,
                 ]}
               >
-                <Ionicons
-                  name="pencil-outline"
-                  size={16}
-                  color={colors.textPrimary}
-                />
                 <Text
-                  style={[styles.actionText, { color: colors.textPrimary }]}
+                  style={[
+                    styles.actionPillText,
+                    { color: colors.textTertiary },
+                  ]}
                 >
                   Editar
                 </Text>
               </Pressable>
             ) : null}
+            {canEdit && canDelete ? (
+              <View
+                style={[
+                  styles.actionPillSep,
+                  { backgroundColor: colors.borderPrimary },
+                ]}
+              />
+            ) : null}
             {canDelete ? (
               <Pressable
                 onPress={handleDelete}
                 style={({ pressed }) => [
-                  styles.actionButton,
-                  {
-                    borderColor: "rgba(248, 113, 113, 0.35)",
-                    backgroundColor: "rgba(239, 68, 68, 0.08)",
-                  },
+                  styles.actionPillItem,
                   pressed && styles.pressed,
                 ]}
               >
                 {deleteMutation.isPending ? (
-                  <ActivityIndicator color="#fca5a5" size="small" />
+                  <ActivityIndicator color={colors.textMuted} size="small" />
                 ) : (
-                  <>
-                    <Ionicons name="trash-outline" size={16} color="#fca5a5" />
-                    <Text style={[styles.actionText, { color: "#fca5a5" }]}>
-                      Eliminar
-                    </Text>
-                  </>
+                  <Text style={[styles.actionPillText, { color: colors.textTertiary }]}>
+                    Eliminar
+                  </Text>
                 )}
               </Pressable>
             ) : null}
@@ -393,7 +395,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     divider: {
       height: 1,
-      marginVertical: 4,
+      marginVertical: 0,
     },
     pageContent: {
       fontSize: 15,
@@ -438,23 +440,28 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       fontSize: 13,
       lineHeight: 19,
     },
-    actionRow: {
-      flexDirection: "row",
-      gap: 10,
-      marginTop: 8,
-    },
-    actionButton: {
+    actionPillGroup: {
       alignItems: "center",
-      borderRadius: 14,
+      alignSelf: "flex-end",
+      borderRadius: 999,
       borderWidth: 1,
       flexDirection: "row",
-      gap: 6,
-      paddingHorizontal: 16,
-      paddingVertical: 10,
+      height: 32,
+      overflow: "hidden",
     },
-    actionText: {
-      fontSize: 14,
-      fontWeight: "600",
+    actionPillItem: {
+      alignItems: "center",
+      height: "100%",
+      justifyContent: "center",
+      paddingHorizontal: 12,
+    },
+    actionPillSep: {
+      height: 16,
+      width: 1,
+    },
+    actionPillText: {
+      fontSize: 13,
+      fontWeight: "500",
     },
     pressed: {
       opacity: 0.75,

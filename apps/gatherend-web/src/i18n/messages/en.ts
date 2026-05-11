@@ -1291,6 +1291,11 @@ export const en: TranslationKeys = {
         "Android may ask you to allow installs from this source before installing the APK.",
       releases: [
         {
+          version: "1.2.0",
+          notes: "Se cambió a un enfoque channel-based",
+          href: "https://downloads.gatherend.com/android/gatherend-android-1.2.0.apk",
+        },
+        {
           version: "1.1.0",
           notes:
             "Added push notifications, fixed many frontend bugs and improved app stability.",

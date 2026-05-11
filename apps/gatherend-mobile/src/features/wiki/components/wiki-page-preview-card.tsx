@@ -37,7 +37,7 @@ function WikiPagePreviewCardInner({ page, onPress }: WikiPagePreviewCardProps) {
       <View style={styles.row}>
         <Ionicons
           name="document-text-outline"
-          size={18}
+          size={22}
           color={colors.textSubtle}
           style={styles.icon}
         />
@@ -97,9 +97,9 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       minWidth: 0,
     },
     title: {
-      fontSize: 15,
+      fontSize: 17,
       fontWeight: "600",
-      lineHeight: 20,
+      lineHeight: 22,
     },
     meta: {
       alignItems: "center",
@@ -108,7 +108,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     metaText: {
       flex: 1,
-      fontSize: 12,
+      fontSize: 13,
     },
   });
 }
