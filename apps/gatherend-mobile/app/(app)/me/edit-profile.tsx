@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useBottomTabBarHeight } from "@/src/features/navigation/components/app-bottom-tab-bar";
 import { useProfile } from "@/src/features/profile/providers/current-profile-provider";
 import { useUpdateProfile } from "@/src/features/profile/hooks/use-update-profile";
 import { useUsernameColorReducer } from "@/src/features/profile/hooks/use-username-color-reducer";
@@ -76,6 +77,7 @@ export default function EditProfileScreen() {
   const profile = useProfile();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight();
 
   // ── Initial state ─────────────────────────────────────────────────────────
 
@@ -227,26 +229,32 @@ export default function EditProfileScreen() {
     const avatarData = parseStoredUploadValue(avatarValue);
     const bannerData = parseStoredUploadValue(bannerValue);
 
-    await mutation.mutateAsync({
-      username: username.trim(),
-      badge: badge.trim() || null,
-      avatarAssetId: avatarData?.assetId ?? profile.avatarAssetId,
-      bannerAssetId: bannerData?.assetId ?? profile.bannerAssetId,
-      languages,
-      chatBubbleStyle,
-      usernameColor: { type: "solid", color: normalizedUsernameColor },
-      profileTags: profileTags.state.tags,
-      profileCardConfig: {
-        ...((profile.profileCardConfig as object | null) ?? {}),
-        style: {
-          ...((profile.profileCardConfig as { style?: object } | null)?.style ??
-            {}),
-          backgroundColor: normalizedCardBgColor,
+    try {
+      await mutation.mutateAsync({
+        username: username.trim(),
+        badge: badge.trim() || null,
+        avatarAssetId: avatarData?.assetId ?? profile.avatarAssetId,
+        bannerAssetId: bannerData?.assetId ?? profile.bannerAssetId,
+        languages,
+        chatBubbleStyle,
+        usernameColor: { type: "solid", color: normalizedUsernameColor },
+        profileTags: profileTags.state.tags,
+        profileCardConfig: {
+          ...((profile.profileCardConfig as object | null) ?? {}),
+          style: {
+            ...((profile.profileCardConfig as { style?: object } | null)
+              ?.style ?? {}),
+            backgroundColor: normalizedCardBgColor,
+          },
         },
-      },
-    });
+      });
 
-    router.back();
+      router.back();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Error al guardar el perfil";
+      Alert.alert("No se pudo guardar", message);
+    }
   }, [
     canSave,
     avatarValue,
@@ -282,7 +290,7 @@ export default function EditProfileScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: insets.bottom + 40 },
+          { paddingBottom: tabBarHeight + 24 },
         ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}

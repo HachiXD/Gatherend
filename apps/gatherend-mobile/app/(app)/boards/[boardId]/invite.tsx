@@ -191,7 +191,11 @@ export default function BoardInviteScreen() {
               (linkDisabled || pressed) && styles.pressed,
             ]}
           >
-            <Ionicons name="share-outline" size={18} color={colors.textPrimary} />
+            <Ionicons
+              name="share-outline"
+              size={18}
+              color={colors.textPrimary}
+            />
           </Pressable>
         </View>
 

@@ -1014,7 +1014,7 @@ export default function BoardShellLayout() {
                     accessibilityHint="Abre la lista de mensajes directos"
                     accessibilityRole="button"
                     accessibilityLabel="Mensajes directos"
-                    onPress={showDrawer}
+                    onPress={() => showDrawer()}
                     style={styles.menuButton}
                   >
                     <Ionicons
@@ -1094,7 +1094,7 @@ export default function BoardShellLayout() {
                       accessibilityHint="Abre el drawer izquierdo del board"
                       accessibilityRole="button"
                       accessibilityLabel="Abrir drawer"
-                      onPress={showDrawer}
+                      onPress={() => showDrawer()}
                       style={[
                         styles.menuButton,
                         hasBoardHeaderImage

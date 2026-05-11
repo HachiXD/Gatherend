@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useBottomTabBarHeight } from "@/src/features/navigation/components/app-bottom-tab-bar";
 import { Text, TextInput } from "@/src/components/app-typography";
 import { ProfileCardInlineView, getCardStyle } from "@/src/features/profile/components/profile-card-inline-view";
 import { useUpdateProfile } from "@/src/features/profile/hooks/use-update-profile";
@@ -351,6 +352,7 @@ export default function EditWallScreen() {
   const profile = useProfile();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight();
   const mutation = useUpdateProfile();
   const { uploadFile } = useUpload({
     onUploadError: (error) => Alert.alert("Error", error),
@@ -534,7 +536,7 @@ export default function EditWallScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: insets.bottom + 40 },
+          { paddingBottom: tabBarHeight + 24 },
         ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}

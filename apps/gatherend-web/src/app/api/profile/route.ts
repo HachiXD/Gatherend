@@ -1,4 +1,4 @@
-import { requireAuth } from "@/lib/require-auth";
+﻿import { requireAuth } from "@/lib/require-auth";
 import { db } from "@/lib/db";
 import { AuthProvider, AssetContext, AssetVisibility, Languages, Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
@@ -534,7 +534,7 @@ export async function PATCH(req: Request) {
           );
         }
 
-        if (!/^[a-zA-Z0-9Ã¡Ã©Ã­Ã³ÃºÃ±ÃÃ‰ÃÃ“ÃšÃ‘\s\-_]+$/.test(tag)) {
+        if (!/^[a-zA-Z0-9\u00C0-\u024F\s\-_]+$/u.test(tag)) {
           return NextResponse.json(
             {
               error:

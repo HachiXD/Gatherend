@@ -1,10 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import BoardFeaturedScreen from "./featured";
-import BoardForumScreen from "./forum";
-import BoardWikiScreen from "./wiki";
-import BoardRankingScreen from "./ranking";
+import BoardFeaturedScreen from "@/src/features/featured/screens/board-featured-screen";
+import BoardForumScreen from "@/src/features/forum/screens/board-forum-channels-screen";
+import BoardWikiScreen from "@/src/features/wiki/screens/board-wiki-channels-screen";
+import BoardRankingScreen from "@/src/features/board-ranking/screens/board-ranking-screen";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,

@@ -361,8 +361,10 @@ const ReactionsRow = memo(function ReactionsRow({
 
 const ImageBody = memo(function ImageBody({
   asset,
+  recyclingKey,
 }: {
   asset: ClientAttachmentAsset;
+  recyclingKey?: string;
 }) {
   const { colors } = useTheme();
   const { width: screenWidth } = useWindowDimensions();
@@ -384,6 +386,7 @@ const ImageBody = memo(function ImageBody({
       >
         <Image
           contentFit="cover"
+          recyclingKey={recyclingKey}
           source={{ uri: asset.url }}
           style={{ borderRadius: 10, height: imageHeight, width: contentWidth }}
         />
@@ -660,11 +663,12 @@ export const ChatItem = memo(function ChatItem({
               {hasSticker ? (
                 <Image
                   contentFit="contain"
+                  recyclingKey={message.id}
                   source={{ uri: message.sticker!.asset!.url! }}
                   style={styles.sticker}
                 />
               ) : hasImage ? (
-                <ImageBody asset={message.attachmentAsset!} />
+                <ImageBody asset={message.attachmentAsset!} recyclingKey={message.id} />
               ) : hasFile ? (
                 <FileBody asset={message.attachmentAsset!} />
               ) : null}

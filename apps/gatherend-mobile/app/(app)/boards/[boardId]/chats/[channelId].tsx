@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+﻿import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { FlashList, FlashListRef } from "@shopify/flash-list";
 import { Redirect, useLocalSearchParams, useFocusEffect } from "expo-router";
@@ -410,6 +410,18 @@ export default function BoardChannelScreen() {
 
   const keyExtractor = useCallback((item: ChatMessage) => item.id, []);
 
+  // Prevent FlashList from recycling a cell of one media type for another.
+  // Without this, Glide (expo-image) can fire a stale 404 callback onto a view
+  // that FlashList already reassigned to a different item, causing
+  // RetryableMountingLayerException on Fabric.
+  const getItemType = useCallback((item: ChatMessage): string => {
+    if ("type" in item && item.type === "WELCOME") return "welcome";
+    if (item.sticker?.asset?.url) return "sticker";
+    if (item.attachmentAsset && item.attachmentAsset.mimeType.startsWith("image/")) return "image";
+    if (item.attachmentAsset) return "file";
+    return "text";
+  }, []);
+
   const renderMessageItem = useCallback(
     ({ item, index }: { item: ChatMessage; index: number }) => {
       // Without inverted, index-1 is the older message rendered above.
@@ -440,7 +452,7 @@ export default function BoardChannelScreen() {
         />
       );
     },
-    [board?.name, compactById, reversedMessages, profile.id],
+    [board?.name, compactById, reversedMessages, profile.id, getItemType],
   );
 
   const handleEndReachedEvent = useCallback(() => {
@@ -589,10 +601,12 @@ export default function BoardChannelScreen() {
                     key={windowKey}
                     ref={flashListRef}
                     data={reversedMessages}
+                    removeClippedSubviews={false}
                     drawDistance={CHAT_DRAW_DISTANCE}
                     extraData={compactById}
                     initialScrollIndex={reversedMessages.length > 0 ? reversedMessages.length - 1 : undefined}
                     keyExtractor={keyExtractor}
+                    overrideItemType={getItemType}
                     renderItem={renderMessageItem}
                     contentContainerStyle={styles.messagesList}
                     onLoad={handleListLoad}
