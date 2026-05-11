@@ -18,7 +18,8 @@ function normalizeOptionalNullableString(value: unknown) {
 
 const optionalHexColorSchema = z
   .string()
-  .regex(HEX_COLOR_REGEX, "Color must be a valid hex value");
+  .regex(HEX_COLOR_REGEX, "Color must be a valid hex value")
+  .optional();
 const requiredContentSchema = z
   .string()
   .trim()

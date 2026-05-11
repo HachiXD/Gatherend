@@ -240,8 +240,12 @@ export default function EditProfileScreen() {
         usernameColor: { type: "solid", color: normalizedUsernameColor },
         profileTags: profileTags.state.tags,
         profileCardConfig: {
+          version: 1,
+          content: {},
           ...((profile.profileCardConfig as object | null) ?? {}),
           style: {
+            rounded: false,
+            shadows: false,
             ...((profile.profileCardConfig as { style?: object } | null)
               ?.style ?? {}),
             backgroundColor: normalizedCardBgColor,
