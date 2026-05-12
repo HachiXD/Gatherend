@@ -180,42 +180,7 @@ export default function BoardRulesScreen() {
     </KeyboardAvoidingView>
   );
 }
-      "Borrar reglas",
-      "Esta acción no se puede deshacer. Las reglas del board serán eliminadas permanentemente.",
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Borrar",
-          style: "destructive",
-          onPress: () => {
-            deleteMutation.mutate(boardId, {
-              onSuccess: () => {
-                setRuleDrafts([createEmptyDraft()]);
-                setImageUpload("");
-                saveMutation.reset();
-              },
-            });
-          },
-        },
-      ],
-    );
-  }, [boardId, deleteMutation, saveMutation]);
 
-  const errorMessage =
-    (saveMutation.error instanceof Error ? saveMutation.error.message : null) ||
-    (deleteMutation.error instanceof Error ? deleteMutation.error.message : null);
-
-  // ── Loading ────────────────────────────────────────────────────────────────
-  if (!isInitialized) {
-    return (
-      <View style={styles.centerState}>
-        <ActivityIndicator color={colors.accentPrimary} size="small" />
-        <Text style={styles.stateText}>Cargando reglas...</Text>
-      </View>
-    );
-  }
-
-  // ── Form ───────────────────────────────────────────────────────────────────
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
 function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {

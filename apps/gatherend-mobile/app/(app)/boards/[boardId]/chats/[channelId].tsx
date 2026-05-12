@@ -12,6 +12,7 @@ import {
 } from "react";
 import {
   ActivityIndicator,
+  InteractionManager,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   Pressable,
@@ -183,6 +184,8 @@ export default function BoardChannelScreen() {
   const flashListRef = useRef<FlashListRef<ChatMessage>>(null);
   const pinnedRef = useRef(true);
   const lastScrollMetricsRef = useRef<FlashListScrollMetrics | null>(null);
+  // Direction to evict after the next messages-length change.
+  const pendingWindowManage = useRef<"up" | "down" | null>(null);
   // Stable refs to the latest pagination handlers — driven from onScroll so
   // we don't depend on FlashList's unreliable onStartReached/onEndReached.
   const handleEndReachedRef = useRef<() => Promise<void>>(async () => {});
@@ -306,6 +309,7 @@ export default function BoardChannelScreen() {
     ensureInitial,
     loadOlder,
     loadNewer,
+    manageWindow,
     goToPresent,
   } = useChatMessageWindow({
     windowKey,
@@ -366,21 +370,26 @@ export default function BoardChannelScreen() {
 
       lastScrollMetricsRef.current = metrics;
       // With inverted=true, visual bottom = scrollTop=0 (distanceFromTop=0).
-      const nextPinned = !hasMoreAfterRef.current && distanceFromTop <= PINNED_TO_BOTTOM_OFFSET;
-      if (nextPinned !== pinnedRef.current) {
-        console.log('[Chat:pin] pinnedRef changed', pinnedRef.current, '->', nextPinned, 'distanceFromTop=', distanceFromTop.toFixed(1), 'hasMoreAfter=', hasMoreAfterRef.current);
-      }
-      pinnedRef.current = nextPinned;
+      pinnedRef.current =
+        !hasMoreAfterRef.current && distanceFromTop <= PINNED_TO_BOTTOM_OFFSET;
 
       // Drive pagination from scroll position directly — more reliable than
       // FlashList's onStartReached/onEndReached which fire too late.
       // With inverted: visual bottom = distanceFromTop zone → load newer.
       //                visual top   = distanceFromBottom zone → load older.
       const triggerZone = layoutMeasurement.height * 2;
-      if (distanceFromTop < triggerZone && hasMoreAfterRef.current && !isLoadingNewerRef.current) {
+      if (
+        distanceFromTop < triggerZone &&
+        hasMoreAfterRef.current &&
+        !isLoadingNewerRef.current
+      ) {
         void handleEndReachedRef.current();
       }
-      if (distanceFromBottom < triggerZone && hasMoreBeforeRef.current && !isLoadingOlderRef.current) {
+      if (
+        distanceFromBottom < triggerZone &&
+        hasMoreBeforeRef.current &&
+        !isLoadingOlderRef.current
+      ) {
         void handleStartReachedRef.current();
       }
     },
@@ -389,15 +398,7 @@ export default function BoardChannelScreen() {
 
   const scrollToBottom = useCallback(() => {
     // With inverted=true, visual bottom = offset 0.
-    const hasRef = flashListRef.current != null;
-    const currentOffset = lastScrollMetricsRef.current?.offsetY;
-    console.log('[Chat:pin] scrollToBottom called — flashRef=', hasRef, 'offset=', currentOffset != null ? currentOffset.toFixed(1) : 'n/a', 'pinned=', pinnedRef.current);
-    if (hasRef) {
-      flashListRef.current!.scrollToOffset({ offset: 0, animated: false });
-      console.log('[Chat:pin] scrollToOffset(0) sent');
-    } else {
-      console.log('[Chat:pin] scrollToOffset SKIPPED — flashRef is null');
-    }
+    flashListRef.current?.scrollToOffset({ offset: 0, animated: false });
     pinnedRef.current = true;
   }, []);
 
@@ -407,42 +408,55 @@ export default function BoardChannelScreen() {
   }, [scrollToBottom]);
 
   // Sticky bottom: present mounted + physically pinned to bottom.
-  // reversedMessages[0] = newest (store keeps oldest-first; reversed = newest-first for FlashList).
-  const newestMessageId = reversedMessages[0]?.id;
-
-  // DIAG: watch if messages array reference changes when sending
-  useEffect(() => {
-    console.log('[Chat:pin] messages[] updated count=', messages.length, 'oldestId=', messages[0]?.id, 'newestId=', reversedMessages[0]?.id, 'pinned=', pinnedRef.current);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages]);
-
+  // With inverted data, index 0 = newest message.
+  const newestMessageId = messages[0]?.id;
   useLayoutEffect(() => {
-    console.log('[Chat:pin] useLayoutEffect newestId=', newestMessageId, 'hasMoreAfter=', hasMoreAfter, 'pinned=', pinnedRef.current);
     if (!newestMessageId || hasMoreAfter) return;
     if (!pinnedRef.current) return;
 
     // Defer one frame so Fabric finishes committing the new item before
     // we call scrollToEnd — prevents RetryableMountingLayerException.
-    console.log('[Chat:pin] scheduling rAF for scrollToBottom');
-    const frame = requestAnimationFrame(() => {
-      console.log('[Chat:pin] rAF fired — pinned=', pinnedRef.current, 'flashRef=', flashListRef.current != null, 'offset=', lastScrollMetricsRef.current?.offsetY?.toFixed(1) ?? 'n/a');
-      scrollToBottom();
-    });
+    const frame = requestAnimationFrame(scrollToBottom);
 
     return () => {
-      console.log('[Chat:pin] rAF cancelled (cleanup)');
       cancelAnimationFrame(frame);
     };
   }, [hasMoreAfter, newestMessageId, scrollToBottom]);
 
+  // Run pending window eviction and/or retrigger pagination AFTER the store
+  // update has propagated to React. Watches `messages` (array ref) not just
+  // `messages.length` because the store's internal auto-truncation keeps the
+  // count stable on cache restores (adds 40 at bottom, removes 40 at top),
+  // which would leave pendingWindowManage orphaned if we only watched length.
+  // Run pending window eviction AFTER the store update has propagated to React
+  // so manageWindow sees the post-load message count.
+  useEffect(() => {
+    const direction = pendingWindowManage.current;
+    pendingWindowManage.current = null;
+    if (!direction) return;
+    const task = InteractionManager.runAfterInteractions(() => {
+      manageWindow(direction);
+    });
+    return () => task.cancel();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages]);
+
   // User scrolled to BOTTOM while viewing past messages -> load newer.
   // Guarded by hasMoreAfter so it no-ops in the normal present-pinned state.
   const handleEndReached = useCallback(async () => {
-    if (!hasMoreAfterRef.current || isFetchingNewer || isLoadingNewerRef.current) return;
+    if (
+      !hasMoreAfterRef.current ||
+      isFetchingNewer ||
+      isLoadingNewerRef.current
+    )
+      return;
     isLoadingNewerRef.current = true;
     setIsLoadingNewer(true);
     try {
-      await loadNewer();
+      const result = await loadNewer();
+      if (result.ok && result.kind !== "noop") {
+        pendingWindowManage.current = "down";
+      }
     } finally {
       isLoadingNewerRef.current = false;
       setIsLoadingNewer(false);
@@ -452,11 +466,19 @@ export default function BoardChannelScreen() {
 
   // User scrolled to TOP of the list -> load older messages.
   const handleStartReached = useCallback(async () => {
-    if (!hasMoreBeforeRef.current || isFetchingOlder || isLoadingOlderRef.current) return;
+    if (
+      !hasMoreBeforeRef.current ||
+      isFetchingOlder ||
+      isLoadingOlderRef.current
+    )
+      return;
     isLoadingOlderRef.current = true;
     setIsLoadingOlder(true);
     try {
-      await loadOlder();
+      const result = await loadOlder();
+      if (result.ok && result.kind !== "noop") {
+        pendingWindowManage.current = "up";
+      }
     } finally {
       isLoadingOlderRef.current = false;
       setIsLoadingOlder(false);
@@ -471,14 +493,6 @@ export default function BoardChannelScreen() {
   }, [goToPresent, scrollToBottom]);
 
   const keyExtractor = useCallback((item: ChatMessage) => item.id, []);
-
-  // Separate WELCOME cards from regular messages so FlashList never tries to
-  // recycle one as the other — different heights and structure.
-  const getItemType = useCallback(
-    (item: ChatMessage) =>
-      ("type" in item && item.type === "WELCOME" ? "welcome" : "message"),
-    [],
-  );
 
   const renderMessageItem = useCallback(
     ({ item, index }: { item: ChatMessage; index: number }) => {
@@ -589,7 +603,22 @@ export default function BoardChannelScreen() {
         </>
       ) : null}
 
-      <View style={styles.body}>
+      <View
+        style={styles.body}
+        onLayout={(e) => {
+          const { x, y, width, height } = e.nativeEvent.layout;
+          console.log(
+            "[ChannelScreen] body onLayout x=",
+            x,
+            "y=",
+            y,
+            "w=",
+            width,
+            "h=",
+            height,
+          );
+        }}
+      >
         {channel.type !== "TEXT" ? (
           isInThisVoiceChannel ? (
             <VoiceCallView channelId={resolvedChannelId} />
@@ -617,7 +646,22 @@ export default function BoardChannelScreen() {
         ) : null}
 
         {channel.type === "TEXT" ? (
-          <View style={styles.chatSurface}>
+          <View
+            style={styles.chatSurface}
+            onLayout={(e) => {
+              const { x, y, width, height } = e.nativeEvent.layout;
+              console.log(
+                "[ChannelScreen] chatSurface onLayout x=",
+                x,
+                "y=",
+                y,
+                "w=",
+                width,
+                "h=",
+                height,
+              );
+            }}
+          >
             {status === "idle" ? (
               <View style={styles.centerState}>
                 <ActivityIndicator color={colors.accentPrimary} size="small" />
@@ -654,7 +698,25 @@ export default function BoardChannelScreen() {
                   </Text>
                 </View>
               ) : (
-                <View style={[styles.listContainer, { opacity: listVisible ? 1 : 0 }]}>
+                <View
+                  style={[
+                    styles.listContainer,
+                    { opacity: listVisible ? 1 : 0 },
+                  ]}
+                  onLayout={(e) => {
+                    const { x, y, width, height } = e.nativeEvent.layout;
+                    console.log(
+                      "[ChannelScreen] listContainer onLayout x=",
+                      x,
+                      "y=",
+                      y,
+                      "w=",
+                      width,
+                      "h=",
+                      height,
+                    );
+                  }}
+                >
                   <FlashList
                     key={windowKey}
                     ref={flashListRef}
@@ -663,7 +725,6 @@ export default function BoardChannelScreen() {
                     removeClippedSubviews={false}
                     drawDistance={CHAT_DRAW_DISTANCE}
                     extraData={compactById}
-                    getItemType={getItemType}
                     keyExtractor={keyExtractor}
                     renderItem={renderMessageItem}
                     contentContainerStyle={styles.messagesList}
@@ -697,14 +758,30 @@ export default function BoardChannelScreen() {
             ) : null}
 
             {channel.isJoined ? (
-              <ChannelComposerAccessory
-                boardId={resolvedBoardId}
-                channelId={resolvedChannelId}
-                profileId={profile.id}
-                windowKey={windowKey}
-                replyTo={replyTo}
-                onClearReply={() => setReplyTo(null)}
-              />
+              <View
+                onLayout={(e) => {
+                  const { x, y, width, height } = e.nativeEvent.layout;
+                  console.log(
+                    "[ChannelScreen] composerWrapper onLayout x=",
+                    x,
+                    "y=",
+                    y,
+                    "w=",
+                    width,
+                    "h=",
+                    height,
+                  );
+                }}
+              >
+                <ChannelComposerAccessory
+                  boardId={resolvedBoardId}
+                  channelId={resolvedChannelId}
+                  profileId={profile.id}
+                  windowKey={windowKey}
+                  replyTo={replyTo}
+                  onClearReply={() => setReplyTo(null)}
+                />
+              </View>
             ) : (
               <View style={styles.joinBar}>
                 <Pressable
