@@ -3,7 +3,6 @@ import * as DocumentPicker from "expo-document-picker";
 import { Image } from "expo-image";
 import {
   forwardRef,
-  useEffect,
   useImperativeHandle,
   useMemo,
   useRef,
@@ -11,8 +10,6 @@ import {
 } from "react";
 import {
   ActivityIndicator,
-  Keyboard,
-  Platform,
   Pressable,
   StyleSheet,
   View,
@@ -129,6 +126,20 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const resolvedBottomInset = bottomInset ?? insets.bottom;
     const bottomPadding = isComposerCompact ? 8 : 10 + resolvedBottomInset;
 
+    // TEMP DIAG
+    console.log(
+      "[ChatInput] insets.bottom=",
+      insets.bottom,
+      "bottomInset prop=",
+      bottomInset,
+      "resolvedBottomInset=",
+      resolvedBottomInset,
+      "bottomPadding=",
+      bottomPadding,
+      "isComposerCompact=",
+      isComposerCompact,
+    );
+
     function setMeasuredInputHeight(nextHeight: number) {
       inputHeightRef.current = nextHeight;
       setInputHeight(nextHeight);
@@ -147,17 +158,6 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       sendSticker: handleStickerSubmit,
       appendEmoji: (emoji) => updateContent(contentRef.current + emoji),
     }));
-
-    // On Android, pressing the back button closes the keyboard but keeps the
-    // TextInput focused. The next tap doesn't fire onFocus so the keyboard
-    // never reopens. Blur the input whenever the keyboard hides to reset state.
-    useEffect(() => {
-      if (Platform.OS !== "android") return;
-      const sub = Keyboard.addListener("keyboardDidHide", () => {
-        inputRef.current?.blur();
-      });
-      return () => sub.remove();
-    }, []);
 
     function handleMirrorTextLayout(event: TextLayoutEvent) {
       const lineCount = Math.max(1, event.nativeEvent.lines.length);
@@ -299,7 +299,22 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const replyAuthor = replyTo ? getMessageAuthor(replyTo) : null;
 
     return (
-      <View style={[styles.container, { paddingBottom: bottomPadding }]}>
+      <View
+        style={[styles.container, { paddingBottom: bottomPadding }]}
+        onLayout={(e) => {
+          const { x, y, width, height } = e.nativeEvent.layout;
+          console.log(
+            "[ChatInput] container onLayout x=",
+            x,
+            "y=",
+            y,
+            "width=",
+            width,
+            "height=",
+            height,
+          );
+        }}
+      >
         {replyTo ? (
           <View
             style={[
@@ -402,12 +417,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           </Pressable>
 
           <View style={styles.inputShell}>
-            <View
-              style={styles.inputTextArea}
-              onTouchStart={() => {
-                inputRef.current?.focus();
-              }}
-            >
+            <View style={[styles.inputTextArea, { height: inputHeight }]}>
               <TextInput
                 ref={inputRef}
                 editable={!disabled}
@@ -419,10 +429,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                 placeholderTextColor={colors.textTertiary}
                 style={[
                   styles.input,
-                  { height: inputHeight },
                   inputHeight <= MIN_INPUT_HEIGHT
                     ? styles.inputSingleLine
                     : styles.inputMultiline,
+                  { height: inputHeight },
                 ]}
                 textAlignVertical={
                   inputHeight <= MIN_INPUT_HEIGHT ? "center" : "top"
@@ -558,7 +568,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       width: 30,
     },
     inputShell: {
-      alignItems: "center",
+      alignItems: "flex-end",
       backgroundColor: colors.bgQuaternary,
       borderColor: colors.borderPrimary,
       borderRadius: 11,
@@ -569,10 +579,8 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       overflow: "hidden",
     },
     inputTextArea: {
-      alignSelf: "stretch",
       flex: 1,
       flexShrink: 1,
-      justifyContent: "center",
       minWidth: 0,
       overflow: "hidden",
     },

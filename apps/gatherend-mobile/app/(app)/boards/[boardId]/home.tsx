@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import BoardFeaturedScreen from "@/src/features/featured/screens/board-featured-screen";
 import BoardForumScreen from "@/src/features/forum/screens/board-forum-channels-screen";
@@ -147,7 +146,7 @@ function RulesContent({
     );
   }
 
-  if (!rules?.items.length) {
+  if (!rules?.content) {
     return (
       <View style={styles.rulesContainer}>
         <View style={styles.centerState}>
@@ -179,26 +178,7 @@ function RulesContent({
           contentContainerStyle={styles.rulesScroll}
           showsVerticalScrollIndicator={false}
         >
-          {rules.imageAsset?.url ? (
-            <Image
-              contentFit="cover"
-              source={{ uri: rules.imageAsset.url }}
-              style={styles.rulesImage}
-            />
-          ) : null}
-          {rules.items.map((rule, i) => (
-            <View key={rule.order} style={styles.ruleItem}>
-              <View style={styles.ruleBadge}>
-                <Text style={styles.ruleBadgeText}>{i + 1}</Text>
-              </View>
-              <View style={styles.ruleBody}>
-                <Text style={styles.ruleTitle}>{rule.title}</Text>
-                {rule.description ? (
-                  <Text style={styles.ruleDescription}>{rule.description}</Text>
-                ) : null}
-              </View>
-            </View>
-          ))}
+          <Text style={styles.rulesText}>{rules.content}</Text>
         </ScrollView>
       </Pressable>
 
@@ -660,50 +640,13 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       marginHorizontal: 20,
     },
     rulesScroll: {
-      gap: 14,
       paddingHorizontal: 16,
       paddingVertical: 16,
     },
-    rulesImage: {
-      borderRadius: 12,
-      height: 160,
-      marginBottom: 4,
-      width: "100%",
-    },
-    ruleItem: {
-      alignItems: "flex-start",
-      flexDirection: "row",
-      gap: 12,
-    },
-    ruleBadge: {
-      alignItems: "center",
-      backgroundColor: colors.accentPrimary,
-      borderRadius: 8,
-      flexShrink: 0,
-      height: 26,
-      justifyContent: "center",
-      marginTop: 2,
-      width: 26,
-    },
-    ruleBadgeText: {
-      color: colors.bgPrimary,
-      fontSize: 17,
-      fontWeight: "800",
-    },
-    ruleBody: {
-      flex: 1,
-      gap: 4,
-    },
-    ruleTitle: {
+    rulesText: {
       color: colors.textPrimary,
-      fontSize: 17,
-      fontWeight: "700",
-      lineHeight: 24,
-    },
-    ruleDescription: {
-      color: colors.textMuted,
-      fontSize: 17,
-      lineHeight: 24,
+      fontSize: 15,
+      lineHeight: 23,
     },
     // Chats
     chatsContainer: {

@@ -146,8 +146,13 @@ type ReportConfig = {
   snapshot?: Record<string, unknown>;
 };
 
-const CHAT_DRAW_DISTANCE = 5500;
+const CHAT_DRAW_DISTANCE = 1800;
 const PINNED_TO_BOTTOM_OFFSET = 48;
+const MAINTAIN_VISIBLE_CONTENT_POSITION = {
+  animateAutoScrollToBottom: false,
+  autoscrollToBottomThreshold: 1,
+  startRenderingFromBottom: true,
+} as const;
 
 type FlashListScrollMetrics = {
   contentHeight: number;
@@ -263,14 +268,7 @@ export default function DmConversationScreen() {
   const flashListRef = useRef<FlashListRef<ChatMessage>>(null);
   const pinnedRef = useRef(true);
   const lastScrollMetricsRef = useRef<FlashListScrollMetrics | null>(null);
-  const handleEndReachedRef = useRef<() => Promise<void>>(async () => {});
-  const handleStartReachedRef = useRef<() => Promise<void>>(async () => {});
-  const hasMoreBeforeRef = useRef(false);
-  const hasMoreAfterRef = useRef(false);
-  const isLoadingNewerRef = useRef(false);
-  const isLoadingOlderRef = useRef(false);
-  const [isLoadingNewer, setIsLoadingNewer] = useState(false);
-  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
+  const pendingWindowManage = useRef<"up" | "down" | null>(null);
   const [listVisible, setListVisible] = useState(false);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [selectedMessage, setSelectedMessage] = useState<ChatMessage | null>(
@@ -349,6 +347,7 @@ export default function DmConversationScreen() {
     ensureInitial,
     loadOlder,
     loadNewer,
+    manageWindow,
     goToPresent,
   } = useChatMessageWindow({
     windowKey,
@@ -370,13 +369,7 @@ export default function DmConversationScreen() {
     canLoadMessages,
   );
 
-  hasMoreBeforeRef.current = hasMoreBefore;
-  hasMoreAfterRef.current = hasMoreAfter;
-
-  const reversedMessages = useMemo(
-    () => [...messages].slice().reverse(),
-    [messages],
-  );
+  const reversedMessages = messages;
 
   useEffect(() => {
     pinnedRef.current = true;
@@ -395,7 +388,6 @@ export default function DmConversationScreen() {
         event.nativeEvent;
       const distanceFromBottom =
         contentSize.height - layoutMeasurement.height - contentOffset.y;
-      const distanceFromTop = contentOffset.y;
       const metrics = {
         contentHeight: contentSize.height,
         distanceFromBottom,
@@ -404,21 +396,14 @@ export default function DmConversationScreen() {
       };
 
       lastScrollMetricsRef.current = metrics;
-      pinnedRef.current = !hasMoreAfterRef.current && distanceFromTop <= PINNED_TO_BOTTOM_OFFSET;
-
-      const triggerZone = layoutMeasurement.height * 2;
-      if (distanceFromTop < triggerZone && hasMoreAfterRef.current && !isLoadingNewerRef.current) {
-        void handleEndReachedRef.current();
-      }
-      if (distanceFromBottom < triggerZone && hasMoreBeforeRef.current && !isLoadingOlderRef.current) {
-        void handleStartReachedRef.current();
-      }
+      pinnedRef.current =
+        !hasMoreAfter && distanceFromBottom <= PINNED_TO_BOTTOM_OFFSET;
     },
-    [],
+    [hasMoreAfter],
   );
 
   const scrollToBottom = useCallback(() => {
-    flashListRef.current?.scrollToOffset({ offset: 0, animated: false });
+    flashListRef.current?.scrollToEnd({ animated: false });
     pinnedRef.current = true;
   }, []);
 
@@ -427,45 +412,45 @@ export default function DmConversationScreen() {
     setListVisible(true);
   }, [scrollToBottom]);
 
-  const newestMessageId = reversedMessages[0]?.id;
+  const newestMessageId = messages[messages.length - 1]?.id;
   useLayoutEffect(() => {
     if (!newestMessageId || hasMoreAfter) return;
     if (!pinnedRef.current) return;
 
-    const frame = requestAnimationFrame(() => {
+    scrollToBottom();
+
+    const firstFrame = requestAnimationFrame(() => {
       scrollToBottom();
+      requestAnimationFrame(scrollToBottom);
     });
 
     return () => {
-      cancelAnimationFrame(frame);
+      cancelAnimationFrame(firstFrame);
     };
   }, [hasMoreAfter, newestMessageId, scrollToBottom]);
 
+  useEffect(() => {
+    if (!pendingWindowManage.current) return;
+    const direction = pendingWindowManage.current;
+    pendingWindowManage.current = null;
+    manageWindow(direction);
+  }, [messages.length, manageWindow]);
+
   const handleEndReached = useCallback(async () => {
-    if (!hasMoreAfterRef.current || isFetchingNewer || isLoadingNewerRef.current) return;
-    isLoadingNewerRef.current = true;
-    setIsLoadingNewer(true);
-    try {
-      await loadNewer();
-    } finally {
-      isLoadingNewerRef.current = false;
-      setIsLoadingNewer(false);
+    if (!hasMoreAfter || isFetchingNewer) return;
+    const result = await loadNewer();
+    if (result.ok && result.kind !== "noop") {
+      pendingWindowManage.current = "down";
     }
-  }, [isFetchingNewer, loadNewer]);
-  handleEndReachedRef.current = handleEndReached;
+  }, [hasMoreAfter, isFetchingNewer, loadNewer]);
 
   const handleStartReached = useCallback(async () => {
-    if (!hasMoreBeforeRef.current || isFetchingOlder || isLoadingOlderRef.current) return;
-    isLoadingOlderRef.current = true;
-    setIsLoadingOlder(true);
-    try {
-      await loadOlder();
-    } finally {
-      isLoadingOlderRef.current = false;
-      setIsLoadingOlder(false);
+    if (!hasMoreBefore || isFetchingOlder) return;
+    const result = await loadOlder();
+    if (result.ok && result.kind !== "noop") {
+      pendingWindowManage.current = "up";
     }
-  }, [isFetchingOlder, loadOlder]);
-  handleStartReachedRef.current = handleStartReached;
+  }, [hasMoreBefore, isFetchingOlder, loadOlder]);
 
   const handleGoToPresent = useCallback(async () => {
     await goToPresent(40);
@@ -474,15 +459,9 @@ export default function DmConversationScreen() {
 
   const keyExtractor = useCallback((item: ChatMessage) => item.id, []);
 
-  const getItemType = useCallback(
-    (item: ChatMessage) =>
-      ("type" in item && item.type === "WELCOME" ? "welcome" : "message"),
-    [],
-  );
-
   const renderMessageItem = useCallback(
     ({ item, index }: { item: ChatMessage; index: number }) => {
-      const previous = reversedMessages[index + 1] ?? null;
+      const previous = reversedMessages[index - 1] ?? null;
 
       return (
         <ChatItem
@@ -593,35 +572,45 @@ export default function DmConversationScreen() {
                   </Text>
                 </View>
               ) : (
-                <View style={[styles.listContainer, { opacity: listVisible ? 1 : 0 }]}>
+                <View
+                  style={[
+                    styles.listContainer,
+                    { opacity: listVisible ? 1 : 0 },
+                  ]}
+                >
                   <FlashList
                     key={windowKey}
                     ref={flashListRef}
+                    contentContainerStyle={styles.messagesList}
                     data={reversedMessages}
-                    inverted
-                    removeClippedSubviews={false}
                     drawDistance={CHAT_DRAW_DISTANCE}
                     extraData={compactById}
-                    getItemType={getItemType}
+                    initialScrollIndex={
+                      reversedMessages.length > 0
+                        ? reversedMessages.length - 1
+                        : undefined
+                    }
                     keyExtractor={keyExtractor}
-                    renderItem={renderMessageItem}
-                    contentContainerStyle={styles.messagesList}
+                    onEndReached={handleEndReachedEvent}
+                    onEndReachedThreshold={0.4}
                     onLoad={handleListLoad}
+                    maintainVisibleContentPosition={
+                      MAINTAIN_VISIBLE_CONTENT_POSITION
+                    }
                     onScroll={handleListScroll}
+                    onStartReached={handleStartReachedEvent}
+                    onStartReachedThreshold={0.4}
+                    renderItem={renderMessageItem}
                     scrollEventThrottle={16}
                     showsVerticalScrollIndicator={false}
-                    onEndReached={handleStartReachedEvent}
-                    onEndReachedThreshold={0.4}
-                    onStartReached={handleEndReachedEvent}
-                    onStartReachedThreshold={0.4}
                     ListHeaderComponent={
-                      isFetchingNewer || isLoadingNewer ? (
-                        <ChatPaginationLoader placement="bottom" />
+                      isFetchingOlder ? (
+                        <ChatPaginationLoader placement="top" />
                       ) : null
                     }
                     ListFooterComponent={
-                      isFetchingOlder || isLoadingOlder ? (
-                        <ChatPaginationLoader placement="top" />
+                      isFetchingNewer ? (
+                        <ChatPaginationLoader placement="bottom" />
                       ) : null
                     }
                   />
