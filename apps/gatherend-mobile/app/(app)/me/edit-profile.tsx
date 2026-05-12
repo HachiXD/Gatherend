@@ -212,8 +212,7 @@ export default function EditProfileScreen() {
   const normalizedCardBgColor = normalizeHexDraft(cardBgColor);
   const isCardBgColorValid = HEX_REGEX.test(normalizedCardBgColor);
   const isBubbleColorValid =
-    !chatBubbleStyle.background ||
-    HEX_REGEX.test(chatBubbleStyle.background);
+    !chatBubbleStyle.background || HEX_REGEX.test(chatBubbleStyle.background);
   const canSave =
     !isSaving &&
     !uploadingAvatar &&

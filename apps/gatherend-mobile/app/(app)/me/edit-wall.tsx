@@ -16,7 +16,10 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBottomTabBarHeight } from "@/src/features/navigation/components/app-bottom-tab-bar";
 import { Text, TextInput } from "@/src/components/app-typography";
-import { ProfileCardInlineView, getCardStyle } from "@/src/features/profile/components/profile-card-inline-view";
+import {
+  ProfileCardInlineView,
+  getCardStyle,
+} from "@/src/features/profile/components/profile-card-inline-view";
 import { useUpdateProfile } from "@/src/features/profile/hooks/use-update-profile";
 import {
   buildProfileCardConfigFromDraft,
@@ -27,10 +30,7 @@ import {
 } from "@/src/features/profile/lib/card/profile-card-draft";
 import { useProfile } from "@/src/features/profile/providers/current-profile-provider";
 import { useUpload } from "@/src/features/uploads/hooks/use-upload";
-import ColorPicker, {
-  HueSlider,
-  Panel1,
-} from "reanimated-color-picker";
+import ColorPicker, { HueSlider, Panel1 } from "reanimated-color-picker";
 import { useTheme } from "@/src/theme/theme-provider";
 
 const HEX_REGEX = /^#(?:[A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/;
@@ -228,7 +228,12 @@ function ColorField({
           onPress={() => setShowPicker((v) => !v)}
           style={[
             styles.swatch,
-            { backgroundColor: value, borderColor: showPicker ? colors.channelTypeActiveBorder : colors.borderPrimary },
+            {
+              backgroundColor: value,
+              borderColor: showPicker
+                ? colors.channelTypeActiveBorder
+                : colors.borderPrimary,
+            },
           ]}
         />
         <TextInput
@@ -542,7 +547,15 @@ export default function EditWallScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Section title="Vista previa">
-          <View style={[styles.previewWrap, { backgroundColor: getCardStyle(previewProfile.profileCardConfig).bg }]}>
+          <View
+            style={[
+              styles.previewWrap,
+              {
+                backgroundColor: getCardStyle(previewProfile.profileCardConfig)
+                  .bg,
+              },
+            ]}
+          >
             <ProfileCardInlineView profile={previewProfile} />
           </View>
         </Section>
@@ -552,7 +565,9 @@ export default function EditWallScreen() {
             label="Color de las cajas"
             value={draft.style.boxColor}
             onChange={(value) =>
-              setDraft((current) => updateDraftStyle(current, "boxColor", value))
+              setDraft((current) =>
+                updateDraftStyle(current, "boxColor", value),
+              )
             }
           />
           <Divider />

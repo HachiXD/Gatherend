@@ -9,16 +9,16 @@ export interface ChatMessageWindowState {
   key: string;
   ready: boolean;
   hasFetchedInitial: boolean;
+  /** Set on socket reconnect so the hook fetches messages missed during disconnect. */
   needsCatchUp: boolean;
-  messages: ChatMessage[]; // oldest -> newest
-  compactById: Record<string, boolean>; // derived compact flag per mounted message id
+  /** Append-only, oldest → newest. FlashList reads it reversed. */
+  messages: ChatMessage[];
+  compactById: Record<string, boolean>;
   compactRevision: number;
-  before: ChatMessage[]; // evicted older (oldest -> newest)
-  after: ChatMessage[]; // evicted newer (oldest -> newest)
-  nextCursor: string | null; // cursor for loading older from server
-  previousCursor: string | null; // cursor for loading newer from server (direction=after)
-  hasMoreAfter: boolean; // present not mounted (cache or server)
-  afterWasAtEdge: boolean; // after cache contains the present edge
+  /** Cursor for paginating older messages from the server (direction=before). */
+  nextCursor: string | null;
+  /** True when we jumped to a historical position and haven't reached the present edge yet. */
+  hasMoreAfter: boolean;
   isFetchingInitial: boolean;
   isFetchingOlder: boolean;
   isFetchingNewer: boolean;
@@ -34,12 +34,8 @@ const DEFAULT_STATE: ChatMessageWindowState = {
   messages: [],
   compactById: {},
   compactRevision: 0,
-  before: [],
-  after: [],
   nextCursor: null,
-  previousCursor: null,
   hasMoreAfter: false,
-  afterWasAtEdge: false,
   isFetchingInitial: false,
   isFetchingOlder: false,
   isFetchingNewer: false,
@@ -49,6 +45,10 @@ const DEFAULT_STATE: ChatMessageWindowState = {
 
 const store = new Map<string, ChatMessageWindowState>();
 const listeners = new Map<string, Set<() => void>>();
+
+/** Per-key GC timer. Fires after GC_TIME_MS of zero subscribers. */
+const gcTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const GC_TIME_MS = 10 * 60 * 1000; // 10 minutes
 
 function emit(key: string) {
   const set = listeners.get(key);
@@ -102,9 +102,7 @@ function dedupeAppend(
 
 function buildSeenSet(state: ChatMessageWindowState): Set<string> {
   const seen = new Set<string>();
-  for (const m of state.before) seen.add(getId(m));
   for (const m of state.messages) seen.add(getId(m));
-  for (const m of state.after) seen.add(getId(m));
   return seen;
 }
 
@@ -307,9 +305,7 @@ function withDerivedCompactState(
   }
 
   const retainedIds = new Set<string>();
-  for (const m of next.before) retainedIds.add(getId(m));
   for (const m of next.messages) retainedIds.add(getId(m));
-  for (const m of next.after) retainedIds.add(getId(m));
 
   const mergedCompactById: Record<string, boolean> = {};
   for (const id of retainedIds) {
@@ -332,210 +328,17 @@ function withDerivedCompactState(
   };
 }
 
-const CACHE_MAX = 400;
-const WINDOW_TARGET = 160;
-const WINDOW_TRUNCATE_CHUNK = 40;
-const WINDOW_HARD_MAX = 200;
-
-type WindowDirection = "up" | "down";
-
-type CacheRestoreMeta = {
-  restoredCount: number;
-  reachedPresentFromCache?: boolean;
-};
-
-function trimBeforeCache(before: ChatMessage[]): {
-  items: ChatMessage[];
-  trimmed: number;
-} {
-  if (before.length <= CACHE_MAX) return { items: before, trimmed: 0 };
-  const trimmed = before.length - CACHE_MAX;
-  return { items: before.slice(before.length - CACHE_MAX), trimmed };
-}
-
-function trimAfterCache(after: ChatMessage[]): {
-  items: ChatMessage[];
-  trimmed: number;
-} {
-  if (after.length <= CACHE_MAX) return { items: after, trimmed: 0 };
-  const trimmed = after.length - CACHE_MAX;
-  // Keep messages closest to the current window (oldest in the after-buffer).
-  return { items: after.slice(0, CACHE_MAX), trimmed };
-}
-
-function truncateTopToBeforeState(
-  prev: ChatMessageWindowState,
-  count: number,
-): ChatMessageWindowState {
-  const takeCount = Math.max(0, Math.min(count, prev.messages.length));
-  if (takeCount === 0) return prev;
-  const take = prev.messages.slice(0, takeCount);
-  const remaining = prev.messages.slice(takeCount);
-  const { items: nextBefore } = trimBeforeCache([...prev.before, ...take]);
-  return { ...prev, before: nextBefore, messages: remaining };
-}
-
-function truncateBottomToAfterState(
-  prev: ChatMessageWindowState,
-  count: number,
-): ChatMessageWindowState {
-  const takeCount = Math.max(0, Math.min(count, prev.messages.length));
-  if (takeCount === 0) return prev;
-  const split = prev.messages.length - takeCount;
-  const take = prev.messages.slice(split);
-  const remaining = prev.messages.slice(0, split);
-  const wasAtEdge = !prev.hasMoreAfter;
-  const combinedAfter = [...take, ...prev.after];
-  const trimmed = trimAfterCache(combinedAfter);
-  const nextAfterWasAtEdge =
-    trimmed.trimmed > 0 ? false : prev.afterWasAtEdge || wasAtEdge;
-  return {
-    ...prev,
-    after: trimmed.items,
-    messages: remaining,
-    hasMoreAfter: true,
-    afterWasAtEdge: nextAfterWasAtEdge,
-  };
-}
-
-function enforceWindowBudget(
-  prev: ChatMessageWindowState,
-  direction: WindowDirection,
-): ChatMessageWindowState {
-  const len = prev.messages.length;
-  if (len <= WINDOW_HARD_MAX) return prev;
-  const evict = Math.max(0, len - WINDOW_TARGET);
-  if (evict === 0) return prev;
-  return direction === "up"
-    ? truncateBottomToAfterState(prev, evict)
-    : truncateTopToBeforeState(prev, evict);
-}
-
-function truncateAfterDirectionalLoad(
-  prev: ChatMessageWindowState,
-  direction: WindowDirection,
-): ChatMessageWindowState {
-  const len = prev.messages.length;
-  if (len <= WINDOW_TARGET) return prev;
-  return direction === "up"
-    ? truncateBottomToAfterState(prev, WINDOW_TRUNCATE_CHUNK)
-    : truncateTopToBeforeState(prev, WINDOW_TRUNCATE_CHUNK);
-}
-
-function restoreFromBeforeCacheState(
-  prev: ChatMessageWindowState,
-  count: number,
-): { next: ChatMessageWindowState; meta: CacheRestoreMeta } {
-  const takeCount = Math.max(0, Math.min(count, prev.before.length));
-  if (takeCount === 0) {
-    return { next: prev, meta: { restoredCount: 0 } };
-  }
-  const restored = prev.before.slice(prev.before.length - takeCount);
-  const remainingBefore = prev.before.slice(0, prev.before.length - takeCount);
-  const merged: ChatMessageWindowState = {
-    ...prev,
-    before: remainingBefore,
-    messages: [...restored, ...prev.messages],
-    updatedAt: Date.now(),
-  };
-  return {
-    next: { ...truncateAfterDirectionalLoad(merged, "up"), updatedAt: Date.now() },
-    meta: { restoredCount: takeCount },
-  };
-}
-
-function computeHasMoreAfterAfterCacheRestore(
-  prev: ChatMessageWindowState,
-  remainingAfterLength: number,
-): { hasMoreAfter: boolean; reachedPresentFromCache: boolean } {
-  const reachedPresentFromCache =
-    remainingAfterLength === 0 && prev.afterWasAtEdge;
-  if (reachedPresentFromCache) {
-    return { hasMoreAfter: false, reachedPresentFromCache: true };
-  }
-  const hasCachedAfter = remainingAfterLength > 0;
-  const hadServerMoreAfter = prev.hasMoreAfter && prev.after.length === 0;
-  return {
-    hasMoreAfter: hasCachedAfter || hadServerMoreAfter || !prev.afterWasAtEdge,
-    reachedPresentFromCache: false,
-  };
-}
-
-function restoreFromAfterCacheState(
-  prev: ChatMessageWindowState,
-  count: number,
-): { next: ChatMessageWindowState; meta: CacheRestoreMeta } {
-  const takeCount = Math.max(0, Math.min(count, prev.after.length));
-  if (takeCount === 0) {
-    return {
-      next: prev,
-      meta: { restoredCount: 0, reachedPresentFromCache: false },
-    };
-  }
-  const restored = prev.after.slice(0, takeCount);
-  const remainingAfter = prev.after.slice(takeCount);
-  const recomputed = computeHasMoreAfterAfterCacheRestore(
-    prev,
-    remainingAfter.length,
-  );
-  const merged: ChatMessageWindowState = {
-    ...prev,
-    after: remainingAfter,
-    messages: [...prev.messages, ...restored],
-    hasMoreAfter: recomputed.hasMoreAfter,
-    afterWasAtEdge: remainingAfter.length > 0 ? prev.afterWasAtEdge : false,
-    previousCursor: recomputed.reachedPresentFromCache
-      ? null
-      : prev.previousCursor,
-    updatedAt: Date.now(),
-  };
-  return {
-    next: { ...truncateAfterDirectionalLoad(merged, "down"), updatedAt: Date.now() },
-    meta: {
-      restoredCount: takeCount,
-      reachedPresentFromCache: recomputed.reachedPresentFromCache,
-    },
-  };
-}
-
 export const chatMessageWindowStore = {
   has(key: string): boolean {
     return store.has(key);
   },
 
+  /** Called on socket reconnect so the hook fetches messages missed during disconnect. */
   markNeedsCatchUpIfExists(key: string) {
     if (!store.has(key)) return;
     chatMessageWindowStore.patch(key, (prev) => {
       if (prev.needsCatchUp) return prev;
       return { ...prev, needsCatchUp: true, updatedAt: Date.now() };
-    });
-  },
-
-  invalidateAfterCacheForCatchUpIfExists(key: string) {
-    if (!store.has(key)) return;
-    chatMessageWindowStore.patch(key, (prev) => {
-      if (prev.after.length === 0 && prev.afterWasAtEdge === false) return prev;
-      return {
-        ...prev,
-        after: [],
-        afterWasAtEdge: false,
-        hasMoreAfter: true,
-        updatedAt: Date.now(),
-      };
-    });
-  },
-
-  invalidateBeforeCacheForCatchUpIfExists(key: string) {
-    if (!store.has(key)) return;
-    chatMessageWindowStore.patch(key, (prev) => {
-      if (prev.before.length === 0) return prev;
-      const firstServerBackedVisible = prev.messages.find(
-        (m) => !isOptimisticMessage(m),
-      );
-      const nextCursor = firstServerBackedVisible
-        ? getId(firstServerBackedVisible)
-        : prev.nextCursor;
-      return { ...prev, before: [], nextCursor, updatedAt: Date.now() };
     });
   },
 
@@ -550,14 +353,30 @@ export const chatMessageWindowStore = {
   },
 
   subscribe(key: string, listener: () => void) {
+    // Cancel any pending GC for this key since a new subscriber arrived.
+    const pendingTimer = gcTimers.get(key);
+    if (pendingTimer !== undefined) {
+      clearTimeout(pendingTimer);
+      gcTimers.delete(key);
+    }
+
     const set = listeners.get(key) ?? new Set();
     set.add(listener);
     listeners.set(key, set);
+
     return () => {
       const current = listeners.get(key);
       if (!current) return;
       current.delete(listener);
-      if (current.size === 0) listeners.delete(key);
+      if (current.size === 0) {
+        listeners.delete(key);
+        // Schedule store entry deletion after GC_TIME_MS with no subscribers.
+        const t = setTimeout(() => {
+          store.delete(key);
+          gcTimers.delete(key);
+        }, GC_TIME_MS);
+        gcTimers.set(key, t);
+      }
     };
   },
 
@@ -582,13 +401,7 @@ export const chatMessageWindowStore = {
     if (!profileId || !patch || typeof patch !== "object") return;
     for (const key of store.keys()) {
       chatMessageWindowStore.patch(key, (prev) => {
-        if (
-          prev.messages.length === 0 &&
-          prev.before.length === 0 &&
-          prev.after.length === 0
-        ) {
-          return prev;
-        }
+        if (prev.messages.length === 0) return prev;
         let changed = false;
         const patchArray = (arr: ChatMessage[]) => {
           if (arr.length === 0) return arr;
@@ -602,14 +415,10 @@ export const chatMessageWindowStore = {
           return localChanged ? next : arr;
         };
         const nextMessages = patchArray(prev.messages);
-        const nextBefore = patchArray(prev.before);
-        const nextAfter = patchArray(prev.after);
         if (!changed) return prev;
         return {
           ...prev,
           messages: nextMessages,
-          before: nextBefore,
-          after: nextAfter,
           updatedAt: Date.now(),
         };
       });
@@ -623,8 +432,13 @@ export const chatMessageWindowStore = {
   deleteIfUnused(key: string) {
     const subs = listeners.get(key);
     if (subs && subs.size > 0) return;
+    // Cancel pending GC timer and delete immediately.
+    const t = gcTimers.get(key);
+    if (t !== undefined) {
+      clearTimeout(t);
+      gcTimers.delete(key);
+    }
     store.delete(key);
-    listeners.delete(key);
   },
 
   setFetching(
@@ -688,15 +502,11 @@ export const chatMessageWindowStore = {
     const messages: ChatMessage[] = [];
     dedupeAppend(messages, normalized, seen);
 
-    // Preserve optimistic messages inserted before the first server response.
-    const optimistic = [
-      ...prev.before.filter(isOptimisticMessage),
-      ...prev.messages.filter(isOptimisticMessage),
-      ...prev.after.filter(isOptimisticMessage),
-    ];
+    // Preserve any optimistic messages inserted before the first server response.
+    const optimistic = prev.messages.filter(isOptimisticMessage);
     dedupeAppend(messages, optimistic, seen);
 
-    const seeded: ChatMessageWindowState = {
+    chatMessageWindowStore.commit(key, {
       key,
       ready: true,
       hasFetchedInitial: true,
@@ -704,21 +514,12 @@ export const chatMessageWindowStore = {
       messages,
       compactById: {},
       compactRevision: 0,
-      before: [],
-      after: [],
       nextCursor,
-      previousCursor: null,
       hasMoreAfter: false,
-      afterWasAtEdge: false,
       isFetchingInitial: false,
       isFetchingOlder: false,
       isFetchingNewer: false,
       error: null,
-      updatedAt: Date.now(),
-    };
-
-    chatMessageWindowStore.commit(key, {
-      ...truncateAfterDirectionalLoad(seeded, "down"),
       updatedAt: Date.now(),
     });
   },
@@ -736,7 +537,7 @@ export const chatMessageWindowStore = {
       if (prepend.length === 0 && nextCursor === prev.nextCursor) {
         return { ...prev, isFetchingOlder: false, updatedAt: Date.now() };
       }
-      const merged: ChatMessageWindowState = {
+      return {
         ...prev,
         ready: true,
         hasFetchedInitial: true,
@@ -745,173 +546,62 @@ export const chatMessageWindowStore = {
         isFetchingOlder: false,
         updatedAt: Date.now(),
       };
-      return {
-        ...truncateAfterDirectionalLoad(merged, "up"),
-        updatedAt: Date.now(),
-      };
     });
   },
 
   mergeNewerFromServer(
     key: string,
     items: ChatMessage[],
-    options?: { hasMoreAfter?: boolean; previousCursor?: string | null },
+    options?: { hasMoreAfter?: boolean },
   ) {
     chatMessageWindowStore.patch(key, (prev) => {
       const normalized = normalizeServerItems(items);
       const seen = buildSeenSet(prev);
       const append: ChatMessage[] = [];
       dedupeAppend(append, normalized, seen);
-      const hasMoreAfter = options?.hasMoreAfter ?? prev.hasMoreAfter;
-      const previousCursor = options?.previousCursor ?? prev.previousCursor;
-      const merged: ChatMessageWindowState = {
+      const hasMoreAfter = options?.hasMoreAfter ?? false;
+      return {
         ...prev,
         ready: true,
         hasFetchedInitial: true,
         needsCatchUp: false,
         messages: [...prev.messages, ...append],
         hasMoreAfter,
-        previousCursor: hasMoreAfter ? previousCursor : null,
-        afterWasAtEdge: false,
-        isFetchingNewer: false,
-        updatedAt: Date.now(),
-      };
-      return {
-        ...truncateAfterDirectionalLoad(merged, "down"),
-        updatedAt: Date.now(),
-      };
-    });
-  },
-
-  reconcileHistoricalCatchUpByIds(
-    key: string,
-    items: ChatMessage[],
-    missingIds: string[],
-  ) {
-    chatMessageWindowStore.patch(key, (prev) => {
-      const fetchedById = new Map(items.map((item) => [getId(item), item]));
-      const missingIdSet = new Set(missingIds);
-      const hadHistoricLike = prev.hasMoreAfter || prev.after.length > 0;
-      const hadBeforeCache = prev.before.length > 0;
-      const nextMessages = prev.messages.flatMap((m) => {
-        if (isOptimisticMessage(m)) return [m];
-        const id = getId(m);
-        if (missingIdSet.has(id)) return [];
-        const updated = fetchedById.get(id);
-        return updated ? [updated] : [m];
-      });
-      const firstServerBackedVisible = nextMessages.find(
-        (m) => !isOptimisticMessage(m),
-      );
-      const nextCursor =
-        hadBeforeCache && firstServerBackedVisible
-          ? getId(firstServerBackedVisible)
-          : prev.nextCursor;
-      return {
-        ...prev,
-        ready: true,
-        hasFetchedInitial: true,
-        needsCatchUp: false,
-        messages: nextMessages,
-        before: [],
-        after: [],
-        nextCursor,
-        previousCursor: hadHistoricLike ? prev.previousCursor : null,
-        hasMoreAfter: hadHistoricLike,
-        afterWasAtEdge: false,
         isFetchingNewer: false,
         updatedAt: Date.now(),
       };
     });
   },
 
-  restoreOlderFromCache(key: string, count: number) {
-    chatMessageWindowStore.patch(key, (prev) => {
-      const restored = restoreFromBeforeCacheState(prev, count);
-      return restored.next;
-    });
-  },
-
-  restoreNewerFromCache(key: string, count: number) {
-    chatMessageWindowStore.patch(key, (prev) => {
-      const restored = restoreFromAfterCacheState(prev, count);
-      return restored.next;
-    });
-  },
-
-  truncateTopToBefore(key: string, count: number) {
-    chatMessageWindowStore.patch(key, (prev) => ({
-      ...truncateTopToBeforeState(prev, count),
-      updatedAt: Date.now(),
-    }));
-  },
-
-  truncateBottomToAfter(key: string, count: number) {
-    chatMessageWindowStore.patch(key, (prev) => ({
-      ...truncateBottomToAfterState(prev, count),
-      updatedAt: Date.now(),
-    }));
-  },
-
+  /**
+   * Jump to present: keep only the newest `keepCount` messages and clear
+   * hasMoreAfter. Used before re-seeding from the server when the user taps
+   * the "Go to present" button.
+   */
   jumpToPresent(key: string, keepCount: number) {
     chatMessageWindowStore.patch(key, (prev) => {
-      const combined =
-        prev.after.length > 0
-          ? [...prev.messages, ...prev.after]
-          : prev.messages;
-      const takeCount = Math.max(0, Math.min(keepCount, combined.length));
-      const start = Math.max(0, combined.length - takeCount);
-      const nextMessages = combined.slice(start);
-      const older = combined.slice(0, start);
-      const { items: nextBefore } = trimBeforeCache([...prev.before, ...older]);
-      const hadHistoricLike = prev.hasMoreAfter || prev.after.length > 0;
-      const shouldAssumeMoreAfterFromServer =
-        prev.needsCatchUp || prev.previousCursor != null;
-      const shouldAssumeMoreAfterFromCache =
-        hadHistoricLike && prev.afterWasAtEdge === false;
-      const nextHasMoreAfter =
-        shouldAssumeMoreAfterFromServer || shouldAssumeMoreAfterFromCache;
+      const len = prev.messages.length;
+      const start = Math.max(0, len - keepCount);
       return {
         ...prev,
-        ready: true,
-        before: nextBefore,
-        after: [],
-        messages: nextMessages,
-        hasMoreAfter: nextHasMoreAfter,
-        afterWasAtEdge: false,
-        previousCursor: nextHasMoreAfter ? prev.previousCursor : null,
+        messages: prev.messages.slice(start),
+        hasMoreAfter: false,
         updatedAt: Date.now(),
       };
     });
   },
 
-  upsertIncomingMessage(
-    key: string,
-    message: ChatMessage,
-    options?: { preferAfterCache?: boolean },
-  ) {
+  upsertIncomingMessage(key: string, message: ChatMessage) {
     chatMessageWindowStore.patch(key, (prev) => {
       const seen = buildSeenSet(prev);
-      const id = getId(message);
+      const id = (message as { id: string }).id;
       if (seen.has(id)) return prev;
-      if (options?.preferAfterCache) {
-        const trimmed = trimAfterCache([...prev.after, message]);
-        return {
-          ...prev,
-          ready: true,
-          after: trimmed.items,
-          hasMoreAfter: true,
-          afterWasAtEdge: false,
-          updatedAt: Date.now(),
-        };
-      }
-      const merged: ChatMessageWindowState = {
+      return {
         ...prev,
         ready: true,
         messages: [...prev.messages, message],
         updatedAt: Date.now(),
       };
-      return { ...enforceWindowBudget(merged, "down"), updatedAt: Date.now() };
     });
   },
 
@@ -921,29 +611,21 @@ export const chatMessageWindowStore = {
     serverMessage: ChatMessage,
   ) {
     chatMessageWindowStore.patch(key, (prev) => {
-      const replaceIn = (arr: ChatMessage[]) => {
-        let changed = false;
-        const next = arr.map((m) => {
-          const t = (m as { tempId?: unknown }).tempId;
-          const isOpt = (m as { isOptimistic?: unknown }).isOptimistic;
-          if (isOpt === true && t === tempId) {
-            changed = true;
-            return serverMessage;
-          }
-          return m;
-        });
-        return { changed, next };
-      };
-      const a = replaceIn(prev.messages);
-      const b = replaceIn(prev.before);
-      const c = replaceIn(prev.after);
-      if (!a.changed && !b.changed && !c.changed) return prev;
+      let changed = false;
+      const nextMessages = prev.messages.map((m) => {
+        const t = (m as { tempId?: unknown }).tempId;
+        const isOpt = (m as { isOptimistic?: unknown }).isOptimistic;
+        if (isOpt === true && t === tempId) {
+          changed = true;
+          return serverMessage;
+        }
+        return m;
+      });
+      if (!changed) return prev;
       return {
         ...prev,
         ready: true,
-        messages: a.next,
-        before: b.next,
-        after: c.next,
+        messages: nextMessages,
         updatedAt: Date.now(),
       };
     });
@@ -952,70 +634,43 @@ export const chatMessageWindowStore = {
   upsertById(
     key: string,
     message: Partial<ChatMessage> & { id: string },
-    options?: { insertIfMissing?: boolean; preferAfterCache?: boolean },
+    options?: { insertIfMissing?: boolean },
   ) {
     chatMessageWindowStore.patch(key, (prev) => {
       const id = message.id;
-      const replaceIn = (arr: ChatMessage[]) => {
-        let changed = false;
-        const next = arr.map((m) => {
-          if (getId(m) !== id) return m;
-          changed = true;
-          return mergeMessageUpdate(m, message);
-        });
-        return { changed, next };
-      };
-      const a = replaceIn(prev.messages);
-      const b = replaceIn(prev.before);
-      const c = replaceIn(prev.after);
-      if (a.changed || b.changed || c.changed) {
+      let changed = false;
+      const nextMessages = prev.messages.map((m) => {
+        if ((m as { id: string }).id !== id) return m;
+        changed = true;
+        return mergeMessageUpdate(m, message);
+      });
+      if (changed) {
         return {
           ...prev,
           ready: true,
-          messages: a.next,
-          before: b.next,
-          after: c.next,
+          messages: nextMessages,
           updatedAt: Date.now(),
         };
       }
       if (!options?.insertIfMissing) return prev;
-      const insertedMessage = message as ChatMessage;
-      if (options?.preferAfterCache) {
-        const trimmed = trimAfterCache([...prev.after, insertedMessage]);
-        return {
-          ...prev,
-          ready: true,
-          after: trimmed.items,
-          hasMoreAfter: true,
-          afterWasAtEdge: false,
-          updatedAt: Date.now(),
-        };
-      }
-      const merged: ChatMessageWindowState = {
+      return {
         ...prev,
         ready: true,
-        messages: [...prev.messages, insertedMessage],
+        messages: [...prev.messages, message as ChatMessage],
         updatedAt: Date.now(),
       };
-      return { ...enforceWindowBudget(merged, "down"), updatedAt: Date.now() };
     });
   },
 
   removeById(key: string, id: string) {
     chatMessageWindowStore.patch(key, (prev) => {
-      const beforeLen =
-        prev.before.length + prev.messages.length + prev.after.length;
-      const nextBefore = prev.before.filter((m) => getId(m) !== id);
-      const nextMessages = prev.messages.filter((m) => getId(m) !== id);
-      const nextAfter = prev.after.filter((m) => getId(m) !== id);
-      const afterLen =
-        nextBefore.length + nextMessages.length + nextAfter.length;
-      if (afterLen === beforeLen) return prev;
+      const nextMessages = prev.messages.filter(
+        (m) => (m as { id: string }).id !== id,
+      );
+      if (nextMessages.length === prev.messages.length) return prev;
       return {
         ...prev,
-        before: nextBefore,
         messages: nextMessages,
-        after: nextAfter,
         updatedAt: Date.now(),
       };
     });
@@ -1028,27 +683,20 @@ export const chatMessageWindowStore = {
   ) {
     chatMessageWindowStore.patch(key, (prev) => {
       let changed = false;
-      const mapArr = (arr: ChatMessage[]) =>
-        arr.map((m) => {
-          if (getId(m) !== id) return m;
-          changed = true;
-          return updater(m);
-        });
-      const nextMessages = mapArr(prev.messages);
-      const nextBefore = mapArr(prev.before);
-      const nextAfter = mapArr(prev.after);
+      const nextMessages = prev.messages.map((m) => {
+        if ((m as { id: string }).id !== id) return m;
+        changed = true;
+        return updater(m);
+      });
       if (!changed) return prev;
       return {
         ...prev,
         messages: nextMessages,
-        before: nextBefore,
-        after: nextAfter,
         updatedAt: Date.now(),
       };
     });
   },
 };
-
 export function useChatMessageWindowStore(key: string): ChatMessageWindowState {
   const getSnapshot = () => chatMessageWindowStore.get(key);
   return useSyncExternalStore(

@@ -140,13 +140,11 @@ type ReportConfig = {
   snapshot?: Record<string, unknown>;
 };
 
-const CHAT_DRAW_DISTANCE = 1800;
+// Keep a large render buffer so items far from the viewport stay mounted.
+// With ~160 messages at ~72px average = ~11500px of content; 5500px on each
+// side means essentially the full window stays mounted at all times.
+const CHAT_DRAW_DISTANCE = 5500;
 const PINNED_TO_BOTTOM_OFFSET = 48;
-const MAINTAIN_VISIBLE_CONTENT_POSITION = {
-  animateAutoScrollToBottom: false,
-  autoscrollToBottomThreshold: 1,
-  startRenderingFromBottom: true,
-} as const;
 
 type FlashListScrollMetrics = {
   contentHeight: number;
@@ -185,8 +183,24 @@ export default function BoardChannelScreen() {
   const flashListRef = useRef<FlashListRef<ChatMessage>>(null);
   const pinnedRef = useRef(true);
   const lastScrollMetricsRef = useRef<FlashListScrollMetrics | null>(null);
-  // Direction to evict after the next messages-length change.
-  const pendingWindowManage = useRef<"up" | "down" | null>(null);
+  // Stable refs to the latest pagination handlers — driven from onScroll so
+  // we don't depend on FlashList's unreliable onStartReached/onEndReached.
+  const handleEndReachedRef = useRef<() => Promise<void>>(async () => {});
+  const handleStartReachedRef = useRef<() => Promise<void>>(async () => {});
+  // Live-updated refs so the scroll handler reads current values without
+  // needing to be recreated on every hasMoreBefore/hasMoreAfter change.
+  const hasMoreBeforeRef = useRef(false);
+  const hasMoreAfterRef = useRef(false);
+  // Ref-based lock for pagination: isFetchingNewer/Older from the store doesn't
+  // cover cache hits (restoreNewerFromCache doesn't set the flag), so FlashList
+  // can fire onEndReached multiple times before a re-render and trigger concurrent
+  // store mutations that crash Fabric (RetryableMountingLayerException).
+  const isLoadingNewerRef = useRef(false);
+  const isLoadingOlderRef = useRef(false);
+  // Mirror the ref as state so the spinner renders immediately on load start
+  // and clears immediately on load end.
+  const [isLoadingNewer, setIsLoadingNewer] = useState(false);
+  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
   const [listVisible, setListVisible] = useState(false);
 
   const { boardId, channelId } = useLocalSearchParams<{
@@ -292,7 +306,6 @@ export default function BoardChannelScreen() {
     ensureInitial,
     loadOlder,
     loadNewer,
-    manageWindow,
     goToPresent,
   } = useChatMessageWindow({
     windowKey,
@@ -313,7 +326,18 @@ export default function BoardChannelScreen() {
     channel?.type === "VOICE" ? resolvedBoardId : undefined,
   );
 
-  const reversedMessages = messages;
+  // Inverted FlashList expects newest-first order (index 0 = newest = visual bottom).
+  // Avoid inline reverse() in JSX — it produces a new array every render and
+  // makes FlashList think all keys changed, causing layout thrashing.
+  const reversedMessages = useMemo(
+    () => [...messages].slice().reverse(),
+    [messages],
+  );
+
+  // Keep live refs in sync every render so the scroll handler always reads
+  // fresh values without needing to be memoized with these as deps.
+  hasMoreBeforeRef.current = hasMoreBefore;
+  hasMoreAfterRef.current = hasMoreAfter;
 
   useEffect(() => {
     pinnedRef.current = true;
@@ -332,6 +356,7 @@ export default function BoardChannelScreen() {
         event.nativeEvent;
       const distanceFromBottom =
         contentSize.height - layoutMeasurement.height - contentOffset.y;
+      const distanceFromTop = contentOffset.y;
       const metrics = {
         contentHeight: contentSize.height,
         distanceFromBottom,
@@ -340,14 +365,39 @@ export default function BoardChannelScreen() {
       };
 
       lastScrollMetricsRef.current = metrics;
-      pinnedRef.current =
-        !hasMoreAfter && distanceFromBottom <= PINNED_TO_BOTTOM_OFFSET;
+      // With inverted=true, visual bottom = scrollTop=0 (distanceFromTop=0).
+      const nextPinned = !hasMoreAfterRef.current && distanceFromTop <= PINNED_TO_BOTTOM_OFFSET;
+      if (nextPinned !== pinnedRef.current) {
+        console.log('[Chat:pin] pinnedRef changed', pinnedRef.current, '->', nextPinned, 'distanceFromTop=', distanceFromTop.toFixed(1), 'hasMoreAfter=', hasMoreAfterRef.current);
+      }
+      pinnedRef.current = nextPinned;
+
+      // Drive pagination from scroll position directly — more reliable than
+      // FlashList's onStartReached/onEndReached which fire too late.
+      // With inverted: visual bottom = distanceFromTop zone → load newer.
+      //                visual top   = distanceFromBottom zone → load older.
+      const triggerZone = layoutMeasurement.height * 2;
+      if (distanceFromTop < triggerZone && hasMoreAfterRef.current && !isLoadingNewerRef.current) {
+        void handleEndReachedRef.current();
+      }
+      if (distanceFromBottom < triggerZone && hasMoreBeforeRef.current && !isLoadingOlderRef.current) {
+        void handleStartReachedRef.current();
+      }
     },
-    [hasMoreAfter],
+    [],
   );
 
   const scrollToBottom = useCallback(() => {
-    flashListRef.current?.scrollToEnd({ animated: false });
+    // With inverted=true, visual bottom = offset 0.
+    const hasRef = flashListRef.current != null;
+    const currentOffset = lastScrollMetricsRef.current?.offsetY;
+    console.log('[Chat:pin] scrollToBottom called — flashRef=', hasRef, 'offset=', currentOffset != null ? currentOffset.toFixed(1) : 'n/a', 'pinned=', pinnedRef.current);
+    if (hasRef) {
+      flashListRef.current!.scrollToOffset({ offset: 0, animated: false });
+      console.log('[Chat:pin] scrollToOffset(0) sent');
+    } else {
+      console.log('[Chat:pin] scrollToOffset SKIPPED — flashRef is null');
+    }
     pinnedRef.current = true;
   }, []);
 
@@ -357,50 +407,62 @@ export default function BoardChannelScreen() {
   }, [scrollToBottom]);
 
   // Sticky bottom: present mounted + physically pinned to bottom.
-  const newestMessageId = messages[messages.length - 1]?.id;
+  // reversedMessages[0] = newest (store keeps oldest-first; reversed = newest-first for FlashList).
+  const newestMessageId = reversedMessages[0]?.id;
+
+  // DIAG: watch if messages array reference changes when sending
+  useEffect(() => {
+    console.log('[Chat:pin] messages[] updated count=', messages.length, 'oldestId=', messages[0]?.id, 'newestId=', reversedMessages[0]?.id, 'pinned=', pinnedRef.current);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages]);
+
   useLayoutEffect(() => {
+    console.log('[Chat:pin] useLayoutEffect newestId=', newestMessageId, 'hasMoreAfter=', hasMoreAfter, 'pinned=', pinnedRef.current);
     if (!newestMessageId || hasMoreAfter) return;
     if (!pinnedRef.current) return;
 
-    scrollToBottom();
-
-    const firstFrame = requestAnimationFrame(() => {
+    // Defer one frame so Fabric finishes committing the new item before
+    // we call scrollToEnd — prevents RetryableMountingLayerException.
+    console.log('[Chat:pin] scheduling rAF for scrollToBottom');
+    const frame = requestAnimationFrame(() => {
+      console.log('[Chat:pin] rAF fired — pinned=', pinnedRef.current, 'flashRef=', flashListRef.current != null, 'offset=', lastScrollMetricsRef.current?.offsetY?.toFixed(1) ?? 'n/a');
       scrollToBottom();
-      requestAnimationFrame(scrollToBottom);
     });
 
     return () => {
-      cancelAnimationFrame(firstFrame);
+      console.log('[Chat:pin] rAF cancelled (cleanup)');
+      cancelAnimationFrame(frame);
     };
   }, [hasMoreAfter, newestMessageId, scrollToBottom]);
-
-  // Run pending window eviction AFTER the store update has propagated to React
-  // so manageWindow sees the post-load message count.
-  useEffect(() => {
-    if (!pendingWindowManage.current) return;
-    const direction = pendingWindowManage.current;
-    pendingWindowManage.current = null;
-    manageWindow(direction);
-  }, [messages.length, manageWindow]);
 
   // User scrolled to BOTTOM while viewing past messages -> load newer.
   // Guarded by hasMoreAfter so it no-ops in the normal present-pinned state.
   const handleEndReached = useCallback(async () => {
-    if (!hasMoreAfter || isFetchingNewer) return;
-    const result = await loadNewer();
-    if (result.ok && result.kind !== "noop") {
-      pendingWindowManage.current = "down";
+    if (!hasMoreAfterRef.current || isFetchingNewer || isLoadingNewerRef.current) return;
+    isLoadingNewerRef.current = true;
+    setIsLoadingNewer(true);
+    try {
+      await loadNewer();
+    } finally {
+      isLoadingNewerRef.current = false;
+      setIsLoadingNewer(false);
     }
-  }, [hasMoreAfter, isFetchingNewer, loadNewer]);
+  }, [isFetchingNewer, loadNewer]);
+  handleEndReachedRef.current = handleEndReached;
 
   // User scrolled to TOP of the list -> load older messages.
   const handleStartReached = useCallback(async () => {
-    if (!hasMoreBefore || isFetchingOlder) return;
-    const result = await loadOlder();
-    if (result.ok && result.kind !== "noop") {
-      pendingWindowManage.current = "up";
+    if (!hasMoreBeforeRef.current || isFetchingOlder || isLoadingOlderRef.current) return;
+    isLoadingOlderRef.current = true;
+    setIsLoadingOlder(true);
+    try {
+      await loadOlder();
+    } finally {
+      isLoadingOlderRef.current = false;
+      setIsLoadingOlder(false);
     }
-  }, [hasMoreBefore, isFetchingOlder, loadOlder]);
+  }, [isFetchingOlder, loadOlder]);
+  handleStartReachedRef.current = handleStartReached;
 
   // Jump to present: refetch latest page then scroll to the visual bottom.
   const handleGoToPresent = useCallback(async () => {
@@ -410,22 +472,18 @@ export default function BoardChannelScreen() {
 
   const keyExtractor = useCallback((item: ChatMessage) => item.id, []);
 
-  // Prevent FlashList from recycling a cell of one media type for another.
-  // Without this, Glide (expo-image) can fire a stale 404 callback onto a view
-  // that FlashList already reassigned to a different item, causing
-  // RetryableMountingLayerException on Fabric.
-  const getItemType = useCallback((item: ChatMessage): string => {
-    if ("type" in item && item.type === "WELCOME") return "welcome";
-    if (item.sticker?.asset?.url) return "sticker";
-    if (item.attachmentAsset && item.attachmentAsset.mimeType.startsWith("image/")) return "image";
-    if (item.attachmentAsset) return "file";
-    return "text";
-  }, []);
+  // Separate WELCOME cards from regular messages so FlashList never tries to
+  // recycle one as the other — different heights and structure.
+  const getItemType = useCallback(
+    (item: ChatMessage) =>
+      ("type" in item && item.type === "WELCOME" ? "welcome" : "message"),
+    [],
+  );
 
   const renderMessageItem = useCallback(
     ({ item, index }: { item: ChatMessage; index: number }) => {
-      // Without inverted, index-1 is the older message rendered above.
-      const previous = reversedMessages[index - 1] ?? null;
+      // inverted + newest-first: index+1 is the older message (visually above).
+      const previous = reversedMessages[index + 1] ?? null;
       const dateSeparatorLabel = getChatDateSeparatorLabel(
         item.createdAt,
         previous?.createdAt,
@@ -452,7 +510,7 @@ export default function BoardChannelScreen() {
         />
       );
     },
-    [board?.name, compactById, reversedMessages, profile.id, getItemType],
+    [board?.name, compactById, reversedMessages, profile.id],
   );
 
   const handleEndReachedEvent = useCallback(() => {
@@ -601,33 +659,30 @@ export default function BoardChannelScreen() {
                     key={windowKey}
                     ref={flashListRef}
                     data={reversedMessages}
+                    inverted
                     removeClippedSubviews={false}
                     drawDistance={CHAT_DRAW_DISTANCE}
                     extraData={compactById}
-                    initialScrollIndex={reversedMessages.length > 0 ? reversedMessages.length - 1 : undefined}
+                    getItemType={getItemType}
                     keyExtractor={keyExtractor}
-                    overrideItemType={getItemType}
                     renderItem={renderMessageItem}
                     contentContainerStyle={styles.messagesList}
                     onLoad={handleListLoad}
-                    maintainVisibleContentPosition={
-                      MAINTAIN_VISIBLE_CONTENT_POSITION
-                    }
                     onScroll={handleListScroll}
                     scrollEventThrottle={16}
                     showsVerticalScrollIndicator={false}
-                    onEndReached={handleEndReachedEvent}
+                    onEndReached={handleStartReachedEvent}
                     onEndReachedThreshold={0.4}
-                    onStartReached={handleStartReachedEvent}
+                    onStartReached={handleEndReachedEvent}
                     onStartReachedThreshold={0.4}
                     ListHeaderComponent={
-                      isFetchingOlder ? (
-                        <ChatPaginationLoader placement="top" />
+                      isFetchingNewer || isLoadingNewer ? (
+                        <ChatPaginationLoader placement="bottom" />
                       ) : null
                     }
                     ListFooterComponent={
-                      isFetchingNewer ? (
-                        <ChatPaginationLoader placement="bottom" />
+                      isFetchingOlder || isLoadingOlder ? (
+                        <ChatPaginationLoader placement="top" />
                       ) : null
                     }
                   />
@@ -859,7 +914,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       borderTopColor: colors.borderPrimary,
       borderTopWidth: 1,
       paddingHorizontal: 16,
-      paddingTop: 12,
+      paddingVertical: 12,
     },
     joinButton: {
       alignItems: "center",

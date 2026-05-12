@@ -32,7 +32,7 @@ function resolveKeyboardEventHeight(
       ? Math.max(0, dimensions.screenHeight - screenY)
       : 0;
 
-  return Math.max(reportedHeight, visualHeight);
+  return reportedHeight > 0 ? reportedHeight : visualHeight;
 }
 
 export function useChatAccessoryPanel() {
@@ -95,7 +95,7 @@ export function useChatAccessoryPanel() {
 
         if (!activePanelRef.current) {
           setPanelHeight((currentHeight) => {
-            const nextHeight = resolvePanelHeight(resolvedHeight);
+            const nextHeight = resolvedHeight + PANEL_HEIGHT_EXTRA;
             return Math.abs(currentHeight - nextHeight) >
               KEYBOARD_HEIGHT_UI_THRESHOLD
               ? nextHeight
@@ -165,9 +165,9 @@ export function useChatAccessoryPanel() {
     const dimensions = getKeyboardHeightDimensions();
     const cachedHeight =
       lastKeyboardHeightRef.current ?? getCachedKeyboardHeight(dimensions);
-    const targetHeight = resolvePanelHeight(
-      cachedHeight ?? getEstimatedKeyboardHeight(dimensions),
-    );
+    const targetHeight =
+      (cachedHeight ?? getEstimatedKeyboardHeight(dimensions)) +
+      PANEL_HEIGHT_EXTRA;
 
     activePanelRef.current = type;
     keyboardVisibleRef.current = false;
@@ -195,7 +195,7 @@ export function useChatAccessoryPanel() {
         getCachedKeyboardHeight(getKeyboardHeightDimensions());
 
       if (keyboardHeight !== null) {
-        setPanelHeight(resolvePanelHeight(keyboardHeight));
+        setPanelHeight(keyboardHeight + PANEL_HEIGHT_EXTRA);
       }
     }
   }

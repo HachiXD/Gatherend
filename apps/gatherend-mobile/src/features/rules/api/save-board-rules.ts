@@ -7,8 +7,7 @@ import type { ClientBoardRules } from "../domain/rules";
 export type SaveBoardRulesInput = {
   boardId: string;
   isEdit: boolean;
-  items: { title: string; description: string | null }[];
-  imageAssetId: string | null;
+  content: string;
 };
 
 export async function saveBoardRules(
@@ -17,10 +16,7 @@ export async function saveBoardRules(
   const response = await nextApiFetch(`/api/boards/${input.boardId}/rules`, {
     method: input.isEdit ? "PATCH" : "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      items: input.items,
-      imageAssetId: input.imageAssetId,
-    }),
+    body: JSON.stringify({ content: input.content }),
   });
 
   if (!response.ok) {

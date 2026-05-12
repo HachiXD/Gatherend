@@ -65,8 +65,7 @@ const leftBottomTextSchema = z
     if (!value.sectionA && !value.sectionB) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message:
-          "leftBottomText must include at least one populated section",
+        message: "leftBottomText must include at least one populated section",
       });
     }
   });

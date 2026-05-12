@@ -570,7 +570,7 @@ export const ChatItem = memo(function ChatItem({
           <Pressable
             onPress={onAvatarPress ? () => onAvatarPress(author) : undefined}
           >
-            <UserAvatar avatarUrl={avatarUrl} size={40} username={username} />
+            <UserAvatar avatarUrl={avatarUrl} recyclingKey={message.id} size={40} username={username} />
           </Pressable>
         ) : (
           <View style={styles.avatarSpacer} />

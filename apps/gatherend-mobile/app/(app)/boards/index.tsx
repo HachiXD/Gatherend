@@ -1,5 +1,5 @@
 import { Redirect, useRouter } from "expo-router";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -12,7 +12,9 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { Text } from "@/src/components/app-typography";
+import { autoCreateBoard } from "@/src/features/boards/api/auto-create-board";
 import { useUserBoards } from "@/src/features/boards/hooks/use-user-boards";
+import { useProfile } from "@/src/features/profile/providers/current-profile-provider";
 import { useTheme } from "@/src/theme/theme-provider";
 
 export default function BoardsEntryScreen() {
@@ -31,6 +33,30 @@ export default function BoardsEntryScreen() {
     refetch,
     isFetching,
   } = useUserBoards();
+  const profile = useProfile();
+
+  const [autoCreateFailed, setAutoCreateFailed] = useState(false);
+  const hasAutoCreated = useRef(false);
+
+  // When boards load empty and no error, auto-create the first board.
+  useEffect(() => {
+    if (isLoading || isError || boards.length > 0 || hasAutoCreated.current) return;
+    hasAutoCreated.current = true;
+
+    const displayName = profile.username || "User";
+    const boardName = `${displayName}'s Board`;
+
+    autoCreateBoard(boardName)
+      .then((board) => {
+        router.replace({
+          pathname: "/boards/[boardId]/home",
+          params: { boardId: board.id, drawerOpen: "1" },
+        });
+      })
+      .catch(() => {
+        setAutoCreateFailed(true);
+      });
+  }, [isLoading, isError, boards.length, profile.username, router]);
 
   const firstBoard = boards[0];
   if (firstBoard) {
@@ -75,11 +101,18 @@ export default function BoardsEntryScreen() {
         </View>
       ) : null}
 
-      {!isLoading && !isError ? (
+      {!isLoading && !isError && !autoCreateFailed ? (
+        <View style={styles.centerState}>
+          <ActivityIndicator color={colors.accentPrimary} size="small" />
+          <Text style={styles.stateText}>Preparando tu board...</Text>
+        </View>
+      ) : null}
+
+      {!isLoading && !isError && autoCreateFailed ? (
         <View style={styles.centerState}>
           <Text style={styles.stateTitle}>Crea tu primer board</Text>
           <Text style={styles.stateText}>
-            Cuando tengas uno, entraras directo a su shell con el drawer.
+            No pudimos crear tu board automáticamente.
           </Text>
           <Pressable
             onPress={() => {
@@ -90,7 +123,7 @@ export default function BoardsEntryScreen() {
               pressed ? styles.buttonPressed : null,
             ]}
           >
-            <Text style={styles.primaryButtonText}>Crea tu board +</Text>
+            <Text style={styles.primaryButtonText}>Crear board +</Text>
           </Pressable>
         </View>
       ) : null}

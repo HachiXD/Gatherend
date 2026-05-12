@@ -994,9 +994,10 @@ export default function BoardShellLayout() {
               styles.foreground,
               { transform: [{ translateX: foregroundX }] },
             ]}
+            onLayout={(e) => { const {x,y,width,height}=e.nativeEvent.layout; console.log('[BoardShell] foreground onLayout x=',x,'y=',y,'w=',width,'h=',height); }}
             {...(!isHome ? foregroundPanResponder.panHandlers : {})}
           >
-            <View style={[styles.header, { paddingTop: insets.top }]}>
+            <View style={[styles.header, { paddingTop: insets.top }]} onLayout={(e) => { const {x,y,width,height}=e.nativeEvent.layout; console.log('[BoardShell] header onLayout x=',x,'y=',y,'w=',width,'h=',height,'insets.top=',insets.top); }}>
               {boardImageUrl && !showDmHeader ? (
                 <>
                   <Image
@@ -1162,7 +1163,13 @@ export default function BoardShellLayout() {
               )}
             </View>
 
-            <View style={[styles.content, { paddingBottom: insets.bottom }]}>
+            <View
+              style={[styles.content, { paddingBottom: insets.bottom }]}
+              onLayout={(e) => {
+                const { x, y, width, height } = e.nativeEvent.layout;
+                console.log('[BoardShell] content onLayout x=', x, 'y=', y, 'w=', width, 'h=', height, 'insets.bottom=', insets.bottom);
+              }}
+            >
               <View style={styles.routeContent}>
                 <Slot />
                 {isShowingPendingOptimistic ? (

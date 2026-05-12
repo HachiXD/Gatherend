@@ -3,6 +3,7 @@ import * as DocumentPicker from "expo-document-picker";
 import { Image } from "expo-image";
 import {
   forwardRef,
+  useEffect,
   useImperativeHandle,
   useMemo,
   useRef,
@@ -10,6 +11,8 @@ import {
 } from "react";
 import {
   ActivityIndicator,
+  Keyboard,
+  Platform,
   Pressable,
   StyleSheet,
   View,
@@ -144,6 +147,17 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       sendSticker: handleStickerSubmit,
       appendEmoji: (emoji) => updateContent(contentRef.current + emoji),
     }));
+
+    // On Android, pressing the back button closes the keyboard but keeps the
+    // TextInput focused. The next tap doesn't fire onFocus so the keyboard
+    // never reopens. Blur the input whenever the keyboard hides to reset state.
+    useEffect(() => {
+      if (Platform.OS !== "android") return;
+      const sub = Keyboard.addListener("keyboardDidHide", () => {
+        inputRef.current?.blur();
+      });
+      return () => sub.remove();
+    }, []);
 
     function handleMirrorTextLayout(event: TextLayoutEvent) {
       const lineCount = Math.max(1, event.nativeEvent.lines.length);
@@ -299,7 +313,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             <View style={styles.replyPreviewCopy}>
               <Text
                 numberOfLines={1}
-                style={[styles.replyPreviewAuthor, { color: colors.accentPrimary }]}
+                style={[
+                  styles.replyPreviewAuthor,
+                  { color: colors.accentPrimary },
+                ]}
               >
                 {replyAuthor?.username ?? "Usuario"}
               </Text>
@@ -385,7 +402,12 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           </Pressable>
 
           <View style={styles.inputShell}>
-            <View style={[styles.inputTextArea, { height: inputHeight }]}>
+            <View
+              style={styles.inputTextArea}
+              onTouchStart={() => {
+                inputRef.current?.focus();
+              }}
+            >
               <TextInput
                 ref={inputRef}
                 editable={!disabled}
@@ -397,10 +419,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                 placeholderTextColor={colors.textTertiary}
                 style={[
                   styles.input,
+                  { height: inputHeight },
                   inputHeight <= MIN_INPUT_HEIGHT
                     ? styles.inputSingleLine
                     : styles.inputMultiline,
-                  { height: inputHeight },
                 ]}
                 textAlignVertical={
                   inputHeight <= MIN_INPUT_HEIGHT ? "center" : "top"
@@ -536,7 +558,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       width: 30,
     },
     inputShell: {
-      alignItems: "flex-end",
+      alignItems: "center",
       backgroundColor: colors.bgQuaternary,
       borderColor: colors.borderPrimary,
       borderRadius: 11,
@@ -547,8 +569,10 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       overflow: "hidden",
     },
     inputTextArea: {
+      alignSelf: "stretch",
       flex: 1,
       flexShrink: 1,
+      justifyContent: "center",
       minWidth: 0,
       overflow: "hidden",
     },

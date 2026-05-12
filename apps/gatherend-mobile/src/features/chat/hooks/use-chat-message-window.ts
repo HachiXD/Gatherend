@@ -30,8 +30,6 @@ export interface ChatMessageWindowApi {
   messages: ChatMessage[]; // oldest -> newest
   compactById: Record<string, boolean>;
   compactRevision: number;
-  beforeCount: number;
-  afterCount: number;
 
   hasMoreBefore: boolean;
   hasMoreAfter: boolean;
@@ -42,21 +40,15 @@ export interface ChatMessageWindowApi {
   ensureInitial: () => void;
   loadOlder: (
     batch?: number,
-  ) => Promise<{ ok: boolean; kind: "cache" | "network" | "noop" }>;
+  ) => Promise<{ ok: boolean; kind: "network" | "noop" }>;
   loadNewer: (
     batch?: number,
-  ) => Promise<{ ok: boolean; kind: "cache" | "network" | "noop" }>;
-  manageWindow: (
-    direction: "up" | "down",
-    options?: { target?: number; hardMax?: number },
-  ) => { evicted: number; side: "top" | "bottom" | null };
-  jumpToPresent: (keepCount: number) => void;
+  ) => Promise<{ ok: boolean; kind: "network" | "noop" }>;
   goToPresent: (
     keepCount: number,
-  ) => Promise<{ ok: boolean; kind: "cache" | "network" | "noop" }>;
+  ) => Promise<{ ok: boolean; kind: "network" | "noop" }>;
 }
 
-// Keep at 40. Higher values cause visible geometry jumps when paging via cache.
 const DEFAULT_BATCH = 40;
 
 const PERSISTED_MESSAGE_ID_REGEX =
@@ -93,8 +85,6 @@ export function useChatMessageWindow({
       messages: s.messages,
       compactById: s.compactById,
       compactRevision: s.compactRevision,
-      beforeCount: s.before.length,
-      afterCount: s.after.length,
       nextCursor: s.nextCursor,
       hasMoreAfter: s.hasMoreAfter,
     }),
@@ -107,8 +97,8 @@ export function useChatMessageWindow({
     return "idle";
   }, [state.error, state.hasFetchedInitial, state.messages.length]);
 
-  const hasMoreBefore = state.beforeCount > 0 || Boolean(state.nextCursor);
-  const hasMoreAfter = state.hasMoreAfter || state.afterCount > 0;
+  const hasMoreBefore = Boolean(state.nextCursor);
+  const hasMoreAfter = state.hasMoreAfter;
 
   const getNewestPersistedMessageId = useCallback((messages: ChatMessage[]) => {
     for (let i = messages.length - 1; i >= 0; i -= 1) {
@@ -186,10 +176,7 @@ export function useChatMessageWindow({
       .then((page) => {
         const serverHasMoreAfter = Boolean(page.previousCursor);
         chatMessageWindowStore.mergeNewerFromServer(windowKey, page.items ?? [], {
-          hasMoreAfter: live.hasMoreAfter || serverHasMoreAfter,
-          previousCursor: serverHasMoreAfter
-            ? (page.previousCursor ?? null)
-            : live.previousCursor,
+          hasMoreAfter: serverHasMoreAfter,
         });
       })
       .catch((e) => {
@@ -211,11 +198,6 @@ export function useChatMessageWindow({
       if (!live.hasFetchedInitial && !live.isFetchingInitial) ensureInitial();
       if (live.isFetchingInitial || live.isFetchingOlder) {
         return { ok: false, kind: "noop" as const };
-      }
-
-      if (live.before.length > 0) {
-        chatMessageWindowStore.restoreOlderFromCache(windowKey, batch);
-        return { ok: true, kind: "cache" as const };
       }
 
       const cursor = live.nextCursor;
@@ -247,12 +229,6 @@ export function useChatMessageWindow({
       if (live.isFetchingInitial || live.isFetchingNewer) {
         return { ok: false, kind: "noop" as const };
       }
-
-      if (live.after.length > 0) {
-        chatMessageWindowStore.restoreNewerFromCache(windowKey, batch);
-        return { ok: true, kind: "cache" as const };
-      }
-
       if (!live.hasMoreAfter) return { ok: false, kind: "noop" as const };
 
       const cursor = getNewestPersistedMessageId(live.messages);
@@ -264,7 +240,6 @@ export function useChatMessageWindow({
         const hasMoreAfterServer = Boolean(page.previousCursor);
         chatMessageWindowStore.mergeNewerFromServer(windowKey, page.items ?? [], {
           hasMoreAfter: hasMoreAfterServer,
-          previousCursor: page.previousCursor ?? null,
         });
         return { ok: true, kind: "network" as const };
       } catch (e) {
@@ -278,56 +253,19 @@ export function useChatMessageWindow({
     [fetchPage, getNewestPersistedMessageId, windowKey],
   );
 
-  const manageWindow = useCallback(
-    (
-      direction: "up" | "down",
-      options?: { target?: number; hardMax?: number },
-    ) => {
-      const target = options?.target ?? 160;
-      const hardMax = options?.hardMax ?? 200;
-      const len = state.messages.length;
-      if (len <= hardMax) return { evicted: 0, side: null as "top" | "bottom" | null };
-      const evict = Math.max(0, len - target);
-      if (evict === 0) return { evicted: 0, side: null as "top" | "bottom" | null };
-      if (direction === "up") {
-        chatMessageWindowStore.truncateBottomToAfter(windowKey, evict);
-        return { evicted: evict, side: "bottom" as const };
-      }
-      chatMessageWindowStore.truncateTopToBefore(windowKey, evict);
-      return { evicted: evict, side: "top" as const };
-    },
-    [state.messages.length, windowKey],
-  );
-
-  const jumpToPresent = useCallback(
-    (keepCount: number) => {
-      chatMessageWindowStore.jumpToPresent(windowKey, keepCount);
-    },
-    [windowKey],
-  );
-
   const goToPresent = useCallback(
     async (keepCount: number) => {
       const live = chatMessageWindowStore.get(windowKey);
-      const hadHistoricLike = live.hasMoreAfter || live.after.length > 0;
-      const shouldVerifyPresent =
-        live.needsCatchUp ||
-        live.previousCursor != null ||
-        (hadHistoricLike && live.afterWasAtEdge === false);
-
-      chatMessageWindowStore.jumpToPresent(windowKey, keepCount);
-
-      if (!shouldVerifyPresent) return { ok: true, kind: "cache" as const };
-
-      const afterJump = chatMessageWindowStore.get(windowKey);
       if (
-        afterJump.isFetchingInitial ||
-        afterJump.isFetchingOlder ||
-        afterJump.isFetchingNewer
+        live.isFetchingInitial ||
+        live.isFetchingOlder ||
+        live.isFetchingNewer
       ) {
         return { ok: false, kind: "noop" as const };
       }
 
+      // Clear to a small window then re-seed from the server present edge.
+      chatMessageWindowStore.jumpToPresent(windowKey, keepCount);
       chatMessageWindowStore.setFetching(windowKey, { isFetchingNewer: true });
       try {
         const page = await fetchPage(undefined, "before", keepCount);
@@ -355,8 +293,6 @@ export function useChatMessageWindow({
     messages: state.messages,
     compactById: state.compactById,
     compactRevision: state.compactRevision,
-    beforeCount: state.beforeCount,
-    afterCount: state.afterCount,
     hasMoreBefore,
     hasMoreAfter,
     isFetchingOlder: state.isFetchingOlder,
@@ -364,8 +300,7 @@ export function useChatMessageWindow({
     ensureInitial,
     loadOlder,
     loadNewer,
-    manageWindow,
-    jumpToPresent,
     goToPresent,
   };
 }
+

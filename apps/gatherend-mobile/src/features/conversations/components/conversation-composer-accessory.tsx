@@ -57,6 +57,7 @@ export const ConversationComposerAccessory = memo(
         <View pointerEvents="none" style={styles.composerTopSpacer} />
         <ChatInput
           ref={chatInputRef}
+
           bottomInset={0}
           context={{ type: "conversation", conversationId }}
           isComposerCompact={isComposerCompact}

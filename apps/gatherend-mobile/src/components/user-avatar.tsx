@@ -8,6 +8,7 @@ type UserAvatarProps = {
   avatarUrl?: string | null;
   username: string;
   profileId?: string;
+  recyclingKey?: string;
   showStatus?: boolean;
   size?: number;
   statusSize?: number;
@@ -21,6 +22,7 @@ export function UserAvatar({
   avatarUrl,
   username,
   profileId,
+  recyclingKey,
   showStatus = false,
   size = 36,
   statusSize,
@@ -43,6 +45,7 @@ export function UserAvatar({
   const avatar = avatarUrl ? (
     <Image
       contentFit="cover"
+      recyclingKey={recyclingKey}
       source={{ uri: avatarUrl }}
       style={{
         borderRadius: radius,

@@ -54,7 +54,6 @@ model UploadedAsset {
   messageAttachmentFor                     Message[]              @relation("MessageAttachmentAsset")
   directMessageAttachmentFor               DirectMessage[]        @relation("DirectMessageAttachmentAsset")
   stickerImageFor                          Sticker[]              @relation("StickerImageAsset")
-  boardRulesImageFor                       BoardRules[]           @relation("BoardRulesImageAsset")
   wikiPageImageFor                         WikiPage[]             @relation("WikiPageImageAsset")
 
   @@index([ownerProfileId])
@@ -926,7 +925,6 @@ enum AssetContext {
   PROFILE_CARD_IMAGE
   BOARD_IMAGE
   BOARD_BANNER
-  BOARD_RULES_IMAGE
   COMMUNITY_POST_IMAGE
   COMMUNITY_POST_COMMENT_IMAGE
   CHANNEL_IMAGE
@@ -1148,16 +1146,12 @@ model Verification {
 }
 
 model BoardRules {
-  id           String         @id @default(uuid())
-  boardId      String         @unique
-  items        Json
-  imageAssetId String?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  board        Board          @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  imageAsset   UploadedAsset? @relation("BoardRulesImageAsset", fields: [imageAssetId], references: [id], onDelete: SetNull)
-
-  @@index([imageAssetId])
+  id        String   @id @default(uuid())
+  boardId   String   @unique
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
 }
 
 model WikiPage {
