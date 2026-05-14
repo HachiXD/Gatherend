@@ -30,10 +30,7 @@ import { getThemeBaseColor, normalizeThemeConfig } from "@/src/theme/runtime";
 import { useTheme } from "@/src/theme/theme-provider";
 import type { ThemeConfig, ThemeMode } from "@/src/theme/types";
 import { isValidHexColor } from "@/src/theme/utils";
-import ColorPicker, {
-  HueSlider,
-  Panel1,
-} from "reanimated-color-picker";
+import ColorPicker, { HueSlider, Panel1 } from "reanimated-color-picker";
 import { Text, TextInput } from "@/src/components/app-typography";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -264,7 +261,7 @@ export default function SettingsScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: insets.bottom + 40 },
+          { paddingBottom: insets.bottom + 80 },
         ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -481,7 +478,9 @@ export default function SettingsScreen() {
                           backgroundColor: isValidHexColor(themeBaseColor)
                             ? themeBaseColor
                             : DEFAULT_BASE_COLOR,
-                          borderColor: showThemePicker ? colors.channelTypeActiveBorder : colors.borderPrimary,
+                          borderColor: showThemePicker
+                            ? colors.channelTypeActiveBorder
+                            : colors.borderPrimary,
                         },
                       ]}
                     />
@@ -512,7 +511,9 @@ export default function SettingsScreen() {
                       value={themeBaseColor}
                     />
                   </View>
-                  <View style={showThemePicker ? null : styles.colorPickerCollapsed}>
+                  <View
+                    style={showThemePicker ? null : styles.colorPickerCollapsed}
+                  >
                     <ColorPicker
                       value={
                         isValidHexColor(themeBaseColor)
@@ -1002,10 +1003,8 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     color: "#64748b",
-    fontSize: 11,
+    fontSize: 15,
     fontWeight: "700",
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
   },
   card: {
     borderRadius: 16,
@@ -1017,9 +1016,9 @@ const styles = StyleSheet.create({
     borderColor: "rgba(239,68,68,0.3)",
   },
   dangerHint: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "500",
-    lineHeight: 17,
+    lineHeight: 18,
     marginTop: 2,
   },
 
@@ -1066,7 +1065,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   actionRowSubtext: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "600",
   },
 
@@ -1156,9 +1155,9 @@ const styles = StyleSheet.create({
     width: 34,
   },
   themeHint: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "500",
-    lineHeight: 17,
+    lineHeight: 18,
   },
   themeActions: {
     flexDirection: "row",
@@ -1175,7 +1174,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   secondaryThemeBtnText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "700",
   },
   primaryThemeBtn: {
@@ -1204,9 +1203,8 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     color: "#64748b",
-    fontSize: 11,
+    fontSize: 15,
     fontWeight: "700",
-    textTransform: "uppercase",
   },
   passwordInputRow: {
     alignItems: "center",

@@ -766,9 +766,8 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
   },
   fieldLabel: {
-    fontSize: 11,
+    fontSize: 15,
     fontWeight: "800",
-    textTransform: "uppercase",
   },
   headerBar: {
     alignItems: "center",
@@ -807,7 +806,7 @@ const styles = StyleSheet.create({
   },
   imagePickerText: {
     color: "#fff",
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "800",
   },
   imageSlot: {
@@ -819,7 +818,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   imageSlotTitle: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "800",
   },
   previewWrap: {
@@ -838,7 +837,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     color: "#fff",
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "800",
   },
   scrollContent: {
@@ -854,9 +853,8 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   sectionLabel: {
-    fontSize: 11,
+    fontSize: 15,
     fontWeight: "800",
-    textTransform: "uppercase",
   },
   swatch: {
     borderRadius: 10,

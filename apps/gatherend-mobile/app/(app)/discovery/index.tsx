@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "expo-router";
 import {
@@ -68,8 +69,7 @@ const BOARD_REPORT_CATEGORIES: ReportCategoryConfig[] = [
 ];
 
 const DISCOVERY_CARD_GAP = 16;
-const DISCOVERY_ITEM_HEIGHT =
-  DISCOVERY_BOARD_CARD_HEIGHT + DISCOVERY_CARD_GAP;
+const DISCOVERY_ITEM_HEIGHT = DISCOVERY_BOARD_CARD_HEIGHT + DISCOVERY_CARD_GAP;
 
 type ReportConfig = {
   title: string;
@@ -133,22 +133,19 @@ export default function DiscoveryScreen() {
     [exploreBoardMutation, router, userBoardIds],
   );
 
-  const handleReportBoard = useCallback(
-    (item: DiscoveryBoard) => {
-      setReportConfig({
-        title: "Reportar board",
-        previewLabel: item.name,
-        categories: BOARD_REPORT_CATEGORIES,
-        targetType: "BOARD",
-        targetId: item.id,
-        snapshot: {
-          name: item.name,
-          imageUrl: (item.bannerAsset ?? item.imageAsset)?.url,
-        },
-      });
-    },
-    [],
-  );
+  const handleReportBoard = useCallback((item: DiscoveryBoard) => {
+    setReportConfig({
+      title: "Reportar board",
+      previewLabel: item.name,
+      categories: BOARD_REPORT_CATEGORIES,
+      targetType: "BOARD",
+      targetId: item.id,
+      snapshot: {
+        name: item.name,
+        imageUrl: (item.bannerAsset ?? item.imageAsset)?.url,
+      },
+    });
+  }, []);
 
   const renderBoard = useCallback(
     ({ item }: { item: DiscoveryBoard }) => (
@@ -216,7 +213,8 @@ export default function DiscoveryScreen() {
     <View style={[styles.safeArea, { paddingTop: topInset }]}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>Discovery</Text>
+          <Ionicons color={colors.textPrimary} name="compass" size={35} />
+          <Text style={styles.title}>Descubrir</Text>
         </View>
 
         {exploreBoardMutation.isError ? (
@@ -262,7 +260,10 @@ export default function DiscoveryScreen() {
 
         {!isLoading && !isError ? (
           <FlatList
-            contentContainerStyle={[styles.listContent, { paddingBottom: tabBarHeight + 16 }]}
+            contentContainerStyle={[
+              styles.listContent,
+              { paddingBottom: tabBarHeight + 16 },
+            ]}
             data={boards}
             getItemLayout={getItemLayout}
             initialNumToRender={3}
@@ -310,8 +311,11 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       paddingTop: 12,
     },
     header: {
+      alignItems: "center",
       borderBottomColor: colors.borderPrimary,
       borderBottomWidth: 1,
+      flexDirection: "row",
+      gap: 10,
       paddingBottom: 14,
     },
     title: {

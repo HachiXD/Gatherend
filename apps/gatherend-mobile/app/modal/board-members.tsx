@@ -83,10 +83,6 @@ export default function BoardMembersModal() {
           onPress={() => router.back()}
           style={({ pressed }) => [
             styles.closeButton,
-            {
-              backgroundColor: colors.bgQuaternary,
-              borderColor: colors.borderPrimary,
-            },
             pressed && styles.closeButtonPressed,
           ]}
         >
@@ -191,8 +187,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     closeButton: {
       alignItems: "center",
-      borderRadius: 18,
-      borderWidth: 1,
+
       height: 36,
       justifyContent: "center",
       width: 36,
@@ -230,7 +225,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     memberName: {
       color: colors.textPrimary,
       flex: 1,
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: "700",
     },
     roleBadge: {
@@ -243,12 +238,12 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     roleBadgeText: {
       color: colors.textMuted,
-      fontSize: 10,
+      fontSize: 13,
       fontWeight: "700",
     },
     discriminator: {
       color: colors.textTertiary,
-      fontSize: 11,
+      fontSize: 13,
     },
     metaRow: {
       flexDirection: "row",
@@ -261,7 +256,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       borderRadius: 8,
       borderWidth: 1,
       color: colors.textMuted,
-      fontSize: 10,
+      fontSize: 13,
       fontWeight: "700",
       overflow: "hidden",
       paddingHorizontal: 6,

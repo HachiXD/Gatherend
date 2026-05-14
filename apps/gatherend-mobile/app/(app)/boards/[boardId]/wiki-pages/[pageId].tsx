@@ -297,7 +297,12 @@ export default function WikiPageDetailScreen() {
                 {deleteMutation.isPending ? (
                   <ActivityIndicator color={colors.textMuted} size="small" />
                 ) : (
-                  <Text style={[styles.actionPillText, { color: colors.textTertiary }]}>
+                  <Text
+                    style={[
+                      styles.actionPillText,
+                      { color: colors.textTertiary },
+                    ]}
+                  >
                     Eliminar
                   </Text>
                 )}
@@ -330,7 +335,7 @@ export default function WikiPageDetailScreen() {
               }}
               style={({ pressed }) => [
                 styles.saveButton,
-                { backgroundColor: colors.textPrimary },
+                { backgroundColor: colors.tabActiveBg },
                 (!editTitle.trim() || editMutation.isPending) &&
                   styles.saveButtonDisabled,
                 pressed && editTitle.trim() && styles.pressed,
@@ -340,7 +345,7 @@ export default function WikiPageDetailScreen() {
                 <ActivityIndicator color={colors.bgPrimary} size="small" />
               ) : (
                 <Text
-                  style={[styles.saveButtonText, { color: colors.bgPrimary }]}
+                  style={[styles.saveButtonText, { color: colors.textPrimary }]}
                 >
                   Guardar
                 </Text>
@@ -391,7 +396,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       fontWeight: "600",
     },
     dateText: {
-      fontSize: 12,
+      fontSize: 13,
     },
     divider: {
       height: 1,
@@ -409,10 +414,9 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       gap: 8,
     },
     fieldLabel: {
-      fontSize: 12,
+      fontSize: 15,
       fontWeight: "700",
       letterSpacing: 0.6,
-      textTransform: "uppercase",
     },
     input: {
       borderRadius: 16,
@@ -425,7 +429,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       minHeight: 200,
     },
     helperText: {
-      fontSize: 12,
+      fontSize: 13,
     },
     errorBox: {
       backgroundColor: "rgba(239, 68, 68, 0.12)",

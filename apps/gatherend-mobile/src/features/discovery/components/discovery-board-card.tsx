@@ -1,12 +1,7 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Fontisto } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { memo, useMemo } from "react";
-import {
-  Pressable,
-  StyleSheet,
-  Text as NativeText,
-  View,
-} from "react-native";
+import { Pressable, StyleSheet, Text as NativeText, View } from "react-native";
 import type { DiscoveryBoard } from "@/src/features/discovery/types";
 import { useTheme } from "@/src/theme/theme-provider";
 
@@ -64,7 +59,7 @@ export const DiscoveryBoardCard = memo(function DiscoveryBoardCard({
             onPress={onReport}
             style={styles.reportButton}
           >
-            <Ionicons color="rgba(255,255,255,0.9)" name="flag-outline" size={18} />
+            <Fontisto color="#f87171" name="flag" size={20} />
           </Pressable>
         ) : null}
       </View>
@@ -140,7 +135,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     meta: {
       color: colors.textMuted,
       fontFamily: GEIST_REGULAR,
-      fontSize: 14,
+      fontSize: 15,
       lineHeight: 20,
       minHeight: 20,
     },

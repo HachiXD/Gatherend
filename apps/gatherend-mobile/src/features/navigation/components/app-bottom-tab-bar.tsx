@@ -8,12 +8,15 @@ import { useMentionStore } from "@/src/features/notifications/stores/use-mention
 import { useAppShellStore } from "@/src/features/navigation/stores/use-app-shell-store";
 import { useTheme } from "@/src/theme/theme-provider";
 
-export const APP_TAB_BAR_CONTENT_HEIGHT = 84;
+export const APP_TAB_BAR_CONTENT_HEIGHT = 68;
 export const APP_TAB_BAR_BOTTOM_PADDING = 12;
 
 export function useBottomTabBarHeight() {
   const insets = useSafeAreaInsets();
-  return APP_TAB_BAR_CONTENT_HEIGHT + Math.max(insets.bottom, APP_TAB_BAR_BOTTOM_PADDING);
+  return (
+    APP_TAB_BAR_CONTENT_HEIGHT +
+    Math.max(insets.bottom, APP_TAB_BAR_BOTTOM_PADDING)
+  );
 }
 
 type AppBottomTabKey = "boards" | "discovery" | "me";
@@ -250,14 +253,14 @@ const styles = StyleSheet.create({
     height: 34,
     justifyContent: "flex-end",
     position: "relative",
-    transform: [{ translateY: -4 }],
+    transform: [{ translateY: -5 }],
     width: 44,
   },
   label: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "700",
     lineHeight: 15,
-    marginTop: 7,
+    marginTop: -3,
   },
   badge: {
     alignItems: "center",
@@ -272,7 +275,6 @@ const styles = StyleSheet.create({
     top: -7,
   },
   badgeText: {
-    color: "#ffffff",
     fontSize: 10,
     fontWeight: "800",
     lineHeight: 14,

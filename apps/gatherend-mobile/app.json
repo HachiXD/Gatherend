@@ -2,7 +2,7 @@
   "expo": {
     "name": "Gatherend",
     "slug": "gatherend",
-    "version": "1.2.2",
+    "version": "1.2.3",
     "orientation": "portrait",
     "icon": "./assets/images/GATHEREND_SQUARE_RELLENADO.png",
     "scheme": "gatherendmobile",
@@ -20,7 +20,7 @@
       },
 
       "predictiveBackGestureEnabled": false,
-      "versionCode": 4,
+      "versionCode": 5,
       "package": "com.gatherend.app"
     },
     "web": {

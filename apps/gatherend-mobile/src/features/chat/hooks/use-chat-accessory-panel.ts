@@ -88,21 +88,6 @@ export function useChatAccessoryPanel() {
     }) => {
       const dimensions = getKeyboardHeightDimensions();
       const resolvedHeight = resolveKeyboardEventHeight(dimensions, event);
-      // TEMP DIAG
-      console.log(
-        "[AccessoryPanel] keyboardDidShow reportedHeight=",
-        event.endCoordinates?.height,
-        "screenY=",
-        event.endCoordinates?.screenY,
-        "resolvedHeight=",
-        resolvedHeight,
-        "screenHeight=",
-        dimensions.screenHeight,
-        "diff(screenHeight-screenY)=",
-        dimensions.screenHeight - (event.endCoordinates?.screenY ?? 0),
-        "diff(resolvedHeight-reportedHeight)=",
-        resolvedHeight - (event.endCoordinates?.height ?? 0),
-      );
       if (resolvedHeight > 0) {
         lastKeyboardHeightRef.current = resolvedHeight;
         hasMeasuredKeyboardRef.current = true;
@@ -111,13 +96,6 @@ export function useChatAccessoryPanel() {
         if (!activePanelRef.current) {
           setPanelHeight((currentHeight) => {
             const nextHeight = resolvedHeight + PANEL_HEIGHT_EXTRA;
-            // TEMP DIAG
-            console.log(
-              "[AccessoryPanel] setPanelHeight nextHeight=",
-              nextHeight,
-              "currentHeight=",
-              currentHeight,
-            );
             return Math.abs(currentHeight - nextHeight) >
               KEYBOARD_HEIGHT_UI_THRESHOLD
               ? nextHeight
@@ -221,18 +199,6 @@ export function useChatAccessoryPanel() {
       }
     }
   }
-
-  // TEMP DIAG
-  console.log(
-    "[AccessoryPanel] return panelHeight=",
-    panelHeight,
-    "isKeyboardVisible=",
-    isKeyboardVisible,
-    "activePanel=",
-    activePanel,
-    "isComposerCompact=",
-    activePanel !== null || isKeyboardVisible,
-  );
 
   return {
     activePanel,

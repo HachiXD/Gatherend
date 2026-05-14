@@ -76,15 +76,19 @@ export default function CreateChannelModalScreen() {
       >
         {/* Header fijo */}
         <View style={styles.header}>
-          <Text style={styles.title}>Crear chat</Text>
+          <View style={styles.titleRow}>
+            <Ionicons
+              color={colors.textPrimary}
+              name="add-circle-outline"
+              size={30}
+            />
+            <Text style={styles.title}>Crear canal</Text>
+          </View>
           <Pressable
             accessibilityLabel="Cerrar"
             accessibilityRole="button"
             onPress={() => router.back()}
-            style={({ pressed }) => [
-              styles.closeButton,
-              pressed ? styles.closeButtonPressed : null,
-            ]}
+            style={styles.closeButton}
           >
             <Ionicons color={colors.textPrimary} name="close" size={20} />
           </Pressable>
@@ -104,7 +108,7 @@ export default function CreateChannelModalScreen() {
                 boardId={boardId}
                 label="Imagen del canal"
                 onChange={setImageUpload}
-                size={96}
+                size={120}
                 value={imageUpload}
               />
             </View>
@@ -149,10 +153,12 @@ export default function CreateChannelModalScreen() {
                 >
                   <Ionicons
                     color={
-                      type === option.key ? colors.bgPrimary : colors.textMuted
+                      type === option.key
+                        ? colors.textPrimary
+                        : colors.textMuted
                     }
                     name={option.icon as keyof typeof Ionicons.glyphMap}
-                    size={17}
+                    size={22}
                   />
                   <Text
                     style={[
@@ -197,7 +203,7 @@ export default function CreateChannelModalScreen() {
             ]}
           >
             {isSubmitting ? (
-              <ActivityIndicator color={colors.bgPrimary} size="small" />
+              <ActivityIndicator color={colors.textPrimary} size="small" />
             ) : (
               <Text style={styles.createButtonText}>Crear canal</Text>
             )}
@@ -227,6 +233,11 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       paddingHorizontal: 20,
       paddingTop: 16,
     },
+    titleRow: {
+      alignItems: "center",
+      flexDirection: "row",
+      gap: 8,
+    },
     title: {
       color: colors.textPrimary,
       fontSize: 22,
@@ -234,17 +245,12 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     closeButton: {
       alignItems: "center",
-      backgroundColor: colors.bgQuaternary,
-      borderColor: colors.borderPrimary,
-      borderRadius: 14,
-      borderWidth: 1,
+
       height: 36,
       justifyContent: "center",
       width: 36,
     },
-    closeButtonPressed: {
-      opacity: 0.8,
-    },
+
     scrollContent: {
       gap: 22,
       paddingBottom: 24,
@@ -259,10 +265,9 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     label: {
       color: colors.textSubtle,
-      fontSize: 12,
+      fontSize: 15,
       fontWeight: "700",
       letterSpacing: 0.6,
-      textTransform: "uppercase",
     },
     input: {
       backgroundColor: colors.bgInput,
@@ -276,7 +281,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     helperText: {
       color: colors.textMuted,
-      fontSize: 12,
+      fontSize: 13,
     },
     typeSegment: {
       backgroundColor: colors.bgInput,
@@ -299,15 +304,15 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       width: "48%",
     },
     typeOptionActive: {
-      backgroundColor: colors.textPrimary,
+      backgroundColor: colors.tabActiveBg,
     },
     typeOptionText: {
       color: colors.textMuted,
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: "700",
     },
     typeOptionTextActive: {
-      color: colors.bgPrimary,
+      color: colors.textPrimary,
     },
     errorBox: {
       backgroundColor: "rgba(239, 68, 68, 0.12)",
@@ -331,7 +336,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     createButton: {
       alignItems: "center",
-      backgroundColor: colors.textPrimary,
+      backgroundColor: colors.tabActiveBg,
       borderRadius: 18,
       justifyContent: "center",
       minHeight: 52,
@@ -341,7 +346,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       opacity: 0.45,
     },
     createButtonText: {
-      color: colors.bgPrimary,
+      color: colors.textPrimary,
       fontSize: 15,
       fontWeight: "700",
     },

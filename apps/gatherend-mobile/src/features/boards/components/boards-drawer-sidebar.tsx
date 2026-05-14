@@ -14,6 +14,8 @@ import { useUserBoards } from "../hooks/use-user-boards";
 import { Text } from "@/src/components/app-typography";
 import { useUnreadStore } from "@/src/features/notifications/stores/use-unread-store";
 import { useMentionStore } from "@/src/features/notifications/stores/use-mention-store";
+import { useConversations } from "@/src/features/conversations/hooks/use-conversations";
+import { UserAvatar } from "@/src/components/user-avatar";
 import type { UserBoard } from "../types/board";
 
 type BoardsDrawerSidebarProps = {
@@ -112,7 +114,7 @@ function BoardDrawerItem({
       </Pressable>
       {hasMention ? (
         <View style={styles.mentionBadge}>
-          <Ionicons color={colors.textLight} name="at" size={10} />
+          <Ionicons color={colors.textLight} name="at" size={16} />
         </View>
       ) : null}
     </View>
@@ -135,6 +137,12 @@ export function BoardsDrawerSidebar({
     refetch,
     isFetching,
   } = useUserBoards();
+  const { data: conversations = [] } = useConversations();
+  const dmUnreads = useUnreadStore((state) => state.dmUnreads);
+  const unreadConversations = useMemo(
+    () => conversations.filter((c) => (dmUnreads[c.id] ?? 0) > 0),
+    [conversations, dmUnreads],
+  );
 
   return (
     <View style={styles.sidebar}>
@@ -155,6 +163,39 @@ export function BoardsDrawerSidebar({
       </Pressable>
 
       <View style={styles.separator} />
+
+      {unreadConversations.length > 0 ? (
+        <>
+          {unreadConversations.map((conversation) => {
+            const unreadCount = dmUnreads[conversation.id] ?? 0;
+            const profile = conversation.otherProfile;
+            return (
+              <Pressable
+                key={conversation.id}
+                accessibilityLabel={`DM de ${profile.username}`}
+                onPress={onDmPress}
+                style={({ pressed }) => [
+                  styles.dmUnreadItem,
+                  pressed ? styles.itemPressed : null,
+                ]}
+              >
+                <UserAvatar
+                  avatarUrl={profile.avatarAsset?.url ?? null}
+                  username={profile.username}
+                  size={54}
+                  showStatus={false}
+                />
+                <View style={styles.dmUnreadBadge}>
+                  <Text style={styles.dmUnreadBadgeText}>
+                    {unreadCount > 99 ? "99+" : String(unreadCount)}
+                  </Text>
+                </View>
+              </Pressable>
+            );
+          })}
+          <View style={styles.separator} />
+        </>
+      ) : null}
 
       <Pressable
         accessibilityLabel="Crear board"
@@ -342,13 +383,41 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     mentionBadge: {
       alignItems: "center",
       backgroundColor: colors.notificationBg,
+      borderColor: colors.bgPrimary,
       borderRadius: 999,
-      bottom: 0,
-      height: 18,
+      borderWidth: 1,
+      bottom: 8,
+      height: 24,
       justifyContent: "center",
       position: "absolute",
-      right: 0,
-      width: 18,
+      right: 16,
+      width: 24,
+    },
+    dmUnreadItem: {
+      alignItems: "center",
+      justifyContent: "center",
+      position: "relative",
+    },
+    dmUnreadBadge: {
+      alignItems: "center",
+      backgroundColor: colors.notificationBg,
+      borderColor: colors.bgPrimary,
+      borderRadius: 999,
+      borderWidth: 1.5,
+      justifyContent: "center",
+      minWidth: 22,
+      minHeight: 22,
+      paddingHorizontal: 3,
+      paddingVertical: 1,
+      position: "absolute",
+      right: 2,
+      bottom: 0,
+    },
+    dmUnreadBadgeText: {
+      color: colors.textLight,
+      fontSize: 15,
+      fontWeight: "700" as const,
+      lineHeight: 13,
     },
   });
 }

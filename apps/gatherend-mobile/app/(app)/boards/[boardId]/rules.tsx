@@ -10,7 +10,6 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBoardRules } from "@/src/features/rules/hooks/use-board-rules";
 import { useSaveBoardRules } from "@/src/features/rules/hooks/use-save-board-rules";
 import { useDeleteBoardRules } from "@/src/features/rules/hooks/use-delete-board-rules";
@@ -24,7 +23,6 @@ const MAX_CONTENT = 10000;
 export default function BoardRulesScreen() {
   const { boardId } = useLocalSearchParams<{ boardId?: string }>();
   const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const { data: rules, isLoading } = useBoardRules(boardId);
@@ -88,7 +86,9 @@ export default function BoardRulesScreen() {
 
   const errorMessage =
     (saveMutation.error instanceof Error ? saveMutation.error.message : null) ||
-    (deleteMutation.error instanceof Error ? deleteMutation.error.message : null);
+    (deleteMutation.error instanceof Error
+      ? deleteMutation.error.message
+      : null);
 
   // ── Loading ────────────────────────────────────────────────────────────────
   if (!isInitialized) {
@@ -140,7 +140,7 @@ export default function BoardRulesScreen() {
       </ScrollView>
 
       {/* Footer */}
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
+      <View style={[styles.footer]}>
         {rules !== null ? (
           <Pressable
             disabled={isBusy}
@@ -212,10 +212,9 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     sectionLabel: {
       color: colors.textSubtle,
-      fontSize: 12,
+      fontSize: 15,
       fontWeight: "700",
       letterSpacing: 0.6,
-      textTransform: "uppercase",
     },
     textarea: {
       backgroundColor: colors.bgInput,
@@ -230,7 +229,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     counter: {
       color: colors.textMuted,
-      fontSize: 11,
+      fontSize: 13,
       textAlign: "right",
     },
     errorBox: {
@@ -252,7 +251,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       flexDirection: "row",
       gap: 10,
       paddingHorizontal: 16,
-      paddingTop: 12,
+      paddingVertical: 12,
     },
     deleteButton: {
       alignItems: "center",
@@ -271,7 +270,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     saveButton: {
       alignItems: "center",
-      backgroundColor: colors.textPrimary,
+      backgroundColor: colors.tabActiveBg,
       borderRadius: 16,
       flex: 1,
       justifyContent: "center",
@@ -279,7 +278,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       paddingHorizontal: 16,
     },
     saveButtonText: {
-      color: colors.bgPrimary,
+      color: colors.textPrimary,
       fontSize: 15,
       fontWeight: "700",
     },

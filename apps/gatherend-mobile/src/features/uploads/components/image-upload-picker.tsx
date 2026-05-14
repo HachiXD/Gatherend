@@ -2,16 +2,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  View,
-} from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { useTheme } from "@/src/theme/theme-provider";
 import type { UploadContext } from "../domain/upload-context";
 import { useUpload } from "../hooks/use-upload";
-import { getStoredUploadValueFromUploadedFile, parseStoredUploadValue } from "../utils/upload-values";
+import {
+  getStoredUploadValueFromUploadedFile,
+  parseStoredUploadValue,
+} from "../utils/upload-values";
 import { Text } from "@/src/components/app-typography";
 
 type ImageUploadPickerProps = {
@@ -119,13 +117,21 @@ export function ImageUploadPicker({
         ]}
       >
         {previewUrl ? (
-          <Image contentFit="cover" source={{ uri: previewUrl }} style={styles.image} />
+          <Image
+            contentFit="cover"
+            source={{ uri: previewUrl }}
+            style={styles.image}
+          />
         ) : (
           <View style={styles.emptyState}>
             {isUploading ? (
               <ActivityIndicator color={colors.accentPrimary} size="small" />
             ) : (
-              <Ionicons color={colors.textMuted} name="image-outline" size={24} />
+              <Ionicons
+                color={colors.textMuted}
+                name="image-outline"
+                size={28}
+              />
             )}
             <Text numberOfLines={2} style={styles.label}>
               {isUploading ? "Subiendo" : label}
@@ -212,7 +218,7 @@ function createStyles(
     },
     label: {
       color: colors.textMuted,
-      fontSize: 11,
+      fontSize: 14,
       fontWeight: "700",
       lineHeight: 14,
       textAlign: "center",
@@ -223,7 +229,7 @@ function createStyles(
       borderColor: colors.borderPrimary,
       borderRadius: 18,
       borderStyle: "dashed",
-      borderWidth: 1,
+      borderWidth: 4,
       height: size,
       justifyContent: "center",
       overflow: "hidden",

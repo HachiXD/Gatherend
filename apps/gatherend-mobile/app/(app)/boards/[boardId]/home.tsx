@@ -645,7 +645,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     rulesText: {
       color: colors.textPrimary,
-      fontSize: 15,
+      fontSize: 20,
       lineHeight: 23,
     },
     // Chats

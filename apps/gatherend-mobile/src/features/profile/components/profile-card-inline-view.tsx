@@ -1,11 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import {
-  StyleSheet,
-  View,
-  type StyleProp,
-  type ViewStyle,
-} from "react-native";
+import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import { resolveProfileCardLayout } from "@/src/features/profile/lib/card/profile-card-layout";
 import type { ProfileCardConfig } from "@/src/features/profile/lib/card/profile-card-config";
 import { Text } from "@/src/components/app-typography";
@@ -273,7 +268,7 @@ export function ProfileCardInlineView({
   profile,
 }: {
   profile: ProfileCardViewProfile;
-}){
+}) {
   const cardStyle = getCardStyle(profile.profileCardConfig);
   const bgFg = getFgFromBg(cardStyle.bg);
   const boxFg = getFgFromBg(cardStyle.box);
@@ -403,9 +398,7 @@ export function ProfileCardInlineView({
                   {layout.activeSlots.leftBottomRightTopImage ? (
                     <ContentImageBox
                       hideTitle
-                      url={
-                        profile.profileCardLeftBottomRightTopImageAsset?.url
-                      }
+                      url={profile.profileCardLeftBottomRightTopImageAsset?.url}
                       rounded={cardStyle.rounded}
                       shadows={cardStyle.shadows}
                       boxColor={cardStyle.box}
@@ -471,14 +464,18 @@ export function ProfileCardInlineView({
             fg={boxFg.fg}
             fgMuted={boxFg.fgMuted}
           />
-          <View style={[styles.statDivider, { backgroundColor: bgFg.border }]} />
+          <View
+            style={[styles.statDivider, { backgroundColor: bgFg.border }]}
+          />
           <StatPill
             label="Idiomas"
             value={profile.languages?.length ?? 0}
             fg={boxFg.fg}
             fgMuted={boxFg.fgMuted}
           />
-          <View style={[styles.statDivider, { backgroundColor: bgFg.border }]} />
+          <View
+            style={[styles.statDivider, { backgroundColor: bgFg.border }]}
+          />
           <StatPill
             label="Tags"
             value={profile.profileTags.length}
@@ -489,27 +486,6 @@ export function ProfileCardInlineView({
       ) : null}
 
       {/* ── Info section ── */}
-      {showStats ? (
-        <View style={[styles.section, boxSharedStyle]}>
-          <SectionRow
-            icon="language-outline"
-            label="Idiomas"
-            value={languageSummary}
-            fg={boxFg.fg}
-            fgMuted={boxFg.fgMuted}
-            borderColor={bgFg.border}
-          />
-          <SectionRow
-            icon="pricetag-outline"
-            label="Tags"
-            value={tagSummary}
-            fg={boxFg.fg}
-            fgMuted={boxFg.fgMuted}
-            borderColor={bgFg.border}
-            last
-          />
-        </View>
-      ) : null}
     </View>
   );
 }

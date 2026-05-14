@@ -12,7 +12,6 @@ import {
 } from "react";
 import {
   ActivityIndicator,
-  InteractionManager,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   Pressable,
@@ -27,13 +26,15 @@ import {
 } from "@/src/features/chat/components/chat-item";
 import { UserProfileSheet } from "@/src/features/chat/components/user-profile-sheet";
 import { MessageActionsSheet } from "@/src/features/chat/components/message-actions-sheet";
-import type { ClientProfileSummary } from "@/src/features/chat/types";
+import type {
+  ChannelMessage,
+  ClientProfileSummary,
+} from "@/src/features/chat/types";
 import {
   ReportScreen,
   type ReportCategoryConfig,
 } from "@/src/features/report/components/report-screen";
 import type { ReportTargetType } from "@/src/features/report/api/submit-report";
-import type { ChannelMessage } from "@/src/features/chat/types";
 import { GoToRecentButton } from "@/src/features/chat/components/go-to-recent-button";
 import { WelcomeMessageCard } from "@/src/features/chat/components/welcome-message-card";
 import { getMessageAuthor } from "@/src/features/chat/utils/message-author";
@@ -184,8 +185,6 @@ export default function BoardChannelScreen() {
   const flashListRef = useRef<FlashListRef<ChatMessage>>(null);
   const pinnedRef = useRef(true);
   const lastScrollMetricsRef = useRef<FlashListScrollMetrics | null>(null);
-  // Direction to evict after the next messages-length change.
-  const pendingWindowManage = useRef<"up" | "down" | null>(null);
   // Stable refs to the latest pagination handlers — driven from onScroll so
   // we don't depend on FlashList's unreliable onStartReached/onEndReached.
   const handleEndReachedRef = useRef<() => Promise<void>>(async () => {});
@@ -309,7 +308,6 @@ export default function BoardChannelScreen() {
     ensureInitial,
     loadOlder,
     loadNewer,
-    manageWindow,
     goToPresent,
   } = useChatMessageWindow({
     windowKey,
@@ -408,8 +406,8 @@ export default function BoardChannelScreen() {
   }, [scrollToBottom]);
 
   // Sticky bottom: present mounted + physically pinned to bottom.
-  // With inverted data, index 0 = newest message.
-  const newestMessageId = messages[0]?.id;
+  // messages is oldest-first from the store; newest = last element.
+  const newestMessageId = messages[messages.length - 1]?.id;
   useLayoutEffect(() => {
     if (!newestMessageId || hasMoreAfter) return;
     if (!pinnedRef.current) return;
@@ -423,24 +421,6 @@ export default function BoardChannelScreen() {
     };
   }, [hasMoreAfter, newestMessageId, scrollToBottom]);
 
-  // Run pending window eviction and/or retrigger pagination AFTER the store
-  // update has propagated to React. Watches `messages` (array ref) not just
-  // `messages.length` because the store's internal auto-truncation keeps the
-  // count stable on cache restores (adds 40 at bottom, removes 40 at top),
-  // which would leave pendingWindowManage orphaned if we only watched length.
-  // Run pending window eviction AFTER the store update has propagated to React
-  // so manageWindow sees the post-load message count.
-  useEffect(() => {
-    const direction = pendingWindowManage.current;
-    pendingWindowManage.current = null;
-    if (!direction) return;
-    const task = InteractionManager.runAfterInteractions(() => {
-      manageWindow(direction);
-    });
-    return () => task.cancel();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages]);
-
   // User scrolled to BOTTOM while viewing past messages -> load newer.
   // Guarded by hasMoreAfter so it no-ops in the normal present-pinned state.
   const handleEndReached = useCallback(async () => {
@@ -453,10 +433,7 @@ export default function BoardChannelScreen() {
     isLoadingNewerRef.current = true;
     setIsLoadingNewer(true);
     try {
-      const result = await loadNewer();
-      if (result.ok && result.kind !== "noop") {
-        pendingWindowManage.current = "down";
-      }
+      await loadNewer();
     } finally {
       isLoadingNewerRef.current = false;
       setIsLoadingNewer(false);
@@ -475,10 +452,7 @@ export default function BoardChannelScreen() {
     isLoadingOlderRef.current = true;
     setIsLoadingOlder(true);
     try {
-      const result = await loadOlder();
-      if (result.ok && result.kind !== "noop") {
-        pendingWindowManage.current = "up";
-      }
+      await loadOlder();
     } finally {
       isLoadingOlderRef.current = false;
       setIsLoadingOlder(false);
@@ -572,7 +546,7 @@ export default function BoardChannelScreen() {
     return (
       <Redirect
         href={{
-          pathname: "/boards/[boardId]/chats",
+          pathname: "/boards/[boardId]",
           params: { boardId: resolvedBoardId },
         }}
       />
@@ -603,22 +577,7 @@ export default function BoardChannelScreen() {
         </>
       ) : null}
 
-      <View
-        style={styles.body}
-        onLayout={(e) => {
-          const { x, y, width, height } = e.nativeEvent.layout;
-          console.log(
-            "[ChannelScreen] body onLayout x=",
-            x,
-            "y=",
-            y,
-            "w=",
-            width,
-            "h=",
-            height,
-          );
-        }}
-      >
+      <View style={styles.body}>
         {channel.type !== "TEXT" ? (
           isInThisVoiceChannel ? (
             <VoiceCallView channelId={resolvedChannelId} />
@@ -646,22 +605,7 @@ export default function BoardChannelScreen() {
         ) : null}
 
         {channel.type === "TEXT" ? (
-          <View
-            style={styles.chatSurface}
-            onLayout={(e) => {
-              const { x, y, width, height } = e.nativeEvent.layout;
-              console.log(
-                "[ChannelScreen] chatSurface onLayout x=",
-                x,
-                "y=",
-                y,
-                "w=",
-                width,
-                "h=",
-                height,
-              );
-            }}
-          >
+          <View style={styles.chatSurface}>
             {status === "idle" ? (
               <View style={styles.centerState}>
                 <ActivityIndicator color={colors.accentPrimary} size="small" />
@@ -703,19 +647,6 @@ export default function BoardChannelScreen() {
                     styles.listContainer,
                     { opacity: listVisible ? 1 : 0 },
                   ]}
-                  onLayout={(e) => {
-                    const { x, y, width, height } = e.nativeEvent.layout;
-                    console.log(
-                      "[ChannelScreen] listContainer onLayout x=",
-                      x,
-                      "y=",
-                      y,
-                      "w=",
-                      width,
-                      "h=",
-                      height,
-                    );
-                  }}
                 >
                   <FlashList
                     key={windowKey}
@@ -758,21 +689,7 @@ export default function BoardChannelScreen() {
             ) : null}
 
             {channel.isJoined ? (
-              <View
-                onLayout={(e) => {
-                  const { x, y, width, height } = e.nativeEvent.layout;
-                  console.log(
-                    "[ChannelScreen] composerWrapper onLayout x=",
-                    x,
-                    "y=",
-                    y,
-                    "w=",
-                    width,
-                    "h=",
-                    height,
-                  );
-                }}
-              >
+              <View>
                 <ChannelComposerAccessory
                   boardId={resolvedBoardId}
                   channelId={resolvedChannelId}
@@ -959,7 +876,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     stateText: {
       color: colors.textMuted,
-      fontSize: 14,
+      fontSize: 15,
       lineHeight: 21,
       textAlign: "center",
     },
@@ -973,8 +890,8 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       paddingHorizontal: 18,
     },
     retryButtonText: {
-      color: colors.textInverse,
-      fontSize: 14,
+      color: colors.textPrimary,
+      fontSize: 15,
       fontWeight: "700",
     },
     voiceIconWrap: {

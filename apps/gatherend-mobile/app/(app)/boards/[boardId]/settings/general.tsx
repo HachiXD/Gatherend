@@ -157,7 +157,7 @@ export default function BoardGeneralSettingsScreen() {
 
           <View style={styles.fields}>
             <View style={styles.field}>
-              <Text style={styles.label}>NOMBRE DEL BOARD</Text>
+              <Text style={styles.label}>Nombre Del Board</Text>
               <TextInput
                 value={name}
                 onChangeText={setName}
@@ -173,7 +173,7 @@ export default function BoardGeneralSettingsScreen() {
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>DESCRIPCION</Text>
+              <Text style={styles.label}>Descripcion</Text>
               <TextInput
                 value={description}
                 onChangeText={setDescription}
@@ -191,13 +191,13 @@ export default function BoardGeneralSettingsScreen() {
         </View>
 
         <View style={styles.panel}>
-          <Text style={styles.sectionTitle}>NOMBRES DE SECCIONES</Text>
+          <Text style={styles.sectionTitle}>Nombres De Secciones</Text>
           <Text style={styles.sectionHint}>
             Deja vacío para usar el nombre por defecto.
           </Text>
           {TAB_FIELDS.map(({ key, defaultLabel }) => (
             <View key={key} style={styles.field}>
-              <Text style={styles.label}>{defaultLabel.toUpperCase()}</Text>
+              <Text style={styles.label}>{defaultLabel}</Text>
               <TextInput
                 value={tabNames[key] ?? ""}
                 onChangeText={(val) =>
@@ -259,11 +259,11 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     counter: {
       alignSelf: "flex-end",
       color: colors.textMuted,
-      fontSize: 11,
+      fontSize: 13,
     },
     error: {
       color: "#fb7185",
-      fontSize: 12,
+      fontSize: 13,
     },
     field: {
       gap: 7,
@@ -279,7 +279,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       borderRadius: 10,
       borderWidth: 1,
       color: colors.textPrimary,
-      fontSize: 14,
+      fontSize: 15,
       minHeight: 42,
       paddingHorizontal: 12,
       paddingVertical: 9,
@@ -289,9 +289,8 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     label: {
       color: colors.textMuted,
-      fontSize: 11,
+      fontSize: 15,
       fontWeight: "700",
-      letterSpacing: 0.8,
     },
     panel: {
       backgroundColor: colors.bgEditForm,
@@ -303,13 +302,12 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     sectionTitle: {
       color: colors.textMuted,
-      fontSize: 11,
+      fontSize: 15,
       fontWeight: "700",
-      letterSpacing: 0.8,
     },
     sectionHint: {
       color: colors.textTertiary,
-      fontSize: 12,
+      fontSize: 13,
       marginTop: -8,
     },
     pressed: {
@@ -325,7 +323,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     primaryButtonText: {
       color: colors.textPrimary,
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: "700",
     },
     scroll: {
@@ -345,7 +343,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     secondaryButtonText: {
       color: colors.textPrimary,
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: "700",
     },
     textarea: {

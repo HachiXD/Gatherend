@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import {
   APP_TAB_BAR_BOTTOM_PADDING,
   APP_TAB_BAR_CONTENT_HEIGHT,
@@ -18,6 +19,7 @@ import { useAppShellStore } from "@/src/features/navigation/stores/use-app-shell
 import type { BoardHomeTab } from "@/src/features/navigation/stores/use-app-shell-store";
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   Dimensions,
   PanResponder,
@@ -39,9 +41,16 @@ import { getBoardRules } from "@/src/features/rules/api/get-board-rules";
 import { boardRulesQueryKey } from "@/src/features/rules/hooks/use-board-rules";
 import { useBoardVoiceParticipantsSocket } from "@/src/features/voice/hooks/use-board-voice-participants-socket";
 import { useVoiceStore } from "@/src/features/voice/store/use-voice-store";
+import { useVoiceParticipantsStore } from "@/src/features/voice/store/use-voice-participants-store";
+import { UserAvatar } from "@/src/components/user-avatar";
+import { useUnreadStore } from "@/src/features/notifications/stores/use-unread-store";
+import { useMentionStore } from "@/src/features/notifications/stores/use-mention-store";
+import { useDeleteChannel } from "@/src/features/boards/hooks/use-delete-channel";
+import { isAdmin } from "@/src/features/boards/member-role";
 import { useProfile } from "@/src/features/profile/providers/current-profile-provider";
 import { getBoardImageUrl } from "@/src/lib/avatar-utils";
 import { useTheme } from "@/src/theme/theme-provider";
+import { BRAND_COLORS } from "@/src/theme/brand-colors";
 import type { BoardChannel } from "@/src/features/boards/types/board";
 import {
   generatePaletteFromBase,
@@ -53,12 +62,12 @@ import {
 import { Text } from "@/src/components/app-typography";
 
 const BOARD_SECTION_TABS = [
-  { key: "home", label: "Casa", icon: "home-outline" },
-  { key: "chats", label: "Chats", icon: "chatbubble-ellipses-outline" },
-  { key: "forum", label: "Foro", icon: "chatbox-outline" },
+  { key: "home", label: "Casa", icon: "home" },
+  { key: "chats", label: "Chats", icon: "chatbubble-ellipses" },
+  { key: "forum", label: "Foro", icon: "chatbox" },
   { key: "featured", label: "Destacado", icon: "star-outline" },
-  { key: "rules", label: "Reglas", icon: "document-text-outline" },
-  { key: "wiki", label: "Wiki", icon: "book-outline" },
+  { key: "rules", label: "Reglas", icon: "document-text" },
+  { key: "wiki", label: "Wiki", icon: "book" },
   { key: "ranking", label: "Ranking", icon: "trophy-outline" },
   { key: "members", label: "Miembros", icon: "people-outline" },
   { key: "invite", label: "Invitar amigos", icon: "person-add-outline" },
@@ -104,6 +113,7 @@ type DrawerChannelsPreviewProps = {
   boardColors: ReturnType<typeof generatePaletteFromBase> | null;
   onChannelPressIn?: () => void;
   onSelectChannel: (channel: BoardChannel) => void;
+  onChannelLongPress?: (channel: BoardChannel) => void;
 };
 
 function DrawerChannelsPreview({
@@ -115,11 +125,17 @@ function DrawerChannelsPreview({
   boardColors,
   onChannelPressIn,
   onSelectChannel,
+  onChannelLongPress,
 }: DrawerChannelsPreviewProps) {
   const sortedChannels = useMemo(
     () => [...channels].sort((a, b) => a.position - b.position),
     [channels],
   );
+  const allParticipants = useVoiceParticipantsStore(
+    (state) => state.participants,
+  );
+  const allUnreads = useUnreadStore((state) => state.unreads);
+  const allMentions = useMentionStore((state) => state.mentions);
 
   return (
     <View style={styles.drawerChannelsSection}>
@@ -140,75 +156,132 @@ function DrawerChannelsPreview({
           {sortedChannels.map((channel) => {
             const isActive = channel.id === activeChannelId;
             const imageUrl = channel.imageAsset?.url ?? null;
+            const voiceParticipants =
+              channel.type === "VOICE"
+                ? (allParticipants[channel.id] ?? [])
+                : [];
+            const displayedParticipants = voiceParticipants.slice(0, 5);
+            const hiddenCount =
+              voiceParticipants.length - displayedParticipants.length;
+            const hasUnread = (allUnreads[channel.id] ?? 0) > 0;
+            const hasMention = allMentions[channel.id] === true;
             return (
-              <Pressable
-                key={channel.id}
-                onPressIn={onChannelPressIn}
-                onPress={() => onSelectChannel(channel)}
-                style={[
-                  styles.drawerChannelRow,
-                  isActive ? styles.drawerChannelRowActive : null,
-                  boardColors && isActive
-                    ? {
-                        backgroundColor: boardColors.channelTypeActiveSoftBg,
-                        borderColor: boardColors.channelTypeActiveSoftBg,
-                      }
-                    : null,
-                ]}
-              >
-                <View
+              <View key={channel.id} style={styles.drawerChannelRowOuter}>
+                {hasUnread && !isActive ? (
+                  <View style={styles.drawerChannelUnreadBar} />
+                ) : null}
+                <Pressable
+                  onPressIn={onChannelPressIn}
+                  onPress={() => onSelectChannel(channel)}
+                  onLongPress={() => onChannelLongPress?.(channel)}
+                  delayLongPress={400}
                   style={[
-                    styles.drawerChannelIcon,
-                    imageUrl ? styles.drawerChannelIconWithImage : null,
+                    styles.drawerChannelRow,
+                    isActive ? styles.drawerChannelRowActive : null,
+                    boardColors && isActive
+                      ? {
+                          backgroundColor: boardColors.channelTypeActiveSoftBg,
+                          borderColor: boardColors.channelTypeActiveSoftBg,
+                        }
+                      : null,
                   ]}
                 >
-                  {imageUrl ? (
-                    <>
-                      <Image
-                        contentFit="cover"
-                        source={{ uri: imageUrl }}
-                        style={StyleSheet.absoluteFill}
-                      />
-                      <View
-                        pointerEvents="none"
-                        style={[
-                          StyleSheet.absoluteFill,
-                          styles.drawerChannelIconImageOverlay,
-                        ]}
-                      />
-                    </>
-                  ) : null}
-                  <Ionicons
-                    color={
-                      isActive
-                        ? colors.accentPrimary
-                        : (boardColors?.textPrimary ?? colors.textPrimary)
-                    }
-                    name={
-                      channel.type === "VOICE"
-                        ? "volume-high-outline"
-                        : channel.type === "FORUM"
-                          ? "chatbox-outline"
-                          : channel.type === "WIKI"
-                            ? "book-outline"
-                            : "chatbubble-ellipses-outline"
-                    }
-                    size={19}
-                  />
-                </View>
-                <View style={styles.drawerChannelCopy}>
-                  <Text
-                    numberOfLines={1}
+                  <View
                     style={[
-                      styles.drawerChannelName,
-                      boardColors ? { color: boardColors.textPrimary } : null,
-                      isActive ? styles.drawerChannelNameActive : null,
+                      styles.drawerChannelIcon,
+                      imageUrl ? styles.drawerChannelIconWithImage : null,
                     ]}
                   >
-                    /{channel.name}
-                  </Text>
-                </View>
-              </Pressable>
+                    {imageUrl ? (
+                      <>
+                        <Image
+                          contentFit="cover"
+                          source={{ uri: imageUrl }}
+                          style={StyleSheet.absoluteFill}
+                        />
+                        <View
+                          pointerEvents="none"
+                          style={[
+                            StyleSheet.absoluteFill,
+                            styles.drawerChannelIconImageOverlay,
+                          ]}
+                        />
+                      </>
+                    ) : null}
+                    <Ionicons
+                      color={
+                        isActive
+                          ? colors.accentPrimary
+                          : hasUnread || hasMention
+                            ? (boardColors?.textPrimary ?? colors.textPrimary)
+                            : (boardColors?.textMuted ?? colors.textMuted)
+                      }
+                      name={
+                        channel.type === "VOICE"
+                          ? "volume-high"
+                          : channel.type === "FORUM"
+                            ? "chatbox"
+                            : channel.type === "WIKI"
+                              ? "book"
+                              : "chatbubble-ellipses"
+                      }
+                      size={22}
+                    />
+                  </View>
+                  <View style={styles.drawerChannelCopy}>
+                    <Text
+                      numberOfLines={1}
+                      style={[
+                        styles.drawerChannelName,
+                        hasUnread || hasMention
+                          ? {
+                              color:
+                                boardColors?.textPrimary ?? colors.textPrimary,
+                            }
+                          : boardColors
+                            ? { color: boardColors.textMuted }
+                            : null,
+                        isActive ? styles.drawerChannelNameActive : null,
+                      ]}
+                    >
+                      /{channel.name}
+                    </Text>
+                  </View>
+                  {hasMention && !isActive ? (
+                    <View style={styles.drawerChannelMentionBadge}>
+                      <Ionicons color={colors.textLight} name="at" size={18} />
+                    </View>
+                  ) : null}
+                </Pressable>
+                {channel.type === "VOICE" &&
+                displayedParticipants.length > 0 ? (
+                  <View style={styles.drawerVoiceParticipants}>
+                    <View style={styles.drawerVoiceAvatarStack}>
+                      {displayedParticipants.map((participant, index) => (
+                        <View
+                          key={participant.profileId}
+                          style={[
+                            styles.drawerVoiceAvatarWrap,
+                            index > 0 ? styles.drawerVoiceAvatarOverlap : null,
+                          ]}
+                        >
+                          <UserAvatar
+                            avatarUrl={participant.avatarUrl}
+                            username={participant.username}
+                            size={25}
+                            showStatus={false}
+                          />
+                        </View>
+                      ))}
+                    </View>
+                    {hiddenCount > 0 ? (
+                      <Text style={styles.drawerVoiceHiddenCount}>
+                        +{hiddenCount}
+                      </Text>
+                    ) : null}
+                  </View>
+                ) : null}
+              </View>
             );
           })}
         </View>
@@ -473,6 +546,11 @@ export default function BoardShellLayout() {
   ).current;
   const [isDrawerOpen, setIsDrawerOpen] = useState(true);
   const [drawerSheetVisible, setDrawerSheetVisible] = useState(false);
+  const [channelActionTarget, setChannelActionTarget] =
+    useState<BoardChannel | null>(null);
+  const [channelActionsVisible, setChannelActionsVisible] = useState(false);
+  const deleteChannelMutation = useDeleteChannel();
+  const canManageChannels = isAdmin(board?.currentMember?.role);
 
   // When leaving boards, reset so next entry always lands on drawer.
   // Skip when navigating to a modal — the modal overlays the board shell and
@@ -812,6 +890,14 @@ export default function BoardShellLayout() {
                           </Text>
                         </View>
                       )}
+                      <LinearGradient
+                        colors={[
+                          "transparent",
+                          boardColors?.bgSecondary ?? colors.bgSecondary,
+                        ]}
+                        pointerEvents="none"
+                        style={styles.boardImageGradient}
+                      />
 
                       <View style={styles.boardNameRow}>
                         <Text
@@ -876,11 +962,11 @@ export default function BoardShellLayout() {
                           <Ionicons
                             color={
                               boardColors
-                                ? boardColors.textPrimary
-                                : colors.textPrimary
+                                ? boardColors.textMuted
+                                : colors.textMuted
                             }
-                            name="home-outline"
-                            size={19}
+                            name="home"
+                            size={22}
                           />
                           <Text
                             ellipsizeMode="tail"
@@ -888,7 +974,7 @@ export default function BoardShellLayout() {
                             style={[
                               styles.tabButtonText,
                               boardColors
-                                ? { color: boardColors.textPrimary }
+                                ? { color: boardColors.textMuted }
                                 : null,
                             ]}
                           >
@@ -912,6 +998,14 @@ export default function BoardShellLayout() {
                             onChannelPressIn={() => {
                               setIsBoardDrawerOpen(false);
                             }}
+                            onChannelLongPress={
+                              canManageChannels
+                                ? (channel) => {
+                                    setChannelActionTarget(channel);
+                                    setChannelActionsVisible(true);
+                                  }
+                                : undefined
+                            }
                             onSelectChannel={handleSelectDrawerChannel}
                             styles={styles}
                           />
@@ -938,6 +1032,12 @@ export default function BoardShellLayout() {
                           pressed && styles.sheetOptionPressed,
                         ]}
                       >
+                        <Ionicons
+                          color={colors.textPrimary}
+                          name="person-add-outline"
+                          size={20}
+                          style={styles.sheetOptionIcon}
+                        />
                         <Text style={styles.sheetOptionText}>
                           Invitar amigos
                         </Text>
@@ -959,6 +1059,12 @@ export default function BoardShellLayout() {
                           pressed && styles.sheetOptionPressed,
                         ]}
                       >
+                        <Ionicons
+                          color={colors.textPrimary}
+                          name="settings-outline"
+                          size={20}
+                          style={styles.sheetOptionIcon}
+                        />
                         <Text style={styles.sheetOptionText}>
                           Ajustes del board
                         </Text>
@@ -978,7 +1084,96 @@ export default function BoardShellLayout() {
                           pressed && styles.sheetOptionPressed,
                         ]}
                       >
+                        <Ionicons
+                          color={colors.textPrimary}
+                          name="add-circle-outline"
+                          size={20}
+                          style={styles.sheetOptionIcon}
+                        />
                         <Text style={styles.sheetOptionText}>Crear canal</Text>
+                      </Pressable>
+                    </BottomSheet>
+                    {/* Channel actions sheet */}
+                    <BottomSheet
+                      visible={channelActionsVisible}
+                      onClose={() => {
+                        setChannelActionsVisible(false);
+                        setChannelActionTarget(null);
+                      }}
+                    >
+                      <Pressable
+                        onPress={() => {
+                          setChannelActionsVisible(false);
+                          if (!activeBoardId || !channelActionTarget) return;
+                          router.push({
+                            pathname: "/modal/edit-channel",
+                            params: {
+                              boardId: activeBoardId,
+                              channelId: channelActionTarget.id,
+                            },
+                          });
+                          setChannelActionTarget(null);
+                        }}
+                        style={({ pressed }) => [
+                          styles.sheetOption,
+                          pressed && styles.sheetOptionPressed,
+                        ]}
+                      >
+                        <Ionicons
+                          color={colors.textPrimary}
+                          name="pencil-outline"
+                          size={20}
+                          style={styles.sheetOptionIcon}
+                        />
+                        <Text style={styles.sheetOptionText}>Editar canal</Text>
+                      </Pressable>
+                      <View style={styles.sheetDivider} />
+                      <Pressable
+                        onPress={() => {
+                          setChannelActionsVisible(false);
+                          if (!activeBoardId || !channelActionTarget) return;
+                          const targetChannel = channelActionTarget;
+                          Alert.alert(
+                            "Eliminar canal",
+                            `Se eliminara /${targetChannel.name}. Esta accion no se puede deshacer.`,
+                            [
+                              {
+                                text: "Cancelar",
+                                style: "cancel",
+                              },
+                              {
+                                text: "Eliminar",
+                                style: "destructive",
+                                onPress: () => {
+                                  deleteChannelMutation.mutate({
+                                    boardId: activeBoardId,
+                                    channelId: targetChannel.id,
+                                  });
+                                },
+                              },
+                            ],
+                          );
+                          setChannelActionTarget(null);
+                        }}
+                        style={({ pressed }) => [
+                          styles.sheetOption,
+                          pressed && styles.sheetOptionPressed,
+                        ]}
+                      >
+                        <Ionicons
+                          color={BRAND_COLORS.danger}
+                          name="trash-outline"
+                          size={20}
+                          style={styles.sheetOptionIcon}
+                        />
+                        <Text
+                          style={[
+                            styles.sheetOptionText,
+                            { color: BRAND_COLORS.danger },
+                          ]}
+                        >
+                          Eliminar canal
+                        </Text>
                       </Pressable>
                     </BottomSheet>
                   </>
@@ -994,10 +1189,9 @@ export default function BoardShellLayout() {
               styles.foreground,
               { transform: [{ translateX: foregroundX }] },
             ]}
-            onLayout={(e) => { const {x,y,width,height}=e.nativeEvent.layout; console.log('[BoardShell] foreground onLayout x=',x,'y=',y,'w=',width,'h=',height); }}
             {...(!isHome ? foregroundPanResponder.panHandlers : {})}
           >
-            <View style={[styles.header, { paddingTop: insets.top }]} onLayout={(e) => { const {x,y,width,height}=e.nativeEvent.layout; console.log('[BoardShell] header onLayout x=',x,'y=',y,'w=',width,'h=',height,'insets.top=',insets.top); }}>
+            <View style={[styles.header, { paddingTop: insets.top }]}>
               {boardImageUrl && !showDmHeader ? (
                 <>
                   <Image
@@ -1165,10 +1359,6 @@ export default function BoardShellLayout() {
 
             <View
               style={[styles.content, { paddingBottom: insets.bottom }]}
-              onLayout={(e) => {
-                const { x, y, width, height } = e.nativeEvent.layout;
-                console.log('[BoardShell] content onLayout x=', x, 'y=', y, 'w=', width, 'h=', height, 'insets.bottom=', insets.bottom);
-              }}
             >
               <View style={styles.routeContent}>
                 <Slot />
@@ -1455,30 +1645,42 @@ function createStyles(
       width: 40,
     },
     boardHeader: {
-      gap: 12,
+      height: 164,
+      overflow: "hidden",
+      position: "relative",
     },
     boardImage: {
+      ...StyleSheet.absoluteFillObject,
       backgroundColor: colors.bgQuaternary,
-      height: 124,
-      width: "100%",
     },
     boardImageFallback: {
+      ...StyleSheet.absoluteFillObject,
       alignItems: "center",
       backgroundColor: colors.bgQuaternary,
-      height: 124,
       justifyContent: "center",
-      width: "100%",
     },
     boardImageFallbackText: {
       color: colors.textPrimary,
       fontSize: 24,
       fontWeight: "800",
     },
+    boardImageGradient: {
+      bottom: 0,
+      height: 88,
+      left: 0,
+      position: "absolute",
+      right: 0,
+    },
     boardNameRow: {
       alignItems: "center",
+      bottom: 0,
       flexDirection: "row",
       justifyContent: "space-between",
+      left: 0,
+      paddingBottom: 12,
       paddingHorizontal: 12,
+      position: "absolute",
+      right: 0,
     },
     boardName: {
       color: colors.textPrimary,
@@ -1545,7 +1747,7 @@ function createStyles(
       minWidth: 0,
     },
     drawerChannelName: {
-      color: colors.textPrimary,
+      color: colors.textMuted,
       fontSize: 14,
       fontWeight: "700",
       lineHeight: 18,
@@ -1559,6 +1761,51 @@ function createStyles(
       lineHeight: 17,
       paddingHorizontal: 2,
       paddingVertical: 8,
+    },
+    drawerVoiceParticipants: {
+      alignItems: "center",
+      flexDirection: "row",
+      gap: 5,
+      paddingBottom: 1,
+      paddingLeft: 48,
+      paddingTop: 1,
+    },
+    drawerVoiceAvatarStack: {
+      flexDirection: "row",
+    },
+    drawerVoiceAvatarWrap: {
+      borderColor: colors.bgSecondary,
+      borderRadius: 9,
+      borderWidth: 1,
+    },
+    drawerVoiceAvatarOverlap: {
+      marginLeft: -5,
+    },
+    drawerVoiceHiddenCount: {
+      color: colors.textMuted,
+      fontSize: 11,
+      fontWeight: "600" as const,
+    },
+    drawerChannelRowOuter: {
+      position: "relative",
+    },
+    drawerChannelUnreadBar: {
+      backgroundColor: colors.accentPrimary,
+      borderRadius: 4,
+      bottom: 6,
+      left: 0,
+      position: "absolute",
+      top: 6,
+      width: 3,
+    },
+    drawerChannelMentionBadge: {
+      alignItems: "center",
+      backgroundColor: colors.notificationBg,
+      borderRadius: 999,
+      height: 24,
+      justifyContent: "center",
+      marginLeft: 2,
+      width: 24,
     },
     drawerChannelSkeletonRow: {
       alignItems: "center",
@@ -1621,7 +1868,7 @@ function createStyles(
       borderColor: colors.channelTypeActiveSoftBg,
     },
     tabButtonText: {
-      color: colors.textPrimary,
+      color: colors.textMuted,
       flex: 1,
       fontSize: 14,
       fontWeight: "700",
@@ -1631,8 +1878,14 @@ function createStyles(
       opacity: 0.92,
     },
     sheetOption: {
+      alignItems: "center",
+      flexDirection: "row",
+      gap: 12,
       paddingHorizontal: 20,
       paddingVertical: 16,
+    },
+    sheetOptionIcon: {
+      flexShrink: 0,
     },
     sheetOptionPressed: {
       opacity: 0.7,

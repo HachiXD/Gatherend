@@ -52,7 +52,7 @@ function WikiPagePreviewCardInner({ page, onPress }: WikiPagePreviewCardProps) {
             <UserAvatar
               avatarUrl={page.author.avatarAsset?.url}
               username={page.author.username}
-              size={16}
+              size={20}
             />
             <Text
               style={[styles.metaText, { color: colors.textTertiary }]}
@@ -104,11 +104,11 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     meta: {
       alignItems: "center",
       flexDirection: "row",
-      gap: 5,
+      gap: 7,
     },
     metaText: {
       flex: 1,
-      fontSize: 13,
+      fontSize: 15,
     },
   });
 }

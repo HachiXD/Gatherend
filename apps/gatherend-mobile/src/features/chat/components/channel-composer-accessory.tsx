@@ -58,15 +58,6 @@ export const ChannelComposerAccessory = memo(function ChannelComposerAccessory({
       <View
         pointerEvents="none"
         style={styles.composerTopSpacer}
-        onLayout={(e) => {
-          const { x, y, width, height } = e.nativeEvent.layout;
-          console.log(
-            "[ComposerAccessory] topSpacer onLayout y=",
-            y,
-            "h=",
-            height,
-          );
-        }}
       />
       <ChatInput
         ref={chatInputRef}
@@ -81,20 +72,7 @@ export const ChannelComposerAccessory = memo(function ChannelComposerAccessory({
         onStickerPickerPress={handleStickerPickerPress}
       />
 
-      <View
-        style={[styles.pickerPanel, panelAnimatedStyle]}
-        onLayout={(e) => {
-          const { x, y, width, height } = e.nativeEvent.layout;
-          console.log(
-            "[ComposerAccessory] pickerPanel onLayout y=",
-            y,
-            "h=",
-            height,
-            "panelAnimatedStyle=",
-            JSON.stringify(panelAnimatedStyle),
-          );
-        }}
-      >
+      <View style={[styles.pickerPanel, panelAnimatedStyle]}>
         {activePanel === "sticker" ? (
           <StickerPanel
             profileId={profileId}

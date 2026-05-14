@@ -6,6 +6,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   View,
 } from "react-native";
@@ -132,13 +133,16 @@ export function ReportScreen({
           style={styles.flex}
         >
           <View style={styles.flex}>
-            <View
-              style={styles.scrollContent}
-              // ScrollView omitted: list is fixed-length, no overflow expected
+            <ScrollView
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
             >
               {/* Preview */}
               <View style={styles.section}>
-                <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
+                <Text
+                  style={[styles.sectionLabel, { color: colors.textMuted }]}
+                >
                   Contenido reportado
                 </Text>
                 <View
@@ -152,7 +156,10 @@ export function ReportScreen({
                 >
                   <Text
                     numberOfLines={3}
-                    style={[styles.previewText, { color: colors.textSecondary }]}
+                    style={[
+                      styles.previewText,
+                      { color: colors.textSecondary },
+                    ]}
                   >
                     {previewLabel}
                   </Text>
@@ -279,7 +286,7 @@ export function ReportScreen({
               {error && !success ? (
                 <Text style={styles.errorText}>{error}</Text>
               ) : null}
-            </View>
+            </ScrollView>
           </View>
 
           {/* Footer */}
@@ -350,20 +357,18 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       width: 36,
     },
     scrollContent: {
-      flex: 1,
       gap: 20,
-      overflow: "hidden",
       paddingHorizontal: 16,
       paddingTop: 20,
+      paddingBottom: 12,
     },
     section: {
       gap: 8,
     },
     sectionLabel: {
-      fontSize: 12,
+      fontSize: 15,
       fontWeight: "600",
       letterSpacing: 0.4,
-      textTransform: "uppercase",
     },
     previewBox: {
       borderRadius: 10,
@@ -372,7 +377,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       paddingVertical: 10,
     },
     previewText: {
-      fontSize: 14,
+      fontSize: 15,
       lineHeight: 20,
     },
     categoryList: {
@@ -392,11 +397,11 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       gap: 2,
     },
     categoryLabel: {
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: "600",
     },
     categoryDescription: {
-      fontSize: 12,
+      fontSize: 13,
       lineHeight: 16,
     },
     radio: {
@@ -408,7 +413,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     descriptionInput: {
       borderRadius: 10,
       borderWidth: 1,
-      fontSize: 14,
+      fontSize: 15,
       height: 88,
       lineHeight: 20,
       paddingHorizontal: 14,
@@ -422,7 +427,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     successText: {
       color: "#16a34a",
-      fontSize: 14,
+      fontSize: 15,
       lineHeight: 20,
     },
     errorText: {

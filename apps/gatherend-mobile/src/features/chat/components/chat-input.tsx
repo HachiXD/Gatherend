@@ -126,20 +126,6 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const resolvedBottomInset = bottomInset ?? insets.bottom;
     const bottomPadding = isComposerCompact ? 8 : 10 + resolvedBottomInset;
 
-    // TEMP DIAG
-    console.log(
-      "[ChatInput] insets.bottom=",
-      insets.bottom,
-      "bottomInset prop=",
-      bottomInset,
-      "resolvedBottomInset=",
-      resolvedBottomInset,
-      "bottomPadding=",
-      bottomPadding,
-      "isComposerCompact=",
-      isComposerCompact,
-    );
-
     function setMeasuredInputHeight(nextHeight: number) {
       inputHeightRef.current = nextHeight;
       setInputHeight(nextHeight);
@@ -299,22 +285,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const replyAuthor = replyTo ? getMessageAuthor(replyTo) : null;
 
     return (
-      <View
-        style={[styles.container, { paddingBottom: bottomPadding }]}
-        onLayout={(e) => {
-          const { x, y, width, height } = e.nativeEvent.layout;
-          console.log(
-            "[ChatInput] container onLayout x=",
-            x,
-            "y=",
-            y,
-            "width=",
-            width,
-            "height=",
-            height,
-          );
-        }}
-      >
+      <View style={[styles.container, { paddingBottom: bottomPadding }]}>
         {replyTo ? (
           <View
             style={[

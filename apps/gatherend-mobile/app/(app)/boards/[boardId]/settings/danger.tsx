@@ -112,7 +112,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     deleteButtonText: {
       color: "#ffe4e6",
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: "800",
     },
     panel: {

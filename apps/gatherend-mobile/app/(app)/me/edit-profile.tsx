@@ -1136,7 +1136,7 @@ const styles = StyleSheet.create({
   },
   saveBtnText: {
     color: "#fff",
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "700",
   },
 
@@ -1217,10 +1217,8 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     color: "#64748b",
-    fontSize: 11,
+    fontSize: 15,
     fontWeight: "700",
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
   },
   sectionCard: {
     borderRadius: 16,
@@ -1236,9 +1234,8 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     color: "#64748b",
-    fontSize: 11,
+    fontSize: 15,
     fontWeight: "700",
-    textTransform: "uppercase",
   },
   fieldDivider: {
     height: 1,
@@ -1253,7 +1250,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   validationMsg: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "600",
     marginTop: 1,
   },
@@ -1370,7 +1367,7 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   langToggleText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "700",
   },
 

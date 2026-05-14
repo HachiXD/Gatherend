@@ -32,6 +32,7 @@
     "expo-haptics": "~55.0.14",
     "expo-image": "~55.0.9",
     "expo-image-picker": "^55.0.19",
+    "expo-linear-gradient": "~55.0.14",
     "expo-linking": "~55.0.14",
     "expo-modules-core": "~55.0.23",
     "expo-network": "~55.0.13",

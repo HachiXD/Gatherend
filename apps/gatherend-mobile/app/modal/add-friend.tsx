@@ -94,7 +94,7 @@ export default function AddFriendScreen() {
         >
           <View style={styles.section}>
             <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
-              ENVIAR SOLICITUD
+              Enviar Solicitud
             </Text>
             <Text style={[styles.sectionHint, { color: colors.textMuted }]}>
               Usa el formato usuario/discriminador (ej. alejandro/g5x)
@@ -182,7 +182,7 @@ export default function AddFriendScreen() {
 
           <View style={styles.section}>
             <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
-              SOLICITUDES PENDIENTES
+              Solicitudes Pendientes
             </Text>
 
             {isLoadingRequests ? (
@@ -364,9 +364,8 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       gap: 8,
     },
     sectionLabel: {
-      fontSize: 11,
+      fontSize: 15,
       fontWeight: "600",
-      letterSpacing: 0.8,
     },
     sectionHint: {
       fontSize: 13,
@@ -383,7 +382,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     input: {
       flex: 1,
-      fontSize: 14,
+      fontSize: 15,
       height: 36,
     },
     sendButton: {
@@ -422,7 +421,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       paddingVertical: 24,
     },
     emptyText: {
-      fontSize: 14,
+      fontSize: 15,
     },
     requestList: {
       gap: 8,
@@ -446,7 +445,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       justifyContent: "center",
     },
     avatarInitial: {
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: "700",
     },
     requestCopy: {
@@ -454,7 +453,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       minWidth: 0,
     },
     requestUsername: {
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: "600",
     },
     requestDiscriminator: {

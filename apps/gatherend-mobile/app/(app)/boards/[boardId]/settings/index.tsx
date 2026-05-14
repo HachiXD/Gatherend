@@ -64,7 +64,7 @@ export default function BoardSettingsIndexScreen() {
       alwaysBounceVertical={false}
     >
       <View style={styles.list}>
-        {sections.map((section) => (
+        {sections.map((section, index) => (
           <Pressable
             key={section.id}
             onPress={() => {
@@ -81,29 +81,33 @@ export default function BoardSettingsIndexScreen() {
             <View style={styles.iconBox}>
               <Ionicons
                 name={section.icon as keyof typeof Ionicons.glyphMap}
-                size={19}
+                size={22}
                 color={section.id === "danger" ? "#fb7185" : colors.textPrimary}
               />
             </View>
-            <View style={styles.rowCopy}>
-              <Text
-                style={[
-                  styles.rowTitle,
-                  section.id === "danger" ? styles.dangerText : null,
-                ]}
-                numberOfLines={1}
-              >
-                {section.title}
-              </Text>
-              <Text style={styles.rowDescription} numberOfLines={2}>
-                {section.description}
-              </Text>
+            <View
+              style={[
+                styles.rowCopy,
+                index < sections.length - 1 ? styles.rowCopyBordered : null,
+              ]}
+            >
+              <View style={styles.rowCopyInner}>
+                <Text
+                  style={[
+                    styles.rowTitle,
+                    section.id === "danger" ? styles.dangerText : null,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {section.title}
+                </Text>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={colors.textMuted}
+              />
             </View>
-            <Ionicons
-              name="chevron-forward"
-              size={18}
-              color={colors.textMuted}
-            />
           </Pressable>
         ))}
       </View>
@@ -139,7 +143,11 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       width: 40,
     },
     list: {
-      gap: 8,
+      backgroundColor: colors.bgEditForm,
+      borderColor: colors.borderPrimary,
+      borderRadius: 12,
+      borderWidth: 1,
+      overflow: "hidden",
     },
     refreshingRow: {
       alignItems: "center",
@@ -154,26 +162,31 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     row: {
       alignItems: "center",
-      backgroundColor: colors.bgEditForm,
-      borderColor: colors.borderPrimary,
-      borderRadius: 12,
-      borderWidth: 1,
+      backgroundColor: "transparent",
       flexDirection: "row",
       gap: 12,
       minHeight: 72,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
+      paddingLeft: 12,
     },
     rowCopy: {
+      alignItems: "center",
+      flex: 1,
+      flexDirection: "row",
+      minHeight: 64,
+      minWidth: 0,
+      paddingRight: 14,
+    },
+    rowCopyBordered: {
+      borderBottomColor: colors.borderPrimary,
+      borderBottomWidth: 1,
+    },
+    rowCopyInner: {
       flex: 1,
       gap: 2,
       minWidth: 0,
+      paddingVertical: 10,
     },
-    rowDescription: {
-      color: colors.textMuted,
-      fontSize: 12,
-      lineHeight: 17,
-    },
+
     rowPressed: {
       opacity: 0.9,
     },

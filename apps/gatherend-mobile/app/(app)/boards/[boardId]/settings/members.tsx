@@ -34,8 +34,8 @@ import { Text } from "@/src/components/app-typography";
 const ROLE_LABELS: Record<BoardMemberRole, string> = {
   OWNER: "Owner",
   ADMIN: "Admin",
-  MODERATOR: "Moderator",
-  GUEST: "Guest",
+  MODERATOR: "Moderador",
+  GUEST: "Invitado",
 };
 
 export default function BoardMembersSettingsScreen() {
@@ -496,7 +496,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     cancelButtonText: {
       color: colors.textPrimary,
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: "800",
     },
     destructiveRow: {
@@ -505,12 +505,12 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     destructiveRowText: {
       color: "#fb7185",
       flex: 1,
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: "700",
     },
     discriminator: {
       color: colors.textTertiary,
-      fontSize: 11,
+      fontSize: 13,
     },
     footerLoader: {
       paddingVertical: 18,
@@ -527,7 +527,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     memberName: {
       color: colors.textPrimary,
       flex: 1,
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: "700",
     },
     metaBadge: {
@@ -623,7 +623,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     sheetRowText: {
       color: colors.textPrimary,
       flex: 1,
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: "700",
     },
     sheetSection: {
@@ -631,7 +631,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     sheetSubtitle: {
       color: colors.textMuted,
-      fontSize: 12,
+      fontSize: 13,
     },
     sheetTitle: {
       color: colors.textPrimary,
@@ -640,7 +640,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     summary: {
       color: colors.textMuted,
-      fontSize: 14,
+      fontSize: 15,
       paddingBottom: 12,
     },
     warningBadge: {

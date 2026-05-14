@@ -200,7 +200,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     actionButtonText: {
       color: colors.textPrimary,
-      fontSize: 13,
+      fontSize: 15,
       fontWeight: "700",
     },
     autoBadge: {
@@ -215,8 +215,8 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     description: {
       color: colors.textMuted,
-      fontSize: 11,
-      lineHeight: 16,
+      fontSize: 13,
+      lineHeight: 18,
       marginTop: 2,
     },
     empty: {
@@ -244,12 +244,12 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     muted: {
       color: colors.textTertiary,
-      fontSize: 11,
+      fontSize: 13,
     },
     name: {
       color: colors.textPrimary,
       flex: 1,
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: "700",
     },
     nameRow: {
@@ -287,7 +287,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     summary: {
       color: colors.textMuted,
-      fontSize: 14,
+      fontSize: 15,
       paddingBottom: 12,
     },
   });

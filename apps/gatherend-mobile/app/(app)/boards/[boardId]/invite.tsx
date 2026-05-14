@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams } from "expo-router";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -15,6 +15,7 @@ import { useUpdateInviteCode } from "@/src/features/invite/hooks/use-update-invi
 import { useTheme } from "@/src/theme/theme-provider";
 import { authBaseUrl } from "@/src/lib/env";
 import { Text } from "@/src/components/app-typography";
+import { BottomSheet } from "@/src/components/bottom-sheet";
 
 const MODERATOR_ROLES = new Set(["OWNER", "ADMIN"]);
 
@@ -28,6 +29,7 @@ export default function BoardInviteScreen() {
 
   const canManage = MODERATOR_ROLES.has(board?.currentMember?.role ?? "");
   const inviteUrl = board ? `${authBaseUrl}/invite/${board.inviteCode}` : "";
+  const [inviteSheetVisible, setInviteSheetVisible] = useState(false);
 
   const handleShare = () => {
     if (!board?.inviteEnabled || !inviteUrl) return;
@@ -76,86 +78,104 @@ export default function BoardInviteScreen() {
       {canManage && (
         <View style={styles.section}>
           <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
-            PERMITIR INVITACIONES
+            Permitir Invitaciones
           </Text>
-          <View
-            style={[
+          <Pressable
+            disabled={isPending}
+            onPress={() => setInviteSheetVisible(true)}
+            style={({ pressed }) => [
               styles.row,
               {
                 borderColor: colors.borderPrimary,
                 backgroundColor: colors.bgEditForm,
               },
+              pressed && styles.pressed,
             ]}
           >
             <Text style={[styles.rowLabel, { color: colors.textPrimary }]}>
-              Invitaciones habilitadas
+              {board.inviteEnabled
+                ? "Invitaciones habilitadas"
+                : "Invitaciones deshabilitadas"}
             </Text>
-            <View
-              style={[styles.toggle, { borderColor: colors.borderPrimary }]}
+            <Ionicons
+              color={colors.textMuted}
+              name="chevron-forward"
+              size={18}
+            />
+          </Pressable>
+          <BottomSheet
+            visible={inviteSheetVisible}
+            onClose={() => setInviteSheetVisible(false)}
+          >
+            <Pressable
+              onPress={() => {
+                setInviteSheetVisible(false);
+                handleSetEnabled(true);
+              }}
+              style={({ pressed }) => [
+                styles.sheetOption,
+                pressed && styles.pressed,
+              ]}
             >
-              <Pressable
-                onPress={() => handleSetEnabled(true)}
-                disabled={isPending}
+              <Ionicons
+                color={
+                  board.inviteEnabled ? colors.accentPrimary : colors.textMuted
+                }
+                name={
+                  board.inviteEnabled ? "radio-button-on" : "radio-button-off"
+                }
+                size={20}
+              />
+              <Text
                 style={[
-                  styles.toggleOption,
+                  styles.sheetOptionText,
                   board.inviteEnabled
-                    ? [
-                        styles.toggleOptionActive,
-                        { backgroundColor: colors.tabButtonBg },
-                      ]
-                    : null,
+                    ? { color: colors.accentPrimary }
+                    : { color: colors.textPrimary },
                 ]}
               >
-                <Text
-                  style={[
-                    styles.toggleOptionText,
-                    {
-                      color: board.inviteEnabled
-                        ? colors.textPrimary
-                        : colors.textMuted,
-                    },
-                  ]}
-                >
-                  Sí
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={() => handleSetEnabled(false)}
-                disabled={isPending}
+                Invitaciones habilitadas
+              </Text>
+            </Pressable>
+            <View style={styles.sheetDivider} />
+            <Pressable
+              onPress={() => {
+                setInviteSheetVisible(false);
+                handleSetEnabled(false);
+              }}
+              style={({ pressed }) => [
+                styles.sheetOption,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Ionicons
+                color={
+                  !board.inviteEnabled ? colors.accentPrimary : colors.textMuted
+                }
+                name={
+                  !board.inviteEnabled ? "radio-button-on" : "radio-button-off"
+                }
+                size={20}
+              />
+              <Text
                 style={[
-                  styles.toggleOption,
-                  styles.toggleOptionRight,
-                  { borderLeftColor: colors.borderPrimary },
+                  styles.sheetOptionText,
                   !board.inviteEnabled
-                    ? [
-                        styles.toggleOptionActive,
-                        { backgroundColor: colors.tabButtonBg },
-                      ]
-                    : null,
+                    ? { color: colors.accentPrimary }
+                    : { color: colors.textPrimary },
                 ]}
               >
-                <Text
-                  style={[
-                    styles.toggleOptionText,
-                    {
-                      color: !board.inviteEnabled
-                        ? colors.textPrimary
-                        : colors.textMuted,
-                    },
-                  ]}
-                >
-                  No
-                </Text>
-              </Pressable>
-            </View>
-          </View>
+                Invitaciones deshabilitadas
+              </Text>
+            </Pressable>
+          </BottomSheet>
         </View>
       )}
 
       {/* Invite link */}
       <View style={styles.section}>
         <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
-          LINK DE INVITACIÓN
+          Link de Invitación
         </Text>
 
         <View
@@ -206,13 +226,13 @@ export default function BoardInviteScreen() {
         )}
 
         {/* Regenerate — solo OWNER/ADMIN */}
-        {canManage && (
+        {canManage && board.inviteEnabled && (
           <Pressable
             onPress={handleRegenerate}
-            disabled={isPending || !board.inviteEnabled}
+            disabled={isPending}
             style={({ pressed }) => [
               styles.regenerateButton,
-              (isPending || !board.inviteEnabled) && styles.disabledButton,
+              isPending && styles.disabledButton,
               pressed && styles.pressed,
             ]}
           >
@@ -250,9 +270,9 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       gap: 8,
     },
     sectionLabel: {
-      fontSize: 11,
-      fontWeight: "600",
-      letterSpacing: 0.8,
+      fontSize: 15,
+      fontWeight: "700",
+      letterSpacing: 0.6,
     },
     row: {
       alignItems: "center",
@@ -264,7 +284,8 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       paddingVertical: 10,
     },
     rowLabel: {
-      fontSize: 14,
+      fontSize: 15,
+      paddingVertical: 8,
     },
     toggle: {
       borderRadius: 8,
@@ -288,12 +309,27 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       fontSize: 13,
       fontWeight: "600",
     },
+    sheetOption: {
+      alignItems: "center",
+      flexDirection: "row",
+      gap: 12,
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+    },
+    sheetOptionText: {
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    sheetDivider: {
+      borderTopColor: colors.borderPrimary,
+      borderTopWidth: 1,
+    },
     linkBox: {
       alignItems: "center",
       borderRadius: 10,
       borderWidth: 1,
       flexDirection: "row",
-      gap: 8,
+      gap: 12,
       paddingHorizontal: 12,
       paddingVertical: 10,
     },
@@ -302,8 +338,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       minWidth: 0,
     },
     linkText: {
-      fontFamily: "monospace",
-      fontSize: 13,
+      fontSize: 15,
     },
     shareButton: {
       alignItems: "center",
@@ -313,7 +348,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       width: 36,
     },
     disabledNote: {
-      fontSize: 12,
+      fontSize: 13,
       lineHeight: 17,
     },
     regenerateButton: {
@@ -324,7 +359,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       paddingVertical: 4,
     },
     regenerateText: {
-      fontSize: 12,
+      fontSize: 13,
     },
     disabledButton: {
       opacity: 0.4,

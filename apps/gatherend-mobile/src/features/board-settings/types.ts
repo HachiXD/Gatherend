@@ -1,4 +1,7 @@
-import type { BoardImageAsset, BoardWithData } from "@/src/features/boards/types/board";
+import type {
+  BoardImageAsset,
+  BoardWithData,
+} from "@/src/features/boards/types/board";
 import type { MemberRole } from "../boards/member-role";
 
 export type { MemberRole as BoardMemberRole } from "../boards/member-role";
@@ -13,7 +16,6 @@ export type BoardSettingsTabId =
 export type BoardSettingsSection = {
   id: BoardSettingsTabId;
   title: string;
-  description: string;
   icon: string;
   route: string;
 };

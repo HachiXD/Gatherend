@@ -43,12 +43,17 @@ function PodiumSlot({ member, rank, styles, colors }: PodiumSlotProps) {
           username={member.profile.username}
           size={avatarSize}
         />
-        <View style={[styles.podiumRankBadge, { backgroundColor: accentColor }]}>
+        <View
+          style={[styles.podiumRankBadge, { backgroundColor: accentColor }]}
+        >
           <Text style={styles.podiumRankBadgeText}>{rank}</Text>
         </View>
       </View>
 
-      <Text numberOfLines={1} style={[styles.podiumName, rank === 1 ? styles.podiumNameFirst : null]}>
+      <Text
+        numberOfLines={1}
+        style={[styles.podiumName, rank === 1 ? styles.podiumNameFirst : null]}
+      >
         {member.profile.username}
       </Text>
 
@@ -56,15 +61,17 @@ function PodiumSlot({ member, rank, styles, colors }: PodiumSlotProps) {
         <Text style={[styles.podiumStatText, { color: accentColor }]}>
           Nv. {member.level}
         </Text>
-        <Text style={styles.podiumXp}>
-          {member.xp.toLocaleString()} xp
-        </Text>
+        <Text style={styles.podiumXp}>{member.xp.toLocaleString()} xp</Text>
       </View>
 
       <View
         style={[
           styles.podiumColumn,
-          { height: columnHeight, backgroundColor: accentColor + "28", borderColor: accentColor + "60" },
+          {
+            height: columnHeight,
+            backgroundColor: accentColor + "28",
+            borderColor: accentColor + "60",
+          },
         ]}
       >
         <Text style={[styles.podiumColumnNumber, { color: accentColor }]}>
@@ -90,7 +97,12 @@ function Podium({ top3, styles, colors }: PodiumProps) {
     <View style={styles.podiumContainer}>
       <View style={styles.podiumRow}>
         {second ? (
-          <PodiumSlot member={second} rank={2} styles={styles} colors={colors} />
+          <PodiumSlot
+            member={second}
+            rank={2}
+            styles={styles}
+            colors={colors}
+          />
         ) : (
           <View style={styles.podiumSlot} />
         )}
@@ -265,29 +277,29 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     podiumRankBadgeText: {
       color: "#fff",
-      fontSize: 10,
+      fontSize: 13,
       fontWeight: "800",
     },
     podiumName: {
       color: colors.textPrimary,
-      fontSize: 12,
+      fontSize: 15,
       fontWeight: "700",
       textAlign: "center",
     },
     podiumNameFirst: {
-      fontSize: 13,
+      fontSize: 17,
     },
     podiumStats: {
       alignItems: "center",
       gap: 1,
     },
     podiumStatText: {
-      fontSize: 11,
+      fontSize: 13,
       fontWeight: "800",
     },
     podiumXp: {
       color: colors.textTertiary,
-      fontSize: 10,
+      fontSize: 13,
       fontWeight: "600",
     },
     podiumColumn: {
@@ -337,12 +349,12 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     memberName: {
       color: colors.textPrimary,
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: "700",
     },
     discriminator: {
       color: colors.textTertiary,
-      fontSize: 11,
+      fontSize: 13,
     },
     statsContainer: {
       alignItems: "flex-end",
@@ -361,12 +373,12 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     statLabel: {
       color: colors.textMuted,
-      fontSize: 9,
+      fontSize: 13,
       fontWeight: "700",
     },
     statValue: {
       color: colors.textPrimary,
-      fontSize: 11,
+      fontSize: 13,
       fontWeight: "800",
     },
     footerLoader: {

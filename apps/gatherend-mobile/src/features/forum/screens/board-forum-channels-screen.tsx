@@ -62,25 +62,14 @@ export default function BoardForumChannelsScreen() {
           ]}
         >
           <View style={styles.iconWrap}>
-            <Ionicons
-              color={colors.textPrimary}
-              name="chatbox-outline"
-              size={22}
-            />
+            <Ionicons color={colors.textPrimary} name="chatbox" size={22} />
           </View>
           <View style={styles.copy}>
             <Text numberOfLines={1} style={styles.title}>
               /{item.name}
             </Text>
-            <Text numberOfLines={1} style={styles.meta}>
-              Foro de posts
-            </Text>
           </View>
-          <Ionicons
-            color={colors.textMuted}
-            name="chevron-forward"
-            size={18}
-          />
+          <Ionicons color={colors.textMuted} name="chevron-forward" size={18} />
         </Pressable>
       )}
     />
