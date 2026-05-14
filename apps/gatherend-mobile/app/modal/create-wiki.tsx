@@ -98,7 +98,7 @@ export default function CreateWikiModalScreen() {
                 context="wiki_page_image"
                 label="Imagen de la página"
                 onChange={setImageUpload}
-                size={96}
+                size={120}
                 value={imageUpload}
               />
             </View>
@@ -159,7 +159,7 @@ export default function CreateWikiModalScreen() {
             ]}
           >
             {isSubmitting ? (
-              <ActivityIndicator color={colors.bgPrimary} size="small" />
+              <ActivityIndicator color={colors.textPrimary} size="small" />
             ) : (
               <Text style={styles.publishButtonText}>Publicar</Text>
             )}
@@ -196,10 +196,6 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     closeButton: {
       alignItems: "center",
-      backgroundColor: colors.bgQuaternary,
-      borderColor: colors.borderPrimary,
-      borderRadius: 14,
-      borderWidth: 1,
       height: 36,
       justifyContent: "center",
       width: 36,
@@ -221,10 +217,9 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     label: {
       color: colors.textSubtle,
-      fontSize: 12,
+      fontSize: 15,
       fontWeight: "700",
       letterSpacing: 0.6,
-      textTransform: "uppercase",
     },
     input: {
       backgroundColor: colors.bgInput,
@@ -241,7 +236,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     helperText: {
       color: colors.textMuted,
-      fontSize: 12,
+      fontSize: 13,
     },
     errorBox: {
       backgroundColor: "rgba(239, 68, 68, 0.12)",
@@ -265,7 +260,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     publishButton: {
       alignItems: "center",
-      backgroundColor: colors.textPrimary,
+      backgroundColor: colors.tabActiveBg,
       borderRadius: 18,
       justifyContent: "center",
       minHeight: 52,
@@ -275,7 +270,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       opacity: 0.45,
     },
     publishButtonText: {
-      color: colors.bgPrimary,
+      color: colors.textPrimary,
       fontSize: 15,
       fontWeight: "700",
     },

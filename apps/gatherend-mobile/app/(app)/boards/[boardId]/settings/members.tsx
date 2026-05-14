@@ -20,6 +20,7 @@ import {
   useBoardSettingsMembers,
 } from "@/src/features/board-settings/hooks/use-board-settings";
 import type {
+  BoardMemberPermission,
   BoardMemberRole,
   BoardSettingsMember,
 } from "@/src/features/board-settings/types";
@@ -37,6 +38,8 @@ const ROLE_LABELS: Record<BoardMemberRole, string> = {
   MODERATOR: "Moderador",
   GUEST: "Invitado",
 };
+
+const WRITE_WIKI_PERMISSION: BoardMemberPermission = "WRITE_WIKI";
 
 export default function BoardMembersSettingsScreen() {
   const { boardId } = useLocalSearchParams<{ boardId?: string }>();
@@ -57,6 +60,7 @@ export default function BoardMembersSettingsScreen() {
 
   const busyMemberId =
     actions.role.variables?.memberId ??
+    actions.permissions.variables?.memberId ??
     actions.kick.variables?.memberId ??
     actions.ban.variables?.memberId ??
     actions.warn.variables?.memberId ??
@@ -64,6 +68,7 @@ export default function BoardMembersSettingsScreen() {
     "";
   const isActionPending =
     actions.role.isPending ||
+    actions.permissions.isPending ||
     actions.kick.isPending ||
     actions.ban.isPending ||
     actions.warn.isPending ||
@@ -92,6 +97,27 @@ export default function BoardMembersSettingsScreen() {
       );
     },
     [actions.role, handleError],
+  );
+
+  const handleWriteWikiPermissionChange = useCallback(
+    (member: BoardSettingsMember, enabled: boolean) => {
+      const currentPermissions = member.permissions ?? [];
+      const nextPermissions = enabled
+        ? Array.from(new Set([...currentPermissions, WRITE_WIKI_PERMISSION]))
+        : currentPermissions.filter(
+            (permission) => permission !== WRITE_WIKI_PERMISSION,
+          );
+
+      setSelectedMember(null);
+      actions.permissions.mutate(
+        { memberId: member.id, nextPermissions },
+        {
+          onError: (error) =>
+            handleError("No se pudieron cambiar los permisos", error),
+        },
+      );
+    },
+    [actions.permissions, handleError],
   );
 
   const handleWarn = useCallback(
@@ -204,6 +230,9 @@ export default function BoardMembersSettingsScreen() {
             </Text>
             <View style={styles.metaRow}>
               <Text style={styles.metaBadge}>Lv. {item.level}</Text>
+              {item.permissions?.includes(WRITE_WIKI_PERMISSION) ? (
+                <Text style={styles.metaBadge}>Wiki writer</Text>
+              ) : null}
               <Text
                 style={[
                   styles.metaBadge,
@@ -275,6 +304,7 @@ export default function BoardMembersSettingsScreen() {
 
   const assignableRoles = actorRole ? getAssignableRoles(actorRole) : [];
   const canWarnOrBan = actorRole === "OWNER" || actorRole === "ADMIN";
+  const canManagePermissions = actorRole === "OWNER" || actorRole === "ADMIN";
 
   return (
     <>
@@ -367,6 +397,43 @@ export default function BoardMembersSettingsScreen() {
                       </Text>
                     </Pressable>
                   ))}
+
+                {canManagePermissions ? (
+                  <Pressable
+                    disabled={isActionPending}
+                    onPress={() =>
+                      handleWriteWikiPermissionChange(
+                        selectedMember,
+                        !selectedMember.permissions?.includes(
+                          WRITE_WIKI_PERMISSION,
+                        ),
+                      )
+                    }
+                    style={({ pressed }) => [
+                      styles.sheetRow,
+                      pressed ? styles.pressed : null,
+                    ]}
+                  >
+                    <Ionicons
+                      name={
+                        selectedMember.permissions?.includes(
+                          WRITE_WIKI_PERMISSION,
+                        )
+                          ? "remove-circle-outline"
+                          : "create-outline"
+                      }
+                      size={18}
+                      color={colors.textPrimary}
+                    />
+                    <Text style={styles.sheetRowText}>
+                      {selectedMember.permissions?.includes(
+                        WRITE_WIKI_PERMISSION,
+                      )
+                        ? "Quitar permiso de escribir wiki"
+                        : "Permitir escribir wiki"}
+                    </Text>
+                  </Pressable>
+                ) : null}
 
                 {canWarnOrBan ? (
                   <>

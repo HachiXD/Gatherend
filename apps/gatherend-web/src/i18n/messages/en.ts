@@ -1291,6 +1291,12 @@ export const en: TranslationKeys = {
         "Android may ask you to allow installs from this source before installing the APK.",
       releases: [
         {
+          version: "1.2.4",
+          notes:
+            "Se soluciono un bug en el drawer y se termino los modales de post y wiki",
+          href: "https://downloads.gatherend.com/android/gatherend-android-1.2.4.apk",
+        },
+        {
           version: "1.2.3",
           notes: "Se pulio la UI y UX.",
           href: "https://downloads.gatherend.com/android/gatherend-android-1.2.3.apk",

@@ -2,9 +2,10 @@ import type {
   BoardImageAsset,
   BoardWithData,
 } from "@/src/features/boards/types/board";
-import type { MemberRole } from "../boards/member-role";
+import type { MemberPermission, MemberRole } from "../boards/member-role";
 
 export type { MemberRole as BoardMemberRole } from "../boards/member-role";
+export type { MemberPermission as BoardMemberPermission } from "../boards/member-role";
 
 export type BoardSettingsTabId =
   | "general"
@@ -42,6 +43,7 @@ export type BoardSettingsMemberProfile = {
 export type BoardSettingsMember = {
   id: string;
   role: MemberRole;
+  permissions: MemberPermission[];
   profileId: string;
   boardId: string;
   xp: number;

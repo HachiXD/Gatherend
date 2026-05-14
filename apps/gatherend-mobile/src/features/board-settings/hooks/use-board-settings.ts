@@ -11,6 +11,7 @@ import {
   refreshBoard,
   removeBoardWarning,
   unbanBoardMember,
+  updateBoardMemberPermissions,
   updateBoardMemberRole,
   updateBoardSettings,
   warnBoardMember,
@@ -18,6 +19,7 @@ import {
 } from "../api/board-settings-api";
 import type {
   BoardBansPage,
+  BoardMemberPermission,
   BoardMembersPage,
   BoardMemberRole,
   BoardModerationActionsPage,
@@ -180,6 +182,33 @@ export function useBoardMemberActions(boardId: string) {
     },
   });
 
+  const permissions = useMutation({
+    mutationFn: ({
+      memberId,
+      nextPermissions,
+    }: {
+      memberId: string;
+      nextPermissions: BoardMemberPermission[];
+    }) => updateBoardMemberPermissions(boardId, memberId, nextPermissions),
+    onSuccess: (_result, { memberId, nextPermissions }) => {
+      queryClient.setQueryData<InfiniteData<BoardMembersPage>>(
+        boardMembersQueryKey(boardId),
+        (prev) =>
+          prev
+            ? {
+                ...prev,
+                pages: prev.pages.map((page) =>
+                  patchMemberPage(page, memberId, (member) => ({
+                    ...member,
+                    permissions: nextPermissions,
+                  })),
+                ),
+              }
+            : prev,
+      );
+    },
+  });
+
   const kick = useMutation({
     mutationFn: ({
       memberId,
@@ -310,7 +339,7 @@ export function useBoardMemberActions(boardId: string) {
     },
   });
 
-  return { role, kick, ban, warn, removeWarning };
+  return { role, permissions, kick, ban, warn, removeWarning };
 }
 
 export function useUnbanBoardMember(boardId: string) {

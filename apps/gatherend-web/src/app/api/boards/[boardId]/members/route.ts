@@ -73,6 +73,7 @@ export async function GET(
       select: {
         id: true,
         role: true,
+        permissions: true,
         profileId: true,
         boardId: true,
         xp: true,

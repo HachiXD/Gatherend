@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
 import { expressMemberCache } from "@/lib/redis";
-import { MemberRole } from "@prisma/client";
+import { MemberPermission, MemberRole } from "@prisma/client";
 import {
   ASSIGNABLE_ROLES,
   assignableBy,
@@ -54,13 +54,25 @@ async function notifyMemberRoleChanged(
   }
 }
 
+function isValidMemberPermission(value: unknown): value is MemberPermission {
+  return value === "WRITE_WIKI";
+}
+
+function parsePermissions(value: unknown): MemberPermission[] | null {
+  if (!Array.isArray(value)) return null;
+  const uniquePermissions = Array.from(new Set(value));
+  if (!uniquePermissions.every(isValidMemberPermission)) return null;
+  return uniquePermissions as MemberPermission[];
+}
+
 /**
  * PATCH /api/boards/[boardId]/members/[memberId]
  *
- * Change a member's role with proper hierarchy validation:
+ * Change a member's role or permissions with proper hierarchy validation:
  * - OWNER can assign: ADMIN, MODERATOR, GUEST to anyone below them
  * - ADMIN can assign: MODERATOR, GUEST to anyone below them (not other ADMINs)
  * - MODERATOR/GUEST cannot change roles
+ * - OWNER and ADMIN can assign permissions to members below them
  *
  * Note: For kicking members, use POST /api/boards/[boardId]/kick
  */
@@ -106,22 +118,42 @@ export async function PATCH(
     }
 
     // Validate body structure
-    if (typeof body !== "object" || body === null || !("role" in body)) {
+    if (
+      typeof body !== "object" ||
+      body === null ||
+      (!("role" in body) && !("permissions" in body))
+    ) {
       return NextResponse.json(
-        { error: "Missing role in request body" },
+        { error: "Missing role or permissions in request body" },
         { status: 400 },
       );
     }
 
-    const { role: newRole } = body as { role: unknown };
+    const { role: newRole, permissions: nextPermissionsValue } = body as {
+      role?: unknown;
+      permissions?: unknown;
+    };
+    const isRoleUpdate = "role" in body;
+    const isPermissionsUpdate = "permissions" in body;
 
     // Validate role is a valid MemberRole and assignable
-    if (
+    if (isRoleUpdate && (
       typeof newRole !== "string" ||
       !ASSIGNABLE_ROLES.includes(newRole as MemberRole)
-    ) {
+    )) {
       return NextResponse.json(
         { error: "Invalid role. Must be ADMIN, MODERATOR, or GUEST" },
+        { status: 400 },
+      );
+    }
+
+    const nextPermissions = isPermissionsUpdate
+      ? parsePermissions(nextPermissionsValue)
+      : null;
+
+    if (isPermissionsUpdate && !nextPermissions) {
+      return NextResponse.json(
+        { error: "Invalid permissions" },
         { status: 400 },
       );
     }
@@ -136,17 +168,6 @@ export async function PATCH(
 
       if (!actor) {
         throw new Error("NOT_A_MEMBER");
-      }
-
-      // 2. Check if actor can assign roles at all
-      const rolesActorCanAssign = assignableBy(actor.role);
-      if (rolesActorCanAssign.length === 0) {
-        throw new Error("FORBIDDEN");
-      }
-
-      // 3. Check if actor can assign this specific role
-      if (!canAssignRole(actor.role, newRole as MemberRole)) {
-        throw new Error("CANNOT_ASSIGN_ROLE");
       }
 
       // 4. Find the target member
@@ -174,23 +195,50 @@ export async function PATCH(
         throw new Error("INSUFFICIENT_PERMISSIONS");
       }
 
-      // 8. Update the member's role
+      if (isRoleUpdate) {
+        // Check if actor can assign roles at all
+        const rolesActorCanAssign = assignableBy(actor.role);
+        if (rolesActorCanAssign.length === 0) {
+          throw new Error("FORBIDDEN");
+        }
+
+        // Check if actor can assign this specific role
+        if (!canAssignRole(actor.role, newRole as MemberRole)) {
+          throw new Error("CANNOT_ASSIGN_ROLE");
+        }
+      }
+
+      if (
+        isPermissionsUpdate &&
+        actor.role !== "OWNER" &&
+        actor.role !== "ADMIN"
+      ) {
+        throw new Error("CANNOT_ASSIGN_PERMISSIONS");
+      }
+
+      // 8. Update the member's role and/or permissions
       const updatedMember = await tx.member.update({
         where: { id: target.id },
-        data: { role: newRole as MemberRole },
-        select: { id: true, profileId: true, role: true },
+        data: {
+          ...(isRoleUpdate ? { role: newRole as MemberRole } : {}),
+          ...(isPermissionsUpdate ? { permissions: nextPermissions! } : {}),
+        },
+        select: { id: true, profileId: true, role: true, permissions: true },
       });
 
       return updatedMember;
     });
 
     await expressMemberCache.invalidate(boardId, result.profileId);
-    void notifyMemberRoleChanged(boardId, result.profileId, result.role);
+    if (isRoleUpdate) {
+      void notifyMemberRoleChanged(boardId, result.profileId, result.role);
+    }
 
     return NextResponse.json({
       success: true,
       memberId: result.id,
       role: result.role,
+      permissions: result.permissions,
     });
   } catch (error) {
     // Handle known transaction errors
@@ -206,6 +254,10 @@ export async function PATCH(
         },
         CANNOT_ASSIGN_ROLE: {
           message: "You cannot assign this role",
+          status: 403,
+        },
+        CANNOT_ASSIGN_PERMISSIONS: {
+          message: "You don't have permission to change member permissions",
           status: 403,
         },
         TARGET_NOT_FOUND: { message: "Member not found", status: 404 },

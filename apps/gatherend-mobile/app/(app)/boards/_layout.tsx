@@ -574,6 +574,7 @@ export default function BoardShellLayout() {
         useNativeDriver: true,
       }).start(({ finished }) => {
         if (finished) {
+          foregroundX.setValue(0);
           onFinish?.();
         }
       });

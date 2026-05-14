@@ -380,7 +380,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       minWidth: 0,
     },
     headerTitle: {
-      fontSize: 16,
+      fontSize: 22,
       fontWeight: "600",
     },
     closeButton: {
@@ -394,7 +394,7 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       paddingVertical: 4,
     },
     headerAction: {
-      fontSize: 15,
+      fontSize: 17,
     },
     headerActionPublish: {
       fontWeight: "600",

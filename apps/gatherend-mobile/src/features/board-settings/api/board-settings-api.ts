@@ -4,6 +4,7 @@ import {
 } from "@/src/services/next-api/next-api-fetch";
 import type {
   BoardBansPage,
+  BoardMemberPermission,
   BoardMembersPage,
   BoardMemberRole,
   BoardModerationActionsPage,
@@ -85,6 +86,27 @@ export async function updateBoardMemberRole(
 
   if (!response.ok) {
     throw new Error(await readNextApiError(response, "No se pudo cambiar el rol"));
+  }
+}
+
+export async function updateBoardMemberPermissions(
+  boardId: string,
+  memberId: string,
+  permissions: BoardMemberPermission[],
+) {
+  const response = await nextApiFetch(
+    `/api/boards/${boardId}/members/${memberId}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ permissions }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await readNextApiError(response, "No se pudieron cambiar los permisos"),
+    );
   }
 }
 

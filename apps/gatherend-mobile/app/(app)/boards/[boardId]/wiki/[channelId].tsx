@@ -26,7 +26,9 @@ export default function BoardWikiChannelScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
   const { data: board } = useBoard(boardId);
-  const wikiChannel = board?.channels.find((channel) => channel.id === channelId);
+  const wikiChannel = board?.channels.find(
+    (channel) => channel.id === channelId,
+  );
   const canCreate = canWriteWiki(
     board?.currentMember?.role,
     board?.currentMember?.permissions ?? [],
@@ -209,13 +211,13 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     fab: {
       alignItems: "center",
-      backgroundColor: colors.accentPrimary,
+      backgroundColor: colors.tabActiveBg,
       borderRadius: 28,
       bottom: 24,
       elevation: 4,
       height: 56,
       justifyContent: "center",
-      opacity: 0.5,
+      opacity: 0.7,
       position: "absolute",
       right: 20,
       shadowColor: "#000",
