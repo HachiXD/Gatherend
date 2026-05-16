@@ -263,12 +263,14 @@ function PostBodyWithImage({
 function CommunityPostEditForm({
   postId,
   communityId,
+  channelId,
   content,
   hasImage,
   onCancel,
 }: {
   postId: string;
   communityId: string;
+  channelId: string;
   content: string;
   hasImage: boolean;
   onCancel: () => void;
@@ -331,7 +333,7 @@ function CommunityPostEditForm({
       };
 
       queryClient.setQueryData<InfiniteData<CommunityPostsFeedPage>>(
-        communityPostsKey(communityId),
+        communityPostsKey(communityId, channelId),
         (current) => {
           if (!current) return current;
 
@@ -402,11 +404,13 @@ function CommunityPostEditForm({
 function CommunityPostCommentComposer({
   postId,
   communityId,
+  channelId,
   replyToCommentId,
   onCancel,
 }: {
   postId: string;
   communityId: string;
+  channelId: string;
   replyToCommentId?: string | null;
   onCancel: () => void;
 }) {
@@ -502,7 +506,7 @@ function CommunityPostCommentComposer({
       const createdComment = response.data as CommunityPostCommentItemData;
 
       queryClient.setQueryData<InfiniteData<CommunityPostsFeedPage>>(
-        communityPostsKey(communityId),
+        communityPostsKey(communityId, channelId),
         (current) => {
           if (!current) return current;
 
@@ -732,6 +736,7 @@ function CommunityPostCommentEditForm({
 function PostInlineCommentInput({
   postId,
   communityId,
+  channelId,
   profileId,
   profileAvatarUrl,
   profileUsername,
@@ -739,6 +744,7 @@ function PostInlineCommentInput({
 }: {
   postId: string;
   communityId: string;
+  channelId: string;
   profileId: string;
   profileAvatarUrl: string;
   profileUsername: string;
@@ -764,7 +770,7 @@ function PostInlineCommentInput({
       const createdComment = response.data as CommunityPostCommentItemData;
 
       queryClient.setQueryData<InfiniteData<CommunityPostsFeedPage>>(
-        communityPostsKey(communityId),
+        communityPostsKey(communityId, channelId),
         (current) => {
           if (!current) return current;
           return {
@@ -1026,7 +1032,7 @@ function CommunityPostsSectionInner({
       options?: { decrementCount?: boolean },
     ) => {
       queryClient.setQueryData<InfiniteData<CommunityPostsFeedPage>>(
-        communityPostsKey(communityId),
+        communityPostsKey(communityId, channelId),
         (current) => {
           if (!current) return current;
 
@@ -1068,7 +1074,7 @@ function CommunityPostsSectionInner({
             : current,
       );
     },
-    [communityId, queryClient],
+    [channelId, communityId, queryClient],
   );
 
   const handleCommentSaved = useCallback(
@@ -1203,6 +1209,7 @@ function CommunityPostsSectionInner({
                               <CommunityPostEditForm
                                 postId={post.id}
                                 communityId={communityId}
+                                channelId={post.channelId}
                                 content={post.content}
                                 hasImage={Boolean(post.imageAsset)}
                                 onCancel={() => setEditingPostId(null)}
@@ -1415,6 +1422,7 @@ function CommunityPostsSectionInner({
                                 <PostInlineCommentInput
                                   postId={post.id}
                                   communityId={communityId}
+                                  channelId={post.channelId}
                                   profileId={profile.id}
                                   profileAvatarUrl={
                                     profile.avatarAsset?.url ?? ""
@@ -1531,6 +1539,7 @@ function CommunityPostsSectionInner({
                                             <CommunityPostCommentComposer
                                               postId={post.id}
                                               communityId={communityId}
+                                              channelId={post.channelId}
                                               replyToCommentId={comment.id}
                                               onCancel={() =>
                                                 setReplyingToComment(null)

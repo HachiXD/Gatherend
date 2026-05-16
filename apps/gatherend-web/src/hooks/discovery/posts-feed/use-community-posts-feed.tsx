@@ -81,10 +81,17 @@ const POST_CARD_GAP = 16;
 const PAGE_GAP = 24;
 const LRU_BUFFER = 6;
 
-export const communityPostsKey = (communityId: string) =>
-  ["community-posts-feed", communityId] as const;
-export const communityPostsScrollKey = (communityId: string) =>
-  `community:posts:${communityId}`;
+export const communityPostsKey = (
+  communityId: string,
+  channelId?: string | null,
+) =>
+  channelId
+    ? (["community-posts-feed", communityId, channelId] as const)
+    : (["community-posts-feed", communityId] as const);
+export const communityPostsScrollKey = (
+  communityId: string,
+  channelId?: string | null,
+) => `community:posts:${communityId}:${channelId ?? "unknown"}`;
 
 async function fetchCommunityPostsFeed(
   communityId: string,
@@ -122,7 +129,7 @@ export function useCommunityPostsFeed(
     externalContainerRef,
   }: UseCommunityPostsFeedOptions = {},
 ) {
-  const scrollStateKey = communityPostsScrollKey(communityId);
+  const scrollStateKey = communityPostsScrollKey(communityId, channelId);
   const [initialScrollState] = useState(() => feedScrollStore.get(scrollStateKey));
   const didRestoreScrollRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -162,7 +169,7 @@ export function useCommunityPostsFeed(
     error,
     refetch,
   } = useInfiniteQuery({
-    queryKey: communityPostsKey(communityId),
+    queryKey: communityPostsKey(communityId, channelId),
     queryFn: ({ pageParam }) =>
       fetchCommunityPostsFeed(communityId, channelId!, pageParam),
     initialPageParam: null as string | null,

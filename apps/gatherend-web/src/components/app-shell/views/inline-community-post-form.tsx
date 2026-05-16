@@ -125,7 +125,7 @@ export function InlineCommunityPostForm({
       );
 
       await queryClient.invalidateQueries({
-        queryKey: communityPostsKey(communityId),
+        queryKey: communityPostsKey(communityId, channelId),
       });
 
       toast.success(t.posts.publishSuccess);
