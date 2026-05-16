@@ -147,7 +147,7 @@ const LeftbarChannelComponent = ({
         onClick={onClick}
         onMouseEnter={enableTooltipsOnce}
         className={cn(
-          "group flex w-full min-w-0 max-w-full cursor-pointer items-center overflow-hidden rounded-lg px-1.5 py-1 text-left transition",
+          "group flex w-full min-w-0 max-w-full cursor-pointer items-center overflow-hidden rounded-lg px-1.5 py-1.5 text-left transition",
           isActive
             ? "bg-theme-channel-active border-l-4 border-theme-border-accent-active-channel"
             : "hover:bg-theme-channel-hover",
