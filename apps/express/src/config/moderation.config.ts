@@ -45,7 +45,6 @@ export const STORAGE_FOLDERS: Record<ModerationContext, string> = {
   channel_image: "channels",
   community_post_image: "community-posts",
   community_post_comment_image: "community-post-comments",
-  board_rules_image: "board-rules",
   profile_avatar: "avatars",
   profile_banner: "banners",
   profile_card_image: "profile-cards",

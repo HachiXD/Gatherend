@@ -4,7 +4,14 @@ import { memo, useTransition, useCallback, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { ChannelType, MemberRole } from "@prisma/client";
 import { isAdmin } from "@/lib/domain-client";
-import { BookOpen, Edit, MessageSquare, Mic, Trash, AtSign } from "lucide-react";
+import {
+  BookOpen,
+  Edit,
+  MessageSquare,
+  Mic,
+  Trash,
+  AtSign,
+} from "lucide-react";
 import { ActionTooltip } from "@/components/action-tooltip";
 import { ModalType, useModal } from "@/hooks/use-modal-store";
 import { SlashSVG } from "@/lib/slash";
@@ -76,6 +83,8 @@ const LeftbarChannelComponent = ({
 
   const isVoiceChannel = channel.type === ChannelType.VOICE;
   const isTextChannel = channel.type === ChannelType.TEXT;
+  const isForumOrWikiChannel =
+    channel.type === ChannelType.FORUM || channel.type === ChannelType.WIKI;
   const hasUnread = unreadCount > 0;
   const canManageChannel = isAdmin(role as MemberRole);
 
@@ -172,7 +181,11 @@ const LeftbarChannelComponent = ({
         <p
           className={cn(
             "min-w-0 flex-1 truncate font-medium text-[14.5px] text-theme-text-primary transition",
-            isTextChannel ? "-ml-0.5" : "ml-0.5",
+            isTextChannel
+              ? "-ml-0.5"
+              : isForumOrWikiChannel
+                ? "ml-1.5"
+                : "ml-0.5",
             !isActive && "group-hover:underline underline-offset-4",
             isActive &&
               "font-semibold text-theme-accent-primary underline underline-offset-4",

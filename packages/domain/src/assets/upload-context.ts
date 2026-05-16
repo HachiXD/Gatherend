@@ -3,7 +3,7 @@
  *
  * These strings are the HTTP API contract between clients (web, mobile) and
  * the Express upload endpoint. Keep in sync with:
- *   - apps/express/src/config/moderation.config.ts  (CONTEXT_TO_ASSET_CONTEXT, STORAGE_FOLDERS, ALWAYS_MODERATED_CONTEXTS)
+ *   - apps/express/src/config/moderation.config.ts  (STORAGE_FOLDERS)
  *   - apps/express/src/modules/upload/upload.routes.ts  (ALWAYS_MODERATED_CONTEXTS, CONTEXT_TO_ASSET_CONTEXT)
  */
 export type UploadContext =
@@ -12,7 +12,6 @@ export type UploadContext =
   | "channel_image"
   | "community_post_image"
   | "community_post_comment_image"
-  | "board_rules_image"
   | "profile_avatar"
   | "profile_banner"
   | "profile_card_image"

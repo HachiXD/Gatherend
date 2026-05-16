@@ -17,7 +17,6 @@ const ENDPOINT_TO_CONTEXT = {
   boardBanner: "board_banner",
   channelImage: "channel_image",
   communityPostImage: "community_post_image",
-  boardRulesImage: "board_rules_image",
 } satisfies Record<string, UploadContext>;
 
 type FileUploadEndpoint = keyof typeof ENDPOINT_TO_CONTEXT;

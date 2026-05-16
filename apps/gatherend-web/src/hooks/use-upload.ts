@@ -17,7 +17,6 @@ const ENDPOINT_TO_CONTEXT: Record<string, UploadContext> = {
   boardBanner: "board_banner",
   channelImage: "channel_image",
   communityPostImage: "community_post_image",
-  boardRulesImage: "board_rules_image",
   profileAvatar: "profile_avatar",
   profileBanner: "profile_banner",
   profileCardImage: "profile_card_image",
