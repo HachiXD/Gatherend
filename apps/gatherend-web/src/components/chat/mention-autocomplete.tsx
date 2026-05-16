@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   useChannelMentionableMembers,
-  type MentionableChannelMember,
+  type MentionableBoardMember,
 } from "@/hooks/use-channel-mentionable-members";
 import { UserAvatar } from "@/components/user-avatar";
 import { cn } from "@/lib/utils";
@@ -14,7 +14,7 @@ interface MentionAutocompleteProps {
   inputValue: string;
   cursorPosition: number;
   onSelect: (
-    member: MentionableChannelMember,
+    member: MentionableBoardMember,
     startIndex: number,
     endIndex: number,
   ) => void;
@@ -68,7 +68,7 @@ export const MentionAutocomplete = ({
       return {
         shouldOpen: false,
         mentionStart: -1,
-        filtered: [] as MentionableChannelMember[],
+        filtered: [] as MentionableBoardMember[],
       };
     }
 
@@ -79,7 +79,7 @@ export const MentionAutocomplete = ({
       return {
         shouldOpen: false,
         mentionStart: -1,
-        filtered: [] as MentionableChannelMember[],
+        filtered: [] as MentionableBoardMember[],
       };
     }
 
@@ -91,7 +91,7 @@ export const MentionAutocomplete = ({
       return {
         shouldOpen: false,
         mentionStart: -1,
-        filtered: [] as MentionableChannelMember[],
+        filtered: [] as MentionableBoardMember[],
       };
     }
 
@@ -121,7 +121,7 @@ export const MentionAutocomplete = ({
 
   // Handler para seleccionar un miembro
   const handleSelect = useCallback(
-    (member: MentionableChannelMember) => {
+    (member: MentionableBoardMember) => {
       onSelect(member, mentionState.mentionStart, cursorPosition);
       setIsOpen(false);
     },

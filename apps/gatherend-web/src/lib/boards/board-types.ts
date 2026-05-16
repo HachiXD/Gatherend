@@ -12,8 +12,6 @@ export type BoardChannel = {
   position: number;
   boardId: string;
   imageAsset: ClientUploadedAsset | null;
-  channelMemberCount: number;
-  isJoined: boolean;
   createdAt: Date;
   updatedAt: Date;
 };

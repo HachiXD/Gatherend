@@ -146,7 +146,6 @@ model Profile {
   reputationEvents                             ProfileReputationEvent[]
   memberXpEvents                               MemberXpEvent[]
   boardRiskEvents                              BoardRiskEvent[]
-  channelMembers                               ChannelMember[]
   channelReadStates                            ChannelReadState[]
   pushTokens                                   PushToken[]
   pushNotificationDeliveries                   PushNotificationDelivery[] @relation("ProfilePushNotificationDeliveries")
@@ -374,7 +373,6 @@ model Channel {
   board          Board              @relation(fields: [boardId], references: [id], onDelete: Cascade)
   profile        Profile?           @relation(fields: [profileId], references: [id])
   imageAsset     UploadedAsset?     @relation("ChannelImageAsset", fields: [imageAssetId], references: [id], onDelete: SetNull)
-  channelMembers ChannelMember[]
   forumPosts     CommunityPost[]
   readStates     ChannelReadState[]
   messages       Message[]
@@ -385,20 +383,6 @@ model Channel {
   @@index([boardId])
   @@index([boardId, type, position])
   @@index([imageAssetId])
-}
-
-model ChannelMember {
-  id        String   @id @default(uuid())
-  channelId String
-  profileId String
-  muted     Boolean  @default(false)
-  joinedAt  DateTime @default(now())
-  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
-
-  @@unique([channelId, profileId])
-  @@index([profileId])
-  @@index([channelId])
 }
 
 model Message {

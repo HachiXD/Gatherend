@@ -57,13 +57,6 @@ export async function createDefaultBoardChannelsForOwner(
       },
     });
 
-    await tx.channelMember.create({
-      data: {
-        channelId: createdChannel.id,
-        profileId: options.ownerProfileId,
-      },
-    });
-
     if (
       createdChannel.type !== ChannelType.TEXT &&
       createdChannel.type !== ChannelType.VOICE

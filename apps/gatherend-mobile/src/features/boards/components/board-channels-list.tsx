@@ -54,16 +54,10 @@ function timeAgo(iso: string): string {
   return `hace ${months} mes${months !== 1 ? "es" : ""}`;
 }
 
-function getChannelMeta(channel: BoardChannel, voiceParticipantCount: number) {
-  const count =
-    channel.type === "VOICE"
-      ? voiceParticipantCount
-      : channel.channelMemberCount;
+function getVoiceChannelMeta(voiceParticipantCount: number) {
+  const count = voiceParticipantCount;
   const label = count === 1 ? "miembro" : "miembros";
-  if (channel.type === "VOICE") {
-    return count === 0 ? "Nadie conectado" : `${count} ${label} en llamada`;
-  }
-  return `${count} ${label}`;
+  return count === 0 ? "Nadie conectado" : `${count} ${label} en llamada`;
 }
 
 type ChannelRowProps = {
@@ -134,13 +128,13 @@ function ChannelRow({
         <Text numberOfLines={1} style={styles.title}>
           /{item.name}
         </Text>
-        {!imageUrl && (
+        {!imageUrl && item.type === "VOICE" ? (
           <View style={styles.membersPill}>
             <Text numberOfLines={1} style={styles.membersPillText}>
-              {getChannelMeta(item, voiceParticipants.length)}
+              {getVoiceChannelMeta(voiceParticipants.length)}
             </Text>
           </View>
-        )}
+        ) : null}
         {item.type === "VOICE" && voiceParticipants.length > 0 ? (
           <View style={styles.participantsRow}>
             <View style={styles.avatarStack}>
@@ -211,21 +205,23 @@ function ChannelRow({
               pointerEvents="none"
               style={[StyleSheet.absoluteFill, styles.imageOverlay]}
             />
-            <View
-              style={[
-                styles.imageMembersPill,
-                derivedColors
-                  ? {
-                      backgroundColor: derivedColors.bgQuaternary,
-                      borderColor: derivedColors.borderPrimary,
-                    }
-                  : null,
-              ]}
-            >
-              <Text numberOfLines={1} style={styles.membersPillText}>
-                {getChannelMeta(item, voiceParticipants.length)}
-              </Text>
-            </View>
+            {item.type === "VOICE" ? (
+              <View
+                style={[
+                  styles.imageMembersPill,
+                  derivedColors
+                    ? {
+                        backgroundColor: derivedColors.bgQuaternary,
+                        borderColor: derivedColors.borderPrimary,
+                      }
+                    : null,
+                ]}
+              >
+                <Text numberOfLines={1} style={styles.membersPillText}>
+                  {getVoiceChannelMeta(voiceParticipants.length)}
+                </Text>
+              </View>
+            ) : null}
           </View>
           <View
             style={[

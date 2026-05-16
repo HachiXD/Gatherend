@@ -33,7 +33,7 @@ import type {
   ClientAttachmentAsset,
   ClientSticker,
 } from "@/types/uploaded-assets";
-import type { MentionableChannelMember } from "@/hooks/use-channel-mentionable-members";
+import type { MentionableBoardMember } from "@/hooks/use-channel-mentionable-members";
 
 interface ChatInputProps {
   apiUrl: string;
@@ -743,7 +743,7 @@ const ChatInputComponent = ({
 
   // Handle mention selection
   const handleMentionSelect = (
-    member: MentionableChannelMember,
+    member: MentionableBoardMember,
     startIndex: number,
     endIndex: number,
   ) => {

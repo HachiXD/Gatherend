@@ -57,11 +57,10 @@ interface MemberRoleChangedPayload {
 
 interface ChannelCreatedPayload {
   boardId: string;
-  channel: Omit<BoardChannel, "isJoined" | "createdAt" | "updatedAt"> & {
+  channel: Omit<BoardChannel, "createdAt" | "updatedAt"> & {
     createdAt: string;
     updatedAt: string;
   };
-  autoJoinedProfileIds: string[];
   timestamp: number;
 }
 
@@ -80,15 +79,6 @@ interface ChannelUpdatedPayload {
     imageAsset?: ClientUploadedAsset | null;
     updatedAt?: string;
   };
-  timestamp: number;
-}
-
-interface ChannelMembershipChangedPayload {
-  boardId: string;
-  channelId: string;
-  profileId: string;
-  action: "joined";
-  channelMemberCount: number;
   timestamp: number;
 }
 
@@ -226,9 +216,6 @@ export function useCachedBoardSync(currentProfileId?: string): void {
         if (old.channels.some((ch) => ch.id === payload.channel.id)) return old;
         const newChannel: BoardChannel = {
           ...payload.channel,
-          isJoined:
-            currentProfileId !== undefined &&
-            payload.autoJoinedProfileIds.includes(currentProfileId),
           createdAt: new Date(payload.channel.createdAt),
           updatedAt: new Date(payload.channel.updatedAt),
         };
@@ -265,53 +252,6 @@ export function useCachedBoardSync(currentProfileId?: string): void {
       });
     };
 
-    const handleChannelMembershipChanged = (
-      payload: ChannelMembershipChangedPayload,
-    ) => {
-      queryClient.setQueryData<BoardWithData>(
-        boardQueryKey(payload.boardId),
-        (old) => {
-          if (!old) return old;
-
-          let changed = false;
-
-          const nextChannels = old.channels.map((channel) => {
-            if (channel.id !== payload.channelId) {
-              return channel;
-            }
-
-            const nextIsJoined =
-              payload.action === "joined" &&
-              currentProfileId !== undefined &&
-              payload.profileId === currentProfileId
-                ? true
-                : channel.isJoined;
-
-            if (
-              channel.channelMemberCount === payload.channelMemberCount &&
-              channel.isJoined === nextIsJoined
-            ) {
-              return channel;
-            }
-
-            changed = true;
-            return {
-              ...channel,
-              channelMemberCount: payload.channelMemberCount,
-              isJoined: nextIsJoined,
-            };
-          });
-
-          if (!changed) return old;
-
-          return {
-            ...old,
-            channels: nextChannels,
-          };
-        },
-      );
-    };
-
     const handleConnect = () => {
       rejoinBoardRooms(socket);
       syncObservedRooms();
@@ -332,10 +272,6 @@ export function useCachedBoardSync(currentProfileId?: string): void {
     socket.on("board:channel-created", handleChannelCreated);
     socket.on("board:channel-deleted", handleChannelDeleted);
     socket.on("board:channel-updated", handleChannelUpdated);
-    socket.on(
-      "board:channel-membership-changed",
-      handleChannelMembershipChanged,
-    );
 
     return () => {
       unsubscribeQueryCache();
@@ -346,10 +282,6 @@ export function useCachedBoardSync(currentProfileId?: string): void {
       socket.off("board:channel-created", handleChannelCreated);
       socket.off("board:channel-deleted", handleChannelDeleted);
       socket.off("board:channel-updated", handleChannelUpdated);
-      socket.off(
-        "board:channel-membership-changed",
-        handleChannelMembershipChanged,
-      );
 
       observedBoardIds.forEach((boardId) => {
         releaseBoardRoom(socket, boardId);

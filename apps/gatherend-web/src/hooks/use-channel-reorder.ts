@@ -16,7 +16,6 @@ export interface RootChannel {
   position: number;
   parentId: null;
   imageAsset?: ClientUploadedAsset | null;
-  channelMemberCount?: number;
 }
 
 export interface ChannelTree {

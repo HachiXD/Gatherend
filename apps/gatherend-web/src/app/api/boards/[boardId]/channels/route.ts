@@ -18,12 +18,9 @@ import {
   serializeUploadedAsset,
   uploadedAssetSummarySelect,
 } from "@/lib/uploaded-assets";
-import {
-  reserveChannelMessageSeqRange,
-  upsertBoardReadStatesForChannel,
-} from "@/lib/channels/read-state";
+import { upsertBoardReadStatesForChannel } from "@/lib/channels/read-state";
 
-const getBoardChannelSelect = (profileId: string) =>
+const getBoardChannelSelect = () =>
   ({
     id: true,
     name: true,
@@ -34,14 +31,6 @@ const getBoardChannelSelect = (profileId: string) =>
     updatedAt: true,
     imageAsset: {
       select: uploadedAssetSummarySelect,
-    },
-    _count: {
-      select: { channelMembers: true },
-    },
-    channelMembers: {
-      where: { profileId },
-      select: { id: true },
-      take: 1,
     },
   }) satisfies Prisma.ChannelSelect;
 
@@ -59,8 +48,6 @@ function serializeBoardChannel(channel: RawBoardChannel) {
     position: channel.position,
     boardId: channel.boardId,
     imageAsset: serializeUploadedAsset(channel.imageAsset),
-    channelMemberCount: channel._count.channelMembers,
-    isJoined: channel.channelMembers.length > 0,
     createdAt: channel.createdAt,
     updatedAt: channel.updatedAt,
   };
@@ -69,7 +56,6 @@ function serializeBoardChannel(channel: RawBoardChannel) {
 async function notifyChannelCreated(
   boardId: string,
   channel: SerializedBoardChannel,
-  autoJoinedProfileIds: string[],
 ) {
   try {
     const socketUrl =
@@ -95,11 +81,9 @@ async function notifyChannelCreated(
             position: channel.position,
             boardId: channel.boardId,
             imageAsset: channel.imageAsset,
-            channelMemberCount: channel.channelMemberCount,
             createdAt: channel.createdAt.toISOString(),
             updatedAt: channel.updatedAt.toISOString(),
           },
-          autoJoinedProfileIds,
           timestamp: Date.now(),
         },
       }),
@@ -215,44 +199,13 @@ export async function POST(
         throw new Error("MAX_CHANNELS");
       }
 
-      const [firstChannel, autoJoinMembers] = await Promise.all([
-        tx.channel.findFirst({
-          where: { boardId },
-          orderBy: { position: "asc" },
-        }),
-        tx.member.findMany({
-          where: {
-            boardId,
-            OR: [
-              {
-                role: {
-                  in: [
-                    MemberRole.OWNER,
-                    MemberRole.ADMIN,
-                    MemberRole.MODERATOR,
-                  ],
-                },
-              },
-              { profileId: profile.id },
-            ],
-          },
-          select: {
-            id: true,
-            profileId: true,
-          },
-        }),
-      ]);
+      const firstChannel = await tx.channel.findFirst({
+        where: { boardId },
+        orderBy: { position: "asc" },
+      });
 
       const firstPos = firstChannel?.position ?? 1000;
       const newPosition = firstPos - 1000;
-      const uniqueAutoJoinMembers = Array.from(
-        new Map(
-          autoJoinMembers.map((boardMember) => [
-            boardMember.profileId,
-            boardMember,
-          ]),
-        ).values(),
-      );
 
       // Crear canal
       const createdChannel = await tx.channel.create({
@@ -270,35 +223,6 @@ export async function POST(
       const shouldCreateChatReadState =
         type === ChannelType.TEXT || type === ChannelType.VOICE;
 
-      if (uniqueAutoJoinMembers.length > 0) {
-        await tx.channelMember.createMany({
-          data: uniqueAutoJoinMembers.map((boardMember) => ({
-            channelId: createdChannel.id,
-            profileId: boardMember.profileId,
-          })),
-          skipDuplicates: true,
-        });
-      }
-
-      if (shouldCreateChatReadState && uniqueAutoJoinMembers.length > 0) {
-        const welcomeStartSeq = await reserveChannelMessageSeqRange(
-          tx,
-          createdChannel.id,
-          uniqueAutoJoinMembers.length,
-        );
-
-        await tx.message.createMany({
-          data: uniqueAutoJoinMembers.map((boardMember, index) => ({
-            channelId: createdChannel.id,
-            seq: welcomeStartSeq + index,
-            type: "WELCOME",
-            content: "",
-            memberId: boardMember.id,
-            messageSenderId: boardMember.profileId,
-          })),
-        });
-      }
-
       if (shouldCreateChatReadState) {
         const finalChannelState = await tx.channel.findUniqueOrThrow({
           where: { id: createdChannel.id },
@@ -314,14 +238,11 @@ export async function POST(
 
       const hydratedChannel = await tx.channel.findUniqueOrThrow({
         where: { id: createdChannel.id },
-        select: getBoardChannelSelect(profile.id),
+        select: getBoardChannelSelect(),
       });
 
       return {
         channel: hydratedChannel,
-        autoJoinedProfileIds: uniqueAutoJoinMembers.map(
-          (boardMember) => boardMember.profileId,
-        ),
       };
     });
 
@@ -330,11 +251,7 @@ export async function POST(
 
     const serializedChannel = serializeBoardChannel(result.channel);
 
-    void notifyChannelCreated(
-      boardId,
-      serializedChannel,
-      result.autoJoinedProfileIds,
-    );
+    void notifyChannelCreated(boardId, serializedChannel);
 
     return NextResponse.json(serializedChannel);
   } catch (error) {

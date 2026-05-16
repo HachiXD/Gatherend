@@ -64,7 +64,6 @@ export const LeftbarClient = ({
         position: ch.position,
         parentId: null as null,
         imageAsset: ch.imageAsset,
-        channelMemberCount: ch.channelMemberCount,
       })),
     };
   }, [board]);

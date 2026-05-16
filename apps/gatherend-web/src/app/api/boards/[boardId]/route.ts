@@ -63,14 +63,6 @@ export async function GET(
             imageAsset: {
               select: uploadedAssetSummarySelect,
             },
-            _count: {
-              select: { channelMembers: true },
-            },
-            channelMembers: {
-              where: { profileId: profile.id },
-              select: { id: true },
-              take: 1,
-            },
           },
         },
         _count: {
@@ -110,10 +102,6 @@ export async function GET(
       channels: channels.map((channel) => ({
         ...channel,
         imageAsset: serializeUploadedAsset(channel.imageAsset),
-        channelMemberCount: channel._count.channelMembers,
-        isJoined: channel.channelMembers.length > 0,
-        _count: undefined,
-        channelMembers: undefined,
       })),
     });
   } catch (error) {

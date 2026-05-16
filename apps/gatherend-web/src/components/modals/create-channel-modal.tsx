@@ -26,7 +26,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useModal } from "@/hooks/use-modal-store";
 import { ChannelType } from "@prisma/client";
-import { isModerator } from "@/lib/domain-client";
 import { BookOpenText, MessageSquare, Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SlashSVG } from "@/lib/slash";
@@ -54,11 +53,6 @@ function getOptimisticChannelImageAsset(
     height: upload.height ?? null,
     dominantColor: null,
   };
-}
-
-function getOptimisticChannelMemberCount(board: BoardWithData | undefined) {
-  const currentRole = board?.currentMember?.role;
-  return isModerator(currentRole) ? 1 : 0;
 }
 
 export const CreateChannelModal = () => {
@@ -114,9 +108,6 @@ export const CreateChannelModal = () => {
       const optimisticImageAsset = getOptimisticChannelImageAsset(
         values.imageUpload,
       );
-      const optimisticMemberCount = previousBoard
-        ? getOptimisticChannelMemberCount(previousBoard)
-        : 1;
       const optimisticChannel: BoardChannel = {
         id: tempId,
         name: values.name,
@@ -124,8 +115,6 @@ export const CreateChannelModal = () => {
         boardId: boardId,
         position: 999,
         imageAsset: optimisticImageAsset,
-        channelMemberCount: optimisticMemberCount,
-        isJoined: true,
         createdAt: new Date(),
         updatedAt: new Date(),
       };

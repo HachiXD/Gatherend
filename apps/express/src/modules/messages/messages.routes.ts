@@ -8,7 +8,7 @@ import {
   updateMessageContent,
   hardDeleteMessage,
   extractMentionIdentifiers,
-  resolveMentionedChannelMemberProfileIds,
+  resolveMentionedBoardMemberProfileIds,
   createMentions,
   reserveChannelMessageSeqRange,
   advanceAuthorChannelReadState,
@@ -102,18 +102,6 @@ router.post("/", async (req, res) => {
     const member = board.members.find((m) => m.profileId === profileId);
     if (!member) return res.status(404).json({ error: "Member not found" });
     const memberLevel = getMemberLevel(member.level);
-
-    const channelMember = await db.channelMember.findUnique({
-      where: {
-        channelId_profileId: {
-          channelId: channelId as string,
-          profileId,
-        },
-      },
-      select: { id: true },
-    });
-    if (!channelMember)
-      return res.status(403).json({ error: "Not a channel member" });
 
     let resolvedAttachmentAssetId: string | null = null;
     if (
@@ -273,8 +261,8 @@ router.post("/", async (req, res) => {
     // Procesar menciones si hay contenido
     if (trimmedContent) {
       const mentionIdentifiers = extractMentionIdentifiers(trimmedContent);
-      const mentionedProfileIds = await resolveMentionedChannelMemberProfileIds(
-        channelId as string,
+      const mentionedProfileIds = await resolveMentionedBoardMemberProfileIds(
+        boardId as string,
         mentionIdentifiers,
         member.profileId,
       );

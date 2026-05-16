@@ -129,8 +129,8 @@ export function extractMentionIdentifiers(content: string): string[] {
   return [...new Set(identifiers)];
 }
 
-export async function resolveMentionedChannelMemberProfileIds(
-  channelId: string,
+export async function resolveMentionedBoardMemberProfileIds(
+  boardId: string,
   identifiers: string[],
   excludeProfileId: string,
 ): Promise<string[]> {
@@ -150,9 +150,9 @@ export async function resolveMentionedChannelMemberProfileIds(
 
     if (conditions.length === 0) return [];
 
-    const profiles = await db.channelMember.findMany({
+    const members = await db.member.findMany({
       where: {
-        channelId,
+        boardId,
         profileId: {
           not: excludeProfileId,
         },
@@ -163,9 +163,9 @@ export async function resolveMentionedChannelMemberProfileIds(
       select: { profileId: true },
     });
 
-    return profiles.map((p) => p.profileId);
+    return members.map((member) => member.profileId);
   } catch (error) {
-    logger.error("[resolveMentionedChannelMemberProfileIds] Database error:", error);
+    logger.error("[resolveMentionedBoardMemberProfileIds] Database error:", error);
     return [];
   }
 }

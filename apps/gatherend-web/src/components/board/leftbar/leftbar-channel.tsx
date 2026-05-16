@@ -31,7 +31,6 @@ interface LeftbarChannelProps {
     position: number;
     parentId: string | null;
     imageAsset?: ClientUploadedAsset | null;
-    channelMemberCount?: number;
   };
   boardId: string;
   role?: MemberRole;
@@ -257,7 +256,6 @@ export const LeftbarChannel = memo(LeftbarChannelComponent, (prev, next) => {
     prev.channel.type === next.channel.type &&
     prev.channel.position === next.channel.position &&
     prev.channel.imageAsset?.id === next.channel.imageAsset?.id &&
-    prev.channel.channelMemberCount === next.channel.channelMemberCount &&
     prev.role === next.role
   );
 });

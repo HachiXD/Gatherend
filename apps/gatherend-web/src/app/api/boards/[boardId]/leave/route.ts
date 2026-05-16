@@ -110,14 +110,7 @@ async function handleLeaveBoard(
         throw new Error("OWNER_CANNOT_LEAVE");
       }
 
-      // 3. Eliminar membresías de canales y member
-      await tx.channelMember.deleteMany({
-        where: {
-          profileId: profile.id,
-          channel: { boardId },
-        },
-      });
-
+      // 3. Eliminar estado del usuario dentro del board y member
       await tx.channelReadState.deleteMany({
         where: {
           profileId: profile.id,

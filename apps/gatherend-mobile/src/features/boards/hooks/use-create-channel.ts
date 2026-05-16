@@ -25,8 +25,6 @@ export function useCreateChannel() {
         boardId: input.boardId,
         position: 999,
         imageAsset: null,
-        channelMemberCount: 1,
-        isJoined: true,
         lastMessageAt: null,
       };
 

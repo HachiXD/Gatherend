@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ClientUploadedAsset } from "@/types/uploaded-assets";
 
-export interface MentionableChannelMember {
+export interface MentionableBoardMember {
   profileId: string;
   profile: {
     id: string;
@@ -16,7 +16,7 @@ export function useChannelMentionableMembers(
   channelId: string | undefined,
   enabled: boolean = true,
 ) {
-  return useQuery<MentionableChannelMember[]>({
+  return useQuery<MentionableBoardMember[]>({
     queryKey: ["channel-mentionable-members", boardId, channelId],
     queryFn: async () => {
       const res = await fetch(
@@ -30,7 +30,7 @@ export function useChannelMentionableMembers(
         throw new Error("Failed to fetch mentionable members");
       }
 
-      return (await res.json()) as MentionableChannelMember[];
+      return (await res.json()) as MentionableBoardMember[];
     },
     enabled: enabled && Boolean(boardId) && Boolean(channelId),
     staleTime: 1000 * 60,

@@ -31,7 +31,7 @@ export async function GET(
       return NextResponse.json({ error: "Invalid IDs" }, { status: 400 });
     }
 
-    const [boardMember, channelMember] = await Promise.all([
+    const [boardMember, channel] = await Promise.all([
       db.member.findFirst({
         where: {
           boardId,
@@ -39,20 +39,13 @@ export async function GET(
         },
         select: { id: true },
       }),
-      db.channelMember.findUnique({
+      db.channel.findFirst({
         where: {
-          channelId_profileId: {
-            channelId,
-            profileId: profile.id,
-          },
+          id: channelId,
+          boardId,
         },
         select: {
           id: true,
-          channel: {
-            select: {
-              boardId: true,
-            },
-          },
         },
       }),
     ]);
@@ -64,16 +57,16 @@ export async function GET(
       );
     }
 
-    if (!channelMember || channelMember.channel.boardId !== boardId) {
+    if (!channel) {
       return NextResponse.json(
-        { error: "Not a channel member" },
-        { status: 403 },
+        { error: "Channel not found" },
+        { status: 404 },
       );
     }
 
-    const mentionableMembers = await db.channelMember.findMany({
+    const mentionableMembers = await db.member.findMany({
       where: {
-        channelId,
+        boardId,
         profileId: {
           not: profile.id,
         },

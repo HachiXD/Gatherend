@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { ChannelType } from "@prisma/client";
 import { ChatHeader } from "@/components/chat/chat-header";
 import { ChatInput } from "@/components/chat/chat-input";
@@ -12,7 +12,6 @@ import {
   useCurrentBoardData,
   useBoardChannelsMap,
 } from "@/hooks/use-board-data";
-import { useQueryClient } from "@tanstack/react-query";
 import { useBoardSwitchNavigation } from "@/contexts/board-switch-context";
 import { ForumView } from "./forum-view";
 import { WikiView } from "./wiki-view";
@@ -32,8 +31,6 @@ interface ChannelViewProps {
  */
 export function ChannelView({ channelId, boardId }: ChannelViewProps) {
   const profile = useProfile();
-  const queryClient = useQueryClient();
-  const [isJoining, setIsJoining] = useState(false);
   const { switchBoardView } = useBoardSwitchNavigation();
 
   useAutoMarkAsRead(channelId, false);
@@ -71,20 +68,6 @@ export function ChannelView({ channelId, boardId }: ChannelViewProps) {
     () => ["chat", "channel", resolvedChannelId],
     [resolvedChannelId],
   );
-
-  const handleJoinChannel = useCallback(async () => {
-    if (isJoining || !board || !channel) return;
-    setIsJoining(true);
-    try {
-      await fetch(`/api/boards/${board.id}/channels/${channel.id}/join`, {
-        method: "POST",
-        credentials: "include",
-      });
-      await queryClient.invalidateQueries({ queryKey: ["board", board.id] });
-    } finally {
-      setIsJoining(false);
-    }
-  }, [isJoining, board, channel, queryClient]);
 
   useEffect(() => {
     if (boardLoading || !board || isStaleBoard || channel) return;
@@ -145,27 +128,15 @@ export function ChannelView({ channelId, boardId }: ChannelViewProps) {
               paramValue={channel.id}
               type="channel"
             />
-            {channel.isJoined ? (
-              <ChatInput
-                name={channel.name}
-                type="channel"
-                apiUrl={`${process.env.NEXT_PUBLIC_API_URL}/messages`}
-                currentProfile={profile}
-                query={inputQuery}
-                chatQueryKey={chatQueryKey}
-                roomId={channel.id}
-              />
-            ) : (
-              <div className="px-4 py-3 border-t border-theme-border">
-                <button
-                  onClick={handleJoinChannel}
-                  disabled={isJoining}
-                  className="w-full h-11 cursor-pointer rounded-none border border-theme-channel-type-active-border bg-theme-channel-type-active-bg text-theme-channel-type-active-text text-sm font-medium transition hover:opacity-90 disabled:opacity-50"
-                >
-                  {isJoining ? "Uniéndose..." : "Unirme al chat"}
-                </button>
-              </div>
-            )}
+            <ChatInput
+              name={channel.name}
+              type="channel"
+              apiUrl={`${process.env.NEXT_PUBLIC_API_URL}/messages`}
+              currentProfile={profile}
+              query={inputQuery}
+              chatQueryKey={chatQueryKey}
+              roomId={channel.id}
+            />
           </div>
         </div>
       )}

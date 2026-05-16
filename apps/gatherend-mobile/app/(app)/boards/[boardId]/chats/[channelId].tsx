@@ -39,7 +39,6 @@ import { GoToRecentButton } from "@/src/features/chat/components/go-to-recent-bu
 import { WelcomeMessageCard } from "@/src/features/chat/components/welcome-message-card";
 import { getMessageAuthor } from "@/src/features/chat/utils/message-author";
 import { getChannelMessages } from "@/src/features/chat/api/get-channel-messages";
-import { joinChannel } from "@/src/features/chat/api/join-channel";
 import type { ChatMessage } from "@/src/features/chat/lib/chat-message";
 import {
   useChatMessageWindow,
@@ -225,7 +224,6 @@ export default function BoardChannelScreen() {
   );
 
   const windowKey = resolvedChannelId ? `channel:${resolvedChannelId}` : "";
-  const [isJoining, setIsJoining] = useState(false);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [selectedMessage, setSelectedMessage] = useState<ChatMessage | null>(
     null,
@@ -254,20 +252,6 @@ export default function BoardChannelScreen() {
     voiceChannelId === resolvedChannelId &&
     (isVoiceConnecting || isVoiceConnected);
 
-  const handleJoinChannel = useCallback(async () => {
-    if (isJoining || !resolvedBoardId || !resolvedChannelId) return;
-    setIsJoining(true);
-    try {
-      await joinChannel({
-        boardId: resolvedBoardId,
-        channelId: resolvedChannelId,
-      });
-      await refetchBoard();
-    } finally {
-      setIsJoining(false);
-    }
-  }, [isJoining, resolvedBoardId, resolvedChannelId, refetchBoard]);
-
   const handleJoinVoice = useCallback(() => {
     if (!resolvedBoardId || !resolvedChannelId || !channel) return;
     startConnecting(resolvedChannelId, channel.name, "board", resolvedBoardId);
@@ -281,7 +265,7 @@ export default function BoardChannelScreen() {
     channel.type === "TEXT",
   );
 
-  const canReceiveRealtime = canViewMessages && Boolean(channel?.isJoined);
+  const canReceiveRealtime = canViewMessages;
 
   const fetchPage = useCallback<FetchPageFn>(
     (cursor, direction, limit) =>
@@ -688,34 +672,16 @@ export default function BoardChannelScreen() {
               )
             ) : null}
 
-            {channel.isJoined ? (
-              <View>
-                <ChannelComposerAccessory
-                  boardId={resolvedBoardId}
-                  channelId={resolvedChannelId}
-                  profileId={profile.id}
-                  windowKey={windowKey}
-                  replyTo={replyTo}
-                  onClearReply={() => setReplyTo(null)}
-                />
-              </View>
-            ) : (
-              <View style={styles.joinBar}>
-                <Pressable
-                  disabled={isJoining}
-                  onPress={() => void handleJoinChannel()}
-                  style={({ pressed }) => [
-                    styles.joinButton,
-                    pressed ? styles.buttonPressed : null,
-                    isJoining ? styles.buttonDisabled : null,
-                  ]}
-                >
-                  <Text style={styles.joinButtonText}>
-                    {isJoining ? "Uniéndose..." : "Unirme al chat"}
-                  </Text>
-                </Pressable>
-              </View>
-            )}
+            <View>
+              <ChannelComposerAccessory
+                boardId={resolvedBoardId}
+                channelId={resolvedChannelId}
+                profileId={profile.id}
+                windowKey={windowKey}
+                replyTo={replyTo}
+                onClearReply={() => setReplyTo(null)}
+              />
+            </View>
           </View>
         ) : null}
       </View>
@@ -903,28 +869,6 @@ function createStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       height: 76,
       justifyContent: "center",
       width: 76,
-    },
-    joinBar: {
-      borderTopColor: colors.borderPrimary,
-      borderTopWidth: 1,
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-    },
-    joinButton: {
-      alignItems: "center",
-      backgroundColor: colors.buttonPrimary,
-      borderRadius: 12,
-      height: 48,
-      justifyContent: "center",
-      width: "100%",
-    },
-    joinButtonText: {
-      color: colors.textInverse,
-      fontSize: 15,
-      fontWeight: "700",
-    },
-    buttonDisabled: {
-      opacity: 0.5,
     },
   });
 }

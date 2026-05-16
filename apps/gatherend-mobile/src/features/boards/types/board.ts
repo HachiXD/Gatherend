@@ -29,8 +29,6 @@ export type BoardChannel = {
   position: number;
   boardId: string;
   imageAsset: BoardImageAsset | null;
-  channelMemberCount: number;
-  isJoined: boolean;
   lastMessageAt: string | null;
 };
 

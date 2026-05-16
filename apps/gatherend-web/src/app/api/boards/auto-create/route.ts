@@ -64,12 +64,6 @@ function getBoardShell(
         orderBy: { position: "asc" },
         include: {
           imageAsset: { select: uploadedAssetSummarySelect },
-          _count: { select: { channelMembers: true } },
-          channelMembers: {
-            where: { profileId },
-            select: { id: true },
-            take: 1,
-          },
         },
       },
     },
@@ -91,10 +85,6 @@ function serializeBoardShell(board: BoardShell) {
     channels: channels.map((channel) => ({
       ...channel,
       imageAsset: serializeUploadedAsset(channel.imageAsset),
-      channelMemberCount: channel._count.channelMembers,
-      isJoined: channel.channelMembers.length > 0,
-      _count: undefined,
-      channelMembers: undefined,
     })),
   };
 }

@@ -35,13 +35,6 @@ async function removeBoardMembershipArtifacts(
     return false;
   }
 
-  await tx.channelMember.deleteMany({
-    where: {
-      profileId: input.profileId,
-      channel: { boardId: input.boardId },
-    },
-  });
-
   await tx.channelReadState.deleteMany({
     where: {
       profileId: input.profileId,

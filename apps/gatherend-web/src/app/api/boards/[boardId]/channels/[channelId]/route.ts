@@ -19,7 +19,7 @@ import {
   uploadedAssetSummarySelect,
 } from "@/lib/uploaded-assets";
 
-const getBoardChannelSelect = (profileId: string) =>
+const getBoardChannelSelect = () =>
   ({
     id: true,
     name: true,
@@ -30,14 +30,6 @@ const getBoardChannelSelect = (profileId: string) =>
     updatedAt: true,
     imageAsset: {
       select: uploadedAssetSummarySelect,
-    },
-    _count: {
-      select: { channelMembers: true },
-    },
-    channelMembers: {
-      where: { profileId },
-      select: { id: true },
-      take: 1,
     },
   }) satisfies Prisma.ChannelSelect;
 
@@ -53,8 +45,6 @@ function serializeBoardChannel(channel: RawBoardChannel) {
     position: channel.position,
     boardId: channel.boardId,
     imageAsset: serializeUploadedAsset(channel.imageAsset),
-    channelMemberCount: channel._count.channelMembers,
-    isJoined: channel.channelMembers.length > 0,
     createdAt: channel.createdAt,
     updatedAt: channel.updatedAt,
   };
@@ -340,7 +330,7 @@ export async function PATCH(
             imageAssetId: resolvedImageAssetId,
           }),
         },
-        select: getBoardChannelSelect(profile.id),
+        select: getBoardChannelSelect(),
       });
     });
 
