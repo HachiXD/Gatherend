@@ -114,12 +114,15 @@ export function InlineCommunityPostForm({
     try {
       setIsSubmitting(true);
 
-      await axios.post(`/api/channels/${channelId}/posts`, {
-        channelId,
-        title: trimmedTitle,
-        content: trimmedContent,
-        imageAssetId: imageAssetId ?? null,
-      });
+      await axios.post(
+        `/api/boards/${communityId}/channels/${channelId}/posts`,
+        {
+          channelId,
+          title: trimmedTitle,
+          content: trimmedContent,
+          imageAssetId: imageAssetId ?? null,
+        },
+      );
 
       await queryClient.invalidateQueries({
         queryKey: communityPostsKey(communityId),

@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { useTranslation } from "@/i18n";
 import { useRateLimit, RATE_LIMIT_CONFIGS } from "@/hooks/use-rate-limit";
 import { checkUserBanStatus } from "@/lib/check-ban-client";
-import { signIn, signUp } from "@/lib/better-auth-client";
+import { getSession, signIn, signUp } from "@/lib/better-auth-client";
 import { prefetchCurrentProfile } from "@/lib/current-profile-cache";
 import { generateRandomUsername } from "@/lib/username/random";
 
@@ -41,6 +41,15 @@ function extractErrorMessage(err: unknown, fallback: string): string {
   }
 
   return fallback;
+}
+
+function isEmailNotVerifiedError(error?: { message?: string; code?: string }) {
+  if (!error) return false;
+
+  return (
+    error.code === "EMAIL_NOT_VERIFIED" ||
+    error.message?.toLowerCase().includes("email not verified")
+  );
 }
 
 function buildDefaultName(email: string): string {
@@ -127,16 +136,23 @@ export const CustomSignUp = () => {
           : undefined,
       );
 
-      const resultError = (result as { error?: { message?: string } }).error;
+      const resultError = (result as { error?: { message?: string; code?: string } }).error;
       if (resultError?.message) {
+        if (isEmailNotVerifiedError(resultError)) {
+          setStep("verification");
+          return;
+        }
+
         setError(t.auth.failedToCreateAccount);
         resetTurnstile();
         return;
       }
 
       const token = (result as { data?: { token?: string | null } }).data?.token;
+      const sessionResult = token ? null : await getSession();
+      const session = (sessionResult as { data?: unknown } | null)?.data;
 
-      if (token) {
+      if (token || session) {
         const banStatus = await checkUserBanStatus();
         if (banStatus?.banned) {
           router.push("/banned");
@@ -147,7 +163,8 @@ export const CustomSignUp = () => {
         return;
       }
 
-      setStep("verification");
+      setError(t.auth.failedToCreateAccount);
+      resetTurnstile();
     } catch (err: unknown) {
       void err;
       setError(t.auth.failedToCreateAccount);

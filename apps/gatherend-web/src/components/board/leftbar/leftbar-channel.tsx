@@ -4,7 +4,7 @@ import { memo, useTransition, useCallback, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { ChannelType, MemberRole } from "@prisma/client";
 import { isAdmin } from "@/lib/domain-client";
-import { Edit, Mic, Trash, AtSign } from "lucide-react";
+import { BookOpen, Edit, MessageSquare, Mic, Trash, AtSign } from "lucide-react";
 import { ActionTooltip } from "@/components/action-tooltip";
 import { ModalType, useModal } from "@/hooks/use-modal-store";
 import { SlashSVG } from "@/lib/slash";
@@ -75,9 +75,18 @@ const LeftbarChannelComponent = ({
   );
 
   const isVoiceChannel = channel.type === ChannelType.VOICE;
-  const isText = !isVoiceChannel;
+  const isTextChannel = channel.type === ChannelType.TEXT;
   const hasUnread = unreadCount > 0;
   const canManageChannel = isAdmin(role as MemberRole);
+
+  const ChannelIcon =
+    channel.type === ChannelType.VOICE
+      ? Mic
+      : channel.type === ChannelType.FORUM
+        ? MessageSquare
+        : channel.type === ChannelType.WIKI
+          ? BookOpen
+          : null;
 
   const onClick = () => {
     const isVoice = channel.type === ChannelType.VOICE;
@@ -136,17 +145,24 @@ const LeftbarChannelComponent = ({
         )}
       >
         {/* ICON */}
-        {isText ? (
+        {isTextChannel ? (
           <SlashSVG
             className={cn(
               "w-5 h-5 shrink-0 text-theme-text-tertiary",
               isActive && "text-theme-accent-primary",
             )}
           />
-        ) : (
-          <Mic
+        ) : ChannelIcon ? (
+          <ChannelIcon
             className={cn(
               "w-5 h-5 shrink-0 ml-0.5 text-theme-text-tertiary",
+              isActive && "text-theme-accent-primary",
+            )}
+          />
+        ) : (
+          <SlashSVG
+            className={cn(
+              "w-5 h-5 shrink-0 text-theme-text-tertiary",
               isActive && "text-theme-accent-primary",
             )}
           />
@@ -156,7 +172,7 @@ const LeftbarChannelComponent = ({
         <p
           className={cn(
             "min-w-0 flex-1 truncate font-medium text-[14.5px] text-theme-text-primary transition",
-            isText ? "-ml-0.5" : "ml-0.5",
+            isTextChannel ? "-ml-0.5" : "ml-0.5",
             !isActive && "group-hover:underline underline-offset-4",
             isActive &&
               "font-semibold text-theme-accent-primary underline underline-offset-4",

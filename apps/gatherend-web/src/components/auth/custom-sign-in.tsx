@@ -37,6 +37,15 @@ function extractErrorMessage(err: unknown, fallback: string): string {
   return fallback;
 }
 
+function isEmailNotVerifiedError(error?: { message?: string; code?: string }) {
+  if (!error) return false;
+
+  return (
+    error.code === "EMAIL_NOT_VERIFIED" ||
+    error.message?.toLowerCase().includes("email not verified")
+  );
+}
+
 export const CustomSignIn = ({
   showEmailVerifiedMessage = false,
 }: {
@@ -97,7 +106,7 @@ export const CustomSignIn = ({
 
       const resultError = (result as { error?: { message?: string; code?: string; status?: number } }).error;
       if (resultError?.message) {
-        if (resultError.code === "EMAIL_NOT_VERIFIED" || resultError.status === 403) {
+        if (isEmailNotVerifiedError(resultError)) {
           setStep("verification");
           return;
         }

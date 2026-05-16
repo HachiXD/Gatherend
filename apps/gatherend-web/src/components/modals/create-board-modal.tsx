@@ -147,7 +147,7 @@ export const CreateBoardModal = () => {
   return (
     <Dialog open={isModalOpen} onOpenChange={handleClose}>
       <DialogContent
-        className="max-w-[440px]! max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain rounded-lg border border-theme-border bg-theme-bg-modal p-0 text-theme-text-subtle"
+        className="max-w-[560px]! max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain rounded-lg border border-theme-border bg-theme-bg-modal p-0 text-theme-text-subtle"
         closeButtonClassName="cursor-pointer rounded-md p-1 text-theme-text-subtle opacity-100 transition hover:bg-theme-bg-cancel-button hover:text-theme-text-light data-[state=open]:bg-transparent data-[state=open]:text-theme-text-subtle focus:ring-0 focus:ring-offset-0 focus:outline-none"
       >
         <DialogHeader className="px-5 pt-5 -mt-2 -mb-1 pb-0">
@@ -162,117 +162,115 @@ export const CreateBoardModal = () => {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <div className="flex flex-col gap-2.5 px-5 pt-0 pb-4">
-              <div className="flex items-stretch gap-3 max-sm:flex-col">
-                <div className="flex min-w-0 flex-1 flex-col gap-2.5">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col gap-0.5">
-                        <FormLabel
-                          htmlFor="create-board-name"
-                          className={fieldLabelClassName}
-                        >
-                          {t.modals.createBoard.nameLabel}
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            id="create-board-name"
-                            disabled={isLoading}
-                            className="h-9 rounded-lg border border-theme-border bg-theme-bg-edit-form/60 px-3 text-[14px] text-theme-text-primary focus-visible:border-theme-border-accent focus-visible:ring-0 focus-visible:ring-offset-0"
-                            placeholder={t.modals.createBoard.namePlaceholder}
-                            autoComplete="off"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage className="text-[11px] leading-tight" />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col gap-0.5">
-                        <FormLabel
-                          htmlFor="create-board-description"
-                          className={fieldLabelClassName}
-                        >
-                          {t.modals.createBoard.descriptionLabel}
-                        </FormLabel>
-                        <FormControl>
-                          <Textarea
-                            id="create-board-description"
-                            disabled={isLoading}
-                            className="scrollbar-ultra-thin field-sizing-fixed min-h-[96px] max-h-[160px] w-full min-w-0 resize-none rounded-lg border border-theme-border bg-theme-bg-edit-form/60 px-3 py-2 text-[14px] text-theme-text-primary focus-visible:border-theme-border-accent focus-visible:ring-0 focus-visible:ring-offset-0"
-                            placeholder={t.modals.createBoard.tellUsMore}
-                            autoComplete="off"
-                            maxLength={300}
-                            rows={4}
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage className="text-[11px] leading-tight" />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="flex w-full shrink-0 flex-col gap-2.5 sm:w-[132px]">
-                  <FormField
-                    control={form.control}
-                    name="imageUpload"
-                    render={({ field }) => (
-                      <FormItem className="flex w-full flex-1 flex-col gap-0.5">
-                        <FormLabel className={fieldLabelClassName}>
-                          Imagen (opcional)
-                        </FormLabel>
-                        <div className="flex flex-1 rounded-lg border border-theme-border bg-theme-bg-edit-form/60 px-3 py-3">
-                          <div className="flex w-full flex-1 items-center justify-center text-center">
-                            <FormControl>
-                              <FileUpload
-                                endpoint="boardImage"
-                                value={field.value || ""}
-                                onChange={field.onChange}
-                                uploadButtonClassName="border-theme-border bg-theme-bg-secondary/40 text-theme-text-subtle transition-all hover:border-theme-border hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
-                                label={t.common.uploadBoardImage}
-                              />
-                            </FormControl>
-                          </div>
+              <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="imageUpload"
+                  render={({ field }) => (
+                    <FormItem className="flex min-w-0 flex-col gap-0.5">
+                      <FormLabel className={fieldLabelClassName}>
+                        Imagen (opcional)
+                      </FormLabel>
+                      <div className="flex min-h-[132px] rounded-lg border border-theme-border bg-theme-bg-edit-form/60 px-3 py-3">
+                        <div className="flex w-full flex-1 items-center justify-center text-center">
+                          <FormControl>
+                            <FileUpload
+                              endpoint="boardImage"
+                              value={field.value || ""}
+                              onChange={field.onChange}
+                              uploadButtonClassName="border-theme-border bg-theme-bg-secondary/40 text-theme-text-subtle transition-all hover:border-theme-border hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+                              label={t.common.uploadBoardImage}
+                            />
+                          </FormControl>
                         </div>
-                        <FormMessage className="text-[11px] leading-tight" />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="bannerUpload"
-                    render={({ field }) => (
-                      <FormItem className="flex w-full flex-1 flex-col gap-0.5">
-                        <FormLabel className={fieldLabelClassName}>
-                          Banner (opcional)
-                        </FormLabel>
-                        <div className="flex flex-1 rounded-lg border border-theme-border bg-theme-bg-edit-form/60 px-3 py-3">
-                          <div className="flex w-full flex-1 items-center justify-center text-center">
-                            <FormControl>
-                              <FileUpload
-                                endpoint="boardBanner"
-                                value={field.value || ""}
-                                onChange={field.onChange}
-                                uploadButtonClassName="w-full border-theme-border bg-theme-bg-secondary/40 text-theme-text-subtle transition-all hover:border-theme-border hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
-                                imagePreviewWrapperClassName="h-20 w-full"
-                                imagePreviewClassName="h-20 w-full rounded-lg"
-                                label="Banner"
-                              />
-                            </FormControl>
-                          </div>
+                      </div>
+                      <FormMessage className="text-[11px] leading-tight" />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="bannerUpload"
+                  render={({ field }) => (
+                    <FormItem className="flex min-w-0 flex-col gap-0.5">
+                      <FormLabel className={fieldLabelClassName}>
+                        Banner (opcional)
+                      </FormLabel>
+                      <div className="flex min-h-[132px] rounded-lg border border-theme-border bg-theme-bg-edit-form/60 px-3 py-3">
+                        <div className="flex w-full flex-1 items-center justify-center text-center">
+                          <FormControl>
+                            <FileUpload
+                              endpoint="boardBanner"
+                              value={field.value || ""}
+                              onChange={field.onChange}
+                              uploadButtonClassName="w-full border-theme-border bg-theme-bg-secondary/40 text-theme-text-subtle transition-all hover:border-theme-border hover:bg-theme-bg-cancel-button-hover hover:text-theme-text-light"
+                              imagePreviewWrapperClassName="h-20 w-full"
+                              imagePreviewClassName="h-20 w-full rounded-lg"
+                              label="Banner"
+                            />
+                          </FormControl>
                         </div>
-                        <FormMessage className="text-[11px] leading-tight" />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                      </div>
+                      <FormMessage className="text-[11px] leading-tight" />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="flex w-full min-w-0 flex-col gap-2.5">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col gap-0.5">
+                      <FormLabel
+                        htmlFor="create-board-name"
+                        className={fieldLabelClassName}
+                      >
+                        {t.modals.createBoard.nameLabel}
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          id="create-board-name"
+                          disabled={isLoading}
+                          className="h-9 rounded-lg border border-theme-border bg-theme-bg-edit-form/60 px-3 text-[14px] text-theme-text-primary focus-visible:border-theme-border-accent focus-visible:ring-0 focus-visible:ring-offset-0"
+                          placeholder={t.modals.createBoard.namePlaceholder}
+                          autoComplete="off"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage className="text-[11px] leading-tight" />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col gap-0.5">
+                      <FormLabel
+                        htmlFor="create-board-description"
+                        className={fieldLabelClassName}
+                      >
+                        {t.modals.createBoard.descriptionLabel}
+                      </FormLabel>
+                      <FormControl>
+                        <Textarea
+                          id="create-board-description"
+                          disabled={isLoading}
+                          className="scrollbar-ultra-thin field-sizing-fixed min-h-[96px] max-h-[160px] w-full min-w-0 resize-none rounded-lg border border-theme-border bg-theme-bg-edit-form/60 px-3 py-2 text-[14px] text-theme-text-primary focus-visible:border-theme-border-accent focus-visible:ring-0 focus-visible:ring-offset-0"
+                          placeholder={t.modals.createBoard.tellUsMore}
+                          autoComplete="off"
+                          maxLength={300}
+                          rows={4}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage className="text-[11px] leading-tight" />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               <div className="flex flex-col gap-0.5">

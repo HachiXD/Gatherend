@@ -92,7 +92,7 @@ async function fetchCommunityPostsFeed(
   cursor?: string | null,
 ): Promise<CommunityPostsFeedPage> {
   const url = new URL(
-    `/api/channels/${channelId}/posts`,
+    `/api/boards/${communityId}/channels/${channelId}/posts`,
     window.location.origin,
   );
   if (cursor) url.searchParams.set("cursor", cursor);
@@ -123,7 +123,7 @@ export function useCommunityPostsFeed(
   }: UseCommunityPostsFeedOptions = {},
 ) {
   const scrollStateKey = communityPostsScrollKey(communityId);
-  const initialScrollStateRef = useRef(feedScrollStore.get(scrollStateKey));
+  const [initialScrollState] = useState(() => feedScrollStore.get(scrollStateKey));
   const didRestoreScrollRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomSentinelRef = useRef<HTMLDivElement>(null);
@@ -131,10 +131,10 @@ export function useCommunityPostsFeed(
   const scrollContainerRef = externalContainerRef ?? containerRef;
 
   const [windowStart, setWindowStart] = useState(
-    initialScrollStateRef.current.windowStart,
+    initialScrollState.windowStart,
   );
   const [pageHeights, setPageHeights] = useState<Record<number, number>>(
-    initialScrollStateRef.current.pageHeights,
+    initialScrollState.pageHeights,
   );
   const [containerElement, setContainerElement] =
     useState<HTMLDivElement | null>(null);
